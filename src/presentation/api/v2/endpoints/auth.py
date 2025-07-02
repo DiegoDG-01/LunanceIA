@@ -1,4 +1,3 @@
-from click import command
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from domain.entities.user import User
@@ -103,7 +102,7 @@ async def refresh_token(
             access_token=result.access_token,
             refresh_token=result.refresh_token
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token invalido"

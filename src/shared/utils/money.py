@@ -1,7 +1,6 @@
 """Utilidades para manejo de dinero."""
 from decimal import Decimal, ROUND_HALF_UP
 from typing import List
-import locale
 
 
 def format_currency(amount: Decimal, currency: str = "MXN") -> str:

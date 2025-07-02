@@ -78,7 +78,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         models = self.db.query(AccountModel).filter(
             and_(
                 AccountModel.user_id == user_id,
-                AccountModel.is_active == True
+                AccountModel.is_active is True
             )
         ).all()
         return [self._model_to_entity(model) for model in models]
@@ -88,7 +88,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         model = self.db.query(AccountModel).filter(AccountModel.account_id == account.account_id).first()
 
         if not model:
-            raise Exception(f"Account not found")
+            raise Exception("Account not found")
 
         model.name = account.name
         model.type = account.account_type
@@ -106,7 +106,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
     async def delete(self, account_id: int) -> None:
         result = self.db.query(AccountModel).filter(AccountModel.account_id == account_id).delete()
         if not result:
-            raise Exception(f"Account not found")
+            raise Exception("Account not found")
         self.db.commit()
         return result > 0
 

@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
 
 from domain.entities.user import User
 from presentation.schemas.requests.account import CreateAccountRequest, UpdateAccountRequest

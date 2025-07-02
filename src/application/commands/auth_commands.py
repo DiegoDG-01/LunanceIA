@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Optional
 
-from domain.entities.user import User
 from domain.repositories.user_repository import UserRepository
 from infrastructure.security.auth_service import verify_password, create_access_token, create_refresh_token
 from shared.exceptions.application import CommandValidationError
@@ -66,8 +64,6 @@ class RefreshTokenHandler:
 
     async def handle(self, command: RefreshTokenCommand) -> LoginResponse:
         """Ejecuta el comando de refresh token."""
-        from infrastructure.security.auth_service import verify_refresh_token
-        from infrastructure.database.connection import get_db
 
         # Verificar refresh token (necesitas adaptar esto a tu lógica actual)
         # user_uuid = verify_refresh_token(command.refresh_token, db)

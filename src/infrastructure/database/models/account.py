@@ -1,5 +1,4 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, DECIMAL
-from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from infrastructure.database.connection import Base

@@ -1,6 +1,5 @@
 from sqlalchemy import CHAR, Column, Integer, DateTime, ForeignKey, Boolean
 from sqlalchemy.dialects.mysql import VARCHAR
-from sqlalchemy.orm import relationship
 
 from infrastructure.database.connection import Base
 from datetime import datetime

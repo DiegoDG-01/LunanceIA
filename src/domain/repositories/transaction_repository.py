@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List
-from datetime import date, datetime
+from datetime import date
 
 from domain.entities.transaction import Transaction
 from domain.objects.enums import TransactionType

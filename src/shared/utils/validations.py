@@ -1,7 +1,7 @@
 """Utilidades para validación."""
 
 import re
-from typing import List, Any
+from typing import List
 from email_validator import validate_email, EmailNotValidError
 
 

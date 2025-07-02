@@ -1,5 +1,5 @@
 """Utilidades para manejo de fechas."""
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Tuple, List
 import calendar
 

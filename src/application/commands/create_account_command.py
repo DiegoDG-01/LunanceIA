@@ -1,11 +1,9 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from domain.entities.account import Account
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.user_repository import UserRepository
 from domain.objects.money import Money
-from domain.objects.enums import AccountType
 from application.dto.account_dto import CreateAccountDTO, AccountResponseDTO
 
 
@@ -40,10 +38,10 @@ class CreateAccountHandler:
         user = await self.user_repository.get_by_uuid(dto.user_uuid)
 
         if not user:
-            raise ValueError(f"User not found")
+            raise ValueError("User not found")
 
         if not user.is_active:
-            raise ValueError(f"User is inactive")
+            raise ValueError("User is inactive")
 
         # Create entity to domain
         initial_balance = Money(amount=dto.initial_balance, currency=dto.currency)

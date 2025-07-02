@@ -77,7 +77,7 @@ class Gemini:
         try:
             GeminiReceipt.model_validate(json_response)
             return json_response
-        except Exception as e:
+        except Exception:
             try:
                 GeminiErrorResponse.model_validate(json_response)
                 return json_response

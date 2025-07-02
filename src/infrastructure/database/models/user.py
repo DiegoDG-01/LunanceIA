@@ -1,5 +1,4 @@
 from sqlalchemy import CHAR,Column, Integer, String, DateTime, Boolean, func
-from sqlalchemy.orm import relationship
 import uuid
 
 from infrastructure.database.connection import Base

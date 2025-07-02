@@ -7,7 +7,7 @@ from presentation.api.v2.router import api_router  # Nueva estructura
 # from OLD.api import api_router as old_api_router  # Backup temporal
 
 app = FastAPI(
-    title="Lunance IA - Your Personal Finance Assistant",
+    title="Lunance IA - Your Personal Intelligence Assistant",
     description="Manage your finances efficiently with our API",
     version="2.0.0",  # Nueva versión con Clean Architecture
 )

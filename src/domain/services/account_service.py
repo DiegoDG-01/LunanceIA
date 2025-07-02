@@ -1,7 +1,6 @@
 from domain.entities.account import Account
 from domain.entities.transaction import Transaction
 from domain.objects.money import Money
-from domain.objects.enums import TransactionType
 
 
 class AccountService:

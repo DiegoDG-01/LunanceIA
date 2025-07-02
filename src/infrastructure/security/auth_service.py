@@ -58,7 +58,7 @@ def verify_refresh_token(token: str, db: Session) -> Optional[RefreshTokenModel]
         refresh_token = db.query(RefreshTokenModel).filter(
             RefreshTokenModel.user_uuid == user_uuid,
             RefreshTokenModel.token_hash == hash_refresh_token(token),
-            RefreshTokenModel.is_revoked == False,
+            RefreshTokenModel.is_revoked is False,
             RefreshTokenModel.expired_at > datetime.now(timezone.utc)
         ).first()
 
