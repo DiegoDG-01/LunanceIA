@@ -12,21 +12,20 @@ class CreateAccountCommand:
     """
     Command for creating an account
     """
+
     dto: CreateAccountDTO
+
 
 class CreateAccountHandler:
     """
     Handler for creating an account
     """
-    def __init__(
-            self,
-            account_repository: AccountRepository,
-            user_repository: UserRepository
-    ):
 
+    def __init__(
+        self, account_repository: AccountRepository, user_repository: UserRepository
+    ):
         self.account_repository = account_repository
         self.user_repository = user_repository
-
 
     async def handle(self, command: CreateAccountCommand) -> AccountResponseDTO:
         """
@@ -35,7 +34,7 @@ class CreateAccountHandler:
         dto = command.dto
 
         # Validate user exists
-        user = await self.user_repository.get_by_uuid(dto.user_uuid)
+        user = await self.user_repository.get_by_id(dto.user_id)
 
         if not user:
             raise ValueError("User not found")
@@ -46,11 +45,11 @@ class CreateAccountHandler:
         # Create entity to domain
         initial_balance = Money(amount=dto.initial_balance, currency=dto.currency)
         account = Account.create_new(
-            user_uuid=dto.user_uuid,
+            user_id=dto.user_id,
             name=dto.name,
             account_type=dto.account_type,
             bank=dto.bank,
-            initial_balance=initial_balance
+            initial_balance=initial_balance,
         )
 
         saved_account = await self.account_repository.create(account)
@@ -64,5 +63,5 @@ class CreateAccountHandler:
             currency=saved_account.current_balance.currency,
             bank=saved_account.bank,
             is_active=saved_account.is_active,
-            creation_date=saved_account.creation_date
+            creation_date=saved_account.creation_date,
         )

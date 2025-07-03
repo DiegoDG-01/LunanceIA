@@ -8,6 +8,7 @@ from application.dto.account_dto import AccountResponseDTO
 @dataclass
 class GetUserAccountsQuery:
     """Query para obtener cuentas de usuario."""
+
     user_id: int
     only_active: bool = False
 
@@ -31,12 +32,12 @@ class GetUserAccountsHandler:
                 account_id=account.account_id,
                 user_id=account.user_id,
                 name=account.name,
-                type=account.type,
+                account_type=account.account_type,
                 bank=account.bank,
                 current_balance=account.current_balance.amount,
                 currency=account.current_balance.currency,
                 is_active=account.is_active,
-                creation_date=account.creation_date
+                creation_date=account.creation_date,
             )
             for account in accounts
         ]

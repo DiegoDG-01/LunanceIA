@@ -11,12 +11,12 @@ class CreateAccountDTO:
     """
     Data Transfer Object for creating an account
     """
-    user_id: str
-    user_uuid: str
+
+    user_id: int
     name: str
     account_type: AccountType
     bank: Optional[str]
-    initial_balance: Decimal = Decimal('0.00')
+    initial_balance: Decimal = Decimal("0.00")
     currency: str = "MXN"
 
 
@@ -25,6 +25,7 @@ class UpdateAccountDTO:
     """
     Data Transfer Object for updating an account
     """
+
     account_id: int
     user_id: str
     name: Optional[str] = None

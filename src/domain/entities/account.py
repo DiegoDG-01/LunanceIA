@@ -18,8 +18,14 @@ class Account:
     creation_date: datetime
 
     @classmethod
-    def create_new(cls, user_id: str, name: str, account_type: AccountType, bank: Optional[str],
-                   initial_balance: Money = None) -> "Account":
+    def create_new(
+        cls,
+        user_id: int,
+        name: str,
+        account_type: AccountType,
+        bank: Optional[str],
+        initial_balance: Money = None,
+    ) -> "Account":
         if initial_balance is None:
             initial_balance = Money(0, "MXN")
 
@@ -31,7 +37,7 @@ class Account:
             current_balance=initial_balance,
             bank=bank,
             is_active=True,
-            creation_date=datetime.now()
+            creation_date=datetime.now(),
         )
 
     def deactivate(self) -> None:
