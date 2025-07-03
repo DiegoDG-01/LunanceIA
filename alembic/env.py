@@ -10,9 +10,18 @@ src_path = project_root / "src"
 sys.path.insert(0, str(src_path))
 
 # Ahora tanto 'config' como 'models' deberían ser importables
-from database import Base
+from src.infrastructure.database.connection import Base
 # Importar todos los modelos para que Alembic los detecte
-from models import user, account, transaction, category, subscription, budget, saving_goal, tag, reminder
+from src.infrastructure.database.models.user import UserModel
+from src.infrastructure.database.models.account import AccountModel
+from src.infrastructure.database.models.transaction import TransactionModel
+from src.infrastructure.database.models.category import CategoryModel
+from src.infrastructure.database.models.subscription import SubscriptionModel
+from src.infrastructure.database.models.subscription import SubscriptionChargeModel
+from src.infrastructure.database.models.saving_goal import SavingGoalModel
+from src.infrastructure.database.models.budget import BudgetModel
+from src.infrastructure.database.models.tag import TagModel
+from src.infrastructure.database.models.reminder import ReminderModel
 
 config = context.config
 
