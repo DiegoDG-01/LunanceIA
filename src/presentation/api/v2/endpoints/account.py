@@ -100,7 +100,7 @@ async def create_account(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.patch("/{account_id}", response_model=AccountResponse)
+@router.put("/{account_id}", response_model=AccountResponse)
 async def update_account(
     account_id: int,
     request: UpdateAccountRequest,
@@ -113,6 +113,7 @@ async def update_account(
         user_id=current_user.user_id,
         name=request.name,
         bank=request.bank,
+        current_balance=request.current_balance,
     )
 
     command = UpdateAccountCommand(dto=dto)

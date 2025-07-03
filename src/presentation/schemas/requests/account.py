@@ -27,6 +27,7 @@ class UpdateAccountRequest(BaseModel):
         None, min_length=1, max_length=100, description="Nombre de la cuenta"
     )
     bank: Optional[str] = Field(None, max_length=100, description="Banco")
+    current_balance: Optional[Decimal] = Field(None, ge=0, description="Balance actual")
 
 
 class AccountActivationRequest(BaseModel):

@@ -8,6 +8,7 @@ from domain.services.account_service import AccountService
 @dataclass
 class DeleteAccountCommand:
     """Comando para eliminar cuenta."""
+
     account_id: int
     user_id: int
 
@@ -16,10 +17,10 @@ class DeleteAccountHandler:
     """Handler para eliminar cuenta."""
 
     def __init__(
-            self,
-            account_repository: AccountRepository,
-            transaction_repository: TransactionRepository,
-            account_service: AccountService
+        self,
+        account_repository: AccountRepository,
+        transaction_repository: TransactionRepository,
+        account_service: AccountService,
     ):
         self.account_repository = account_repository
         self.transaction_repository = transaction_repository
@@ -28,9 +29,8 @@ class DeleteAccountHandler:
     async def handle(self, command: DeleteAccountCommand) -> bool:
         """Ejecuta el comando de eliminar cuenta."""
         # Obtener cuenta
-        account = await self.account_repository.get_by_id_and_user(
-            command.account_id,
-            command.user_id
+        account = await self.account_repository.get_by_id_and_user_id(
+            command.account_id, command.user_id
         )
         if not account:
             raise ValueError("Cuenta no encontrada")
@@ -41,11 +41,10 @@ class DeleteAccountHandler:
 
         # Verificar que no hay transacciones pendientes
         transactions = await self.transaction_repository.get_by_account(
-            command.account_id,
-            command.user_id
+            command.account_id, command.user_id
         )
         if transactions:
             raise ValueError("No se puede eliminar cuenta con transacciones existentes")
 
         # Eliminar cuenta
-        return await self.account_repository.delete(command.account_id, command.user_id)
+        return await self.account_repository.delete(account)

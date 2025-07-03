@@ -16,7 +16,8 @@ class SQLAlchemyAccountRepository(AccountRepository):
     def __init__(self, db: session):
         self.db = db
 
-    def _model_to_entity(self, model: AccountModel) -> Account:
+    @staticmethod
+    def _model_to_entity(model: AccountModel) -> Account:
         """
         Convert a SQLAlchemy AccountModel to a domain Account entity
         """
@@ -33,7 +34,8 @@ class SQLAlchemyAccountRepository(AccountRepository):
             creation_date=model.creation_date,
         )
 
-    def _entity_to_model(self, entity: Account) -> AccountModel:
+    @staticmethod
+    def _entity_to_model(entity: Account) -> AccountModel:
         """
         Convert a domain Account entity to a SQLAlchemy AccountModel
         """
@@ -121,10 +123,11 @@ class SQLAlchemyAccountRepository(AccountRepository):
 
         return self._model_to_entity(model)
 
-    async def delete(self, account_id: int) -> None:
+    async def delete(self, account: Account) -> bool:
+        """Elimina completamente una cuenta de la base de datos."""
         result = (
             self.db.query(AccountModel)
-            .filter(AccountModel.account_id == account_id)
+            .filter(AccountModel.account_id == account.account_id)
             .delete()
         )
         if not result:

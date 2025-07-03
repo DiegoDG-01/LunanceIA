@@ -30,6 +30,7 @@ class UpdateAccountDTO:
     user_id: str
     name: Optional[str] = None
     bank: Optional[str] = None
+    current_balance: Optional[Decimal] = None
 
 
 @dataclass

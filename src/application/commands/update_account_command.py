@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 
 from domain.repositories.account_repository import AccountRepository
+from domain.objects.money import Money
 from application.dto.account_dto import UpdateAccountDTO, AccountResponseDTO
 
 
 @dataclass
 class UpdateAccountCommand:
     """Comando para actualizar cuenta."""
+
     dto: UpdateAccountDTO
 
 
@@ -21,9 +23,8 @@ class UpdateAccountHandler:
         dto = command.dto
 
         # Obtener cuenta existente
-        account = await self.account_repository.get_by_id_and_user(
-            dto.account_id,
-            dto.user_id
+        account = await self.account_repository.get_by_id_and_user_id(
+            dto.account_id, dto.user_id
         )
         if not account:
             raise ValueError("Cuenta no encontrada")
@@ -35,6 +36,11 @@ class UpdateAccountHandler:
         if dto.bank is not None:
             account.bank = dto.bank
 
+        if dto.current_balance is not None:
+            # Convertir Decimal a Money manteniendo la moneda actual
+            current_currency = account.current_balance.currency
+            account.current_balance = Money(dto.current_balance, current_currency)
+
         # Guardar cambios
         updated_account = await self.account_repository.update(account)
 
@@ -43,10 +49,10 @@ class UpdateAccountHandler:
             account_id=updated_account.account_id,
             user_id=updated_account.user_id,
             name=updated_account.name,
-            type=updated_account.type,
+            account_type=updated_account.account_type,
             bank=updated_account.bank,
             current_balance=updated_account.current_balance.amount,
             currency=updated_account.current_balance.currency,
             is_active=updated_account.is_active,
-            creation_date=updated_account.creation_date
+            creation_date=updated_account.creation_date,
         )

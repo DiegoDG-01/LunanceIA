@@ -18,7 +18,9 @@ class AccountRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_id_and_user_id(self, account_id: int, user_id: int) -> Optional[Account]:
+    async def get_by_id_and_user_id(
+        self, account_id: int, user_id: int
+    ) -> Optional[Account]:
         """Get account by id and user uuid"""
         pass
 
@@ -29,7 +31,7 @@ class AccountRepository(ABC):
 
     @abstractmethod
     async def get_active_by_user(self, user_id: str) -> List[Account]:
-        """ Get all active accounts by user uuid"""
+        """Get all active accounts by user uuid"""
         pass
 
     @abstractmethod
@@ -48,6 +50,6 @@ class AccountRepository(ABC):
         pass
 
     @abstractmethod
-    async def delete(self, account: Account) -> Account:
+    async def delete(self, account: Account) -> bool:
         """This method is used to completely delete an account"""
         pass
