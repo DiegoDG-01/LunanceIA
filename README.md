@@ -116,10 +116,10 @@ pip install -e .
 ```bash
 # Levantar MySQL con Docker
 docker run --name lunance-mysql \
-  -e MYSQL_ROOT_PASSWORD=root \
+  -e MYSQL_ROOT_PASSWORD=luna_root \
   -e MYSQL_DATABASE=lunance \
   -e MYSQL_USER=luna \
-  -e MYSQL_PASSWORD=root \
+  -e MYSQL_PASSWORD=luna_root \
   -p 3306:3306 \
   -d mysql:8.0
 ```

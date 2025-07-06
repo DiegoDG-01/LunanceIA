@@ -69,10 +69,10 @@ Si solo necesitas la base de datos para desarrollo local:
 ```bash
 # Ejecutar contenedor MySQL
 docker run --name lunance-mysql \
-  -e MYSQL_ROOT_PASSWORD=root \
+  -e MYSQL_ROOT_PASSWORD=luna_root \
   -e MYSQL_DATABASE=lunance \
   -e MYSQL_USER=luna \
-  -e MYSQL_PASSWORD=root \
+  -e MYSQL_PASSWORD=luna_root \
   -p 3306:3306 \
   -d mysql:8.0
 
@@ -89,7 +89,7 @@ DB_HOST=localhost  # Usar "localhost" para desarrollo local
 DB_PORT=3306
 DB_NAME=lunance
 DB_USER=luna
-DB_PASSWORD=root
+DB_PASSWORD=luna_root
 ```
 
 ## 🛠️ Gestión de Contenedores
@@ -166,10 +166,10 @@ lsof -i :3306
 
 # Cambiar puerto en el comando Docker
 docker run --name lunance-mysql \
-  -e MYSQL_ROOT_PASSWORD=root \
+  -e MYSQL_ROOT_PASSWORD=luna_root \
   -e MYSQL_DATABASE=lunance \
   -e MYSQL_USER=luna \
-  -e MYSQL_PASSWORD=root \
+  -e MYSQL_PASSWORD=luna_root \
   -p 3307:3306 \
   -d mysql:8.0
 ```
@@ -206,10 +206,10 @@ docker rm -v lunance-mysql
 
 # Crear nuevo contenedor
 docker run --name lunance-mysql \
-  -e MYSQL_ROOT_PASSWORD=root \
+  -e MYSQL_ROOT_PASSWORD=luna_root \
   -e MYSQL_DATABASE=lunance \
   -e MYSQL_USER=luna \
-  -e MYSQL_PASSWORD=root \
+  -e MYSQL_PASSWORD=luna_root \
   -p 3306:3306 \
   -d mysql:8.0
 

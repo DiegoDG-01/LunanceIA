@@ -39,4 +39,5 @@ HEALTHCHECK --interval=10s --timeout=10s --start-period=5s --retries=3 \
     CMD curl --fail http://localhost:8000/health || exit 1
 
 # Wait for database, run migrations, then start the application
-ENTRYPOINT ["sh", "-c", "while ! nc -z db 3306; do sleep 1; done && uv run alembic upgrade head && exec uv run uvicorn src.main:app --host 0.0.0.0 --port 8000"]
+COPY entrypoint.sh ./
+ENTRYPOINT ["./entrypoint.sh"]
