@@ -1,7 +1,6 @@
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    DATABASE_URL: str
     SECRET_KEY: str
     SECRET_KEY_REFRESH: str
     ALGORITHM: str = "HS256"
