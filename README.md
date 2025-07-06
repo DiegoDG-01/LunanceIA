@@ -56,136 +56,102 @@ src/
 
 ## 🚀 Instalación y Configuración
 
-### Prerrequisitos
-- Python 3.8+
-- MySQL
-- pip o uv (recomendado)
+Tienes dos opciones para ejecutar Lunance IA:
 
-### 1. Clonar el repositorio
+### 🐳 Opción 1: Docker Compose (Recomendado para uso rápido)
+
+**Prerrequisitos:**
+- Docker y Docker Compose instalados
+
+**Pasos:**
+
+1. **Clonar el repositorio**
 ```bash
 git clone <repository-url>
 cd Lunance
 ```
 
-### 2. Instalar dependencias
+2. **Configurar variables de entorno**
 ```bash
-# Con uv (recomendado) - Gestor moderno de paquetes
+cp .env.example .env
+# Editar .env y cambiar los valores CHANGE_ME
+```
+
+3. **Ejecutar con Docker Compose**
+```bash
+docker-compose up --build -d
+```
+
+4. **Verificar la instalación**
+- API: http://localhost:8000
+- Documentación: http://localhost:8000/docs
+
+> 🐳 **Para configuración detallada de Docker**: Consulta [DOCKER_SETUP.md](docs/DOCKER_SETUP.md)
+
+### 🛠️ Opción 2: Desarrollo Local
+
+**Prerrequisitos:**
+- Python 3.8+
+- Docker (para MySQL)
+- pip o uv (recomendado)
+
+**Pasos:**
+
+1. **Clonar el repositorio**
+```bash
+git clone <repository-url>
+cd Lunance
+```
+
+2. **Instalar dependencias**
+```bash
+# Con uv (recomendado)
 uv sync
 
 # O con pip tradicional
 pip install -e .
 ```
 
-### 3. Configurar variables de entorno
-Crear un archivo `.env` en la raíz del proyecto:
-```env
-# Base de datos
-DATABASE_URL=mysql+pymysql://usuario:password@localhost:3306/lunance
-
-# Autenticación JWT
-SECRET_KEY=tu_clave_secreta_muy_segura
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-REFRESH_TOKEN_EXPIRE_DAYS=7
-REFRESH_TOKEN_SECRET_KEY=tu_clave_secreta_refresh_muy_segura
-
-# Configuración de aplicación
-DEBUG=True
-ENVIRONMENT=development
-
-# Servicios externos (opcional)
-GEMINI_API_KEY=tu_clave_api_gemini
+3. **Configurar MySQL**
+```bash
+# Levantar MySQL con Docker
+docker run --name lunance-mysql \
+  -e MYSQL_ROOT_PASSWORD=root \
+  -e MYSQL_DATABASE=lunance \
+  -e MYSQL_USER=luna \
+  -e MYSQL_PASSWORD=root \
+  -p 3306:3306 \
+  -d mysql:8.0
 ```
 
-### 4. Ejecutar migraciones
+4. **Configurar variables de entorno**
+```bash
+cp .env.example .env
+# Editar .env para desarrollo local (DB_HOST=localhost)
+```
+
+5. **Ejecutar migraciones y iniciar servidor**
 ```bash
 alembic upgrade head
-```
-
-### 5. Configurar pre-commit (opcional pero recomendado)
-```bash
-# Instalar pre-commit hooks para calidad de código
-pre-commit install
-```
-
-### 6. Ejecutar pruebas
-```bash
-# Ejecutar todas las pruebas
-pytest
-
-# Con cobertura
-pytest --cov=src
-
-# Ejecutar linting
-ruff check src/
-ruff format src/
-```
-
-### 7. Iniciar el servidor
-```bash
-# Desarrollo
 uvicorn src.main:app --reload
-
-# Producción
-uvicorn src.main:app --host 0.0.0.0 --port 8000
 ```
+
+> 🐳 **Para gestión avanzada de contenedores**: Consulta [DOCKER_SETUP.md](docs/DOCKER_SETUP.md)
 
 ## 📖 Uso de la API
 
-### Autenticación JWT
-```bash
-# Obtener token de acceso (API v2)
-curl -X POST "http://localhost:8000/api/v2/auth/login" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "email": "tu_email@ejemplo.com",
-       "password": "tu_password"
-     }'
+La API REST de Lunance IA v2 utiliza autenticación JWT y sigue los principios de Clean Architecture.
 
-# Respuesta
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer",
-  "expires_in": 1800
-}
-
-# Usar token en requests autenticados
-curl -X GET "http://localhost:8000/api/v2/account/" \
-     -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-
-# Renovar token usando refresh token
-curl -X POST "http://localhost:8000/api/v2/auth/refresh" \
-     -H "Content-Type: application/json" \
-     -d '{"refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}'
-```
-
-### Endpoints API v2 (Clean Architecture)
-
-#### 🔐 **Autenticación** - `/api/v2/auth/`
-- `POST /login` - Iniciar sesión
-- `POST /register` - Registrar usuario
-- `POST /refresh` - Renovar token
-- `POST /logout` - Cerrar sesión
-
-#### 💳 **Cuentas** - `/api/v2/account/`
-- `GET /` - Listar cuentas del usuario
-- `POST /` - Crear nueva cuenta
-- `GET /{account_id}` - Obtener cuenta por ID
-- `PUT /{account_id}` - Actualizar cuenta
-- `DELETE /{account_id}` - Eliminar cuenta
-
-#### 💰 **Transacciones** - `/api/v2/transaction/` (Próximamente)
-- `GET /` - Listar transacciones
-- `POST /` - Crear transacción
-- `GET /{transaction_id}` - Obtener transacción
-- `PUT /{transaction_id}` - Actualizar transacción
-- `DELETE /{transaction_id}` - Eliminar transacción
+### Endpoints Principales
+- 🔐 **Autenticación**: `/api/v2/auth/` (login, register, refresh, logout)
+- 💳 **Cuentas**: `/api/v2/account/` (CRUD completo para gestión de cuentas)
+- 💰 **Transacciones**: `/api/v2/transaction/` (próximamente)
 
 ### Documentación Interactiva
-Una vez iniciado el servidor, accede a:
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
+
+> 📋 **Guía Completa de API**: Para ejemplos detallados, autenticación JWT, códigos de error y flujos completos, consulta [API_USAGE.md](docs/API_USAGE.md)
 
 ## 🏗️ Arquitectura
 
