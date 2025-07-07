@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 
 from infrastructure.database.connection import get_db
 from infrastructure.database.repositories.sqlalchemy_account_repository import SQLAlchemyAccountRepository
-# from infrastructure.database.repositories.sqlalchemy_user_repository import SQLAlchemyUserRepository
 from infrastructure.database.repositories.sqlalchemy_transaction_repository import SQLAlchemyTransactionRepository
 from domain.services.account_service import AccountService
 from application.commands.create_account_command import CreateAccountHandler
@@ -12,8 +11,12 @@ from application.commands.delete_account_command import DeleteAccountHandler
 from application.queries.get_user_accounts_query import GetUserAccountsHandler
 from application.queries.get_account_by_id_query import GetAccountByIdHandler
 from infrastructure.database.repositories.sqlalchemy_user_repository import SQLAlchemyUserRepository
-from application.commands.auth_commands import LoginHandler, RefreshTokenHandler
+from application.commands.auth_commands import LoginHandler, RefreshTokenHandler, LogoutHandler
 from application.commands.register_commands import RegisterHandler
+from infrastructure.security.jwt_service import JWTService
+
+from domain.repositories.auth_token_repository import AuthTokenRepository
+from infrastructure.database.repositories.sqlalchemy_auth_token_repository import SQLAlchemyAuthTokenRepository
 
 
 # Repository Dependencies
@@ -68,11 +71,25 @@ def get_account_by_id_handler(
 ) -> GetAccountByIdHandler:
     return GetAccountByIdHandler(account_repo)
 
+def get_auth_token_repository(
+        db: Session = Depends(get_db)
+) -> AuthTokenRepository:
+    return SQLAlchemyAuthTokenRepository(db)
+
+
+def get_jwt_service(
+        user_repo: SQLAlchemyUserRepository = Depends(get_user_repository),
+        auth_token_repo: AuthTokenRepository = Depends(get_auth_token_repository)
+) -> JWTService:
+    return JWTService(user_repo, auth_token_repo)
+
 
 def get_login_handler(
-        user_repo: SQLAlchemyUserRepository = Depends(get_user_repository)
+        user_repo: SQLAlchemyUserRepository = Depends(get_user_repository),
+        auth_token_repo: AuthTokenRepository = Depends(get_auth_token_repository),
+        jwt_service: JWTService = Depends(get_jwt_service)
 ) -> LoginHandler:
-    return LoginHandler(user_repo)
+    return LoginHandler(user_repo, auth_token_repo, jwt_service)
 
 
 def get_register_handler(
@@ -82,6 +99,15 @@ def get_register_handler(
 
 
 def get_refresh_token_handler(
-        user_repo: SQLAlchemyUserRepository = Depends(get_user_repository)
+        user_repo: SQLAlchemyUserRepository = Depends(get_user_repository),
+        auth_token_repository: AuthTokenRepository = Depends(get_auth_token_repository),
+        jwt_service: JWTService = Depends(get_jwt_service)
 ) -> RefreshTokenHandler:
-    return RefreshTokenHandler(user_repo)
+    return RefreshTokenHandler(user_repo, auth_token_repository, jwt_service)
+
+
+def get_logout_handler(
+        auth_token_repository: AuthTokenRepository = Depends(get_auth_token_repository),
+        jwt_service: JWTService = Depends(get_jwt_service)
+) -> LogoutHandler:
+    return LogoutHandler(auth_token_repository, jwt_service)

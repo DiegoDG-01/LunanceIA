@@ -1,0 +1,97 @@
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+import hashlib
+
+from infrastructure.config.settings import settings
+from domain.repositories.auth_token_repository import AuthTokenRepository
+from domain.repositories.user_repository import UserRepository
+
+
+class JWTService:
+    def __init__(self, user_repository: UserRepository, auth_token_repository: AuthTokenRepository):
+        self.user_repository = user_repository
+        self.auth_token_repository = auth_token_repository
+        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+    def check_password(self, plain_password: str, hashed_password: str) -> bool:
+        return self.pwd_context.verify(plain_password, hashed_password)
+
+    def create_access_token(self, user_id: int, expires_in  : Optional[int] = None):
+        if expires_in:
+            expire = datetime.now(timezone.utc) + timedelta(minutes=expires_in)
+        else:
+            expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        to_encode = {"exp": expire, "sub": str(user_id)}
+        encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+        return encoded_jwt
+
+    def create_refresh_token(self, user_id: int, expires_in: Optional[int] = None):
+        if expires_in:
+            expire = datetime.now(timezone.utc) + timedelta(days=expires_in)
+        else:
+            expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        to_encode = {"exp": expire, "sub": str(user_id), "type": "refresh"}
+        encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+        return encoded_jwt
+
+    def verify_access_token(self, token: str):
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=settings.ALGORITHM)
+            user_id = payload.get("sub")
+            if user_id is None:
+                return None
+            return user_id
+        except JWTError as e:
+            print(e)
+            return None
+
+    def verify_refresh_token(self, token: str):
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=settings.ALGORITHM)
+            user_id = payload.get("sub")
+            token_type = payload.get("type")
+            
+            if user_id is None or token_type != "refresh":
+                return None
+            
+            # Validate token against database using repository
+            token_hash = self.hash_refresh_token(token)
+            is_valid = self.auth_token_repository.is_token_valid(
+                user_id=user_id, 
+                hash_refresh_token=token_hash
+            )
+            
+            return user_id if is_valid else None
+        except JWTError as e:
+            print(e)
+            return None
+
+    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
+        return self.pwd_context.verify(plain_password, hashed_password)
+
+    def get_password_hash(self, password: str) -> str:
+        return self.pwd_context.hash(password)
+
+    def revoke_refresh_token(self, token: str) -> bool:
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=settings.ALGORITHM)
+            user_id = payload.get("sub")
+            token_type = payload.get("type")
+            
+            if user_id is None or token_type != "refresh":
+                return False
+            
+            token_hash = self.hash_refresh_token(token)
+            return self.auth_token_repository.revoke_token(user_id, token_hash)
+        except JWTError:
+            return False
+
+    def save_refresh_token(self, user_id: int, token: str, expires_at: datetime) -> bool:
+        token_hash = self.hash_refresh_token(token)
+        return self.auth_token_repository.save_token(user_id, token_hash, expires_at)
+
+    @staticmethod
+    def hash_refresh_token(token: str):
+        return hashlib.sha256(token.encode()).hexdigest()
