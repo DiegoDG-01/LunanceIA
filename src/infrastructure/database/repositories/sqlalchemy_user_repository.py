@@ -15,25 +15,23 @@ class SQLAlchemyUserRepository(UserRepository):
     def _model_to_entity(self, model: UserModel) -> User:
         """Convierte modelo SQLAlchemy a entidad de dominio."""
         return User(
-            user_id=model.user_id,
             uuid=model.uuid,
             name=model.name,
             email=model.email,
             password_hash=model.password_hash,
             registration_date=model.registration_date,
-            is_active=model.is_active
+            is_active=model.is_active,
         )
 
     def _entity_to_model(self, entity: User) -> UserModel:
         """Convierte entidad de dominio a modelo SQLAlchemy."""
         return UserModel(
-            user_id=entity.user_id,
             uuid=entity.uuid,
             name=entity.name,
             email=entity.email,
             password_hash=entity.password_hash,
             registration_date=entity.registration_date,
-            is_active=entity.is_active
+            is_active=entity.is_active,
         )
 
     async def create(self, user: User) -> User:
@@ -46,33 +44,27 @@ class SQLAlchemyUserRepository(UserRepository):
 
     async def get_by_id(self, user_id: int) -> Optional[User]:
         """Obtiene usuario por ID."""
-        model = self.db.query(UserModel).filter(
-            UserModel.user_id == user_id
-        ).first()
+        model = self.db.query(UserModel).filter(UserModel.user_id == user_id).first()
 
         return self._model_to_entity(model) if model else None
 
     async def get_by_email(self, email: str) -> Optional[User]:
         """Obtiene usuario por email."""
-        model = self.db.query(UserModel).filter(
-            UserModel.email == email
-        ).first()
+        model = self.db.query(UserModel).filter(UserModel.email == email).first()
 
         return self._model_to_entity(model) if model else None
 
     async def get_by_uuid(self, uuid: str) -> Optional[User]:
         """Obtiene usuario por UUID."""
-        model = self.db.query(UserModel).filter(
-            UserModel.uuid == uuid
-        ).first()
+        model = self.db.query(UserModel).filter(UserModel.uuid == uuid).first()
 
         return self._model_to_entity(model) if model else None
 
     async def update(self, user: User) -> User:
         """Actualiza un usuario."""
-        model = self.db.query(UserModel).filter(
-            UserModel.user_id == user.user_id
-        ).first()
+        model = (
+            self.db.query(UserModel).filter(UserModel.user_id == user.user_id).first()
+        )
 
         if not model:
             raise ValueError("Usuario no encontrado")
@@ -89,9 +81,9 @@ class SQLAlchemyUserRepository(UserRepository):
 
     async def deactivate(self, user: User) -> User:
         """Desactiva un usuario (soft delete)."""
-        model = self.db.query(UserModel).filter(
-            UserModel.user_id == user.user_id
-        ).first()
+        model = (
+            self.db.query(UserModel).filter(UserModel.user_id == user.user_id).first()
+        )
 
         if not model:
             raise ValueError("Usuario no encontrado")
@@ -103,9 +95,9 @@ class SQLAlchemyUserRepository(UserRepository):
 
     async def delete(self, user: User) -> User:
         """Elimina completamente un usuario."""
-        model = self.db.query(UserModel).filter(
-            UserModel.user_id == user.user_id
-        ).first()
+        model = (
+            self.db.query(UserModel).filter(UserModel.user_id == user.user_id).first()
+        )
 
         if not model:
             raise ValueError("Usuario no encontrado")
@@ -116,9 +108,7 @@ class SQLAlchemyUserRepository(UserRepository):
 
     async def exist_by_email(self, email: str) -> bool:
         """Verifica si existe un usuario con el email dado."""
-        count = self.db.query(UserModel).filter(
-            UserModel.email == email
-        ).count()
+        count = self.db.query(UserModel).filter(UserModel.email == email).count()
 
         return count > 0
 

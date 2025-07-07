@@ -9,7 +9,7 @@ from application.dto.account_dto import AccountResponseDTO
 class GetUserAccountsQuery:
     """Query para obtener cuentas de usuario."""
 
-    user_id: int
+    user_uuid: str
     only_active: bool = False
 
 
@@ -22,15 +22,15 @@ class GetUserAccountsHandler:
     async def handle(self, query: GetUserAccountsQuery) -> List[AccountResponseDTO]:
         """Ejecuta la query de obtener cuentas."""
         if query.only_active:
-            accounts = await self.account_repository.get_active_by_user(query.user_id)
+            accounts = await self.account_repository.get_active_by_user(query.user_uuid)
         else:
-            accounts = await self.account_repository.get_by_user_id(query.user_id)
+            accounts = await self.account_repository.get_by_user_uuid(query.user_uuid)
 
         # Convertir a DTOs
         return [
             AccountResponseDTO(
                 account_id=account.account_id,
-                user_id=account.user_id,
+                user_uuid=account.user_uuid,
                 name=account.name,
                 account_type=account.account_type,
                 bank=account.bank,

@@ -12,7 +12,7 @@ class CreateAccountDTO:
     Data Transfer Object for creating an account
     """
 
-    user_id: int
+    user_uuid: str
     name: str
     account_type: AccountType
     bank: Optional[str]
@@ -27,7 +27,7 @@ class UpdateAccountDTO:
     """
 
     account_id: int
-    user_id: str
+    user_uuid: str
     name: Optional[str] = None
     bank: Optional[str] = None
     current_balance: Optional[Decimal] = None
@@ -36,7 +36,7 @@ class UpdateAccountDTO:
 @dataclass
 class AccountResponseDTO:
     account_id: int
-    user_id: str
+    user_uuid: str
     name: str
     account_type: AccountType
     current_balance: Decimal

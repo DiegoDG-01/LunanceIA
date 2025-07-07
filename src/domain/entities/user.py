@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 from email_validator import validate_email, EmailNotValidError
 
 import uuid
@@ -8,7 +7,6 @@ import uuid
 
 @dataclass
 class User:
-    user_id: Optional[int]
     uuid: str
     name: str
     email: str
@@ -20,13 +18,12 @@ class User:
     def create_new(cls, name: str, email: str, password_hash: str):
         """Factory method to create a new user"""
         return cls(
-            user_id=None,
             uuid=str(uuid.uuid4()),
             name=name,
             email=email,
             password_hash=password_hash,
             registration_date=datetime.now(),
-            is_active=True
+            is_active=True,
         )
 
     def deactivate(self):

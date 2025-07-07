@@ -18,19 +18,19 @@ class AccountRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_id_and_user_id(
-        self, account_id: int, user_id: int
+    async def get_by_id_and_user_uuid(
+        self, account_id: int, user_uuid: str
     ) -> Optional[Account]:
         """Get account by id and user uuid"""
         pass
 
     @abstractmethod
-    async def get_by_user_id(self, user_id: int) -> List[Account]:
+    async def get_by_user_uuid(self, user_uuid: str) -> List[Account]:
         """Get all accounts by user uuid"""
         pass
 
     @abstractmethod
-    async def get_active_by_user(self, user_id: str) -> List[Account]:
+    async def get_active_by_user(self, user_uuid: str) -> List[Account]:
         """Get all active accounts by user uuid"""
         pass
 

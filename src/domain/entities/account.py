@@ -9,7 +9,7 @@ from domain.objects.enums import AccountType
 @dataclass
 class Account:
     account_id: Optional[int]
-    user_id: int
+    user_uuid: str
     name: str
     account_type: AccountType
     current_balance: Money
@@ -20,7 +20,7 @@ class Account:
     @classmethod
     def create_new(
         cls,
-        user_id: int,
+        user_uuid: str,
         name: str,
         account_type: AccountType,
         bank: Optional[str],
@@ -31,7 +31,7 @@ class Account:
 
         return cls(
             account_id=None,
-            user_id=user_id,
+            user_uuid=user_uuid,
             name=name,
             account_type=account_type,
             current_balance=initial_balance,

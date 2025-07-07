@@ -21,7 +21,7 @@ class RegisterCommand:
 class RegisterResponse:
     """Respuesta del comando de registro."""
 
-    user_id: int
+    user_uuid: str
     name: str
     email: str
     message: str
@@ -60,7 +60,7 @@ class RegisterHandler:
         saved_user = await self.user_repository.create(user)
 
         return RegisterResponse(
-            user_id=saved_user.user_id,
+            user_uuid=saved_user.uuid,
             name=saved_user.name,
             email=saved_user.email,
             message="Usuario registrado exitosamente",

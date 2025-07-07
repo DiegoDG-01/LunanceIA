@@ -10,7 +10,7 @@ class DeleteAccountCommand:
     """Comando para eliminar cuenta."""
 
     account_id: int
-    user_id: int
+    user_uuid: str
 
 
 class DeleteAccountHandler:
@@ -29,8 +29,8 @@ class DeleteAccountHandler:
     async def handle(self, command: DeleteAccountCommand) -> bool:
         """Ejecuta el comando de eliminar cuenta."""
         # Obtener cuenta
-        account = await self.account_repository.get_by_id_and_user_id(
-            command.account_id, command.user_id
+        account = await self.account_repository.get_by_id_and_user_uuid(
+            command.account_id, command.user_uuid
         )
         if not account:
             raise ValueError("Cuenta no encontrada")
@@ -41,7 +41,7 @@ class DeleteAccountHandler:
 
         # Verificar que no hay transacciones pendientes
         transactions = await self.transaction_repository.get_by_account(
-            command.account_id, command.user_id
+            command.account_id, command.user_uuid
         )
         if transactions:
             raise ValueError("No se puede eliminar cuenta con transacciones existentes")

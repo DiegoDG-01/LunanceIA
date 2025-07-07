@@ -8,8 +8,9 @@ from application.dto.account_dto import AccountResponseDTO
 @dataclass
 class GetAccountByIdQuery:
     """Query para obtener cuenta por ID."""
+
     account_id: int
-    user_id: int
+    user_uuid: str
 
 
 class GetAccountByIdHandler:
@@ -20,9 +21,8 @@ class GetAccountByIdHandler:
 
     async def handle(self, query: GetAccountByIdQuery) -> Optional[AccountResponseDTO]:
         """Ejecuta la query de obtener cuenta por ID."""
-        account = await self.account_repository.get_by_id_and_user(
-            query.account_id,
-            query.user_id
+        account = await self.account_repository.get_by_id_and_user_uuid(
+            query.account_id, query.user_uuid
         )
 
         if not account:
@@ -30,12 +30,12 @@ class GetAccountByIdHandler:
 
         return AccountResponseDTO(
             account_id=account.account_id,
-            user_id=account.user_id,
+            user_uuid=account.user_uuid,
             name=account.name,
-            type=account.type,
+            account_type=account.account_type,
             bank=account.bank,
             current_balance=account.current_balance.amount,
             currency=account.current_balance.currency,
             is_active=account.is_active,
-            creation_date=account.creation_date
+            creation_date=account.creation_date,
         )

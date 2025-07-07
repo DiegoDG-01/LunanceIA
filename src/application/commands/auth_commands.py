@@ -51,10 +51,10 @@ class LoginHandler:
             raise CommandValidationError("LoginCommand", ["Credenciales incorrectas"])
 
         access_token = self.jwt_service.create_access_token(
-            user_id=user.uuid, expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+            user_uuid=user.uuid, expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
         refresh_token = self.jwt_service.create_refresh_token(
-            user_id=user.uuid, expires_in=settings.REFRESH_TOKEN_EXPIRE_DAYS
+            user_uuid=user.uuid, expires_in=settings.REFRESH_TOKEN_EXPIRE_DAYS
         )
 
         refresh_token_hash = self.jwt_service.hash_refresh_token(refresh_token)
@@ -120,7 +120,7 @@ class RefreshTokenHandler:
             raise CommandValidationError("RefreshTokenCommand", ["User invalido"])
 
         access_token = self.jwt_service.create_access_token(
-            user_id=user_uuid, expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+            user_uuid=user_uuid, expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
 
         return LoginResponse(

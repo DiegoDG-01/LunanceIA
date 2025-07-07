@@ -23,8 +23,8 @@ class UpdateAccountHandler:
         dto = command.dto
 
         # Obtener cuenta existente
-        account = await self.account_repository.get_by_id_and_user_id(
-            dto.account_id, dto.user_id
+        account = await self.account_repository.get_by_id_and_user_uuid(
+            dto.account_id, dto.user_uuid
         )
         if not account:
             raise ValueError("Cuenta no encontrada")
@@ -47,7 +47,7 @@ class UpdateAccountHandler:
         # Retornar DTO de respuesta
         return AccountResponseDTO(
             account_id=updated_account.account_id,
-            user_id=updated_account.user_id,
+            user_uuid=updated_account.user_uuid,
             name=updated_account.name,
             account_type=updated_account.account_type,
             bank=updated_account.bank,

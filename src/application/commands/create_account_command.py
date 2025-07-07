@@ -34,7 +34,7 @@ class CreateAccountHandler:
         dto = command.dto
 
         # Validate user exists
-        user = await self.user_repository.get_by_id(dto.user_id)
+        user = await self.user_repository.get_by_uuid(dto.user_uuid)
 
         if not user:
             raise ValueError("User not found")
@@ -45,7 +45,7 @@ class CreateAccountHandler:
         # Create entity to domain
         initial_balance = Money(amount=dto.initial_balance, currency=dto.currency)
         account = Account.create_new(
-            user_id=dto.user_id,
+            user_uuid=dto.user_uuid,
             name=dto.name,
             account_type=dto.account_type,
             bank=dto.bank,
@@ -56,7 +56,7 @@ class CreateAccountHandler:
 
         return AccountResponseDTO(
             account_id=saved_account.account_id,
-            user_id=saved_account.user_id,
+            user_uuid=saved_account.user_uuid,
             name=saved_account.name,
             account_type=saved_account.account_type,
             current_balance=saved_account.current_balance.amount,

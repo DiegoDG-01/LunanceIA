@@ -1,4 +1,13 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, DECIMAL
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Enum,
+    DECIMAL,
+)
 from sqlalchemy.sql import func
 
 from infrastructure.database.connection import Base
@@ -9,7 +18,12 @@ class AccountModel(Base):
     __tablename__ = "accounts"
 
     account_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True)
+    user_uuid = Column(
+        String(36),
+        ForeignKey("users.uuid", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     name = Column(String(100), nullable=False)
     type = Column(Enum(AccountType), nullable=False)
     bank = Column(String(100))

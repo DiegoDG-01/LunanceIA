@@ -23,7 +23,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         """
         return Account(
             account_id=model.account_id,
-            user_id=model.user_id,
+            user_uuid=model.user_uuid,
             name=model.name,
             account_type=model.type,
             bank=model.bank,
@@ -40,7 +40,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         Convert a domain Account entity to a SQLAlchemy AccountModel
         """
         return AccountModel(
-            user_id=entity.user_id,
+            user_uuid=entity.user_uuid,
             account_id=entity.account_id,
             name=entity.name,
             type=entity.account_type,
@@ -68,15 +68,15 @@ class SQLAlchemyAccountRepository(AccountRepository):
             return None
         return self._model_to_entity(model)
 
-    async def get_by_id_and_user_id(
-        self, account_id: int, user_id: int
+    async def get_by_id_and_user_uuid(
+        self, account_id: int, user_uuid: str
     ) -> Optional[Account]:
         model = (
             self.db.query(AccountModel)
             .filter(
                 and_(
                     AccountModel.account_id == account_id,
-                    AccountModel.user_id == user_id,
+                    AccountModel.user_uuid == user_uuid,
                 )
             )
             .first()
@@ -85,17 +85,21 @@ class SQLAlchemyAccountRepository(AccountRepository):
             return None
         return self._model_to_entity(model)
 
-    async def get_by_user_id(self, user_id: int) -> List[Account]:
+    async def get_by_user_uuid(self, user_uuid: str) -> List[Account]:
         models = (
-            self.db.query(AccountModel).filter(AccountModel.user_id == user_id).all()
+            self.db.query(AccountModel)
+            .filter(AccountModel.user_uuid == user_uuid)
+            .all()
         )
         return [self._model_to_entity(model) for model in models]
 
-    async def get_active_by_user(self, user_id: str) -> List[Account]:
+    async def get_active_by_user(self, user_uuid: str) -> List[Account]:
         models = (
             self.db.query(AccountModel)
             .filter(
-                and_(AccountModel.user_id == user_id, AccountModel.is_active is True)
+                and_(
+                    AccountModel.user_uuid == user_uuid, AccountModel.is_active is True
+                )
             )
             .all()
         )

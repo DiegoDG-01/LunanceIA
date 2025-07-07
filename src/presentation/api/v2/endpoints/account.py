@@ -46,7 +46,7 @@ async def get_user_accounts(
     handler: GetUserAccountsHandler = Depends(get_user_accounts_handler),
 ):
     """Obtiene todas las cuentas del usuario."""
-    query = GetUserAccountsQuery(user_id=current_user.user_id, only_active=only_active)
+    query = GetUserAccountsQuery(user_uuid=current_user.uuid, only_active=only_active)
 
     accounts = await handler.handle(query)
 
@@ -63,7 +63,7 @@ async def get_account(
     handler: GetAccountByIdHandler = Depends(get_account_by_id_handler),
 ):
     """Obtiene una cuenta específica."""
-    query = GetAccountByIdQuery(account_id=account_id, user_id=current_user.user_id)
+    query = GetAccountByIdQuery(account_id=account_id, user_uuid=current_user.uuid)
 
     account = await handler.handle(query)
 
@@ -83,7 +83,7 @@ async def create_account(
 ):
     """Crea una nueva cuenta."""
     dto = CreateAccountDTO(
-        user_id=current_user.user_id,
+        user_uuid=current_user.uuid,
         name=request.name,
         account_type=request.type,
         bank=request.bank,
@@ -110,7 +110,7 @@ async def update_account(
     """Actualiza una cuenta."""
     dto = UpdateAccountDTO(
         account_id=account_id,
-        user_id=current_user.user_id,
+        user_uuid=current_user.uuid,
         name=request.name,
         bank=request.bank,
         current_balance=request.current_balance,
@@ -132,7 +132,7 @@ async def delete_account(
     handler: DeleteAccountHandler = Depends(get_delete_account_handler),
 ):
     """Elimina una cuenta."""
-    command = DeleteAccountCommand(account_id=account_id, user_id=current_user.user_id)
+    command = DeleteAccountCommand(account_id=account_id, user_uuid=current_user.uuid)
 
     try:
         success = await handler.handle(command)
