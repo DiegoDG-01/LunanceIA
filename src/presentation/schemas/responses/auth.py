@@ -24,4 +24,4 @@ class UserInfoResponse(BaseModel):
     user_uuid: str = Field(..., description="UUID del usuario")
     name: str = Field(..., description="Nombre del usuario")
     email: str = Field(..., description="Email del usuario")
-    is_active: bool = Field(default=True, description="Estado del usuario")
+    is_active: bool = Field(..., description="Estado del usuario")

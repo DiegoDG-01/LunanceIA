@@ -1,17 +1,18 @@
 """Validadores de reglas de negocio."""
+
 from decimal import Decimal
-from datetime import date
+from datetime import date, timedelta
 
 from shared.constants.business import (
     MAX_TRANSACTION_AMOUNT,
     MIN_TRANSACTION_AMOUNT,
     MAX_ACCOUNT_NAME_LENGTH,
-    SUPPORTED_CURRENCIES
+    SUPPORTED_CURRENCIES,
 )
 from shared.exceptions.domain import (
     InvalidTransactionAmountError,
     InvalidCurrencyError,
-    ValidationError
+    ValidationError,
 )
 
 
@@ -36,14 +37,16 @@ class TransactionValidator:
         today = date.today()
 
         # No permitir fechas muy futuras (más de una semana)
-        max_future_date = today
+        max_future_date = today + timedelta(days=7)
         if transaction_date > max_future_date:
-            raise ValidationError("No se permiten fechas futuras")
+            raise ValidationError("No se permiten fechas futuras más de una semana")
 
         # No permitir fechas muy antiguas (más de 2 años)
         min_past_date = date(today.year - 2, 1, 1)
         if transaction_date < min_past_date:
-            raise ValidationError("La fecha es demasiado antigua")
+            raise ValidationError(
+                "La fecha es demasiado antigua para ser procesada, mas de 2 años de antiguedad"
+            )
 
 
 class AccountValidator:
@@ -56,7 +59,9 @@ class AccountValidator:
             raise ValidationError("El nombre de la cuenta es requerido")
 
         if len(name) > MAX_ACCOUNT_NAME_LENGTH:
-            raise ValidationError(f"El nombre no puede exceder {MAX_ACCOUNT_NAME_LENGTH} caracteres")
+            raise ValidationError(
+                f"El nombre no puede exceder {MAX_ACCOUNT_NAME_LENGTH} caracteres"
+            )
 
     @staticmethod
     def validate_currency(currency: str) -> None:

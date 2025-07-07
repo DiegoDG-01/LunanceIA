@@ -75,7 +75,7 @@ class JWTService:
             # Validate token against database using repository
             token_hash = self.hash_refresh_token(token)
             is_valid = self.auth_token_repository.is_token_valid(
-                user_uuid=user_uuid, hash_refresh_token=token_hash
+                user_uuid=user_uuid, refresh_hash_token=token_hash
             )
 
             return user_uuid if is_valid else None

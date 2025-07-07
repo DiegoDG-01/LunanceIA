@@ -11,7 +11,7 @@ class CreateAccountRequest(BaseModel):
     name: str = Field(
         ..., min_length=1, max_length=100, description="Nombre de la cuenta"
     )
-    type: AccountType = Field(..., description="Tipo de cuenta")
+    account_type: AccountType = Field(..., description="Tipo de cuenta")
     bank: Optional[str] = Field(None, max_length=100, description="Banco")
     initial_balance: Decimal = Field(
         Decimal("0.00"), ge=0, description="Balance inicial"

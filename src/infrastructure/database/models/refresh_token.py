@@ -1,8 +1,8 @@
 from sqlalchemy import CHAR, Column, Integer, DateTime, ForeignKey, Boolean
 from sqlalchemy.dialects.mysql import VARCHAR
+from sqlalchemy.sql import func
 
 from infrastructure.database.connection import Base
-from datetime import datetime
 
 
 class RefreshTokenModel(Base):
@@ -12,7 +12,7 @@ class RefreshTokenModel(Base):
     user_uuid = Column(CHAR(36), ForeignKey("users.uuid"), nullable=False)
     token_hash = Column(VARCHAR(255), nullable=False)
     is_revoked = Column(Boolean, default=False)
-    expired_at = Column(DateTime, nullable=False, default=datetime.now())
-    created_at = Column(DateTime, nullable=False, default=datetime.now())
+    expired_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
 
     # user = relationship("UserModel", back_populates="refresh_tokens")

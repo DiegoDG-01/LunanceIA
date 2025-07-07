@@ -3,11 +3,12 @@ from decimal import Decimal
 from datetime import date
 from typing import Optional
 
-from domain.value_objects.enums import TransactionType
+from domain.objects.enums import TransactionType
 
 
 class CreateTransactionRequest(BaseModel):
     """Schema para crear transacción."""
+
     account_id: int = Field(..., gt=0, description="ID de la cuenta")
     category_id: int = Field(..., gt=0, description="ID de la categoría")
     type: TransactionType = Field(..., description="Tipo de transacción")
@@ -20,6 +21,7 @@ class CreateTransactionRequest(BaseModel):
 
 class UpdateTransactionRequest(BaseModel):
     """Schema para actualizar transacción."""
+
     description: Optional[str] = Field(None, max_length=500, description="Descripción")
     notes: Optional[str] = Field(None, max_length=1000, description="Notas")
     category_id: Optional[int] = Field(None, gt=0, description="ID de la categoría")
@@ -27,6 +29,7 @@ class UpdateTransactionRequest(BaseModel):
 
 class TransactionFilterRequest(BaseModel):
     """Schema para filtrar transacciones."""
+
     account_id: Optional[int] = Field(None, gt=0, description="ID de la cuenta")
     category_id: Optional[int] = Field(None, gt=0, description="ID de la categoría")
     type: Optional[TransactionType] = Field(None, description="Tipo de transacción")

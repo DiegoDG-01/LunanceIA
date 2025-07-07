@@ -51,8 +51,13 @@ class Account:
             raise ValueError("Currencies must be the same to update balance")
         if not self.is_active:
             raise ValueError("Account is inactive")
-        if new_balance.amount < self.current_balance.amount:
-            raise ValueError("Balance cannot be less than current balance")
+        if (
+            new_balance.amount < self.current_balance.amount
+            and self.account_type != AccountType.CREDIT
+        ):
+            raise ValueError(
+                "Balance cannot be less than current balance for non-credit accounts"
+            )
         self.current_balance = new_balance
 
     def can_withdraw(self, amount: Money) -> bool:

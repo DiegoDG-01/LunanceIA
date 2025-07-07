@@ -1,9 +1,12 @@
 from google import genai
 from google.genai import types
-from infrastructure.config.config import settings
+from infrastructure.config.settings import settings
 from json import loads, JSONDecodeError
-from shared.utils.promts import LUNANCE_PROMPT
-from OLD.schemas.gemini import GeminiReceipt, GeminiErrorResponse
+from shared.utils.prompts import LUNANCE_PROMPT
+from presentation.schemas.responses.gemini import (
+    GeminiReceipt,
+    GeminiErrorResponse,
+)
 
 
 class Gemini:
@@ -14,6 +17,7 @@ class Gemini:
     throughout the application's lifecycle, which is an efficient way to manage
     API connections.
     """
+
     _instance = None
 
     def __new__(cls):
@@ -46,13 +50,8 @@ class Gemini:
             # The system instruction guides the model to return a specific JSON format.
             response = self.client.models.generate_content(
                 model=settings.GEMINI_MODEL_ID,
-                config=types.GenerateContentConfig(
-                    system_instruction=LUNANCE_PROMPT
-                ),
-                contents=types.Part.from_bytes(
-                    data=image_data,
-                    mime_type='image/jpeg'
-                )
+                config=types.GenerateContentConfig(system_instruction=LUNANCE_PROMPT),
+                contents=types.Part.from_bytes(data=image_data, mime_type="image/jpeg"),
             )
         except Exception as e:
             # Handle potential exceptions during the API call (e.g., network issues).
