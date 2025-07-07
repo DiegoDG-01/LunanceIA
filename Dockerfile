@@ -19,7 +19,6 @@ RUN apk add --no-cache netcat-openbsd
 # Copy dependency files for layer caching optimization
 COPY pyproject.toml ./
 COPY uv.lock ./
-COPY .env ./
 
 # Install Python dependencies (production only)
 RUN uv sync --no-dev

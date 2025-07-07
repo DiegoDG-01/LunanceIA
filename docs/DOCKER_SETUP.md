@@ -15,6 +15,8 @@ Esta guía te ayudará a configurar y gestionar los servicios de Docker para el 
 
 Docker Compose levanta toda la infraestructura necesaria:
 
+> **📝 Nota para Desarrollo Local**: Si necesitas usar el contenedor localmente, añade `COPY .env ./` en el Dockerfile después de la línea 30 para incluir tu archivo `.env` local en el contenedor. Esto permite que tanto el Dockerfile como Docker Compose funcionen correctamente.
+
 ```bash
 # Clonar el repositorio
 git clone <repository-url>

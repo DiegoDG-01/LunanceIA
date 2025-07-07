@@ -21,8 +21,8 @@ services:
     image: mysql:8.0          # Use official MySQL 8.0 image
     container_name: lunance_db
     restart: always           # Restart container if it stops
-    ports:
-       - "3306:3306"          # Removed: No external port mapping for security
+#    ports:
+#       - "3306:3306"          # Removed: No external port mapping for security
     volumes:
       - mysql_data:/var/lib/mysql  # Persist database data
     environment:
