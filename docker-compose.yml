@@ -1,0 +1,45 @@
+# Docker Compose configuration for Lunance application
+# Defines a multi-container setup with FastAPI backend and MySQL database
+
+services:
+  # FastAPI application service
+  api:
+    build: .                    # Build from local Dockerfile
+    ports:
+      - "8000:8000"            # Map host port 8000 to container port 8000
+    depends_on:
+      - db                     # Wait for database service to start
+    env_file:
+      - .env                   # Load environment variables from .env file
+    volumes:
+      - api_data:/app                 # Mount current directory for development
+    networks:
+      - lunance-net           # Connect to custom network
+
+  # MySQL database service
+  db:
+    image: mysql:8.0          # Use official MySQL 8.0 image
+    container_name: lunance_db
+    restart: always           # Restart container if it stops
+#    ports:
+#       - "3306:3306"          # Removed: No external port mapping for security
+    volumes:
+      - mysql_data:/var/lib/mysql  # Persist database data
+    environment:
+      # Database configuration
+      - MYSQL_DATABASE=lunance       # Create application database
+      - MYSQL_USER=luna              # Create application user
+      - MYSQL_PASSWORD=luna_root      # Set password for application user
+      - MYSQL_ROOT_PASSWORD=root     # Set root password
+    networks:
+      - lunance-net                 # Connect to custom network
+
+# Named volumes for data persistence
+volumes:
+  mysql_data:             # Persistent storage for MySQL data
+  api_data:               # Persistent storage for application data
+
+# Custom networks for service communication
+networks:
+  lunance-net:               # Isolated network for application services
+    driver: bridge           # Use bridge network driver
