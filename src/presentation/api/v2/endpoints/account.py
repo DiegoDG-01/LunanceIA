@@ -85,7 +85,7 @@ async def create_account(
     dto = CreateAccountDTO(
         user_uuid=current_user.uuid,
         name=request.name,
-        account_type=request.type,
+        account_type=request.account_type,
         bank=request.bank,
         initial_balance=request.initial_balance,
         currency=request.currency,
