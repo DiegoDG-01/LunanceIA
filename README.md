@@ -195,20 +195,28 @@ ruff check src/ --fix
 
 ### Testing
 ```bash
-# Ejecutar todas las pruebas
-pytest
+# Tests E2E (disponibles - valida API completa)
+pytest src/tests/e2e/ -v
 
-# Pruebas con cobertura
-pytest --cov=src --cov-report=html
+# Test específico de autenticación (22 tests)
+pytest src/tests/e2e/test_auth_api.py -v
 
-# Pruebas específicas
-pytest tests/unit/domain/  # Solo pruebas de dominio
-pytest tests/integration/  # Solo pruebas de integración
-pytest tests/e2e/         # Solo pruebas end-to-end
+# Test de flujo completo
+pytest src/tests/e2e/test_auth_api.py::TestCompleteAuthFlow -v
 
-# Pruebas con output detallado
-pytest -v -s
+# Tests con output detallado para debugging
+pytest src/tests/e2e/ -v -s
+
+# Tests específicos por clase
+pytest src/tests/e2e/test_auth_api.py::TestUserAuthentication -v
 ```
+
+**Estado actual:**
+- ✅ **E2E Tests**: 22 tests funcionando (API coverage 100%)
+- 🚧 **Unit/Integration Tests**: En desarrollo
+- ⚠️ **Coverage**: No disponible (tests HTTP externos)
+
+> 🧪 **Documentación Completa de Tests**: Para configuración, comandos específicos y debugging, consulta [TEST USAGE](src/tests/TEST.md)
 
 ### Base de Datos
 ```bash
