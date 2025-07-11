@@ -12,13 +12,13 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
         self.db = db
 
     async def save_refresh_token(
-        self, user_uuid: str, refresh_hash_token: str, expires_at: datetime
+        self, user_id: int, refresh_hash_token: str, expires_at: datetime
     ) -> bool:
         try:
-            self.revoke_all_refresh_tokens_for_user(user_uuid)
+            await self.revoke_all_refresh_tokens_for_user(user_id)
 
             new_refresh_token = RefreshTokenModel(
-                user_uuid=user_uuid,
+                user_id=user_id,
                 token_hash=refresh_hash_token,
                 is_revoked=False,
                 expired_at=expires_at,
@@ -33,14 +33,14 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
             return False
 
     async def get_refresh_token(
-        self, user_uuid: str, refresh_hash_token: str
+        self, user_id: int, refresh_hash_token: str
     ) -> Optional[RefreshTokenModel]:
         try:
             token = (
                 self.db.query(RefreshTokenModel)
                 .filter(
                     and_(
-                        RefreshTokenModel.user_uuid == user_uuid,
+                        RefreshTokenModel.user_id == user_id,
                         RefreshTokenModel.token_hash == refresh_hash_token,
                         RefreshTokenModel.is_revoked.is_(False),
                         RefreshTokenModel.expired_at > datetime.now(),
@@ -49,22 +49,17 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
                 .first()
             )
 
-            if token:
-                return token
-
-            return None
+            return token if token is not None else None
         except Exception:
             return None
 
-    async def revoke_refresh_token(
-        self, user_uuid: str, refresh_hash_token: str
-    ) -> bool:
+    async def revoke_refresh_token(self, user_id: int, refresh_hash_token: str) -> bool:
         try:
             result = (
                 self.db.query(RefreshTokenModel)
                 .filter(
                     and_(
-                        RefreshTokenModel.user_uuid == user_uuid,
+                        RefreshTokenModel.user_id == user_id,
                         RefreshTokenModel.token_hash == refresh_hash_token,
                     )
                 )
@@ -77,12 +72,12 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
             self.db.rollback()
             return False
 
-    async def revoke_all_refresh_tokens_for_user(self, user_uuid: str) -> bool:
+    async def revoke_all_refresh_tokens_for_user(self, user_id: int) -> bool:
         try:
             result = (
                 self.db.query(RefreshTokenModel)
-                .filter(RefreshTokenModel.user_uuid == user_uuid)
-                .update({"is_revoked": True})
+                .filter(RefreshTokenModel.user_id == user_id)
+                .update({"is_revoked": 1})
             )
 
             self.db.commit()
@@ -104,14 +99,14 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
             self.db.rollback()
             return False
 
-    async def is_token_valid(self, user_uuid: str, hash_refresh_token: str) -> bool:
+    async def is_token_valid(self, user_id: int, refresh_hash_token: str) -> bool:
         try:
             token = (
                 self.db.query(RefreshTokenModel)
                 .filter(
                     and_(
-                        RefreshTokenModel.user_uuid == user_uuid,
-                        RefreshTokenModel.token_hash == hash_refresh_token,
+                        RefreshTokenModel.user_id == user_id,
+                        RefreshTokenModel.token_hash == refresh_hash_token,
                         RefreshTokenModel.is_revoked.is_(False),
                         RefreshTokenModel.expired_at > datetime.now(),
                     )
@@ -123,10 +118,10 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
         except Exception:
             return False
 
-    async def revoke_token(self, user_uuid: str, refresh_hash_token: str) -> bool:
-        return await self.revoke_refresh_token(user_uuid, refresh_hash_token)
+    async def revoke_token(self, user_id: int, refresh_hash_token: str) -> bool:
+        return await self.revoke_refresh_token(user_id, refresh_hash_token)
 
     async def save_token(
-        self, user_uuid: str, refresh_hash_token: str, expires_at: datetime
+        self, user_id: int, refresh_hash_token: str, expires_at: datetime
     ) -> bool:
-        return await self.save_refresh_token(user_uuid, refresh_hash_token, expires_at)
+        return await self.save_refresh_token(user_id, refresh_hash_token, expires_at)

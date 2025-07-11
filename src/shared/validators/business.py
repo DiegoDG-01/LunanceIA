@@ -2,6 +2,7 @@
 
 from decimal import Decimal
 from datetime import date, timedelta
+from pydantic import EmailStr
 
 from shared.constants.business import (
     MAX_TRANSACTION_AMOUNT,
@@ -74,7 +75,7 @@ class UserValidator:
     """Validador para usuarios."""
 
     @staticmethod
-    def validate_email(email: str) -> None:
+    def validate_email(email: EmailStr) -> None:
         """Valida el formato del email."""
         from shared.utils.validations import validate_email_format
 

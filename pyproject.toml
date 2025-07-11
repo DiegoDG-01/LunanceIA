@@ -19,6 +19,7 @@ dependencies = [
     "bcrypt>=4.3.0",
     "google-genai>=1.22.0",
     "email-validator>=2.2.0",
+    "pre-commit>=4.2.0",
 ]
 
 [project.optional-dependencies]

@@ -15,6 +15,7 @@ class SQLAlchemyUserRepository(UserRepository):
     def _model_to_entity(self, model: UserModel) -> User:
         """Convierte modelo SQLAlchemy a entidad de dominio."""
         return User(
+            id=model.id,
             uuid=model.uuid,
             name=model.name,
             email=model.email,
@@ -26,6 +27,7 @@ class SQLAlchemyUserRepository(UserRepository):
     def _entity_to_model(self, entity: User) -> UserModel:
         """Convierte entidad de dominio a modelo SQLAlchemy."""
         return UserModel(
+            id=entity.id,
             uuid=entity.uuid,
             name=entity.name,
             email=entity.email,
@@ -44,7 +46,7 @@ class SQLAlchemyUserRepository(UserRepository):
 
     async def get_by_id(self, user_id: int) -> Optional[User]:
         """Obtiene usuario por ID."""
-        model = self.db.query(UserModel).filter(UserModel.user_id == user_id).first()
+        model = self.db.query(UserModel).filter(UserModel.id == user_id).first()
 
         return self._model_to_entity(model) if model else None
 
@@ -62,9 +64,7 @@ class SQLAlchemyUserRepository(UserRepository):
 
     async def update(self, user: User) -> User:
         """Actualiza un usuario."""
-        model = (
-            self.db.query(UserModel).filter(UserModel.user_id == user.user_id).first()
-        )
+        model = self.db.query(UserModel).filter(UserModel.id == user.id).first()
 
         if not model:
             raise ValueError("Usuario no encontrado")
@@ -81,9 +81,7 @@ class SQLAlchemyUserRepository(UserRepository):
 
     async def deactivate(self, user: User) -> User:
         """Desactiva un usuario (soft delete)."""
-        model = (
-            self.db.query(UserModel).filter(UserModel.user_id == user.user_id).first()
-        )
+        model = self.db.query(UserModel).filter(UserModel.id == user.id).first()
 
         if not model:
             raise ValueError("Usuario no encontrado")
@@ -95,9 +93,7 @@ class SQLAlchemyUserRepository(UserRepository):
 
     async def delete(self, user: User) -> User:
         """Elimina completamente un usuario."""
-        model = (
-            self.db.query(UserModel).filter(UserModel.user_id == user.user_id).first()
-        )
+        model = self.db.query(UserModel).filter(UserModel.id == user.id).first()
 
         if not model:
             raise ValueError("Usuario no encontrado")

@@ -1,3 +1,4 @@
+from pydantic import EmailStr
 from dataclasses import dataclass
 from datetime import datetime
 from email_validator import validate_email, EmailNotValidError
@@ -7,9 +8,10 @@ import uuid
 
 @dataclass
 class User:
+    id: int
     uuid: str
     name: str
-    email: str
+    email: EmailStr
     password_hash: str
     registration_date: datetime
     is_active: bool = True
@@ -18,6 +20,7 @@ class User:
     def create_new(cls, name: str, email: str, password_hash: str):
         """Factory method to create a new user"""
         return cls(
+            id=None,
             uuid=str(uuid.uuid4()),
             name=name,
             email=email,
@@ -32,9 +35,9 @@ class User:
     def activate(self):
         self.is_active = True
 
-    def change_email(self, new_email: str) -> None:
+    def change_email(self, new_email: EmailStr) -> None:
         try:
-            validate_email(new_email)
+            validate_email(str(new_email))
         except EmailNotValidError:
             raise ValueError("Email is not valid")
         self.email = new_email

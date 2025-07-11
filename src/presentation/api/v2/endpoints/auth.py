@@ -34,6 +34,7 @@ from shared.exceptions.domain import (
 )
 from shared.exceptions.application import CommandValidationError
 from shared.exceptions.base import ValidationError
+from shared.exceptions.domain import InvalidCredentialsError
 
 router = APIRouter()
 
@@ -67,7 +68,10 @@ async def register(
 @router.get("/me", response_model=UserInfoResponse)
 async def me(current_user: User = Depends(get_current_active_user)):
     return UserInfoResponse(
-        user_uuid=current_user.uuid, name=current_user.name, email=current_user.email
+        user_uuid=current_user.uuid,
+        name=current_user.name,
+        email=current_user.email,
+        is_active=current_user.is_active,
     )
 
 
@@ -84,12 +88,18 @@ async def login(
             refresh_token=result.refresh_token,
             token_type=result.token_type,
         )
-    except (UserNotFoundError, UserInactiveError):
+    except (UserNotFoundError, UserInactiveError, InvalidCredentialsError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales incorrectas"
         )
     except CommandValidationError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 @router.post("/refresh", response_model=TokenResponse)

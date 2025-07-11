@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from pydantic import EmailStr
+
 from domain.entities.user import User
 from domain.repositories.user_repository import UserRepository
 from infrastructure.security.jwt_service import JWTService
@@ -13,7 +15,7 @@ class RegisterCommand:
     """Comando para registro de usuario."""
 
     name: str
-    email: str
+    email: EmailStr
     password: str
 
 
@@ -23,7 +25,7 @@ class RegisterResponse:
 
     user_uuid: str
     name: str
-    email: str
+    email: EmailStr
     message: str
 
 
@@ -52,7 +54,7 @@ class RegisterHandler:
         password_hash = self.jwt_service.get_password_hash(command.password)
         user = User.create_new(
             name=command.name.strip(),
-            email=command.email.lower(),
+            email=command.email,
             password_hash=password_hash,
         )
 

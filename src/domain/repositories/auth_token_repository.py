@@ -6,14 +6,14 @@ from datetime import datetime
 class AuthTokenRepository(ABC):
     @abstractmethod
     async def save_refresh_token(
-        self, user_uuid: str, refresh_hash_token: str, expires_at: datetime
+        self, user_id: int, refresh_hash_token: str, expires_at: datetime
     ) -> bool:
         """Save refresh token"""
         pass
 
     @abstractmethod
     async def get_refresh_token(
-        self, user_uuid: str, refresh_hash_token: str
+        self, user_id: int, refresh_hash_token: str
     ) -> Optional[dict]:
         """Get refresh token"""
         pass
@@ -36,7 +36,7 @@ class AuthTokenRepository(ABC):
         pass
 
     @abstractmethod
-    async def is_token_valid(self, user_uuid: str, refresh_hash_token: str) -> bool:
+    async def is_token_valid(self, user_id: int, refresh_hash_token: str) -> bool:
         """Check if token is valid"""
         pass
 

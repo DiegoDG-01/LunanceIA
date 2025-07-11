@@ -2,13 +2,14 @@
 
 import re
 from typing import List
+from pydantic import EmailStr
 from email_validator import validate_email, EmailNotValidError
 
 
-def validate_email_format(email: str) -> bool:
+def validate_email_format(email: EmailStr) -> bool:
     """Valida formato de email."""
     try:
-        validate_email(email)
+        validate_email(str(email))
         return True
     except EmailNotValidError:
         return False
@@ -45,7 +46,7 @@ def validate_currency_code(currency: str) -> bool:
 def validate_phone_number(phone: str) -> bool:
     """Valida formato de número telefónico."""
     # Formato mexicano básico
-    pattern = r'^(\+52|52)?[\s\-]?(\d{2})[\s\-]?(\d{4})[\s\-]?(\d{4})$'
+    pattern = r"^(\+52|52)?[\s\-]?(\d{2})[\s\-]?(\d{4})[\s\-]?(\d{4})$"
     return bool(re.match(pattern, phone))
 
 
@@ -65,7 +66,7 @@ def sanitize_string(input_str: str, max_length: int = None) -> str:
 
 
 def validate_required_fields(data: dict, required_fields: List[str]) -> List[str]:
-    """Valida campos requeridos en un diccionario."""
+    """Valída campos requeridos en un diccionario."""
     errors = []
 
     for field in required_fields:
