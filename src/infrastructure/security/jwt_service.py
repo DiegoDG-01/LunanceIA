@@ -61,7 +61,7 @@ class JWTService:
             print(e)
             return None
 
-    def verify_refresh_token(self, token: str):
+    async def verify_refresh_token(self, token: str):
         try:
             payload = jwt.decode(
                 token, settings.SECRET_KEY, algorithms=settings.ALGORITHM
@@ -72,14 +72,21 @@ class JWTService:
             if user_uuid is None or token_type != "refresh":
                 return None
 
+            user = await self.user_repository.get_by_uuid(user_uuid)
+            if user is None:
+                return None
+
             # Validate token against database using repository
             token_hash = self.hash_refresh_token(token)
-            is_valid = self.auth_token_repository.is_token_valid(
-                user_uuid=user_uuid, refresh_hash_token=token_hash
+            is_valid = await self.auth_token_repository.is_token_valid(
+                user_id=user.id, refresh_hash_token=token_hash
             )
 
             return user_uuid if is_valid else None
         except JWTError as e:
+            print(e)
+            return None
+        except Exception as e:
             print(e)
             return None
 
@@ -89,7 +96,7 @@ class JWTService:
     def get_password_hash(self, password: str) -> str:
         return self.pwd_context.hash(password)
 
-    def revoke_refresh_token(self, token: str) -> bool:
+    async def revoke_refresh_token(self, token: str) -> bool:
         try:
             payload = jwt.decode(
                 token, settings.SECRET_KEY, algorithms=settings.ALGORITHM
@@ -101,15 +108,17 @@ class JWTService:
                 return False
 
             token_hash = self.hash_refresh_token(token)
-            return self.auth_token_repository.revoke_token(user_uuid, token_hash)
+            return await self.auth_token_repository.revoke_token(user_uuid, token_hash)
         except JWTError:
             return False
 
-    def save_refresh_token(
+    async def save_refresh_token(
         self, user_uuid: str, token: str, expires_at: datetime
     ) -> bool:
         token_hash = self.hash_refresh_token(token)
-        return self.auth_token_repository.save_token(user_uuid, token_hash, expires_at)
+        return await self.auth_token_repository.save_token(
+            user_uuid, token_hash, expires_at
+        )
 
     @staticmethod
     def hash_refresh_token(token: str):

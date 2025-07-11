@@ -67,7 +67,10 @@ async def register(
 @router.get("/me", response_model=UserInfoResponse)
 async def me(current_user: User = Depends(get_current_active_user)):
     return UserInfoResponse(
-        user_uuid=current_user.uuid, name=current_user.name, email=current_user.email
+        user_uuid=current_user.uuid,
+        name=current_user.name,
+        email=current_user.email,
+        is_active=current_user.is_active,
     )
 
 
@@ -90,6 +93,12 @@ async def login(
         )
     except CommandValidationError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 @router.post("/refresh", response_model=TokenResponse)

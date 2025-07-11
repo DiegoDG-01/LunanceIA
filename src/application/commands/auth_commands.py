@@ -1,3 +1,4 @@
+from pydantic import EmailStr
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
@@ -11,7 +12,7 @@ from shared.exceptions.domain import UserNotFoundError, UserInactiveError
 
 @dataclass
 class LoginCommand:
-    email: str
+    email: EmailStr
     password: str
 
 
@@ -63,7 +64,7 @@ class LoginHandler:
         )
 
         await self.auth_token_repository.save_refresh_token(
-            user_uuid=user.uuid,
+            user_id=user.id,
             refresh_hash_token=refresh_token_hash,
             expires_at=refresh_expires_at,
         )
@@ -98,19 +99,9 @@ class RefreshTokenHandler:
                 "RefreshTokenCommand", ["Refresh token es requerido"]
             )
 
-        user_uuid = self.jwt_service.verify_refresh_token(command.refresh_token)
+        user_uuid = await self.jwt_service.verify_refresh_token(command.refresh_token)
 
         if not user_uuid:
-            raise CommandValidationError(
-                "RefreshTokenCommand", ["Refresh token invalido"]
-            )
-
-        refresh_token_hash = self.jwt_service.hash_refresh_token(command.refresh_token)
-        stored_token = await self.auth_token_repository.get_refresh_token(
-            user_uuid, refresh_token_hash
-        )
-
-        if not stored_token:
             raise CommandValidationError(
                 "RefreshTokenCommand", ["Refresh token invalido"]
             )
@@ -118,6 +109,16 @@ class RefreshTokenHandler:
         user = await self.user_repository.get_by_uuid(user_uuid)
         if not user or not user.is_active:
             raise CommandValidationError("RefreshTokenCommand", ["User invalido"])
+
+        refresh_token_hash = self.jwt_service.hash_refresh_token(command.refresh_token)
+        stored_token = await self.auth_token_repository.get_refresh_token(
+            user.id, refresh_token_hash
+        )
+
+        if not stored_token:
+            raise CommandValidationError(
+                "RefreshTokenCommand", ["Refresh token invalido"]
+            )
 
         access_token = self.jwt_service.create_access_token(
             user_uuid=user_uuid, expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES
@@ -142,8 +143,12 @@ class LogoutResponse:
 
 class LogoutHandler:
     def __init__(
-        self, auth_token_repository: AuthTokenRepository, jwt_service: JWTService
+        self,
+        user_repository: UserRepository,
+        auth_token_repository: AuthTokenRepository,
+        jwt_service: JWTService,
     ):
+        self.user_repository = user_repository
         self.jwt_service = jwt_service
         self.auth_token_repository = auth_token_repository
 
@@ -153,13 +158,18 @@ class LogoutHandler:
                 "LogoutCommand", ["Refresh token es requerido"]
             )
 
-        user_uuid = self.jwt_service.verify_refresh_token(command.refresh_token)
+        user_uuid = await self.jwt_service.verify_refresh_token(command.refresh_token)
         if not user_uuid:
+            return LogoutResponse()
+
+        # Obtener user_id para revocar el token
+        user = await self.user_repository.get_by_uuid(user_uuid)
+        if not user:
             return LogoutResponse()
 
         refresh_token_hash = self.jwt_service.hash_refresh_token(command.refresh_token)
         await self.auth_token_repository.revoke_refresh_token(
-            user_uuid, refresh_token_hash
+            user.id, refresh_token_hash
         )
 
         return LogoutResponse()

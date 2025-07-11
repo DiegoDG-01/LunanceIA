@@ -7,6 +7,7 @@ import uuid
 
 @dataclass
 class User:
+    id: int
     uuid: str
     name: str
     email: str
