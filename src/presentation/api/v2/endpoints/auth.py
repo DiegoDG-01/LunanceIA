@@ -34,6 +34,7 @@ from shared.exceptions.domain import (
 )
 from shared.exceptions.application import CommandValidationError
 from shared.exceptions.base import ValidationError
+from shared.exceptions.domain import InvalidCredentialsError
 
 router = APIRouter()
 
@@ -87,7 +88,7 @@ async def login(
             refresh_token=result.refresh_token,
             token_type=result.token_type,
         )
-    except (UserNotFoundError, UserInactiveError):
+    except (UserNotFoundError, UserInactiveError, InvalidCredentialsError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales incorrectas"
         )

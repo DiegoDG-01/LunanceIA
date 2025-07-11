@@ -1,4 +1,6 @@
+from pydantic import EmailStr
 from shared.exceptions.base import ValidationError, NotFoundError, BusinessRuleError
+
 
 # User Exceptions
 class UserNotFoundError(NotFoundError):
@@ -14,6 +16,13 @@ class UserNotFoundError(NotFoundError):
         super().__init__(message, "USER_NOT_FOUND")
 
 
+class InvalidCredentialsError(BusinessRuleError):
+    """Credenciales inválidas."""
+
+    def __init__(self):
+        super().__init__("Las credenciales son inválidas", "INVALID_CREDENTIALS")
+
+
 class UserInactiveError(BusinessRuleError):
     """Usuario inactivo."""
 
@@ -24,7 +33,7 @@ class UserInactiveError(BusinessRuleError):
 class EmailAlreadyExistsError(ValidationError):
     """Email ya existe."""
 
-    def __init__(self, email: str):
+    def __init__(self, email: EmailStr):
         super().__init__(f"El email {email} ya está registrado", "EMAIL_EXISTS")
 
 
@@ -33,7 +42,9 @@ class AccountNotFoundError(NotFoundError):
     """Cuenta no encontrada."""
 
     def __init__(self, account_id: int):
-        super().__init__(f"Cuenta con ID {account_id} no encontrada", "ACCOUNT_NOT_FOUND")
+        super().__init__(
+            f"Cuenta con ID {account_id} no encontrada", "ACCOUNT_NOT_FOUND"
+        )
 
 
 class AccountInactiveError(BusinessRuleError):
@@ -46,7 +57,9 @@ class AccountInactiveError(BusinessRuleError):
 class InsufficientFundsError(BusinessRuleError):
     """Fondos insuficientes."""
 
-    def __init__(self, account_id: int, required_amount: float, available_amount: float):
+    def __init__(
+        self, account_id: int, required_amount: float, available_amount: float
+    ):
         message = f"Fondos insuficientes en cuenta {account_id}. Requerido: {required_amount}, Disponible: {available_amount}"
         super().__init__(message, "INSUFFICIENT_FUNDS")
 
@@ -72,7 +85,10 @@ class TransactionNotFoundError(NotFoundError):
     """Transacción no encontrada."""
 
     def __init__(self, transaction_id: int):
-        super().__init__(f"Transacción con ID {transaction_id} no encontrada", "TRANSACTION_NOT_FOUND")
+        super().__init__(
+            f"Transacción con ID {transaction_id} no encontrada",
+            "TRANSACTION_NOT_FOUND",
+        )
 
 
 class InvalidTransactionAmountError(ValidationError):
@@ -86,7 +102,9 @@ class CategoryNotFoundError(NotFoundError):
     """Categoría no encontrada."""
 
     def __init__(self, category_id: int):
-        super().__init__(f"Categoría con ID {category_id} no encontrada", "CATEGORY_NOT_FOUND")
+        super().__init__(
+            f"Categoría con ID {category_id} no encontrada", "CATEGORY_NOT_FOUND"
+        )
 
 
 # Money Value Object Exceptions
@@ -101,7 +119,9 @@ class CurrencyMismatchError(ValidationError):
     """Las monedas no coinciden."""
 
     def __init__(self, currency1: str, currency2: str):
-        super().__init__(f"Las monedas no coinciden: {currency1} vs {currency2}", "CURRENCY_MISMATCH")
+        super().__init__(
+            f"Las monedas no coinciden: {currency1} vs {currency2}", "CURRENCY_MISMATCH"
+        )
 
 
 class NegativeAmountError(ValidationError):

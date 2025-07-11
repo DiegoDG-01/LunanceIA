@@ -7,7 +7,11 @@ from domain.repositories.auth_token_repository import AuthTokenRepository
 from infrastructure.config.settings import settings
 from infrastructure.security.jwt_service import JWTService
 from shared.exceptions.application import CommandValidationError
-from shared.exceptions.domain import UserNotFoundError, UserInactiveError
+from shared.exceptions.domain import (
+    UserNotFoundError,
+    UserInactiveError,
+    InvalidCredentialsError,
+)
 
 
 @dataclass
@@ -49,7 +53,7 @@ class LoginHandler:
             raise UserInactiveError()
 
         if not self.jwt_service.check_password(command.password, user.password_hash):
-            raise CommandValidationError("LoginCommand", ["Credenciales incorrectas"])
+            raise InvalidCredentialsError()
 
         access_token = self.jwt_service.create_access_token(
             user_uuid=user.uuid, expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES

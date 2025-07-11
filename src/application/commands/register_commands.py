@@ -25,7 +25,7 @@ class RegisterResponse:
 
     user_uuid: str
     name: str
-    email: str
+    email: EmailStr
     message: str
 
 
@@ -54,7 +54,7 @@ class RegisterHandler:
         password_hash = self.jwt_service.get_password_hash(command.password)
         user = User.create_new(
             name=command.name.strip(),
-            email=command.email.lower(),
+            email=command.email,
             password_hash=password_hash,
         )
 

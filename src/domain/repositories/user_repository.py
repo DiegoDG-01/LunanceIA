@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
+from pydantic import EmailStr
+
 from domain.entities.user import User
 
 
@@ -18,7 +20,7 @@ class UserRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_email(self, email: str) -> Optional[User]:
+    async def get_by_email(self, email: EmailStr) -> Optional[User]:
         """Get user by email"""
         pass
 
@@ -34,7 +36,7 @@ class UserRepository(ABC):
 
     @abstractmethod
     async def deactivate(self, user: User) -> User:
-        """This method is used to soft delete a user"""
+        """This method is used to softly delete a user"""
         pass
 
     @abstractmethod
@@ -44,6 +46,6 @@ class UserRepository(ABC):
         pass
 
     @abstractmethod
-    async def exist_by_email(self, email: str) -> bool:
+    async def exist_by_email(self, email: EmailStr) -> bool:
         """Check if user exists by email"""
         pass
