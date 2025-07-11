@@ -28,12 +28,13 @@ app.include_router(api_router, prefix="/api/v2")
 # Temporalmente, mantener las rutas viejas como backup
 # app.include_router(old_api_router, prefix="/api/v1/old")
 
+
 @app.get("/")
 async def root():
     return {
         "message": "Lunance API - Clean Architecture",
         "version": "2.0.0",
-        "architecture": "Clean Architecture + DDD"
+        "architecture": "Clean Architecture + DDD",
     }
 
 

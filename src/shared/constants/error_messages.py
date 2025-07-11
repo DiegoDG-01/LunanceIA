@@ -1,4 +1,5 @@
 """Mensajes de error estandarizados."""
+
 # Errores de autenticación
 AUTH_INVALID_CREDENTIALS = "Credenciales inválidas"
 AUTH_TOKEN_EXPIRED = "Token expirado"

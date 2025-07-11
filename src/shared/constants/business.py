@@ -1,10 +1,11 @@
 """Constantes de reglas de negocio."""
+
 from decimal import Decimal
 
 # Límites monetarios
-MAX_TRANSACTION_AMOUNT = Decimal('1000000.00')  # 1 millón
-MIN_TRANSACTION_AMOUNT = Decimal('0.01')  # 1 centavo
-MAX_ACCOUNT_BALANCE = Decimal('10000000.00')  # 10 millones
+MAX_TRANSACTION_AMOUNT = Decimal("1000000.00")  # 1 millón
+MIN_TRANSACTION_AMOUNT = Decimal("0.01")  # 1 centavo
+MAX_ACCOUNT_BALANCE = Decimal("10000000.00")  # 10 millones
 
 # Límites de texto
 MAX_ACCOUNT_NAME_LENGTH = 100

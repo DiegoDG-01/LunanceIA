@@ -1,4 +1,5 @@
 """Utilidades para manejo de fechas."""
+
 from datetime import date, timedelta
 from typing import Tuple, List
 import calendar
@@ -66,4 +67,3 @@ def is_same_month(date1: date, date2: date) -> bool:
 def days_in_month(year: int, month: int) -> int:
     """Obtiene la cantidad de días en un mes."""
     return calendar.monthrange(year, month)[1]
-

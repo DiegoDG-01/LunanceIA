@@ -1,4 +1,5 @@
 """Excepciones de la capa de aplicación."""
+
 from shared.exceptions.base import LunanceException, ValidationError
 
 
@@ -14,7 +15,9 @@ class QueryValidationError(ValidationError):
     """Error de validación en query."""
 
     def __init__(self, query_name: str, validation_errors: list):
-        message = f"Error de validación en query {query_name}: {', '.join(validation_errors)}"
+        message = (
+            f"Error de validación en query {query_name}: {', '.join(validation_errors)}"
+        )
         super().__init__(message, "QUERY_VALIDATION_ERROR")
 
 

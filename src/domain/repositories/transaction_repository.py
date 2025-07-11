@@ -28,45 +28,41 @@ class TransactionRepository(ABC):
 
     @abstractmethod
     def get_by_account(
-            self,
-            account_id: int,
-            user_uuid: str,
-            limit: int = 100,
-            offset: int = 0
+        self, account_id: int, user_uuid: str, limit: int = 100, offset: int = 0
     ) -> List[Transaction]:
         """Get transactions by account id and user uuid"""
         pass
 
     @abstractmethod
     def get_by_date_range(
-            self,
-            user_uuid: str,
-            start_date: date,
-            end_date: date,
-            account_id: Optional[int] = None,
-            transaction_type: Optional[TransactionType] = None,
+        self,
+        user_uuid: str,
+        start_date: date,
+        end_date: date,
+        account_id: Optional[int] = None,
+        transaction_type: Optional[TransactionType] = None,
     ) -> List[Transaction]:
         """Get transactions by date range and user uuid"""
         pass
 
     @abstractmethod
     def get_by_category(
-            self,
-            user_uuid: str,
-            category_id: int,
-            start_date: date,
-            end_date: date,
+        self,
+        user_uuid: str,
+        category_id: int,
+        start_date: date,
+        end_date: date,
     ) -> List[Transaction]:
         """Get transactions by category id and user uuid"""
         pass
 
     @abstractmethod
     def get_by_type(
-            self,
-            user_uuid: str,
-            transaction_type: TransactionType,
-            limit: int = 100,
-            offset: int = 0
+        self,
+        user_uuid: str,
+        transaction_type: TransactionType,
+        limit: int = 100,
+        offset: int = 0,
     ) -> List[Transaction]:
         """Get transactions by transaction type and user uuid"""
         pass
@@ -83,26 +79,22 @@ class TransactionRepository(ABC):
 
     @abstractmethod
     def get_total_by_type(
-            self, user_uuid: str,
-            transaction_type: TransactionType,
-            start_date: date,
-            end_date: date,
-            account_id: Optional[int] = None
+        self,
+        user_uuid: str,
+        transaction_type: TransactionType,
+        start_date: date,
+        end_date: date,
+        account_id: Optional[int] = None,
     ) -> float:
         """Get total amount by transaction type and user uuid"""
         pass
 
     @abstractmethod
     def get_monthly_summary(
-            self,
-            user_uuid: str,
-            year: int,
-            month: int,
-            account_id: Optional[int] = None
+        self, user_uuid: str, year: int, month: int, account_id: Optional[int] = None
     ) -> List[dict]:
         """Get monthly summary by user uuid"""
         pass
-
 
     @abstractmethod
     def count_by_user(self, user_uuid: str) -> int:

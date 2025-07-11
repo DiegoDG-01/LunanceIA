@@ -21,9 +21,18 @@ class Transaction:
     creation_date: Optional[datetime] = None
 
     @classmethod
-    def create_new(cls, user_id: int, account_id: int, category_id: Optional[int], transaction_type: TransactionType,
-                   amount: Money, transaction_date: date, description: Optional[str] = None,
-                   notes: Optional[str] = None, tags: Optional[List[int]] = None):
+    def create_new(
+        cls,
+        user_id: int,
+        account_id: int,
+        category_id: Optional[int],
+        transaction_type: TransactionType,
+        amount: Money,
+        transaction_date: date,
+        description: Optional[str] = None,
+        notes: Optional[str] = None,
+        tags: Optional[List[int]] = None,
+    ):
         if transaction_date is None:
             transaction_date = date.today()
         return cls(
@@ -37,7 +46,7 @@ class Transaction:
             description=description,
             notes=notes,
             tags=tags,
-            creation_date=datetime.now()
+            creation_date=datetime.now(),
         )
 
     def is_income(self):

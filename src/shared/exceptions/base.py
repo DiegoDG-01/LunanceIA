@@ -1,4 +1,6 @@
 """Excepciones base del sistema."""
+
+
 class LunanceException(Exception):
     """Excepción base de la aplicación."""
 
@@ -10,19 +12,23 @@ class LunanceException(Exception):
 
 class ValidationError(LunanceException):
     """Error de validación."""
+
     pass
 
 
 class NotFoundError(LunanceException):
     """Error cuando no se encuentra un recurso."""
+
     pass
 
 
 class UnauthorizedError(LunanceException):
     """Error de autorización."""
+
     pass
 
 
 class BusinessRuleError(LunanceException):
     """Error de regla de negocio."""
+
     pass

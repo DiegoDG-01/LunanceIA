@@ -9,6 +9,7 @@ from domain.objects.enums import TransactionType
 @dataclass
 class CreateTransactionDTO:
     """DTO para crear transacción."""
+
     user_id: int
     account_id: int
     category_id: int
@@ -23,6 +24,7 @@ class CreateTransactionDTO:
 @dataclass
 class UpdateTransactionDTO:
     """DTO para actualizar transacción."""
+
     transaction_id: int
     user_id: int
     description: Optional[str] = None
@@ -33,6 +35,7 @@ class UpdateTransactionDTO:
 @dataclass
 class TransactionResponseDTO:
     """DTO para respuesta de transacción."""
+
     transaction_id: int
     user_id: int
     account_id: int
