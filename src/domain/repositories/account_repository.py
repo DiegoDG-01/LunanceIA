@@ -18,14 +18,14 @@ class AccountRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_id_and_user_uuid(
-        self, account_id: int, user_uuid: str
+    async def get_by_uuid_and_user_id(
+        self, account_uuid: str, user_id: int
     ) -> Optional[Account]:
         """Get account by id and user uuid"""
         pass
 
     @abstractmethod
-    async def get_by_user_uuid(self, user_uuid: str) -> List[Account]:
+    async def get_by_user_id(self, user_id: int) -> List[Account]:
         """Get all accounts by user uuid"""
         pass
 
@@ -40,13 +40,8 @@ class AccountRepository(ABC):
         pass
 
     @abstractmethod
-    async def deactivate(self, account: Account) -> Account:
-        """This method is used to soft delete an account"""
-        pass
-
-    @abstractmethod
-    async def activate(self, account: Account) -> Account:
-        """This method is used to activate an account"""
+    async def switch_status(self, account: Account) -> Account:
+        """Switch account status"""
         pass
 
     @abstractmethod
