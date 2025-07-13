@@ -9,15 +9,13 @@ from domain.objects.enums import AccountType
 class AccountResponse(BaseModel):
     """Schema de respuesta para cuenta."""
 
-    account_id: int = Field(..., description="ID de la cuenta")
-    # user_id: int = Field(..., description="ID del usuario")
+    account_uuid: str = Field(..., description="Identificador unico de la cuenta")
     name: str = Field(..., description="Nombre de la cuenta")
     account_type: AccountType = Field(..., description="Tipo de cuenta")
     bank: Optional[str] = Field(None, description="Banco")
     current_balance: Decimal = Field(..., description="Balance actual")
     currency: str = Field(..., description="Moneda")
     is_active: bool = Field(..., description="Estado de la cuenta")
-    creation_date: datetime = Field(..., description="Fecha de creación")
 
     class Config:
         from_attributes = True

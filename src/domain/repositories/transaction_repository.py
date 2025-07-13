@@ -28,7 +28,7 @@ class TransactionRepository(ABC):
 
     @abstractmethod
     def get_by_account(
-        self, account_id: int, user_uuid: str, limit: int = 100, offset: int = 0
+        self, account_uuid: str, user_id: int, limit: int = 100, offset: int = 0
     ) -> List[Transaction]:
         """Get transactions by account id and user uuid"""
         pass

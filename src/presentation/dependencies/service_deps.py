@@ -11,6 +11,7 @@ from infrastructure.database.repositories.sqlalchemy_transaction_repository impo
 from domain.services.account_service import AccountService
 from application.commands.create_account_command import CreateAccountHandler
 from application.commands.update_account_command import UpdateAccountHandler
+from application.commands.state_account_command import StateAccountHandler
 from application.commands.delete_account_command import DeleteAccountHandler
 from application.queries.get_user_accounts_query import GetUserAccountsHandler
 from application.queries.get_account_by_id_query import GetAccountByIdHandler
@@ -75,6 +76,13 @@ def get_delete_account_handler(
     account_service: AccountService = Depends(get_account_service),
 ) -> DeleteAccountHandler:
     return DeleteAccountHandler(account_repo, transaction_repo, account_service)
+
+
+def get_state_account_handler(
+    account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
+    account_service: AccountService = Depends(get_account_service),
+) -> StateAccountHandler:
+    return StateAccountHandler(account_repo, account_service)
 
 
 # Query Handler Dependencies

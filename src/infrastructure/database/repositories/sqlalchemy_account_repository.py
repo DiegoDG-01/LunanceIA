@@ -22,8 +22,8 @@ class SQLAlchemyAccountRepository(AccountRepository):
         Convert a SQLAlchemy AccountModel to a domain Account entity
         """
         return Account(
-            account_id=model.account_id,
-            user_uuid=model.user_uuid,
+            uuid=model.uuid,
+            user_id=model.user_id,
             name=model.name,
             account_type=model.type,
             bank=model.bank,
@@ -40,8 +40,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         Convert a domain Account entity to a SQLAlchemy AccountModel
         """
         return AccountModel(
-            user_uuid=entity.user_uuid,
-            account_id=entity.account_id,
+            user_id=entity.user_id,
             name=entity.name,
             type=entity.account_type,
             bank=entity.bank,
@@ -68,15 +67,15 @@ class SQLAlchemyAccountRepository(AccountRepository):
             return None
         return self._model_to_entity(model)
 
-    async def get_by_id_and_user_uuid(
-        self, account_id: int, user_uuid: str
+    async def get_by_uuid_and_user_id(
+        self, account_uuid: str, user_id: int
     ) -> Optional[Account]:
         model = (
             self.db.query(AccountModel)
             .filter(
                 and_(
-                    AccountModel.account_id == account_id,
-                    AccountModel.user_uuid == user_uuid,
+                    AccountModel.uuid == account_uuid,
+                    AccountModel.user_id == user_id,
                 )
             )
             .first()
@@ -85,11 +84,9 @@ class SQLAlchemyAccountRepository(AccountRepository):
             return None
         return self._model_to_entity(model)
 
-    async def get_by_user_uuid(self, user_uuid: str) -> List[Account]:
+    async def get_by_user_id(self, user_id: int) -> List[Account]:
         models = (
-            self.db.query(AccountModel)
-            .filter(AccountModel.user_uuid == user_uuid)
-            .all()
+            self.db.query(AccountModel).filter(AccountModel.user_id == user_id).all()
         )
         return [self._model_to_entity(model) for model in models]
 
@@ -108,7 +105,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
     async def update(self, account: Account) -> Account:
         model = (
             self.db.query(AccountModel)
-            .filter(AccountModel.account_id == account.account_id)
+            .filter(AccountModel.uuid == account.uuid)
             .first()
         )
 
@@ -131,7 +128,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         """Elimina completamente una cuenta de la base de datos."""
         result = (
             self.db.query(AccountModel)
-            .filter(AccountModel.account_id == account.account_id)
+            .filter(AccountModel.uuid == account.uuid)
             .delete()
         )
         if not result:
@@ -139,12 +136,6 @@ class SQLAlchemyAccountRepository(AccountRepository):
         self.db.commit()
         return result > 0
 
-    async def activate(self, account: Account) -> Account:
-        """Activa una cuenta."""
-        account.activate()  # Método del dominio
-        return await self.update(account)
-
-    async def deactivate(self, account: Account) -> Account:
-        """Desactiva una cuenta."""
-        account.deactivate()  # Método del dominio
+    async def switch_status(self, account: Account) -> Account:
+        account.is_active = not account.is_active
         return await self.update(account)
