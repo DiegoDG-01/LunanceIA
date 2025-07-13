@@ -68,7 +68,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         return self._model_to_entity(model)
 
     async def get_by_uuid_and_user_id(
-        self, account_uuid: str, user_id: id
+        self, account_uuid: str, user_id: int
     ) -> Optional[Account]:
         model = (
             self.db.query(AccountModel)

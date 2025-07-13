@@ -8,7 +8,6 @@ from domain.services.account_service import AccountService
 class StateAccountCommand:
     account_uuid: str
     user_id: int
-    status: bool
 
 
 class StateAccountHandler:

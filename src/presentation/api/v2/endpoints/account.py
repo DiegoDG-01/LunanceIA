@@ -159,7 +159,6 @@ async def activate_account(
     command = StateAccountCommand(
         account_uuid=account_uuid,
         user_id=current_user.id,
-        status=True,
     )
 
     try:
