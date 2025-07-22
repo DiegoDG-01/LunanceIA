@@ -146,6 +146,9 @@ HTTP_CODES_ERRORS = {
         "BUSINESS_RULE_VIOLATION": "Violación de regla de negocio",
         "VALIDATION_INVALID_AMOUNT": "Monto inválido",
         "VALIDATION_INVALID_CURRENCY": "Moneda inválida",
+        "GEMINI_PROCESSING_ERROR": "Error procesando imagen con Gemini",
+        "GEMINI_API_ERROR": "Error de API de Gemini",
+        "VALIDATION_INVALID_IMAGE": "Imagen no válida o no procesable",
     },
     "en": {
         # Códigos HTTP genéricos
@@ -178,6 +181,9 @@ HTTP_CODES_ERRORS = {
         "BUSINESS_RULE_VIOLATION": "Business rule violation",
         "VALIDATION_INVALID_AMOUNT": "Invalid amount",
         "VALIDATION_INVALID_CURRENCY": "Invalid currency",
+        "GEMINI_PROCESSING_ERROR": "Error processing image with Gemini",
+        "GEMINI_API_ERROR": "Gemini API error",
+        "VALIDATION_INVALID_IMAGE": "Invalid or unprocessable image",
     },
 }
 

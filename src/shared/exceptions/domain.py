@@ -1,5 +1,10 @@
 from pydantic import EmailStr
-from shared.exceptions.base import ValidationError, NotFoundError, BusinessRuleError
+from shared.exceptions.base import (
+    ValidationError,
+    NotFoundError,
+    BusinessRuleError,
+    LunanceException,
+)
 
 
 # User Exceptions
@@ -129,3 +134,31 @@ class NegativeAmountError(ValidationError):
 
     def __init__(self, amount: float):
         super().__init__(f"Cantidad negativa no permitida: {amount}", "NEGATIVE_AMOUNT")
+
+
+class GeminiProcessingError(LunanceException):
+    """Error al procesar imagen con Gemini"""
+
+    def __init__(self, message: str = "Error procesando imagen con Gemini"):
+        super().__init__(message)
+
+
+class GeminiInvalidResponseError(LunanceException):
+    """Respuesta inválida de Gemini"""
+
+    def __init__(self, message: str = "Gemini devolvió una respuesta inválida"):
+        super().__init__(message)
+
+
+class GeminiAPIError(LunanceException):
+    """Error de comunicación con Gemini API"""
+
+    def __init__(self, message: str = "Error comunicándose con Gemini API"):
+        super().__init__(message)
+
+
+class InvalidImageError(LunanceException):
+    """Imagen inválida o no procesable"""
+
+    def __init__(self, message: str = "La imagen proporcionada no es válida"):
+        super().__init__(message)

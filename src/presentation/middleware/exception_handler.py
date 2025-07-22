@@ -31,6 +31,10 @@ from shared.exceptions.domain import (
     InvalidCurrencyError,
     CurrencyMismatchError,
     NegativeAmountError,
+    GeminiAPIError,
+    GeminiProcessingError,
+    GeminiInvalidResponseError,
+    InvalidImageError,
 )
 from presentation.schemas.responses.error import StandardErrorResponse, ErrorDetail
 from shared.constants.validation_messages import (
@@ -79,6 +83,14 @@ def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
         return "VALIDATION_INVALID_AMOUNT", 400
     elif isinstance(exc, (InvalidCurrencyError, CurrencyMismatchError)):
         return "VALIDATION_INVALID_CURRENCY", 400
+
+    # Errores de API Gemini
+    elif isinstance(exc, (GeminiProcessingError, GeminiInvalidResponseError)):
+        return "GEMINI_PROCESSING_ERROR", 422
+    elif isinstance(exc, GeminiAPIError):
+        return "GEMINI_API_ERROR", 503  # Service unavailable
+    elif isinstance(exc, InvalidImageError):
+        return "VALIDATION_INVALID_IMAGE", 400
 
     # Error genérico del sistema (500)
     else:
