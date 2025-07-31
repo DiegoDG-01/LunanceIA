@@ -48,7 +48,15 @@ logger = logging.getLogger(__name__)
 
 
 def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
-    """Mapea una excepción a su código de error y status HTTP correspondiente."""
+    """
+    Map a domain or system exception to a standardized error code and HTTP status.
+    
+    Parameters:
+        exc (Exception): The exception instance to map.
+    
+    Returns:
+        tuple[str, int]: A tuple containing the error code and corresponding HTTP status code.
+    """
 
     # Excepciones de autenticación y autorización (401)
     if isinstance(exc, (InvalidCredentialsError, UnauthorizedError)):
@@ -100,7 +108,11 @@ def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
 async def lunance_exception_handler(
     request: Request, exc: LunanceException
 ) -> JSONResponse:
-    """Manejador para excepciones personalizadas de Lunance."""
+    """
+    Handles custom Lunance exceptions and returns a standardized JSON error response.
+    
+    The handler maps the exception to an error code and HTTP status, logs the error, detects the user's language from the request, translates the error message, and constructs a consistent error response.
+    """
     error_code, status_code = map_exception_to_error_code(exc)
 
     # Log del error para debugging
@@ -124,7 +136,11 @@ async def lunance_exception_handler(
 async def validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
-    """Manejador para errores de validación de FastAPI/Pydantic."""
+    """
+    Handle FastAPI/Pydantic validation errors and return a standardized, localized error response.
+    
+    Extracts validation errors, translates each message based on the user's language, and returns a JSON response with detailed error information and a main validation error message.
+    """
     logger.warning(f"Validation error: {exc.errors()}")
 
     # Detectar idioma del usuario
@@ -172,7 +188,11 @@ async def validation_exception_handler(
 async def http_exception_handler(
     request: Request, exc: Union[HTTPException, StarletteHTTPException]
 ) -> JSONResponse:
-    """Manejador para HTTPException estándar."""
+    """
+    Handle standard HTTP exceptions and return a standardized JSON error response.
+    
+    Maps the HTTP status code to a predefined error code, translates the error message based on the user's language, and returns a consistent error response structure with the original HTTP status code.
+    """
     logger.warning(f"HTTP Exception: {exc.status_code} - {exc.detail}")
 
     # Mapear códigos HTTP a códigos de error
@@ -205,7 +225,12 @@ async def http_exception_handler(
 
 
 async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Manejador para excepciones no controladas."""
+    """
+    Handles uncaught exceptions and returns a standardized internal server error response in the user's language.
+    
+    Returns:
+        JSONResponse: A JSON response with HTTP status 500 and a translated error message.
+    """
     logger.error(
         f"Unhandled exception: {type(exc).__name__} - {str(exc)}", exc_info=exc
     )

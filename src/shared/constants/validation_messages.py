@@ -192,16 +192,18 @@ def translate_validation_message(
     error_type: str, field_name: str = None, language: str = "es", **context
 ) -> str:
     """
-    Traduce un mensaje de error de validación al idioma especificado.
-
-    Args:
-        error_type: Tipo de error de Pydantic
-        field_name: Nombre del campo (opcional)
-        language: Idioma de traducción ("es" o "en")
-        **context: Contexto adicional para formatear el mensaje
-
+    Translates a Pydantic validation error message into the specified language, formatting it with provided context.
+    
+    If a field-specific message exists for the given field name, it is returned; otherwise, the general error type message is used. Defaults to Spanish if the language is unsupported. If message formatting fails due to missing context, the unformatted template is returned.
+    
+    Parameters:
+        error_type (str): The Pydantic error type to translate.
+        field_name (str, optional): The name of the field associated with the error.
+        language (str, optional): The target language code ("es" or "en"). Defaults to "es".
+        **context: Additional variables for message formatting.
+    
     Returns:
-        Mensaje traducido al idioma especificado
+        str: The localized and formatted validation error message.
     """
     # Validar idioma
     if language not in ["es", "en"]:
@@ -228,14 +230,14 @@ def translate_validation_message(
 
 def get_http_code_error_message(code: str, language: str = "es") -> str:
     """
-    Obtiene el mensaje de error para un código de estado HTTP.
-
-    Args:
-        code: Código de estado HTTP
-        language: Idioma ("es" o "en")
-
+    Return the localized error message for a given HTTP status or application-specific error code.
+    
+    Parameters:
+        code (str): The HTTP status or application-specific error code.
+        language (str, optional): Language code ("es" or "en"). Defaults to "es".
+    
     Returns:
-        Mensaje de error traducido
+        str: The translated error message, or the default validation error message if the code is not found.
     """
     if language not in ["es", "en"]:
         language = "es"
@@ -247,13 +249,13 @@ def get_http_code_error_message(code: str, language: str = "es") -> str:
 
 def get_main_validation_message(language: str = "es") -> str:
     """
-    Obtiene el mensaje principal de errores de validación.
-
-    Args:
-        language: Idioma ("es" o "en")
-
+    Return the main validation errors summary message in the specified language.
+    
+    Parameters:
+    	language (str): Language code ("es" for Spanish or "en" for English). Defaults to "es".
+    
     Returns:
-        Mensaje principal traducido
+    	str: Localized main validation errors summary message.
     """
     if language not in ["es", "en"]:
         language = "es"
