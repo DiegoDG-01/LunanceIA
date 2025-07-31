@@ -1,6 +1,11 @@
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
+from application.commands.update_transaction_command import (
+    UpdateTransactionCommandHandler,
+)
+from application.queries.get_transactions_query import GetTransactionsHandler
+from infrastructure.external_services.gemini import GeminiService
 from infrastructure.database.connection import get_db
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
@@ -12,6 +17,17 @@ from domain.services.account_service import AccountService
 from application.commands.create_account_command import CreateAccountHandler
 from application.commands.update_account_command import UpdateAccountHandler
 from application.commands.state_account_command import StateAccountHandler
+from application.commands.create_transaction_command import (
+    CreateTransactionHandler,
+)
+from application.commands.delete_transaction_command import (
+    DeleteTransactionHandler,
+)
+from domain.repositories.transaction_repository import TransactionRepository
+
+from application.queries.get_transaction_by_uuid_query import (
+    GetTransactionByUuidHandler,
+)
 from application.commands.delete_account_command import DeleteAccountHandler
 from application.queries.get_user_accounts_query import GetUserAccountsHandler
 from application.queries.get_account_by_id_query import GetAccountByIdHandler
@@ -47,6 +63,10 @@ def get_transaction_repository(
     db: Session = Depends(get_db),
 ) -> SQLAlchemyTransactionRepository:
     return SQLAlchemyTransactionRepository(db)
+
+
+def get_gemini_service() -> GeminiService:
+    return GeminiService()
 
 
 # Service Dependencies
@@ -92,10 +112,43 @@ def get_user_accounts_handler(
     return GetUserAccountsHandler(account_repo)
 
 
+def get_transactions_handler(
+    transaction_repo: SQLAlchemyTransactionRepository = Depends(
+        get_transaction_repository
+    ),
+) -> GetTransactionsHandler:
+    return GetTransactionsHandler(transaction_repo)
+
+
+def get_transaction_by_uuid_handler(
+    transaction_repository: TransactionRepository = Depends(get_transaction_repository),
+) -> GetTransactionByUuidHandler:
+    return GetTransactionByUuidHandler(transaction_repository)
+
+
 def get_account_by_id_handler(
     account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
 ) -> GetAccountByIdHandler:
     return GetAccountByIdHandler(account_repo)
+
+
+def get_create_transaction_handler(
+    user_repo: SQLAlchemyUserRepository = Depends(get_user_repository),
+    account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
+    transaction_repo: SQLAlchemyTransactionRepository = Depends(
+        get_transaction_repository
+    ),
+) -> CreateTransactionHandler:
+    return CreateTransactionHandler(user_repo, account_repo, transaction_repo)
+
+
+def get_delete_transaction_handler(
+    user_repo: SQLAlchemyUserRepository = Depends(get_user_repository),
+    transaction_repo: SQLAlchemyTransactionRepository = Depends(
+        get_transaction_repository
+    ),
+) -> DeleteTransactionHandler:
+    return DeleteTransactionHandler(transaction_repo, user_repo)
 
 
 def get_auth_token_repository(db: Session = Depends(get_db)) -> AuthTokenRepository:
@@ -122,6 +175,12 @@ def get_register_handler(
     jwt_service: JWTService = Depends(get_jwt_service),
 ) -> RegisterHandler:
     return RegisterHandler(user_repo, jwt_service)
+
+
+def get_update_transaction_handler(
+    transaction_repository: TransactionRepository = Depends(get_transaction_repository),
+) -> UpdateTransactionCommandHandler:
+    return UpdateTransactionCommandHandler(transaction_repository)
 
 
 def get_refresh_token_handler(
