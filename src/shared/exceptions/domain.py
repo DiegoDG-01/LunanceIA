@@ -133,6 +133,12 @@ class NegativeAmountError(ValidationError):
     """Monto negativo no permitido."""
 
     def __init__(self, amount: float):
+        """
+        Initialize the exception for a negative amount value.
+        
+        Parameters:
+            amount (float): The negative amount that triggered the exception.
+        """
         super().__init__(f"Cantidad negativa no permitida: {amount}", "NEGATIVE_AMOUNT")
 
 
@@ -140,6 +146,9 @@ class GeminiProcessingError(LunanceException):
     """Error al procesar imagen con Gemini"""
 
     def __init__(self, message: str = "Error procesando imagen con Gemini"):
+        """
+        Initialize a GeminiProcessingError with an optional custom error message.
+        """
         super().__init__(message)
 
 
@@ -147,6 +156,12 @@ class GeminiInvalidResponseError(LunanceException):
     """Respuesta inválida de Gemini"""
 
     def __init__(self, message: str = "Gemini devolvió una respuesta inválida"):
+        """
+        Initialize a GeminiInvalidResponseError with an optional custom message.
+        
+        Parameters:
+            message (str): Custom error message describing the invalid response from Gemini. Defaults to "Gemini devolvió una respuesta inválida".
+        """
         super().__init__(message)
 
 
@@ -154,6 +169,12 @@ class GeminiAPIError(LunanceException):
     """Error de comunicación con Gemini API"""
 
     def __init__(self, message: str = "Error comunicándose con Gemini API"):
+        """
+        Initialize a GeminiAPIError with an optional custom error message.
+        
+        Parameters:
+            message (str): Custom error message describing the API communication error. Defaults to "Error comunicándose con Gemini API".
+        """
         super().__init__(message)
 
 
@@ -161,4 +182,10 @@ class InvalidImageError(LunanceException):
     """Imagen inválida o no procesable"""
 
     def __init__(self, message: str = "La imagen proporcionada no es válida"):
+        """
+        Initialize the exception for invalid or unprocessable images.
+        
+        Parameters:
+            message (str): Optional custom error message describing the image validation failure.
+        """
         super().__init__(message)
