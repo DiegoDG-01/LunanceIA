@@ -1,6 +1,9 @@
 from typing import Optional
+from datetime import datetime
 from dataclasses import dataclass
 
+from domain.objects.money import Money
+from domain.entities.transaction import TransactionType
 from application.dto.transaction_dto import TransactionResponseDTO
 from shared.exceptions.domain import TransactionNotFoundError
 
@@ -30,32 +33,45 @@ class UpdateTransactionCommandHandler:
 
         if command.description is not None:
             transaction.description = command.description
+
         if command.notes is not None:
             transaction.notes = command.notes
+
         if command.category_id is not None:
             transaction.category_id = command.category_id
+
         if command.transaction_type is not None:
-            transaction.transaction_type = command.transaction_type
+            try:
+                transaction.transaction_type = TransactionType(command.transaction_type)
+            except ValueError:
+                raise ValueError(
+                    f"Invalid transaction type: {command.transaction_type}"
+                )
+
         if command.amount is not None:
-            from domain.objects.money import Money
-
             transaction.amount = Money(amount=command.amount, currency="MXN")
-        if command.transaction_date is not None:
-            from datetime import datetime
 
+        if command.transaction_date is not None:
             if isinstance(command.transaction_date, str):
                 transaction.transaction_date = datetime.strptime(
                     command.transaction_date, "%Y-%m-%d"
                 ).date()
             else:
                 transaction.transaction_date = command.transaction_date
-        # Actualizar la transacción
-        self.transaction_repository.update(transaction)
 
-        # Obtener la transacción con detalles de cuenta para el response
-        result = self.transaction_repository.get_by_uuid_with_account_details(
-            transaction.uuid, command.user_id
-        )
+        try:
+            self.transaction_repository.update(transaction)
+        except Exception as e:
+            raise TransactionNotFoundError(f"Error updating transaction: {e}")
+
+        try:
+            result = self.transaction_repository.get_by_uuid_with_account_details(
+                transaction.uuid, command.user_id
+            )
+        except Exception as e:
+            raise TransactionNotFoundError(
+                f"Failed to retrieve updated transaction: {str(e)}"
+            )
 
         if not result:
             raise TransactionNotFoundError(command.transaction_uuid)

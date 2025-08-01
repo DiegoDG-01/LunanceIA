@@ -35,7 +35,7 @@ class CreateTransactionHandler:
         dto = command.dto
         money = Money(dto.amount, dto.currency)
 
-        transaction = dto.transaction_date or date.today()
+        transaction_date = dto.transaction_date or date.today()
 
         user = await self.user_repository.get_by_id(dto.user_id)
         if not user or not user.is_active:
@@ -53,20 +53,16 @@ class CreateTransactionHandler:
             category_id=dto.category_id,
             transaction_type=dto.transaction_type,
             amount=money,
-            transaction_date=transaction,
+            transaction_date=transaction_date,
             description=dto.description,
             notes=dto.notes,
         )
 
         transaction = self.transaction_repository.create(transaction)
 
-        return TransactionResponseDTO(
-            uuid=transaction.uuid,
-            category_id=transaction.category_id,
-            transaction_type=transaction.transaction_type,
-            amount=transaction.amount.amount,
-            transaction_date=transaction.transaction_date,
-            description=transaction.description,
-            notes=transaction.notes,
-            creation_date=transaction.creation_date,
+        return TransactionResponseDTO.from_entity(
+            transaction,
+            account.name,
+            account.account_type,
+            account.bank,
         )
