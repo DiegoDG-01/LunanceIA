@@ -7,7 +7,10 @@ from fastapi import (
     HTTPException,
     status,
     Response,
+    Request,
 )
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from infrastructure.external_services.gemini import GeminiService
 
@@ -60,10 +63,13 @@ from shared.exceptions.domain import (
 )
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/", response_model=list[TransactionResponse])
+@limiter.limit("100/minute")
 async def get_transactions(
+    request: Request,
     # 📥 QUERY PARAMETERS: Recibe filtros del HTTP request
     skip: int = Query(0, ge=0, description="Saltar N transacciones"),
     limit: int = Query(100, ge=1, le=1000, description="Máximo de resultados"),
@@ -103,7 +109,9 @@ async def get_transactions(
 
 
 @router.get("/{transaction_uuid}", response_model=TransactionResponse)
+@limiter.limit("100/minute")
 async def get_transaction_by_uuid(
+    request: Request,
     transaction_uuid: str,
     current_user: User = Depends(get_current_user),
     handler: GetTransactionByUuidHandler = Depends(get_transaction_by_uuid_handler),
@@ -115,21 +123,23 @@ async def get_transaction_by_uuid(
 
 
 @router.post("/", response_model=TransactionResponse)
+@limiter.limit("50/minute")
 async def create_transaction(
-    request: CreateTransactionRequest,
+    request: Request,
+    transaction_request: CreateTransactionRequest,
     current_user: User = Depends(get_current_user),
     handler: CreateTransactionHandler = Depends(get_create_transaction_handler),
 ):
     # Convertir request → DTO
     dto = CreateTransactionDTO(
-        account_uuid=request.account_uuid,
+        account_uuid=transaction_request.account_uuid,
         user_id=current_user.id,
-        category_id=request.category_id,
-        transaction_type=request.transaction_type,
-        amount=request.amount,
-        description=request.description,
-        notes=request.notes,
-        transaction_date=request.transaction_date,
+        category_id=transaction_request.category_id,
+        transaction_type=transaction_request.transaction_type,
+        amount=transaction_request.amount,
+        description=transaction_request.description,
+        notes=transaction_request.notes,
+        transaction_date=transaction_request.transaction_date,
     )
 
     command = CreateTransactionCommand(dto=dto)
@@ -139,7 +149,9 @@ async def create_transaction(
 
 
 @router.post("/image", response_model=TransactionResponse)
+@limiter.limit("10/minute")  # Más restrictivo por ser procesamiento de imagen
 async def create_transaction_from_image(
+    request: Request,
     file: UploadFile = File(...),
     account_uuid: str = Form(...),
     current_user: User = Depends(get_current_user),
@@ -189,21 +201,23 @@ async def create_transaction_from_image(
 
 
 @router.put("/{transaction_uuid}", response_model=TransactionResponse)
+@limiter.limit("30/minute")
 async def update_transaction(
+    request: Request,
     transaction_uuid: str,
-    request: UpdateTransactionRequest,
+    update_request: UpdateTransactionRequest,
     current_user: User = Depends(get_current_user),
     handler: UpdateTransactionCommandHandler = Depends(get_update_transaction_handler),
 ):
     command = UpdateTransactionCommand(
         transaction_uuid=transaction_uuid,
         user_id=current_user.id,
-        description=request.description,
-        notes=request.notes,
-        category_id=request.category_id,
-        transaction_type=request.transaction_type,
-        amount=request.amount,
-        transaction_date=request.transaction_date,
+        description=update_request.description,
+        notes=update_request.notes,
+        category_id=update_request.category_id,
+        transaction_type=update_request.transaction_type,
+        amount=update_request.amount,
+        transaction_date=update_request.transaction_date,
     )
 
     try:
@@ -224,7 +238,9 @@ async def update_transaction(
 
 
 @router.delete("/{transaction_uuid}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("20/minute")
 async def delete_transaction(
+    request: Request,
     transaction_uuid: str,
     current_user: User = Depends(get_current_user),
     handler: DeleteTransactionHandler = Depends(get_delete_transaction_handler),

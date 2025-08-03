@@ -10,7 +10,7 @@ from infrastructure.database.repositories.sqlalchemy_user_repository import (
 )
 from infrastructure.config.settings import settings
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v2/auth/login")
 
 
 async def get_current_user(
