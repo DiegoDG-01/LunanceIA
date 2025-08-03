@@ -1,5 +1,5 @@
-from google import genai
 import json
+from google import genai
 from google.genai import types
 from typing import Optional
 from decimal import Decimal
@@ -47,9 +47,16 @@ class GeminiService:
 
         # 1. Validar imagen
         if not image_data or len(image_data) == 0 or not isinstance(image_data, bytes):
-            raise InvalidImageError("La imagen proporcionada no es valida")
+            raise InvalidImageError("The image provided is not valid")
 
-        # 2. Enviar a Gemini
+        # 2. Check image size (e.g. 2.5MB)
+        max_image_size = 2.5 * 1024 * 1024
+        if len(image_data) > max_image_size:
+            raise InvalidImageError(
+                "The image exceeds the maximum size allowed (2.5MB)"
+            )
+
+        # 3. Send image to Gemini
         try:
             response = self.client.models.generate_content(
                 model=settings.GEMINI_MODEL_ID,
@@ -57,15 +64,24 @@ class GeminiService:
                 contents=types.Part.from_bytes(data=image_data, mime_type="image/jpeg"),
             )
         except Exception as e:
-            raise GeminiAPIError(f"Error en la llamada a Gemini: {e}")
+            raise GeminiAPIError(f"Error calling Gemini API: {str(e)}")
 
-        # 3. Parsear respuesta JSON
+        # 4. Parse JSON response
         try:
-            text_to_json = response.text.replace("`", "").replace("json", "")
-            data = json.loads(text_to_json)
+            import re
+
+            response_text = response.text.strip()
+            if response_text.startswith("```"):
+                json_match = re.match(
+                    r"```(?:json)?\s*\n(.*?)\n```", response_text, re.DOTALL
+                )
+                if json_match:
+                    response_text = json_match.group(1)
+
+            data = json.loads(response_text)
         except (json.JSONDecodeError, ValueError):
             # Fallback si Gemini no responde en JSON válido
-            raise GeminiInvalidResponseError("Gemini devolvió una respuesta inválida")
+            raise GeminiInvalidResponseError("Gemini returned an invalid JSON response")
 
         # 4. Validar respuesta
         if data.get("error"):
