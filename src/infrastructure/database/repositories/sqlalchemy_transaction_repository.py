@@ -19,14 +19,14 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
 
     def _models_to_entity_with_account(
         self, transaction_model: TransactionModel, account_model: AccountModel
-    ) -> tuple:
+    ) -> tuple[Transaction, str, AccountType, Optional[str]]:
         transaction = self._model_to_entity(transaction_model)
         return transaction, account_model.name, account_model.type, account_model.bank
 
     def _model_to_entity(self, model: TransactionModel) -> Transaction:
         """Convierte modelo SQLAlchemy a entidad de dominio."""
         return Transaction(
-            id=None,
+            id=model.id,
             uuid=model.uuid,
             user_id=model.user_id,
             account_id=model.account_id,

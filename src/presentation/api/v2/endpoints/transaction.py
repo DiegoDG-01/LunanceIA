@@ -49,6 +49,15 @@ from application.commands.update_transaction_command import (
     UpdateTransactionCommandHandler,
 )
 from presentation.dependencies.service_deps import get_update_transaction_handler
+from shared.exceptions.domain import (
+    GeminiInvalidResponseError,
+    GeminiProcessingError,
+    GeminiAPIError,
+    InvalidImageError,
+    AccountNotFoundError,
+    UserNotFoundError,
+    TransactionNotFoundError,
+)
 
 router = APIRouter()
 
@@ -64,7 +73,7 @@ async def get_transactions(
         None, description="Tipo de transacción"
     ),
     category_id: Optional[int] = Query(None, gt=0, description="ID de categoría"),
-    account_uuid: Optional[str] = Query(None, gt=0, description="ID de cuenta"),
+    account_uuid: Optional[str] = Query(None, description="UUID de la cuenta"),
     # 🔐 DEPENDENCIAS: Inyección automática de FastAPI
     current_user: User = Depends(get_current_user),
     handler: GetTransactionsHandler = Depends(get_transactions_handler),
@@ -87,7 +96,7 @@ async def get_transactions(
     )
 
     # ⚙️ Ejecutar el caso de uso
-    transactions = await handler.handle(query)
+    transactions = handler.handle(query)
 
     # 📤 Convertir DTOs → Response schema para HTTP
     return [TransactionResponse(**transaction.__dict__) for transaction in transactions]
@@ -140,13 +149,24 @@ async def create_transaction_from_image(
     if not file:
         raise HTTPException(status_code=400, detail="No file provided")
 
-        # 1. Leer imagen
+    # 1. Leer imagen
     image_data = await file.read()
 
     # 2. Procesar con Gemini
-    gemini_result = await gemini_service.extract_transaction_data(image_data)
+    try:
+        gemini_result = await gemini_service.extract_transaction_data(image_data)
+    except InvalidImageError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except GeminiAPIError:
+        raise HTTPException(
+            status_code=502, detail="External service temporarily unavailable"
+        )
+    except GeminiInvalidResponseError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except GeminiProcessingError as e:
+        raise HTTPException(status_code=422, detail=str(e))
 
-    # 3. Crear DTO combinando Gemini + request
+    # 3. Create DTO combining Gemini + request
     dto = CreateTransactionDTO(
         user_id=current_user.id,
         account_uuid=account_uuid,
@@ -162,7 +182,7 @@ async def create_transaction_from_image(
         # 4. Ejecutar mismo comando
         command = CreateTransactionCommand(dto=dto)
         result = await handler.handle(command)
-    except ValueError as e:
+    except (ValueError, AccountNotFoundError, UserNotFoundError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     return TransactionResponse(**result.__dict__)
@@ -186,8 +206,21 @@ async def update_transaction(
         transaction_date=request.transaction_date,
     )
 
-    updated_transaction = handler.handle(command)
-    return TransactionResponse(**updated_transaction.__dict__)
+    try:
+        updated_transaction = handler.handle(command)
+        return TransactionResponse(**updated_transaction.__dict__)
+    except TransactionNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Transaction not found or access denied",
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error updating transaction",
+        )
 
 
 @router.delete("/{transaction_uuid}", status_code=status.HTTP_204_NO_CONTENT)

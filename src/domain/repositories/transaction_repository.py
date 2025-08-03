@@ -93,9 +93,7 @@ class TransactionRepository(ABC):
         pass
 
     @abstractmethod
-    def update(
-        self, transaction_uuid: str, user_id: int, updates: dict
-    ) -> Optional[Transaction]:
+    def update(self, transaction: Transaction) -> Optional[Transaction]:
         """Update transaction"""
         pass
 
