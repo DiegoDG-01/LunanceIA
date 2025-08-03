@@ -60,9 +60,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
 
     async def get_by_id(self, account_id: int) -> Optional[Account]:
         model = (
-            self.db.query(AccountModel)
-            .filter(AccountModel.account_id == account_id)
-            .first()
+            self.db.query(AccountModel).filter(AccountModel.id == account_id).first()
         )
         if model is None:
             return None
