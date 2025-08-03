@@ -22,6 +22,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         Convert a SQLAlchemy AccountModel to a domain Account entity
         """
         return Account(
+            id=model.id,
             uuid=model.uuid,
             user_id=model.user_id,
             name=model.name,

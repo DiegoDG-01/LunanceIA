@@ -8,7 +8,7 @@ from domain.objects.enums import AccountType
 
 @dataclass
 class Account:
-    # account_id: Optional[int]
+    id: Optional[int]
     uuid: Optional[str]
     user_id: int
     name: str
