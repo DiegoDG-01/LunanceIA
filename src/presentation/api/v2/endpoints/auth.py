@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from domain.entities.user import User
 from presentation.schemas.requests.auth import (
@@ -37,16 +39,20 @@ from shared.exceptions.base import ValidationError
 from shared.exceptions.domain import InvalidCredentialsError
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/register", response_model=RegisterResponse)
+@limiter.limit("3/hour")  # 3 registros por hora por IP
 async def register(
-    request: RegisterRequest, handler: RegisterHandler = Depends(get_register_handler)
+    request: Request,
+    register_request: RegisterRequest,
+    handler: RegisterHandler = Depends(get_register_handler),
 ):
     command = RegisterCommand(
-        name=request.name,
-        email=request.email,
-        password=request.password,
+        name=register_request.name,
+        email=register_request.email,
+        password=register_request.password,
     )
 
     try:
@@ -66,7 +72,8 @@ async def register(
 
 
 @router.get("/me", response_model=UserInfoResponse)
-async def me(current_user: User = Depends(get_current_active_user)):
+@limiter.limit("60/minute")
+async def me(request: Request, current_user: User = Depends(get_current_active_user)):
     return UserInfoResponse(
         user_uuid=current_user.uuid,
         name=current_user.name,
@@ -76,10 +83,13 @@ async def me(current_user: User = Depends(get_current_active_user)):
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("5/minute")
 async def login(
-    request: LoginRequest, handler: LoginHandler = Depends(get_login_handler)
+    request: Request,
+    login_request: LoginRequest,
+    handler: LoginHandler = Depends(get_login_handler),
 ):
-    command = LoginCommand(email=request.email, password=request.password)
+    command = LoginCommand(email=login_request.email, password=login_request.password)
 
     try:
         result = await handler.handle(command)
@@ -103,11 +113,13 @@ async def login(
 
 
 @router.post("/refresh", response_model=TokenResponse)
+@limiter.limit("10/minute")
 async def refresh_token(
-    request: RefreshTokenRequest,
+    request: Request,
+    refresh_request: RefreshTokenRequest,
     handler: RefreshTokenHandler = Depends(get_refresh_token_handler),
 ):
-    command = RefreshTokenCommand(refresh_token=request.refresh_token)
+    command = RefreshTokenCommand(refresh_token=refresh_request.refresh_token)
 
     try:
         result = await handler.handle(command)
@@ -121,10 +133,13 @@ async def refresh_token(
 
 
 @router.post("/logout")
+@limiter.limit("10/minute")
 async def logout(
-    request: RefreshTokenRequest, handler: LogoutHandler = Depends(get_logout_handler)
+    request: Request,
+    logout_request: RefreshTokenRequest,
+    handler: LogoutHandler = Depends(get_logout_handler),
 ):
-    command = LogoutCommand(refresh_token=request.refresh_token)
+    command = LogoutCommand(refresh_token=logout_request.refresh_token)
 
     try:
         await handler.handle(command)

@@ -7,6 +7,7 @@ from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from slowapi.errors import RateLimitExceeded
 
 from shared.exceptions.base import (
     LunanceException,
@@ -49,10 +50,10 @@ logger = logging.getLogger(__name__)
 def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
     """
     Map a domain or system exception to a standardized error code and HTTP status.
-    
+
     Parameters:
         exc (Exception): The exception instance to map.
-    
+
     Returns:
         tuple[str, int]: A tuple containing the error code and corresponding HTTP status code.
     """
@@ -109,7 +110,7 @@ async def lunance_exception_handler(
 ) -> JSONResponse:
     """
     Handles custom Lunance exceptions and returns a standardized JSON error response.
-    
+
     The handler maps the exception to an error code and HTTP status, logs the error, detects the user's language from the request, translates the error message, and constructs a consistent error response.
     """
     error_code, status_code = map_exception_to_error_code(exc)
@@ -137,7 +138,7 @@ async def validation_exception_handler(
 ) -> JSONResponse:
     """
     Handle FastAPI/Pydantic validation errors and return a standardized, localized error response.
-    
+
     Extracts validation errors, translates each message based on the user's language, and returns a JSON response with detailed error information and a main validation error message.
     """
     logger.warning(f"Validation error: {exc.errors()}")
@@ -189,7 +190,7 @@ async def http_exception_handler(
 ) -> JSONResponse:
     """
     Handle standard HTTP exceptions and return a standardized JSON error response.
-    
+
     Maps the HTTP status code to a predefined error code, translates the error message based on the user's language, and returns a consistent error response structure with the original HTTP status code.
     """
     logger.warning(f"HTTP Exception: {exc.status_code} - {exc.detail}")
@@ -226,7 +227,7 @@ async def http_exception_handler(
 async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """
     Handles uncaught exceptions and returns a standardized internal server error response in the user's language.
-    
+
     Returns:
         JSONResponse: A JSON response with HTTP status 500 and a translated error message.
     """
@@ -247,3 +248,75 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
     )
 
     return JSONResponse(status_code=500, content=error_response.model_dump())
+
+
+async def rate_limit_exceeded_handler(
+    request: Request, exc: RateLimitExceeded
+) -> JSONResponse:
+    """
+    Handle rate limit exceeded errors and return a standardized JSON error response.
+
+    Provides detailed information about the rate limit violation including the limit,
+    remaining requests, and retry-after time in the user's preferred language.
+    """
+    logger.warning(f"Rate limit exceeded for {request.client.host}: {exc.detail}")
+
+    # Detectar idioma del usuario
+    user_language = get_user_language(request)
+
+    # Traducir mensaje principal
+    main_message = get_http_code_error_message(
+        code="RATE_LIMIT_EXCEEDED", language=user_language
+    )
+
+    # Crear detalles específicos del rate limit
+    details = []
+    if hasattr(exc, "detail") and exc.detail:
+        # Extraer información del rate limit del mensaje de error
+        detail_msg = str(exc.detail)
+
+        details.append(
+            ErrorDetail(
+                loc=["rate_limit"],
+                msg=detail_msg,
+                type="rate_limit_exceeded",
+                input=None,
+            )
+        )
+
+    error_response = StandardErrorResponse(
+        error_code="RATE_LIMIT_EXCEEDED",
+        message=main_message,
+        details=details if details else None,
+    )
+
+    # Crear respuesta con headers de rate limiting
+    response = JSONResponse(status_code=429, content=error_response.model_dump())
+
+    # Agregar headers informativos si están disponibles en la excepción
+    if hasattr(exc, "retry_after") and exc.retry_after:
+        response.headers["Retry-After"] = str(exc.retry_after)
+
+    # Headers estándar de rate limiting (versión corregida y segura)
+    response.headers["X-RateLimit-Remaining"] = "0"
+
+    # Intentar extraer límite del mensaje de error de manera segura
+    try:
+        detail_str = str(exc.detail) if hasattr(exc, "detail") and exc.detail else ""
+
+        # slowapi suele tener mensajes como "Rate limit exceeded: 5 per 1 minute"
+        if ":" in detail_str and "per" in detail_str:
+            parts = detail_str.split(":")
+            if len(parts) > 1:
+                limit_part = parts[1].strip().split(" ")[0]
+                response.headers["X-RateLimit-Limit"] = limit_part
+            else:
+                response.headers["X-RateLimit-Limit"] = "Unknown"
+        else:
+            response.headers["X-RateLimit-Limit"] = "Unknown"
+
+    except Exception:
+        # Si hay cualquier error extrayendo la información, usar valor por defecto
+        response.headers["X-RateLimit-Limit"] = "Unknown"
+
+    return response

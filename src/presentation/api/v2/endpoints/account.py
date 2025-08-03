@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from domain.entities.user import User
 from presentation.schemas.requests.account import (
@@ -42,10 +44,13 @@ from application.queries.get_account_by_id_query import (
 from application.dto.account_dto import CreateAccountDTO, UpdateAccountDTO
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/", response_model=AccountListResponse)
+@limiter.limit("100/minute")
 async def get_user_accounts(
+    request: Request,
     only_active: bool = False,
     current_user: User = Depends(get_current_active_user),
     handler: GetUserAccountsHandler = Depends(get_user_accounts_handler),
@@ -62,7 +67,9 @@ async def get_user_accounts(
 
 
 @router.get("/{account_uuid}", response_model=AccountResponse)
+@limiter.limit("100/minute")
 async def get_account(
+    request: Request,
     account_uuid: str,
     current_user: User = Depends(get_current_active_user),
     handler: GetAccountByIdHandler = Depends(get_account_by_id_handler),
@@ -81,19 +88,21 @@ async def get_account(
 
 
 @router.post("/", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 async def create_account(
-    request: CreateAccountRequest,
+    request: Request,
+    account_request: CreateAccountRequest,
     current_user: User = Depends(get_current_active_user),
     handler: CreateAccountHandler = Depends(get_create_account_handler),
 ):
     """Crea una nueva cuenta."""
     dto = CreateAccountDTO(
         user_id=current_user.id,
-        name=request.name,
-        account_type=request.account_type,
-        bank=request.bank,
-        initial_balance=request.initial_balance,
-        currency=request.currency,
+        name=account_request.name,
+        account_type=account_request.account_type,
+        bank=account_request.bank,
+        initial_balance=account_request.initial_balance,
+        currency=account_request.currency,
     )
 
     command = CreateAccountCommand(dto=dto)
@@ -106,9 +115,11 @@ async def create_account(
 
 
 @router.patch("/{account_uuid}", response_model=AccountResponse)
+@limiter.limit("30/minute")
 async def update_account(
+    request: Request,
     account_uuid: str,
-    request: UpdateAccountRequest,
+    update_request: UpdateAccountRequest,
     current_user: User = Depends(get_current_active_user),
     handler: UpdateAccountHandler = Depends(get_update_account_handler),
 ):
@@ -116,9 +127,9 @@ async def update_account(
     dto = UpdateAccountDTO(
         account_uuid=account_uuid,
         user_id=current_user.id,
-        name=request.name,
-        bank=request.bank,
-        current_balance=request.current_balance,
+        name=update_request.name,
+        bank=update_request.bank,
+        current_balance=update_request.current_balance,
     )
 
     command = UpdateAccountCommand(dto=dto)
@@ -131,7 +142,9 @@ async def update_account(
 
 
 @router.delete("/{account_uuid}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/minute")
 async def delete_account(
+    request: Request,
     account_uuid: str,
     current_user: User = Depends(get_current_active_user),
     handler: DeleteAccountHandler = Depends(get_delete_account_handler),
@@ -150,7 +163,9 @@ async def delete_account(
 
 
 @router.patch("/{account_uuid}/status", response_model=AccountResponse)
+@limiter.limit("20/minute")
 async def activate_account(
+    request: Request,
     account_uuid: str,
     current_user: User = Depends(get_current_active_user),
     handler: StateAccountHandler = Depends(get_state_account_handler),
