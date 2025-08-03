@@ -8,7 +8,8 @@ from domain.objects.enums import TransactionType
 
 @dataclass
 class Transaction:
-    transaction_id: Optional[int]
+    id: Optional[int]
+    uuid: Optional[str]
     user_id: int
     account_id: int
     category_id: Optional[int]
@@ -36,7 +37,8 @@ class Transaction:
         if transaction_date is None:
             transaction_date = date.today()
         return cls(
-            transaction_id=None,
+            id=None,
+            uuid=None,
             user_id=user_id,
             account_id=account_id,
             category_id=category_id,

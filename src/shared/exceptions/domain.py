@@ -89,9 +89,9 @@ class AccountHasTransactionsError(BusinessRuleError):
 class TransactionNotFoundError(NotFoundError):
     """Transacción no encontrada."""
 
-    def __init__(self, transaction_id: int):
+    def __init__(self, transaction_uuid: str):
         super().__init__(
-            f"Transacción con ID {transaction_id} no encontrada",
+            f"Transacción con UUID {transaction_uuid} no encontrada",
             "TRANSACTION_NOT_FOUND",
         )
 

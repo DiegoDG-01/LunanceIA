@@ -1,90 +1,107 @@
+import json
 from google import genai
 from google.genai import types
-from infrastructure.config.settings import settings
-from json import loads, JSONDecodeError
+from typing import Optional
+from decimal import Decimal
+from datetime import date
 from shared.utils.prompts import LUNANCE_PROMPT
-from presentation.schemas.responses.gemini import (
-    GeminiReceipt,
-    GeminiErrorResponse,
+from domain.objects.enums import TransactionType
+from infrastructure.config.settings import settings
+from shared.exceptions.domain import (
+    GeminiProcessingError,
+    GeminiInvalidResponseError,
+    GeminiAPIError,
+    InvalidImageError,
 )
 
 
-class Gemini:
-    """
-    A Singleton class to handle interactions with the Google Gemini API.
+class GeminiTransactionResult:
+    """Resultado del procesamiento de Gemini"""
 
-    This class ensures that only one instance of the Gemini client is created
-    throughout the application's lifecycle, which is an efficient way to manage
-    API connections.
-    """
+    def __init__(
+        self,
+        amount: Decimal,
+        transaction_type: TransactionType,
+        description: Optional[str] = None,
+        notes: Optional[str] = None,
+        transaction_date: Optional[date] = None,
+        category_id: Optional[int] = None,
+    ):
+        self.amount = amount
+        self.transaction_type = transaction_type
+        self.description = description
+        self.notes = notes
+        self.transaction_date = transaction_date or date.today()
+        self.category_id = category_id
 
-    _instance = None
 
-    def __new__(cls):
-        """
-        Implements the Singleton pattern.
+class GeminiService:
+    def __init__(self):
+        # Configurar API key
+        self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
-        If an instance of the class does not exist, it creates one and initializes
-        the Gemini client with the API key from the settings. Otherwise, it returns
-        the existing instance.
-        """
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            # Initialize the Gemini client upon first instance creation.
-            cls._instance.client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        return cls._instance
+    async def extract_transaction_data(
+        self, image_data: bytes
+    ) -> GeminiTransactionResult:
+        """Extrae datos de transacción de una imagen"""
 
-    def analyze_receipt(self, image_data: bytes) -> dict | bool:
-        """
-        Analyzes a receipt image and extracts structured data as JSON.
+        # 1. Validar imagen
+        if not image_data or len(image_data) == 0 or not isinstance(image_data, bytes):
+            raise InvalidImageError("The image provided is not valid")
 
-        Args:
-            image_data: The receipt image data in bytes.
+        # 2. Check image size (e.g. 2.5MB)
+        max_image_size = 2.5 * 1024 * 1024
+        if len(image_data) > max_image_size:
+            raise InvalidImageError(
+                "The image exceeds the maximum size allowed (2.5MB)"
+            )
 
-        Returns:
-            A dictionary containing the extracted receipt data on success,
-            or False if an error occurs during the API call or JSON parsing.
-        """
+        # 3. Send image to Gemini
         try:
-            # Send the image data to the Gemini model for analysis.
-            # The system instruction guides the model to return a specific JSON format.
             response = self.client.models.generate_content(
                 model=settings.GEMINI_MODEL_ID,
                 config=types.GenerateContentConfig(system_instruction=LUNANCE_PROMPT),
                 contents=types.Part.from_bytes(data=image_data, mime_type="image/jpeg"),
             )
         except Exception as e:
-            # Handle potential exceptions during the API call (e.g., network issues).
-            print(f"Error calling Gemini API: {e}")
-            return False
+            raise GeminiAPIError(f"Error calling Gemini API: {str(e)}")
 
+        # 4. Parse JSON response
         try:
-            # Clean the response text to ensure it's valid JSON.
-            # LLMs can sometimes wrap their JSON output in markdown backticks or add "json".
-            text_to_json = response.text.replace("`", "").replace("json", "")
-            # Parse the cleaned string into a Python dictionary.
-            json_response = loads(text_to_json)
-        except JSONDecodeError as e:
-            # Handle cases where the response is not valid JSON.
-            print(f"JSON decoding failed: {e}")
-            return False
+            import re
+
+            response_text = response.text.strip()
+            if response_text.startswith("```"):
+                json_match = re.match(
+                    r"```(?:json)?\s*\n(.*?)\n```", response_text, re.DOTALL
+                )
+                if json_match:
+                    response_text = json_match.group(1)
+
+            data = json.loads(response_text)
+        except (json.JSONDecodeError, ValueError):
+            # Fallback si Gemini no responde en JSON válido
+            raise GeminiInvalidResponseError("Gemini returned an invalid JSON response")
+
+        # 4. Validar respuesta
+        if data.get("error"):
+            raise GeminiInvalidResponseError(
+                f"Gemini devolvió una respuesta inválida {data.get('error', 'Error desconocido')}"
+            )
+
+        # 5. Extraer datos
+        try:
+            return GeminiTransactionResult(
+                amount=Decimal(str(data.get("amount", 0))),
+                transaction_type=TransactionType(
+                    data.get("transaction_type", "EXPENSE")
+                ),
+                description=data.get("description"),
+                notes=data.get("notes"),
+                transaction_date=date.fromisoformat(data.get("transaction_date"))
+                if data.get("transaction_date")
+                else None,
+                category_id=None,  # Por ahora null, luego puedes agregar lógica de categorías
+            )
         except Exception as e:
-            # Handle other unexpected errors during post-processing.
-            print(f"An unexpected error occurred during response parsing: {e}")
-            return False
-
-        try:
-            GeminiReceipt.model_validate(json_response)
-            return json_response
-        except Exception:
-            try:
-                GeminiErrorResponse.model_validate(json_response)
-                return json_response
-            except Exception as e:
-                print(f"An unexpected error occurred during response validation: {e}")
-                return False
-
-
-# Create a global instance of the Gemini service for easy access across the application.
-# This leverages the Singleton pattern to ensure a single, shared client.
-gemini = Gemini()
+            raise GeminiProcessingError(f"Error procesando respuesta de Gemini: {e}")

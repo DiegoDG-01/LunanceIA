@@ -11,7 +11,6 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from shared.exceptions.base import (
     LunanceException,
     ValidationError as LunanceValidationError,
-    NotFoundError,
     UnauthorizedError,
     BusinessRuleError,
 )
@@ -65,7 +64,7 @@ def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
         return "AUTH_USER_INACTIVE", 401
 
     # Excepciones de recursos no encontrados (404)
-    elif isinstance(exc, (UserNotFoundError, NotFoundError)):
+    elif isinstance(exc, UserNotFoundError):
         return "NOT_FOUND_USER", 404
     elif isinstance(exc, AccountNotFoundError):
         return "NOT_FOUND_ACCOUNT", 404
