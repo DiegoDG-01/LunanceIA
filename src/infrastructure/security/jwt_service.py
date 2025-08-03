@@ -44,7 +44,7 @@ class JWTService:
             )
         to_encode = {"exp": expire, "sub": user_uuid, "type": "refresh"}
         encoded_jwt = jwt.encode(
-            to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
+            to_encode, settings.SECRET_KEY_REFRESH, algorithm=settings.ALGORITHM
         )
         return encoded_jwt
 
@@ -64,7 +64,7 @@ class JWTService:
     async def verify_refresh_token(self, token: str):
         try:
             payload = jwt.decode(
-                token, settings.SECRET_KEY, algorithms=settings.ALGORITHM
+                token, settings.SECRET_KEY_REFRESH, algorithms=settings.ALGORITHM
             )
             user_uuid = payload.get("sub")
             token_type = payload.get("type")
