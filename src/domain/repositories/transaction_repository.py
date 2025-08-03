@@ -27,13 +27,13 @@ class TransactionRepository(ABC):
         Delete transaction by UUID with ownership validation.
 
         Returns:
-            bool: True if deleted, False if not found or access denie
+            bool: True if deleted, False if not found or access denied
         """
 
     pass
 
     @abstractmethod
-    def get_by_id_and_user_uuid(self, id: int, user_uuid: str) -> Optional[Transaction]:
+    def get_by_id_and_user_uuid(self, id: int, user_id: int) -> Optional[Transaction]:
         """Get transaction by id and user uuid"""
         pass
 

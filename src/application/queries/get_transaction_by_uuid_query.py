@@ -1,9 +1,7 @@
 from dataclasses import dataclass
 
-from application.queries.get_transactions_query import GetTransactionsHandler
 from domain.repositories.transaction_repository import TransactionRepository
 from application.dto.transaction_dto import TransactionResponseDTO
-
 from shared.exceptions.domain import TransactionNotFoundError
 
 
@@ -17,7 +15,7 @@ class GetTransactionByUuidHandler:
     def __init__(self, transaction_repository: TransactionRepository):
         self.transaction_repository = transaction_repository
 
-    async def handle(self, query: GetTransactionsHandler) -> TransactionResponseDTO:
+    async def handle(self, query: GetTransactionByUuidQuery) -> TransactionResponseDTO:
         transaction = self.transaction_repository.get_by_uuid_with_account_details(
             query.uuid, query.user_id
         )

@@ -25,7 +25,7 @@ class Transaction:
     def create_new(
         cls,
         user_id: int,
-        account_id: Optional[int],
+        account_id: int,
         category_id: Optional[int],
         transaction_type: TransactionType,
         amount: Money,
