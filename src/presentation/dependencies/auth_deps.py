@@ -9,6 +9,8 @@ from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
 from infrastructure.config.settings import settings
+from shared.exceptions.domain import UserNotFoundError
+from shared.exceptions.base import UnauthorizedError
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v2/auth/login")
 
@@ -16,13 +18,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v2/auth/login")
 async def get_current_user(
     db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)
 ) -> User:
-    """Obtiene el usuario actual desde el token JWT."""
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
     try:
         # Decodificar JWT (usando tu lógica actual)
         payload = jwt.decode(
@@ -30,16 +25,16 @@ async def get_current_user(
         )
         user_uuid: str = payload.get("sub")
         if user_uuid is None:
-            raise credentials_exception
+            raise UnauthorizedError("Invalid token: missing user")
     except JWTError:
-        raise credentials_exception
+        raise UnauthorizedError("Invalid token: malformed or expired")
 
     # Usar repositorio para obtener usuario
     user_repo = SQLAlchemyUserRepository(db)
     user = await user_repo.get_by_uuid(user_uuid)
 
     if user is None:
-        raise credentials_exception
+        raise UserNotFoundError()
 
     return user
 
