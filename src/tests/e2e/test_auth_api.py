@@ -81,7 +81,7 @@ class TestUserRegistration:
         elif response.status_code == 409:
             # User already exists - that's fine for testing
             data = response.json()
-            assert "detail" in data
+            assert "message" in data  # Using standardized error format
     
     @pytest.mark.asyncio
     async def test_register_duplicate_email(self, http_client: httpx.AsyncClient, debug_user_data: dict):
@@ -94,7 +94,7 @@ class TestUserRegistration:
         assert response.status_code == 409, f"Duplicate email: Expected 409, got {response.status_code}"
         
         data = response.json()
-        assert "detail" in data, "Should have error detail"
+        assert "message" in data, "Should have error message"
 
 
 class TestUserAuthentication:
@@ -140,7 +140,7 @@ class TestUserAuthentication:
         assert response.status_code == 401, f"Wrong password: Expected 401, got {response.status_code}"
         
         data = response.json()
-        assert "detail" in data, "Should have error detail"
+        assert "message" in data, "Should have error message"
     
     @pytest.mark.asyncio
     async def test_login_nonexistent_user(self, http_client: httpx.AsyncClient):
@@ -154,7 +154,7 @@ class TestUserAuthentication:
         assert response.status_code == 401, f"Nonexistent user: Expected 401, got {response.status_code}"
         
         data = response.json()
-        assert "detail" in data, "Should have error detail"
+        assert "message" in data, "Should have error message"
 
 
 class TestUserProfile:
@@ -197,7 +197,7 @@ class TestUserProfile:
         assert response.status_code == 401, f"Unauthorized: Expected 401, got {response.status_code}"
         
         data = response.json()
-        assert "detail" in data, "Should have error detail"
+        assert "message" in data, "Should have error message"
     
     @pytest.mark.asyncio
     async def test_get_user_info_invalid_token(self, http_client: httpx.AsyncClient):
@@ -208,7 +208,7 @@ class TestUserProfile:
         assert response.status_code == 401, f"Invalid token: Expected 401, got {response.status_code}"
         
         data = response.json()
-        assert "detail" in data, "Should have error detail"
+        assert "message" in data, "Should have error message"
 
 
 class TestTokenRefresh:
@@ -258,7 +258,7 @@ class TestTokenRefresh:
         assert response.status_code == 401, f"Invalid refresh: Expected 401, got {response.status_code}"
         
         data = response.json()
-        assert "detail" in data, "Should have error detail"
+        assert "message" in data, "Should have error message"
     
     @pytest.mark.asyncio
     async def test_refresh_token_missing(self, http_client: httpx.AsyncClient):
@@ -270,7 +270,7 @@ class TestTokenRefresh:
         assert response.status_code in [422, 401], f"Missing refresh token: Expected 422 or 401, got {response.status_code}"
         
         data = response.json()
-        assert "detail" in data, "Should have error detail"
+        assert "message" in data, "Should have error message"
 
 
 class TestLogout:
@@ -381,7 +381,7 @@ class TestValidation:
         assert response.status_code == 422, f"Missing fields: Expected 422, got {response.status_code}"
         
         data = response.json()
-        assert "detail" in data, "Should have validation errors"
+        assert "details" in data, "Should have validation errors"
     
     @pytest.mark.asyncio
     async def test_register_invalid_email(self, http_client: httpx.AsyncClient):
@@ -396,7 +396,7 @@ class TestValidation:
         assert response.status_code == 422, f"Invalid email: Expected 422, got {response.status_code}"
         
         data = response.json()
-        assert "detail" in data, "Should have validation errors"
+        assert "details" in data, "Should have validation errors"
     
     @pytest.mark.asyncio
     async def test_register_weak_password(self, http_client: httpx.AsyncClient):
@@ -411,7 +411,7 @@ class TestValidation:
         assert response.status_code in [400, 422], f"Weak password: Expected 400 or 422, got {response.status_code}"
         
         data = response.json()
-        assert "detail" in data, "Should have validation errors"
+        assert "details" in data, "Should have validation errors"
     
     @pytest.mark.asyncio
     async def test_register_short_password(self, http_client: httpx.AsyncClient):
@@ -426,4 +426,4 @@ class TestValidation:
         assert response.status_code in [400, 422], f"Short password: Expected 400 or 422, got {response.status_code}"
         
         data = response.json()
-        assert "detail" in data, "Should have validation errors"
+        assert "details" in data, "Should have validation errors"
