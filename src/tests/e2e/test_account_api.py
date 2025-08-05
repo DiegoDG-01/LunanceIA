@@ -71,7 +71,7 @@ class TestAccountStatusToggle:
         assert response.status_code == 401, f"Unauthorized: Expected 401, got {response.status_code}"
         
         data = response.json()
-        assert "detail" in data, "Should have error detail"
+        assert "message" in data, "Should have error message"
     
     @pytest.mark.asyncio
     async def test_toggle_account_status_invalid_token(self, http_client: httpx.AsyncClient):
@@ -87,7 +87,7 @@ class TestAccountStatusToggle:
         assert response.status_code == 401, f"Invalid token: Expected 401, got {response.status_code}"
         
         data = response.json()
-        assert "detail" in data, "Should have error detail"
+        assert "message" in data, "Should have error message"
     
     @pytest.mark.asyncio
     async def test_toggle_nonexistent_account(self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens, debug_user_data: dict):
@@ -116,7 +116,7 @@ class TestAccountStatusToggle:
         assert response.status_code == 404, f"Nonexistent account: Expected 404, got {response.status_code}"
         
         data = response.json()
-        assert "detail" in data, "Should have error detail"
+        assert "message" in data, "Should have error message"
     
     @pytest.mark.asyncio
     async def test_toggle_account_invalid_uuid_format(self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens, debug_user_data: dict):
@@ -146,7 +146,7 @@ class TestAccountStatusToggle:
         assert response.status_code in [404, 422], f"Invalid UUID: Expected 404 or 422, got {response.status_code}"
         
         data = response.json()
-        assert "detail" in data, "Should have error detail"
+        assert "message" in data, "Should have error message"
 
 
 class TestAccountStatusConsistency:

@@ -31,6 +31,7 @@ class Account:
             initial_balance = Money(0, "MXN")
 
         return cls(
+            id=None,
             uuid=None,
             user_id=user_id,
             name=name,
