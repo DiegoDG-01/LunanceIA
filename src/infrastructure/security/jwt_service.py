@@ -99,7 +99,7 @@ class JWTService:
     async def revoke_refresh_token(self, token: str) -> bool:
         try:
             payload = jwt.decode(
-                token, settings.SECRET_KEY, algorithms=settings.ALGORITHM
+                token, settings.SECRET_KEY_REFRESH, algorithms=settings.ALGORITHM
             )
             user_uuid = payload.get("sub")
             token_type = payload.get("type")
