@@ -1,6 +1,6 @@
 # Lunance IA - Personal Finance Management API
 
-Lunance IA es una API REST completa para la gestión de finanzas personales construida con FastAPI y Python. Proporciona un backend robusto para el seguimiento de ingresos, gastos, presupuestos, suscripciones, metas de ahorro y recordatorios financieros.
+Lunance IA es una API REST completa para la gestión de finanzas personales construida con **Clean Architecture + Domain-Driven Design** usando FastAPI y Python. Implementa un backend empresarial robusto con separación clara de responsabilidades, patrones CQRS, y arquitectura hexagonal para el seguimiento de ingresos, gastos, presupuestos, suscripciones, metas de ahorro y recordatorios financieros.
 
 ## 🚀 Características Principales
 
@@ -24,139 +24,247 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 
 ## 🛠️ Stack Tecnológico
 
-- **Framework**: FastAPI (Python)
-- **Base de Datos**: MySQL con SQLAlchemy ORM
-- **Migraciones**: Alembic
-- **Autenticación**: JWT + OAuth2
-- **Validación**: Pydantic
-- **Seguridad**: Passlib, python-jose
+### Core Technologies
+- **Framework**: FastAPI 0.115.12
+- **Base de Datos**: MySQL con SQLAlchemy 2.0.41 ORM
+- **Migraciones**: Alembic 1.16.1
+- **Autenticación**: JWT + OAuth2 (python-jose 3.5.0)
+- **Validación**: Pydantic 2.11.5 con soporte de email
+- **Seguridad**: Passlib 1.7.4 + bcrypt 4.3.0
+- **IA**: Google Gemini API 1.22.0
+
+### Development Tools
+- **Package Manager**: uv (gestor moderno de paquetes Python)
+- **Code Quality**: Ruff 0.11.13 (linting & formatting)
+- **Testing**: pytest 8.4.1 + pytest-asyncio + httpx
+- **Pre-commit**: Hooks automáticos de calidad de código
 
 ## 📁 Estructura del Proyecto
 
 ```
 src/
 ├── main.py                 # Aplicación principal FastAPI
-├── config.py              # Configuración de la aplicación
-├── models/                # Modelos de base de datos
-│   ├── user.py           # Usuario y autenticación
-│   ├── account.py        # Cuentas financieras
-│   ├── transaction.py    # Transacciones
-│   ├── budget.py         # Presupuestos
-│   ├── subscription.py   # Suscripciones
-│   └── ...
-├── api/v1/               # Endpoints API v1
-│   ├── endpoints/        # Rutas específicas
-│   │   ├── auth.py      # Autenticación
-│   │   ├── transactions.py
-│   │   ├── users.py
-│   │   └── ...
-│   └── api.py           # Router principal
-├── core/                # Funcionalidades core
-│   ├── security.py      # Manejo de JWT y passwords
-│   └── database.py      # Configuración de BD
-└── schemas/             # Schemas Pydantic
-    └── ...
+├── domain/                 # Lógica de negocio central
+├── application/            # Casos de uso y comandos
+├── infrastructure/         # Base de datos y servicios externos
+├── presentation/           # API REST y endpoints
+├── shared/                 # Utilidades y recursos compartidos
+└── tests/                  # Pruebas unitarias e integración
 ```
+
+> 📖 **Documentación Técnica**: Para más detalles sobre la arquitectura, patrones de diseño y estructura interna, consulta [ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ## 🚀 Instalación y Configuración
 
-### Prerrequisitos
-- Python 3.8+
-- MySQL
-- pip o uv (recomendado)
+Tienes dos opciones para ejecutar Lunance IA:
 
-### 1. Clonar el repositorio
+### 🐳 Opción 1: Docker Compose (Recomendado para uso rápido)
+
+**Prerrequisitos:**
+- Docker y Docker Compose instalados
+
+**Pasos:**
+
+1. **Clonar el repositorio**
 ```bash
 git clone <repository-url>
 cd Lunance
 ```
 
-### 2. Instalar dependencias
+2. **Configurar variables de entorno**
+```bash
+cp .env.example .env
+# Editar .env y cambiar los valores CHANGE_ME
+```
+
+3. **Ejecutar con Docker Compose**
+```bash
+docker-compose up --build -d
+```
+
+4. **Verificar la instalación**
+- API: http://localhost:8000
+- Documentación: http://localhost:8000/docs
+
+> 🐳 **Para configuración detallada de Docker**: Consulta [DOCKER_SETUP.md](docs/DOCKER_SETUP.md)
+
+### 🛠️ Opción 2: Desarrollo Local
+
+**Prerrequisitos:**
+- Python 3.8+
+- Docker (para MySQL)
+- pip o uv (recomendado)
+
+**Pasos:**
+
+1. **Clonar el repositorio**
+```bash
+git clone <repository-url>
+cd Lunance
+```
+
+2. **Instalar dependencias**
 ```bash
 # Con uv (recomendado)
 uv sync
 
-# O con pip
-pip install -r requirements.txt
+# O con pip tradicional
+pip install -e .
 ```
 
-### 3. Configurar variables de entorno
-Crear un archivo `.env` en la raíz del proyecto:
-```env
-DATABASE_URL=mysql+pymysql://usuario:password@localhost:3306/lunance
-SECRET_KEY=tu_clave_secreta_muy_segura
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+3. **Configurar MySQL**
+```bash
+# Levantar MySQL con Docker
+docker run --name lunance-mysql \
+  -e MYSQL_ROOT_PASSWORD=luna_root \
+  -e MYSQL_DATABASE=lunance \
+  -e MYSQL_USER=luna \
+  -e MYSQL_PASSWORD=luna_root \
+  -p 3306:3306 \
+  -d mysql:8.0
 ```
 
-### 4. Ejecutar migraciones
+4. **Configurar variables de entorno**
+```bash
+cp .env.example .env
+# Editar .env para desarrollo local (DB_HOST=localhost)
+```
+
+5. **Ejecutar migraciones y iniciar servidor**
 ```bash
 alembic upgrade head
-```
-
-### 5. Iniciar el servidor
-```bash
-# Desarrollo
 uvicorn src.main:app --reload
-
-# Producción
-uvicorn src.main:app --host 0.0.0.0 --port 8000
 ```
+
+> 🐳 **Para gestión avanzada de contenedores**: Consulta [DOCKER_SETUP.md](docs/DOCKER_SETUP.md)
 
 ## 📖 Uso de la API
 
-### Autenticación
-```bash
-# Obtener token de acceso
-curl -X POST "http://localhost:8000/api/v1/login" \
-     -H "Content-Type: application/x-www-form-urlencoded" \
-     -d "username=tu_email@ejemplo.com&password=tu_password"
-```
+La API REST de Lunance IA v2 utiliza autenticación JWT y sigue los principios de Clean Architecture.
 
 ### Endpoints Principales
-
-- **Autenticación**: `/api/v1/login`
-- **Usuarios**: `/api/v1/users/`
-- **Transacciones**: `/api/v1/transactions/`
-- **Presupuestos**: `/api/v1/budgets/`
-- **Cuentas**: `/api/v1/accounts/`
-- **Suscripciones**: `/api/v1/subscriptions/`
+- 🔐 **Autenticación**: `/api/v2/auth/` (login, register, refresh, logout)
+- 💳 **Cuentas**: `/api/v2/account/` (CRUD completo para gestión de cuentas)
+- 💰 **Transacciones**: `/api/v2/transaction/` (próximamente)
 
 ### Documentación Interactiva
-Una vez iniciado el servidor, accede a:
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
+> 📋 **Guía Completa de API**: Para ejemplos detallados, autenticación JWT, códigos de error y flujos completos, consulta [API_USAGE.md](docs/API_USAGE.md)
+
 ## 🏗️ Arquitectura
 
-### Modelos de Datos Principales
+Lunance IA utiliza **Clean Architecture + Domain-Driven Design** para garantizar:
 
-1. **Usuario**: Gestión de usuarios con autenticación JWT
-2. **Cuenta**: Diferentes tipos de cuentas financieras
-3. **Transacción**: Registro de ingresos y gastos
-4. **Categoría**: Clasificación de transacciones
-5. **Presupuesto**: Límites de gasto por categoría y período
-6. **Suscripción**: Pagos recurrentes automatizados
-7. **Meta de Ahorro**: Objetivos financieros con seguimiento
-8. **Etiqueta**: Sistema de etiquetado personalizable
-9. **Recordatorio**: Sistema de notificaciones
+- ✅ **Separación clara de responsabilidades**
+- ✅ **Código testeable y mantenible**
+- ✅ **Escalabilidad empresarial**
+- ✅ **Flexibilidad para cambios futuros**
 
-### Características Técnicas
+### Capas Principales
 
-- **Arquitectura RESTful**: API limpia y estándar
-- **Versionado de API**: Soporte para múltiples versiones
-- **Validación de Datos**: Schemas Pydantic robustos
-- **Manejo de Errores**: Respuestas de error consistentes
-- **CORS**: Configurado para integraciones frontend
-- **Logging**: Sistema de logs para monitoreo
+- **Domain**: Lógica de negocio central (Entidades, Value Objects)
+- **Application**: Casos de uso y comandos (CQRS)
+- **Infrastructure**: Base de datos y servicios externos
+- **Presentation**: API REST y validaciones
+
+> 📖 **Documentación Completa**: Para detalles técnicos, ejemplos de código y patrones implementados, consulta [ARCHITECTURE.md](docs/ARCHITECTURE.md)
+
+## 🔒 Seguridad
+
+- **JWT Access Tokens**: Expiración de 30 minutos
+- **Refresh Tokens**: Expiración de 7 días con rotación
+- **Password Hashing**: bcrypt con salt automático
+- **OAuth2**: Flujo estándar de autenticación
+- **Validación robusta**: Schemas Pydantic en todos los endpoints
+
+## 🛠️ Flujo de Desarrollo
+
+### Calidad de Código
+```bash
+# Formateo automático
+ruff format src/
+
+# Linting
+ruff check src/
+
+# Corrección automática de issues
+ruff check src/ --fix
+```
+
+### Testing
+```bash
+# Tests E2E (disponibles - valida API completa)
+pytest src/tests/e2e/ -v
+
+# Test específico de autenticación (22 tests)
+pytest src/tests/e2e/test_auth_api.py -v
+
+# Test de flujo completo
+pytest src/tests/e2e/test_auth_api.py::TestCompleteAuthFlow -v
+
+# Tests con output detallado para debugging
+pytest src/tests/e2e/ -v -s
+
+# Tests específicos por clase
+pytest src/tests/e2e/test_auth_api.py::TestUserAuthentication -v
+```
+
+**Estado actual:**
+- ✅ **E2E Tests**: 22 tests funcionando (API coverage 100%)
+- 🚧 **Unit/Integration Tests**: En desarrollo
+- ⚠️ **Coverage**: No disponible (tests HTTP externos)
+
+> 🧪 **Documentación Completa de Tests**: Para configuración, comandos específicos y debugging, consulta [TEST USAGE](src/tests/TEST.md)
+
+### Base de Datos
+```bash
+# Crear nueva migración
+alembic revision --autogenerate -m "Descripción del cambio"
+
+# Aplicar migraciones
+alembic upgrade head
+
+# Revertir migración
+alembic downgrade -1
+
+# Ver historial de migraciones
+alembic history
+```
+
+### Desarrollo con uv
+```bash
+# Agregar nueva dependencia
+uv add fastapi
+
+# Agregar dependencia de desarrollo
+uv add --dev pytest
+
+# Actualizar dependencias
+uv sync
+
+# Crear entorno virtual
+uv venv
+
+# Activar entorno
+source .venv/bin/activate  # Linux/macOS
+# o
+.venv\Scripts\activate     # Windows
+```
 
 ## 🤝 Contribución
 
+¡Las contribuciones son bienvenidas! Este proyecto sigue estándares profesionales de desarrollo.
+
+### Inicio Rápido
 1. Fork el proyecto
 2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
 3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
 4. Push a la rama (`git push origin feature/AmazingFeature`)
 5. Abre un Pull Request
+
+> 📋 **Guía Completa**: Para configuración del entorno, estándares de código, testing y flujo de desarrollo, consulta [CONTRIBUTING.md](docs/CONTRIBUTING.md)
 
 ## 📄 Licencia
 
