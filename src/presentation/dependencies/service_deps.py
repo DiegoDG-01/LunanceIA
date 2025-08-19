@@ -146,8 +146,9 @@ def get_delete_transaction_handler(
     transaction_repo: SQLAlchemyTransactionRepository = Depends(
         get_transaction_repository
     ),
+    account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
 ) -> DeleteTransactionHandler:
-    return DeleteTransactionHandler(transaction_repo)
+    return DeleteTransactionHandler(transaction_repo, account_repo)
 
 
 def get_auth_token_repository(db: Session = Depends(get_db)) -> AuthTokenRepository:

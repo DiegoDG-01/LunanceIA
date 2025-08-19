@@ -53,10 +53,7 @@ class Account:
             raise ValueError("Currencies must be the same to update balance")
         if not self.is_active:
             raise ValueError("Account is inactive")
-        if (
-            new_balance.amount < self.current_balance.amount
-            and self.account_type != AccountType.CREDIT
-        ):
+        if new_balance.amount < 0 and self.account_type != AccountType.CREDIT_CARD:
             raise ValueError(
                 "Balance cannot be less than current balance for non-credit accounts"
             )

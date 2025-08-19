@@ -254,7 +254,7 @@ async def delete_transaction(
     """
     command = DeleteTransactionCommand(uuid=transaction_uuid, user_id=current_user.id)
 
-    deleted = handler.handle(command)
+    deleted = await handler.handle(command)
 
     if not deleted:
         raise HTTPException(
