@@ -46,9 +46,9 @@ class EmailAlreadyExistsError(ValidationError):
 class AccountNotFoundError(NotFoundError):
     """Cuenta no encontrada."""
 
-    def __init__(self, account_id: int):
+    def __init__(self, account_uuid: str):
         super().__init__(
-            f"Cuenta con ID {account_id} no encontrada", "ACCOUNT_NOT_FOUND"
+            f"Cuenta con ID {account_uuid} no encontrada", "ACCOUNT_NOT_FOUND"
         )
 
 
@@ -103,6 +103,16 @@ class InvalidTransactionAmountError(ValidationError):
         super().__init__(f"Monto de transacción inválido: {amount}", "INVALID_AMOUNT")
 
 
+class InvalidTransactionTypeError(ValidationError):
+    """Tipo de transacción inválido."""
+
+    def __init__(self, transaction_type: str):
+        super().__init__(
+            f"Tipo de transacción inválido: {transaction_type}",
+            "INVALID_TRANSACTION_TYPE",
+        )
+
+
 class CategoryNotFoundError(NotFoundError):
     """Categoría no encontrada."""
 
@@ -135,7 +145,7 @@ class NegativeAmountError(ValidationError):
     def __init__(self, amount: float):
         """
         Initialize the exception for a negative amount value.
-        
+
         Parameters:
             amount (float): The negative amount that triggered the exception.
         """
@@ -158,7 +168,7 @@ class GeminiInvalidResponseError(LunanceException):
     def __init__(self, message: str = "Gemini devolvió una respuesta inválida"):
         """
         Initialize a GeminiInvalidResponseError with an optional custom message.
-        
+
         Parameters:
             message (str): Custom error message describing the invalid response from Gemini. Defaults to "Gemini devolvió una respuesta inválida".
         """
@@ -171,7 +181,7 @@ class GeminiAPIError(LunanceException):
     def __init__(self, message: str = "Error comunicándose con Gemini API"):
         """
         Initialize a GeminiAPIError with an optional custom error message.
-        
+
         Parameters:
             message (str): Custom error message describing the API communication error. Defaults to "Error comunicándose con Gemini API".
         """
@@ -184,7 +194,7 @@ class InvalidImageError(LunanceException):
     def __init__(self, message: str = "La imagen proporcionada no es válida"):
         """
         Initialize the exception for invalid or unprocessable images.
-        
+
         Parameters:
             message (str): Optional custom error message describing the image validation failure.
         """

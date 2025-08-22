@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    ENVIRONMENT: str = "PROD"
+
     DB_HOST: str = "localhost"
     DB_PORT: str = "3306"
     DB_NAME: str

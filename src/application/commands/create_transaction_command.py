@@ -9,6 +9,7 @@ from domain.repositories.user_repository import UserRepository
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.transaction_repository import TransactionRepository
 from application.dto.transaction_dto import CreateTransactionDTO, TransactionResponseDTO
+from shared.exceptions.domain import InvalidTransactionTypeError
 
 
 @dataclass
@@ -63,7 +64,7 @@ class CreateTransactionHandler:
         elif transaction.is_income():
             new_balance = account.current_balance.add(money)
         else:
-            raise Exception("Invalid transaction type")
+            raise InvalidTransactionTypeError(transaction.transaction_type)
 
         account.update_balance(new_balance)
 
