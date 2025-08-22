@@ -48,7 +48,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/", response_model=AccountListResponse)
-@limiter.limit("100/minute")
+@limiter.limit("1000/minute")
 async def get_user_accounts(
     request: Request,
     only_active: bool = False,
@@ -67,7 +67,7 @@ async def get_user_accounts(
 
 
 @router.get("/{account_uuid}", response_model=AccountResponse)
-@limiter.limit("100/minute")
+@limiter.limit("1000/minute")
 async def get_account(
     request: Request,
     account_uuid: str,
@@ -79,16 +79,11 @@ async def get_account(
 
     account = await handler.handle(query)
 
-    if not account:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Cuenta no encontrada"
-        )
-
     return AccountResponse(**account.__dict__)
 
 
 @router.post("/", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)
-@limiter.limit("10/minute")
+@limiter.limit("1000/minute")
 async def create_account(
     request: Request,
     account_request: CreateAccountRequest,
@@ -107,15 +102,12 @@ async def create_account(
 
     command = CreateAccountCommand(dto=dto)
 
-    try:
-        account = await handler.handle(command)
-        return AccountResponse(**account.__dict__)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    account = await handler.handle(command)
+    return AccountResponse(**account.__dict__)
 
 
 @router.patch("/{account_uuid}", response_model=AccountResponse)
-@limiter.limit("30/minute")
+@limiter.limit("1000/minute")
 async def update_account(
     request: Request,
     account_uuid: str,
@@ -134,15 +126,12 @@ async def update_account(
 
     command = UpdateAccountCommand(dto=dto)
 
-    try:
-        account = await handler.handle(command)
-        return AccountResponse(**account.__dict__)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    account = await handler.handle(command)
+    return AccountResponse(**account.__dict__)
 
 
 @router.delete("/{account_uuid}", status_code=status.HTTP_204_NO_CONTENT)
-@limiter.limit("5/minute")
+@limiter.limit("1000/minute")
 async def delete_account(
     request: Request,
     account_uuid: str,
@@ -152,18 +141,15 @@ async def delete_account(
     """Elimina una cuenta."""
     command = DeleteAccountCommand(account_uuid=account_uuid, user_id=current_user.id)
 
-    try:
-        success = await handler.handle(command)
-        if not success:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Cuenta no encontrada"
-            )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    success = await handler.handle(command)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Cuenta no encontrada"
+        )
 
 
 @router.patch("/{account_uuid}/status", response_model=AccountResponse)
-@limiter.limit("20/minute")
+@limiter.limit("1000/minute")
 async def activate_account(
     request: Request,
     account_uuid: str,
@@ -176,17 +162,13 @@ async def activate_account(
         user_id=current_user.id,
     )
 
-    try:
-        account = await handler.handle(command)
-        return AccountResponse(
-            account_uuid=account.uuid,
-            name=account.name,
-            account_type=account.account_type,
-            bank=account.bank,
-            current_balance=account.current_balance.amount,
-            currency=account.current_balance.currency,
-            is_active=account.is_active,
-        )
-
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    account = await handler.handle(command)
+    return AccountResponse(
+        account_uuid=account.uuid,
+        name=account.name,
+        account_type=account.account_type,
+        bank=account.bank,
+        current_balance=account.current_balance.amount,
+        currency=account.current_balance.currency,
+        is_active=account.is_active,
+    )

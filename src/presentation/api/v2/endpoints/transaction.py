@@ -45,22 +45,12 @@ from datetime import date
 from fastapi import Query
 from domain.objects.enums import TransactionType
 
-
 from presentation.schemas.requests.transaction import UpdateTransactionRequest
 from application.commands.update_transaction_command import (
     UpdateTransactionCommand,
     UpdateTransactionCommandHandler,
 )
 from presentation.dependencies.service_deps import get_update_transaction_handler
-from shared.exceptions.domain import (
-    GeminiInvalidResponseError,
-    GeminiProcessingError,
-    GeminiAPIError,
-    InvalidImageError,
-    AccountNotFoundError,
-    UserNotFoundError,
-    TransactionNotFoundError,
-)
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -165,18 +155,8 @@ async def create_transaction_from_image(
     image_data = await file.read()
 
     # 2. Procesar con Gemini
-    try:
-        gemini_result = await gemini_service.extract_transaction_data(image_data)
-    except InvalidImageError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except GeminiAPIError:
-        raise HTTPException(
-            status_code=502, detail="External service temporarily unavailable"
-        )
-    except GeminiInvalidResponseError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    except GeminiProcessingError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+
+    gemini_result = await gemini_service.extract_transaction_data(image_data)
 
     # 3. Create DTO combining Gemini + request
     dto = CreateTransactionDTO(
@@ -190,12 +170,9 @@ async def create_transaction_from_image(
         transaction_date=gemini_result.transaction_date,
     )
 
-    try:
-        # 4. Ejecutar mismo comando
-        command = CreateTransactionCommand(dto=dto)
-        result = await handler.handle(command)
-    except (ValueError, AccountNotFoundError, UserNotFoundError) as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    # 4. Ejecutar mismo comando
+    command = CreateTransactionCommand(dto=dto)
+    result = await handler.handle(command)
 
     return TransactionResponse(**result.__dict__)
 
@@ -220,21 +197,8 @@ async def update_transaction(
         transaction_date=update_request.transaction_date,
     )
 
-    try:
-        updated_transaction = handler.handle(command)
-        return TransactionResponse(**updated_transaction.__dict__)
-    except TransactionNotFoundError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Transaction not found or access denied",
-        )
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error updating transaction",
-        )
+    updated_transaction = handler.handle(command)
+    return TransactionResponse(**updated_transaction.__dict__)
 
 
 @router.delete("/{transaction_uuid}", status_code=status.HTTP_204_NO_CONTENT)
