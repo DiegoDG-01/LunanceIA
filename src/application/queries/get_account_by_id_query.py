@@ -4,6 +4,8 @@ from typing import Optional
 from domain.repositories.account_repository import AccountRepository
 from application.dto.account_dto import AccountResponseDTO
 
+from shared.exceptions.domain import AccountNotFoundError
+
 
 @dataclass
 class GetAccountByIdQuery:
@@ -26,7 +28,7 @@ class GetAccountByIdHandler:
         )
 
         if not account:
-            return None
+            raise AccountNotFoundError(account_uuid=query.account_uuid)
 
         return AccountResponseDTO(
             account_uuid=account.uuid,

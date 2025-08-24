@@ -9,6 +9,7 @@ from domain.repositories.user_repository import UserRepository
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.transaction_repository import TransactionRepository
 from application.dto.transaction_dto import CreateTransactionDTO, TransactionResponseDTO
+from shared.exceptions.domain import InvalidTransactionTypeError
 
 
 @dataclass
@@ -45,7 +46,7 @@ class CreateTransactionHandler:
             dto.account_uuid, dto.user_id
         )
         if not account:
-            raise AccountNotFoundError(account_uuid=dto.account_uuid)
+            raise AccountNotFoundError(account_id=dto.account_uuid)
 
         transaction = Transaction.create_new(
             user_id=user.id,
@@ -57,6 +58,17 @@ class CreateTransactionHandler:
             description=dto.description,
             notes=dto.notes,
         )
+
+        if transaction.is_expense():
+            new_balance = account.current_balance.subtract(money)
+        elif transaction.is_income():
+            new_balance = account.current_balance.add(money)
+        else:
+            raise InvalidTransactionTypeError(transaction.transaction_type)
+
+        account.update_balance(new_balance)
+
+        await self.account_repository.update(account)
 
         transaction = self.transaction_repository.create(transaction)
 

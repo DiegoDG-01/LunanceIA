@@ -5,6 +5,8 @@ from typing import Optional
 from domain.objects.money import Money
 from domain.objects.enums import AccountType
 
+from shared.exceptions.domain import AccountInactiveError
+
 
 @dataclass
 class Account:
@@ -52,11 +54,8 @@ class Account:
         if new_balance.currency != self.current_balance.currency:
             raise ValueError("Currencies must be the same to update balance")
         if not self.is_active:
-            raise ValueError("Account is inactive")
-        if (
-            new_balance.amount < self.current_balance.amount
-            and self.account_type != AccountType.CREDIT
-        ):
+            raise AccountInactiveError(self.id)
+        if new_balance.amount < 0 and self.account_type != AccountType.CREDIT_CARD:
             raise ValueError(
                 "Balance cannot be less than current balance for non-credit accounts"
             )
