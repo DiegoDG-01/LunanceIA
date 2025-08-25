@@ -7,7 +7,7 @@ from domain.objects.enums import TransactionType, AccountType
 
 class TransactionResponse(BaseModel):
     uuid: str
-    category_id: Optional[int]
+    category: Optional[str]
     transaction_type: TransactionType
     amount: Decimal
     transaction_date: date

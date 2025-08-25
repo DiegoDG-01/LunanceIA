@@ -31,14 +31,13 @@ class UpdateTransactionCommandHandler:
         if not transaction:
             raise TransactionNotFoundError(command.transaction_uuid)
 
+        transaction.category_id = command.category_id
+
         if command.description is not None:
             transaction.description = command.description
 
         if command.notes is not None:
             transaction.notes = command.notes
-
-        if command.category_id is not None:
-            transaction.category_id = command.category_id
 
         if command.transaction_type is not None:
             try:
@@ -76,8 +75,10 @@ class UpdateTransactionCommandHandler:
         if not result:
             raise TransactionNotFoundError(command.transaction_uuid)
 
-        transaction_entity, account_name, account_type, account_bank = result
+        transaction_entity, account_name, account_type, account_bank, category_name = (
+            result
+        )
 
         return TransactionResponseDTO.from_entity(
-            transaction_entity, account_name, account_type, account_bank
+            transaction_entity, account_name, account_type, account_bank, category_name
         )

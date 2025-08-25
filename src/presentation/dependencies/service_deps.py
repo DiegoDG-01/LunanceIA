@@ -46,6 +46,10 @@ from domain.repositories.auth_token_repository import AuthTokenRepository
 from infrastructure.database.repositories.sqlalchemy_auth_token_repository import (
     SQLAlchemyAuthTokenRepository,
 )
+from application.queries.get_categories_query import GetCategoriesHandler
+from infrastructure.database.repositories.sqlalchemy_category_repository import (
+    SQLAlchemyCategoryRepository,
+)
 
 
 # Repository Dependencies
@@ -197,3 +201,8 @@ def get_logout_handler(
     jwt_service: JWTService = Depends(get_jwt_service),
 ) -> LogoutHandler:
     return LogoutHandler(user_repo, auth_token_repository, jwt_service)
+
+
+def get_categories_handler(db: Session = Depends(get_db)) -> GetCategoriesHandler:
+    category_repository = SQLAlchemyCategoryRepository(db)
+    return GetCategoriesHandler(category_repository)
