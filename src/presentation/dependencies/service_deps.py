@@ -20,6 +20,7 @@ from application.commands.state_account_command import StateAccountHandler
 from application.commands.create_transaction_command import (
     CreateTransactionHandler,
 )
+from domain.repositories.account_repository import AccountRepository
 from application.commands.delete_transaction_command import (
     DeleteTransactionHandler,
 )
@@ -192,8 +193,9 @@ def get_register_handler(
 
 def get_update_transaction_handler(
     transaction_repository: TransactionRepository = Depends(get_transaction_repository),
+    account_repository: AccountRepository = Depends(get_account_repository),
 ) -> UpdateTransactionCommandHandler:
-    return UpdateTransactionCommandHandler(transaction_repository)
+    return UpdateTransactionCommandHandler(transaction_repository, account_repository)
 
 
 def get_refresh_token_handler(
