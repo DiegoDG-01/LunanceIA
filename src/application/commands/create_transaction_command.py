@@ -7,6 +7,7 @@ from shared.exceptions.domain import AccountNotFoundError
 from shared.exceptions.domain import UserNotFoundError
 from domain.repositories.user_repository import UserRepository
 from domain.repositories.account_repository import AccountRepository
+from domain.repositories.category_repository import CategoryRepository
 from domain.repositories.transaction_repository import TransactionRepository
 from application.dto.transaction_dto import CreateTransactionDTO, TransactionResponseDTO
 from shared.exceptions.domain import InvalidTransactionTypeError
@@ -27,10 +28,12 @@ class CreateTransactionHandler:
         user_repository: UserRepository,
         account_repository: AccountRepository,
         transaction_repository: TransactionRepository,
+        category_repository: CategoryRepository,
     ):
         self.user_repository = user_repository
         self.account_repository = account_repository
         self.transaction_repository = transaction_repository
+        self.category_repository = category_repository
 
     async def handle(self, command: CreateTransactionCommand) -> TransactionResponseDTO:
         dto = command.dto
@@ -70,6 +73,9 @@ class CreateTransactionHandler:
 
         await self.account_repository.update(account)
 
+        category = await self.category_repository.get_by_id(dto.category_id)
+        category_name = category.name if category else None
+
         transaction = self.transaction_repository.create(transaction)
 
         return TransactionResponseDTO.from_entity(
@@ -77,4 +83,5 @@ class CreateTransactionHandler:
             account.name,
             account.account_type,
             account.bank,
+            category_name,
         )

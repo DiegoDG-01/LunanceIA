@@ -73,6 +73,12 @@ def get_gemini_service() -> GeminiService:
     return GeminiService()
 
 
+def get_category_repository(
+    db: Session = Depends(get_db),
+) -> SQLAlchemyCategoryRepository:
+    return SQLAlchemyCategoryRepository(db)
+
+
 # Service Dependencies
 def get_account_service() -> AccountService:
     return AccountService()
@@ -142,8 +148,11 @@ def get_create_transaction_handler(
     transaction_repo: SQLAlchemyTransactionRepository = Depends(
         get_transaction_repository
     ),
+    category_repo: SQLAlchemyCategoryRepository = Depends(get_category_repository),
 ) -> CreateTransactionHandler:
-    return CreateTransactionHandler(user_repo, account_repo, transaction_repo)
+    return CreateTransactionHandler(
+        user_repo, account_repo, transaction_repo, category_repo
+    )
 
 
 def get_delete_transaction_handler(
