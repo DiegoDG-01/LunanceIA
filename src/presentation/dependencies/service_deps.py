@@ -20,6 +20,7 @@ from application.commands.state_account_command import StateAccountHandler
 from application.commands.create_transaction_command import (
     CreateTransactionHandler,
 )
+from domain.repositories.account_repository import AccountRepository
 from application.commands.delete_transaction_command import (
     DeleteTransactionHandler,
 )
@@ -46,6 +47,10 @@ from domain.repositories.auth_token_repository import AuthTokenRepository
 from infrastructure.database.repositories.sqlalchemy_auth_token_repository import (
     SQLAlchemyAuthTokenRepository,
 )
+from application.queries.get_categories_query import GetCategoriesHandler
+from infrastructure.database.repositories.sqlalchemy_category_repository import (
+    SQLAlchemyCategoryRepository,
+)
 
 
 # Repository Dependencies
@@ -67,6 +72,12 @@ def get_transaction_repository(
 
 def get_gemini_service() -> GeminiService:
     return GeminiService()
+
+
+def get_category_repository(
+    db: Session = Depends(get_db),
+) -> SQLAlchemyCategoryRepository:
+    return SQLAlchemyCategoryRepository(db)
 
 
 # Service Dependencies
@@ -138,16 +149,20 @@ def get_create_transaction_handler(
     transaction_repo: SQLAlchemyTransactionRepository = Depends(
         get_transaction_repository
     ),
+    category_repo: SQLAlchemyCategoryRepository = Depends(get_category_repository),
 ) -> CreateTransactionHandler:
-    return CreateTransactionHandler(user_repo, account_repo, transaction_repo)
+    return CreateTransactionHandler(
+        user_repo, account_repo, transaction_repo, category_repo
+    )
 
 
 def get_delete_transaction_handler(
     transaction_repo: SQLAlchemyTransactionRepository = Depends(
         get_transaction_repository
     ),
+    account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
 ) -> DeleteTransactionHandler:
-    return DeleteTransactionHandler(transaction_repo)
+    return DeleteTransactionHandler(transaction_repo, account_repo)
 
 
 def get_auth_token_repository(db: Session = Depends(get_db)) -> AuthTokenRepository:
@@ -178,8 +193,9 @@ def get_register_handler(
 
 def get_update_transaction_handler(
     transaction_repository: TransactionRepository = Depends(get_transaction_repository),
+    account_repository: AccountRepository = Depends(get_account_repository),
 ) -> UpdateTransactionCommandHandler:
-    return UpdateTransactionCommandHandler(transaction_repository)
+    return UpdateTransactionCommandHandler(transaction_repository, account_repository)
 
 
 def get_refresh_token_handler(
@@ -196,3 +212,8 @@ def get_logout_handler(
     jwt_service: JWTService = Depends(get_jwt_service),
 ) -> LogoutHandler:
     return LogoutHandler(user_repo, auth_token_repository, jwt_service)
+
+
+def get_categories_handler(db: Session = Depends(get_db)) -> GetCategoriesHandler:
+    category_repository = SQLAlchemyCategoryRepository(db)
+    return GetCategoriesHandler(category_repository)

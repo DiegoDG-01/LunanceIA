@@ -38,7 +38,7 @@ class TransactionResponseDTO:
     """DTO para respuesta de transacción."""
 
     uuid: str
-    category_id: Optional[int]
+    category: Optional[str]
     transaction_type: TransactionType
     amount: Decimal
     transaction_date: date
@@ -50,11 +50,13 @@ class TransactionResponseDTO:
     account_bank: Optional[str]
 
     @classmethod
-    def from_entity(cls, transaction, account_name, account_type, account_bank):
+    def from_entity(
+        cls, transaction, account_name, account_type, account_bank, category_name
+    ):
         """Create DTO from Transaction entity."""
         return cls(
             uuid=transaction.uuid,
-            category_id=transaction.category_id,
+            category=category_name,
             transaction_type=transaction.transaction_type,
             amount=transaction.amount.amount,
             transaction_date=transaction.transaction_date,

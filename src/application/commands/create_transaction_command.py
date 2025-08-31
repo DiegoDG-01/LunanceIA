@@ -7,8 +7,10 @@ from shared.exceptions.domain import AccountNotFoundError
 from shared.exceptions.domain import UserNotFoundError
 from domain.repositories.user_repository import UserRepository
 from domain.repositories.account_repository import AccountRepository
+from domain.repositories.category_repository import CategoryRepository
 from domain.repositories.transaction_repository import TransactionRepository
 from application.dto.transaction_dto import CreateTransactionDTO, TransactionResponseDTO
+from shared.exceptions.domain import InvalidTransactionTypeError
 
 
 @dataclass
@@ -26,10 +28,12 @@ class CreateTransactionHandler:
         user_repository: UserRepository,
         account_repository: AccountRepository,
         transaction_repository: TransactionRepository,
+        category_repository: CategoryRepository,
     ):
         self.user_repository = user_repository
         self.account_repository = account_repository
         self.transaction_repository = transaction_repository
+        self.category_repository = category_repository
 
     async def handle(self, command: CreateTransactionCommand) -> TransactionResponseDTO:
         dto = command.dto
@@ -58,6 +62,24 @@ class CreateTransactionHandler:
             notes=dto.notes,
         )
 
+        if transaction.is_expense():
+            new_balance = account.current_balance.subtract(money)
+        elif transaction.is_income():
+            new_balance = account.current_balance.add(money)
+        else:
+            raise InvalidTransactionTypeError(transaction.transaction_type)
+
+        account.update_balance(new_balance)
+
+        await self.account_repository.update(account)
+
+        category = (
+            await self.category_repository.get_by_id(dto.category_id)
+            if dto.category_id
+            else None
+        )
+        category_name = category.name if category else None
+
         transaction = self.transaction_repository.create(transaction)
 
         return TransactionResponseDTO.from_entity(
@@ -65,4 +87,5 @@ class CreateTransactionHandler:
             account.name,
             account.account_type,
             account.bank,
+            category_name,
         )

@@ -9,6 +9,8 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from slowapi.errors import RateLimitExceeded
 
+from infrastructure.config.settings import settings
+
 from shared.exceptions.base import (
     LunanceException,
     ValidationError as LunanceValidationError,
@@ -35,6 +37,7 @@ from shared.exceptions.domain import (
     GeminiProcessingError,
     GeminiInvalidResponseError,
     InvalidImageError,
+    InvalidTransactionTypeError,
 )
 from presentation.schemas.responses.error import StandardErrorResponse, ErrorDetail
 from shared.constants.validation_messages import (
@@ -89,6 +92,8 @@ def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
         return "BUSINESS_RULE_VIOLATION", 400
     elif isinstance(exc, (InvalidTransactionAmountError, NegativeAmountError)):
         return "VALIDATION_INVALID_AMOUNT", 400
+    elif isinstance(exc, InvalidTransactionTypeError):
+        return "INVALID_TRANSACTION_TYPE", 400
     elif isinstance(exc, (InvalidCurrencyError, CurrencyMismatchError)):
         return "VALIDATION_INVALID_CURRENCY", 400
 
@@ -115,8 +120,11 @@ async def lunance_exception_handler(
     """
     error_code, status_code = map_exception_to_error_code(exc)
 
-    # Log del error para debugging
-    logger.error(f"LunanceException: {error_code} - {exc.message}", exc_info=exc)
+    # Error logging for development and production
+    if settings.ENVIRONMENT == "DEV":
+        logger.error(f"LunanceException: {error_code} - {exc.message}", exc_info=exc)
+    elif settings.ENVIRONMENT == "PROD":
+        logger.warning(f"LunanceException: {error_code} - {exc.message}")
 
     # Detectar idioma del usuario
     user_language = get_user_language(request)

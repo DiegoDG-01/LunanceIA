@@ -9,6 +9,7 @@ from domain.objects.money import Money
 from domain.objects.enums import TransactionType, AccountType
 from infrastructure.database.models.transaction import TransactionModel
 from infrastructure.database.models.account import AccountModel
+from infrastructure.database.models.category import CategoryModel
 
 
 class SQLAlchemyTransactionRepository(TransactionRepository):
@@ -18,10 +19,20 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         self.db = db
 
     def _models_to_entity_with_account(
-        self, transaction_model: TransactionModel, account_model: AccountModel
+        self,
+        transaction_model: TransactionModel,
+        account_model: AccountModel,
+        category_model: CategoryModel,
     ) -> tuple[Transaction, str, AccountType, Optional[str]]:
         transaction = self._model_to_entity(transaction_model)
-        return transaction, account_model.name, account_model.type, account_model.bank
+        category_name = category_model.name if category_model else None
+        return (
+            transaction,
+            account_model.name,
+            account_model.type,
+            account_model.bank,
+            category_name,
+        )
 
     def _model_to_entity(self, model: TransactionModel) -> Transaction:
         """Convierte modelo SQLAlchemy a entidad de dominio."""
@@ -112,8 +123,9 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
     ) -> List[Transaction]:
         """Obtiene todas las transacciones de un usuario con paginación."""
         results = (
-            self.db.query(TransactionModel, AccountModel)
+            self.db.query(TransactionModel, AccountModel, CategoryModel)
             .join(AccountModel, TransactionModel.account_id == AccountModel.id)
+            .outerjoin(CategoryModel, TransactionModel.category_id == CategoryModel.id)
             .filter(TransactionModel.user_id == user_id)
             .order_by(desc(TransactionModel.creation_date))
             .limit(limit)
@@ -122,8 +134,8 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         )
 
         return [
-            self._models_to_entity_with_account(transaction, acc)
-            for transaction, acc in results
+            self._models_to_entity_with_account(transaction, acc, cat)
+            for transaction, acc, cat in results
         ]
 
     def get_by_account(
@@ -209,8 +221,9 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         self, uuid: str, user_id: int
     ) -> Optional[Tuple[Transaction, str, AccountType, Optional[str]]]:
         result = (
-            self.db.query(TransactionModel, AccountModel)
+            self.db.query(TransactionModel, AccountModel, CategoryModel)
             .join(AccountModel, TransactionModel.account_id == AccountModel.id)
+            .outerjoin(CategoryModel, TransactionModel.category_id == CategoryModel.id)
             .filter(
                 and_(TransactionModel.uuid == uuid, TransactionModel.user_id == user_id)
             )
@@ -220,8 +233,10 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         if not result:
             return None
 
-        transaction_model, account_model = result
-        return self._models_to_entity_with_account(transaction_model, account_model)
+        transaction_model, account_model, category_model = result
+        return self._models_to_entity_with_account(
+            transaction_model, account_model, category_model
+        )
 
     def get_by_type(
         self,
@@ -259,8 +274,11 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             raise ValueError("Transacción no encontrada")
 
         # Actualizar campos
-        if transaction.category_id is not None:
-            model.category_id = transaction.category_id
+        # Set category_id in all cases
+        # Case 1: category_id is not None and exists id for that category
+        # Case 2: category_id is None and no category exists or user not set category
+        model.category_id = transaction.category_id
+
         if transaction.transaction_type is not None:
             model.type = transaction.transaction_type
         if transaction.amount is not None:

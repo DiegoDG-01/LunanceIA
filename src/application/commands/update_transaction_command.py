@@ -4,8 +4,10 @@ from dataclasses import dataclass
 
 from domain.objects.money import Money
 from domain.entities.transaction import TransactionType
-from application.dto.transaction_dto import TransactionResponseDTO
 from shared.exceptions.domain import TransactionNotFoundError
+from application.dto.transaction_dto import TransactionResponseDTO
+from domain.repositories.account_repository import AccountRepository
+from domain.repositories.transaction_repository import TransactionRepository
 
 
 @dataclass
@@ -21,24 +23,39 @@ class UpdateTransactionCommand:
 
 
 class UpdateTransactionCommandHandler:
-    def __init__(self, transaction_repository):
+    def __init__(
+        self,
+        transaction_repository: TransactionRepository,
+        account_repository: AccountRepository,
+    ):
         self.transaction_repository = transaction_repository
+        self.account_repository = account_repository
 
-    def handle(self, command: UpdateTransactionCommand) -> TransactionResponseDTO:
+    async def handle(self, command: UpdateTransactionCommand) -> TransactionResponseDTO:
         transaction = self.transaction_repository.get_by_uuid_and_user_id(
             command.transaction_uuid, command.user_id
         )
         if not transaction:
             raise TransactionNotFoundError(command.transaction_uuid)
 
+        account = await self.account_repository.get_by_id(transaction.account_id)
+
+        # 1. REVERTIR el efecto de la transacción original
+        if transaction.transaction_type == TransactionType.EXPENSE:
+            account.current_balance = account.current_balance.add(transaction.amount)
+        elif transaction.transaction_type == TransactionType.INCOME:
+            account.current_balance = account.current_balance.subtract(
+                transaction.amount
+            )
+
+        # 2. ACTUALIZAR los campos de la transacción
+        transaction.category_id = command.category_id
+
         if command.description is not None:
             transaction.description = command.description
 
         if command.notes is not None:
             transaction.notes = command.notes
-
-        if command.category_id is not None:
-            transaction.category_id = command.category_id
 
         if command.transaction_type is not None:
             try:
@@ -59,11 +76,22 @@ class UpdateTransactionCommandHandler:
             else:
                 transaction.transaction_date = command.transaction_date
 
+        # 3. APLICAR el efecto de la transacción actualizada
+        if transaction.is_expense():
+            account.current_balance = account.current_balance.subtract(
+                transaction.amount
+            )
+        elif transaction.is_income():
+            account.current_balance = account.current_balance.add(transaction.amount)
+
+        # 4. GUARDAR ambos: transacción y cuenta
         try:
             self.transaction_repository.update(transaction)
+            await self.account_repository.update(account)
         except Exception as e:
             raise TransactionNotFoundError(f"Error updating transaction: {e}")
 
+        # 5. OBTENER resultado para respuesta
         try:
             result = self.transaction_repository.get_by_uuid_with_account_details(
                 transaction.uuid, command.user_id
@@ -76,8 +104,10 @@ class UpdateTransactionCommandHandler:
         if not result:
             raise TransactionNotFoundError(command.transaction_uuid)
 
-        transaction_entity, account_name, account_type, account_bank = result
+        transaction_entity, account_name, account_type, account_bank, category_name = (
+            result
+        )
 
         return TransactionResponseDTO.from_entity(
-            transaction_entity, account_name, account_type, account_bank
+            transaction_entity, account_name, account_type, account_bank, category_name
         )

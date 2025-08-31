@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from domain.repositories.account_repository import AccountRepository
 from domain.services.account_service import AccountService
 
+from shared.exceptions.domain import AccountNotFoundError
+
 
 @dataclass
 class StateAccountCommand:
@@ -22,6 +24,6 @@ class StateAccountHandler:
             command.account_uuid, command.user_id
         )
         if not account:
-            raise ValueError("Cuenta no encontrada")
+            raise AccountNotFoundError(account_uuid=command.account_uuid)
 
         return await self.account_repository.switch_status(account)
