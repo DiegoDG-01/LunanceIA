@@ -10,6 +10,12 @@ class LunanceException(Exception):
         super().__init__(self.message)
 
 
+class JWTException(LunanceException):
+    """Error de JWT."""
+
+    pass
+
+
 class ValidationError(LunanceException):
     """Error de validación."""
 

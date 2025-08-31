@@ -7,6 +7,7 @@ import hashlib
 from infrastructure.config.settings import settings
 from domain.repositories.auth_token_repository import AuthTokenRepository
 from domain.repositories.user_repository import UserRepository
+from shared.exceptions.application import JWTValidationError
 
 
 class JWTService:
@@ -84,8 +85,7 @@ class JWTService:
 
             return user_uuid if is_valid else None
         except JWTError as e:
-            print(e)
-            return None
+            raise JWTValidationError(e)
         except Exception as e:
             print(e)
             return None

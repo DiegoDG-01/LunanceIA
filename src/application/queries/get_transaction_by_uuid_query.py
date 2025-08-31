@@ -24,5 +24,9 @@ class GetTransactionByUuidHandler:
             raise TransactionNotFoundError(query.uuid)
 
         return TransactionResponseDTO.from_entity(
-            transaction[0], transaction[1], transaction[2], transaction[3]
+            transaction[0],
+            transaction[1],
+            transaction[2],
+            transaction[3],
+            transaction[4],
         )

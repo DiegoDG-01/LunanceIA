@@ -12,6 +12,7 @@ from shared.exceptions.domain import (
     UserInactiveError,
     InvalidCredentialsError,
 )
+from shared.exceptions.application import JWTValidationError
 
 
 @dataclass
@@ -103,7 +104,14 @@ class RefreshTokenHandler:
                 "RefreshTokenCommand", ["Refresh token es requerido"]
             )
 
-        user_uuid = await self.jwt_service.verify_refresh_token(command.refresh_token)
+        try:
+            user_uuid = await self.jwt_service.verify_refresh_token(
+                command.refresh_token
+            )
+        except JWTValidationError:
+            raise CommandValidationError(
+                "RefreshTokenCommand", ["Refresh token invalido"]
+            )
 
         if not user_uuid:
             raise CommandValidationError(

@@ -132,6 +132,8 @@ HTTP_CODES_ERRORS = {
         # Códigos específicos de Lunance - Autenticación
         "AUTH_INVALID_CREDENTIALS": "Credenciales inválidas",
         "AUTH_USER_INACTIVE": "Usuario inactivo",
+        # JWT Validation error
+        "JWT_VALIDATION_ERROR": "Token inválido: malformado o expirado",
         # Códigos específicos de Lunance - Recursos no encontrados
         "NOT_FOUND_USER": "Usuario no encontrado",
         "NOT_FOUND_ACCOUNT": "Cuenta no encontrada",
@@ -168,6 +170,8 @@ HTTP_CODES_ERRORS = {
         # Códigos específicos de Lunance - Autenticación
         "AUTH_INVALID_CREDENTIALS": "Invalid credentials",
         "AUTH_USER_INACTIVE": "Inactive user",
+        # JWT Validation error
+        "JWT_VALIDATION_ERROR": "Invalid token: malformed or expired",
         # Códigos específicos de Lunance - Recursos no encontrados
         "NOT_FOUND_USER": "User not found",
         "NOT_FOUND_ACCOUNT": "Account not found",
