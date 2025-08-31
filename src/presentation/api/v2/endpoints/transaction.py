@@ -197,7 +197,7 @@ async def update_transaction(
         transaction_date=update_request.transaction_date,
     )
 
-    updated_transaction = handler.handle(command)
+    updated_transaction = await handler.handle(command)
     return TransactionResponse(**updated_transaction.__dict__)
 
 
