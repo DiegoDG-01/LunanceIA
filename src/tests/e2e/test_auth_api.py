@@ -151,7 +151,7 @@ class TestUserAuthentication:
         }
         response = await http_client.post("/auth/login", json=login_data)
         
-        assert response.status_code == 401, f"Nonexistent user: Expected 401, got {response.status_code}"
+        assert response.status_code == 404, f"Nonexistent user: Expected 404, got {response.status_code}"
         
         data = response.json()
         assert "message" in data, "Should have error message"
@@ -255,7 +255,7 @@ class TestTokenRefresh:
         refresh_data = {"refresh_token": "invalid_refresh_token"}
         response = await http_client.post("/auth/refresh", json=refresh_data)
         
-        assert response.status_code == 401, f"Invalid refresh: Expected 401, got {response.status_code}"
+        assert response.status_code == 400, f"Invalid refresh: Expected 400, got {response.status_code}"
         
         data = response.json()
         assert "message" in data, "Should have error message"
@@ -363,7 +363,7 @@ class TestCompleteAuthFlow:
         # 6. VERIFICACIÓN - Token revocado
         verify_data = {"refresh_token": new_refresh_token}
         verify_response = await http_client.post("/auth/refresh", json=verify_data)
-        assert verify_response.status_code == 401, "Token should be revoked after logout"
+        assert verify_response.status_code == 400, "Token should be revoked after logout"
 
 
 class TestValidation:

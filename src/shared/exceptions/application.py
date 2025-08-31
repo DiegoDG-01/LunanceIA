@@ -1,6 +1,13 @@
 """Excepciones de la capa de aplicación."""
 
-from shared.exceptions.base import LunanceException, ValidationError
+from shared.exceptions.base import LunanceException, ValidationError, JWTException
+
+
+class JWTValidationError(JWTException):
+    """Error de validación en JWT."""
+
+    def __init__(self, message: str):
+        super().__init__(message, "JWT_VALIDATION_ERROR")
 
 
 class CommandValidationError(ValidationError):
