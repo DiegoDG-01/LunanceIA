@@ -110,17 +110,17 @@ class RefreshTokenHandler:
             )
         except JWTValidationError:
             raise CommandValidationError(
-                "RefreshTokenCommand", ["Refresh token invalido"]
+                "RefreshTokenCommand", ["Refresh token inválido"]
             )
 
         if not user_uuid:
             raise CommandValidationError(
-                "RefreshTokenCommand", ["Refresh token invalido"]
+                "RefreshTokenCommand", ["Refresh token inválido"]
             )
 
         user = await self.user_repository.get_by_uuid(user_uuid)
         if not user or not user.is_active:
-            raise CommandValidationError("RefreshTokenCommand", ["User invalido"])
+            raise CommandValidationError("RefreshTokenCommand", ["User inválido"])
 
         refresh_token_hash = self.jwt_service.hash_refresh_token(command.refresh_token)
         stored_token = await self.auth_token_repository.get_refresh_token(
@@ -129,7 +129,7 @@ class RefreshTokenHandler:
 
         if not stored_token:
             raise CommandValidationError(
-                "RefreshTokenCommand", ["Refresh token invalido"]
+                "RefreshTokenCommand", ["Refresh token inválido"]
             )
 
         access_token = self.jwt_service.create_access_token(

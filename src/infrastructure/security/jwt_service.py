@@ -85,7 +85,7 @@ class JWTService:
 
             return user_uuid if is_valid else None
         except JWTError as e:
-            raise JWTValidationError(e)
+            raise JWTValidationError(str(e))
         except Exception as e:
             print(e)
             return None
