@@ -49,7 +49,7 @@ class CreateTransactionHandler:
             dto.account_uuid, dto.user_id
         )
         if not account:
-            raise AccountNotFoundError(account_id=dto.account_uuid)
+            raise AccountNotFoundError(account_uuid=dto.account_uuid)
 
         transaction = Transaction.create_new(
             user_id=user.id,
@@ -73,7 +73,11 @@ class CreateTransactionHandler:
 
         await self.account_repository.update(account)
 
-        category = await self.category_repository.get_by_id(dto.category_id)
+        category = (
+            await self.category_repository.get_by_id(dto.category_id)
+            if dto.category_id
+            else None
+        )
         category_name = category.name if category else None
 
         transaction = self.transaction_repository.create(transaction)

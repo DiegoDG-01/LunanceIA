@@ -54,7 +54,7 @@ class SQLAlchemyCategoryRepository(CategoryRepository):
     async def update(self, category: Category) -> Category:
         category_model = self.db.get(CategoryModel, category.id)
         if not category_model:
-            raise CategoryNotFoundError(f"Category with id {category.id} not found")
+            raise CategoryNotFoundError(category.id)
 
         category_model.name = category.name
         category_model.description = category.description
@@ -70,7 +70,7 @@ class SQLAlchemyCategoryRepository(CategoryRepository):
     async def delete(self, category_id: int) -> None:
         category_model = self.db.get(CategoryModel, category_id)
         if not category_model:
-            raise CategoryNotFoundError(f"Category with id {category_id} not found")
+            raise CategoryNotFoundError(category_id)
 
         self.db.delete(category_model)
         self.db.commit()

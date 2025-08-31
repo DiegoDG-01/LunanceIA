@@ -73,6 +73,8 @@ class UpdateTransactionCommandHandler:
                 transaction.transaction_date = datetime.strptime(
                     command.transaction_date, "%Y-%m-%d"
                 ).date()
+            else:
+                transaction.transaction_date = command.transaction_date
 
         # 3. APLICAR el efecto de la transacción actualizada
         if transaction.is_expense():
