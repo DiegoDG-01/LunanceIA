@@ -6,6 +6,8 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
+from infrastructure.config.settings import settings
+
 # Importar la nueva estructura
 from presentation.api.v2.router import api_router  # Nueva estructura
 from presentation.middleware.exception_handler import (
@@ -30,9 +32,16 @@ app = FastAPI(
 app.state.limiter = limiter
 
 # Configurar CORS
+if settings.ENVIRONMENT.upper() == "PROD":
+    origins = ["https://lunance.app"]  # Configurar dominio de producción
+elif settings.ENVIRONMENT.upper() == "DEV":
+    origins = ["*"]
+else:
+    raise ValueError("Invalid environment")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especificar los orígenes permitidos
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
