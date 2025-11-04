@@ -75,6 +75,7 @@ cd Lunance
 ```bash
 cp .env.example .env
 # Editar .env y cambiar los valores CHANGE_ME
+# IMPORTANTE: Configurar ENVIRONMENT=PROD para producción o ENVIRONMENT=DEV para desarrollo
 ```
 
 3. **Ejecutar con Docker Compose**
@@ -127,7 +128,9 @@ docker run --name lunance-mysql \
 4. **Configurar variables de entorno**
 ```bash
 cp .env.example .env
-# Editar .env para desarrollo local (DB_HOST=localhost)
+# Editar .env para desarrollo local:
+# - DB_HOST=localhost
+# - ENVIRONMENT=DEV (importante para CORS y logs de desarrollo)
 ```
 
 5. **Ejecutar migraciones y iniciar servidor**
@@ -178,6 +181,10 @@ Lunance IA utiliza **Clean Architecture + Domain-Driven Design** para garantizar
 - **Password Hashing**: bcrypt con salt automático
 - **OAuth2**: Flujo estándar de autenticación
 - **Validación robusta**: Schemas Pydantic en todos los endpoints
+- **CORS Configurado**: Según entorno (PROD: dominio específico, DEV: abierto)
+- **Rate Limiting**: Protección contra abuso con límites por IP y usuario
+- **Manejo de Excepciones Robusto**: Sistema estandarizado de respuestas de error
+- **Internacionalización (i18n)**: Mensajes de error en español e inglés
 
 ## 🛠️ Flujo de Desarrollo
 
