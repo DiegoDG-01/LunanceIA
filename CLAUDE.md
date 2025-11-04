@@ -1,4 +1,4 @@
-# Gemini Project Configuration
+# Claude Project Configuration
 
 ## Project Overview
 
