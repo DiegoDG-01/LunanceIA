@@ -20,19 +20,19 @@ def validate_password_strength(password: str) -> List[str]:
     errors = []
 
     if len(password) < 8:
-        errors.append("La contraseña debe tener al menos 8 caracteres")
+        errors.append("PASSWORD_TOO_SHORT")
 
     if not re.search(r"[A-Z]", password):
-        errors.append("La contraseña debe tener al menos una letra mayúscula")
+        errors.append("PASSWORD_MISSING_UPPERCASE")
 
     if not re.search(r"[a-z]", password):
-        errors.append("La contraseña debe tener al menos una letra minúscula")
+        errors.append("PASSWORD_MISSING LOWERCASE")
 
     if not re.search(r"\d", password):
-        errors.append("La contraseña debe tener al menos un número")
+        errors.append("PASSWORD_MISSING_DIGIT")
 
     if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
-        errors.append("La contraseña debe tener al menos un carácter especial")
+        errors.append("PASSWORD_MISSING_SPECIAL")
 
     return errors
 

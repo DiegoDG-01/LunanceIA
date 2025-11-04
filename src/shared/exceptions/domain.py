@@ -39,7 +39,7 @@ class EmailAlreadyExistsError(ValidationError):
     """Email ya existe."""
 
     def __init__(self, email: EmailStr):
-        super().__init__(f"El email {email} ya está registrado", "EMAIL_EXISTS")
+        super().__init__(f"El email {email} ya está registrado")
 
 
 # Account Exceptions

@@ -91,8 +91,28 @@ class UserValidator:
         from shared.utils.validations import validate_password_strength
 
         if not password:
-            raise ValidationError("La contraseña es requerida")
+            raise ValidationError(
+                message="El password es requerido",
+                details=[
+                    {
+                        "loc": ["body", "password"],
+                        "msg": "",
+                        "type": "PASSWORD_REQUIRED",
+                    }
+                ],
+            )
 
         errors = validate_password_strength(password)
         if errors:
-            raise ValidationError("; ".join(errors))
+            details = [
+                {
+                    "loc": ["body", "password"],
+                    "msg": "",
+                    "type": error_msg,
+                }
+                for error_msg in errors
+            ]
+            raise ValidationError(
+                message="La contraseña no cumple con los requisitos de seguridad",
+                details=details,
+            )
