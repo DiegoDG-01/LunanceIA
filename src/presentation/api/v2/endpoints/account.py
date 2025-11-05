@@ -102,7 +102,7 @@ async def create_account(
 
     command = CreateAccountCommand(dto=dto)
 
-    account = await handler.handle(command)
+    account = handler.handle(command)
     return AccountResponse(**account.__dict__)
 
 

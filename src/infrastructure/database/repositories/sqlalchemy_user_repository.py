@@ -37,7 +37,7 @@ class SQLAlchemyUserRepository(UserRepository):
             is_active=entity.is_active,
         )
 
-    async def create(self, user: User) -> User:
+    def create(self, user: User) -> User:
         """Crea un nuevo usuario."""
         model = self._entity_to_model(user)
         self.db.add(model)
