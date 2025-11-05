@@ -1,4 +1,5 @@
 from typing import Optional
+from sqlalchemy import exists
 from sqlalchemy.orm import Session
 
 from domain.entities.user import User
@@ -104,9 +105,9 @@ class SQLAlchemyUserRepository(UserRepository):
 
     async def exist_by_email(self, email: str) -> bool:
         """Verifica si existe un usuario con el email dado."""
-        count = self.db.query(UserModel).filter(UserModel.email == email).count()
-
-        return count > 0
+        return self.db.query(
+            exists().where(UserModel.email == email)
+        ).scalar()
 
     async def exists_by_email(self, email: str) -> bool:
         """Verifica si existe un usuario con el email dado (alias)."""
