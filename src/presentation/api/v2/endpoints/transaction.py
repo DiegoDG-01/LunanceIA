@@ -57,7 +57,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/", response_model=list[TransactionResponse])
-@limiter.limit("100/minute")
+@limiter.limit("50/minute")
 async def get_transactions(
     request: Request,
     # 📥 QUERY PARAMETERS: Recibe filtros del HTTP request
@@ -99,7 +99,7 @@ async def get_transactions(
 
 
 @router.get("/{transaction_uuid}", response_model=TransactionResponse)
-@limiter.limit("100/minute")
+@limiter.limit("50/minute")
 async def get_transaction_by_uuid(
     request: Request,
     transaction_uuid: str,
@@ -113,7 +113,7 @@ async def get_transaction_by_uuid(
 
 
 @router.post("/", response_model=TransactionResponse)
-@limiter.limit("50/minute")
+@limiter.limit("20/minute")
 async def create_transaction(
     request: Request,
     transaction_request: CreateTransactionRequest,
@@ -139,7 +139,7 @@ async def create_transaction(
 
 
 @router.post("/image", response_model=TransactionResponse)
-@limiter.limit("10/minute")  # Más restrictivo por ser procesamiento de imagen
+@limiter.limit("5/minute")  # Más restrictivo por ser procesamiento de imagen
 async def create_transaction_from_image(
     request: Request,
     file: UploadFile = File(...),
@@ -178,7 +178,7 @@ async def create_transaction_from_image(
 
 
 @router.put("/{transaction_uuid}", response_model=TransactionResponse)
-@limiter.limit("30/minute")
+@limiter.limit("15/minute")
 async def update_transaction(
     request: Request,
     transaction_uuid: str,
@@ -202,7 +202,7 @@ async def update_transaction(
 
 
 @router.delete("/{transaction_uuid}", status_code=status.HTTP_204_NO_CONTENT)
-@limiter.limit("20/minute")
+@limiter.limit("10/minute")
 async def delete_transaction(
     request: Request,
     transaction_uuid: str,

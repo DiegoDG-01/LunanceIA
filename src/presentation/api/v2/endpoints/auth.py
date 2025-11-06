@@ -35,7 +35,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/register", response_model=RegisterResponse)
-@limiter.limit("1000/minute")  # 3 registros por hora por IP
+@limiter.limit("5/hour")  # 5 registros por hora por IP
 async def register(
     request: Request,
     register_request: RegisterRequest,
@@ -57,7 +57,7 @@ async def register(
 
 
 @router.get("/me", response_model=UserInfoResponse)
-@limiter.limit("1000/minute")
+@limiter.limit("100/minute")
 async def me(request: Request, current_user: User = Depends(get_current_active_user)):
     return UserInfoResponse(
         user_uuid=current_user.uuid,
@@ -68,7 +68,7 @@ async def me(request: Request, current_user: User = Depends(get_current_active_u
 
 
 @router.post("/login", response_model=TokenResponse)
-@limiter.limit("1000/minute")
+@limiter.limit("10/minute")
 async def login(
     request: Request,
     login_request: LoginRequest,
@@ -85,7 +85,7 @@ async def login(
 
 
 @router.post("/refresh", response_model=TokenResponse)
-@limiter.limit("1000/minute")
+@limiter.limit("20/minute")
 async def refresh_token(
     request: Request,
     refresh_request: RefreshTokenRequest,
@@ -100,7 +100,7 @@ async def refresh_token(
 
 
 @router.post("/logout")
-@limiter.limit("1000/minute")
+@limiter.limit("10/minute")
 async def logout(
     request: Request,
     logout_request: RefreshTokenRequest,

@@ -59,7 +59,7 @@ app.include_router(api_router, prefix="/api/v2")
 
 
 @app.get("/")
-@limiter.limit("100/minute")
+@limiter.limit("50/minute")
 async def root(request: Request):
     return {
         "message": "Lunance API - Clean Architecture",
@@ -68,6 +68,6 @@ async def root(request: Request):
 
 
 @app.get("/health")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 async def health_check(request: Request):
     return {"status": "healthy", "version": "2.0.0", "hello": "world"}

@@ -48,7 +48,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/", response_model=AccountListResponse)
-@limiter.limit("1000/minute")
+@limiter.limit("50/minute")
 async def get_user_accounts(
     request: Request,
     only_active: bool = False,
@@ -67,7 +67,7 @@ async def get_user_accounts(
 
 
 @router.get("/{account_uuid}", response_model=AccountResponse)
-@limiter.limit("1000/minute")
+@limiter.limit("50/minute")
 async def get_account(
     request: Request,
     account_uuid: str,
@@ -83,7 +83,7 @@ async def get_account(
 
 
 @router.post("/", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)
-@limiter.limit("1000/minute")
+@limiter.limit("50/minute")
 async def create_account(
     request: Request,
     account_request: CreateAccountRequest,
@@ -107,7 +107,7 @@ async def create_account(
 
 
 @router.patch("/{account_uuid}", response_model=AccountResponse)
-@limiter.limit("1000/minute")
+@limiter.limit("50/minute")
 async def update_account(
     request: Request,
     account_uuid: str,
@@ -131,7 +131,7 @@ async def update_account(
 
 
 @router.delete("/{account_uuid}", status_code=status.HTTP_204_NO_CONTENT)
-@limiter.limit("1000/minute")
+@limiter.limit("50/minute")
 async def delete_account(
     request: Request,
     account_uuid: str,
@@ -149,7 +149,7 @@ async def delete_account(
 
 
 @router.patch("/{account_uuid}/status", response_model=AccountResponse)
-@limiter.limit("1000/minute")
+@limiter.limit("50/minute")
 async def activate_account(
     request: Request,
     account_uuid: str,
