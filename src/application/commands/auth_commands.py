@@ -48,7 +48,7 @@ class LoginHandler:
 
         user = await self.user_repository.get_by_email(command.email)
         if not user:
-            raise UserNotFoundError(email=command.email)
+            raise UserNotFoundError()
 
         if not user.is_active:
             raise UserInactiveError()

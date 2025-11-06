@@ -11,14 +11,8 @@ from shared.exceptions.base import (
 class UserNotFoundError(NotFoundError):
     """Usuario no encontrado."""
 
-    def __init__(self, user_id: int = None, email: str = None):
-        if user_id:
-            message = f"Usuario con ID {user_id} no encontrado"
-        elif email:
-            message = f"Usuario con email {email} no encontrado"
-        else:
-            message = "Usuario no encontrado"
-        super().__init__(message, "USER_NOT_FOUND")
+    def __init__(self):
+        super().__init__("User not found")
 
 
 class InvalidCredentialsError(BusinessRuleError):
