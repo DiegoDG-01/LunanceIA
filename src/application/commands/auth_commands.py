@@ -113,11 +113,6 @@ class RefreshTokenHandler:
                 "RefreshTokenCommand", ["Refresh token inválido"]
             )
 
-        if not user_uuid:
-            raise CommandValidationError(
-                "RefreshTokenCommand", ["Refresh token inválido"]
-            )
-
         user = await self.user_repository.get_by_uuid(user_uuid)
         if not user or not user.is_active:
             raise CommandValidationError("RefreshTokenCommand", ["User inválido"])

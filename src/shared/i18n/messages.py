@@ -9,6 +9,8 @@ ERROR_MESSAGES = {
         "PASSWORD_MISSING_LOWERCASE": "La contraseña debe incluir al menos una minúscula",
         "PASSWORD_MISSING_DIGIT": "La contraseña debe incluir al menos un número",
         "PASSWORD_MISSING_SPECIAL": "La contraseña debe incluir al menos un carácter especial",
+
+        "REFRESH_TOKEN_INVALID": "El token de refresco es inválido",
     },
     "en": {
         "PASSWORD_TOO_SHORT": "Password must be at least 8 characters",
@@ -16,5 +18,7 @@ ERROR_MESSAGES = {
         "PASSWORD_MISSING_LOWERCASE": "Password must include at least one lowercase letter",
         "PASSWORD_MISSING_DIGIT": "Password must include at least one number",
         "PASSWORD_MISSING_SPECIAL": "Password must include at least one special character",
+
+        "REFRESH_TOKEN_INVALID": "Refresh token is invalid",
     },
 }
