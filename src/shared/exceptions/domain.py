@@ -18,8 +18,8 @@ class UserNotFoundError(NotFoundError):
 class InvalidCredentialsError(BusinessRuleError):
     """Credenciales inválidas."""
 
-    def __init__(self):
-        super().__init__("Las credenciales son inválidas", "INVALID_CREDENTIALS")
+    def __init__(self, type):
+        super().__init__(f"Invalid credentials for {type}")
 
 
 class UserInactiveError(BusinessRuleError):

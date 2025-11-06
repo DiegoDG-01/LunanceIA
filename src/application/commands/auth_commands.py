@@ -48,13 +48,13 @@ class LoginHandler:
 
         user = await self.user_repository.get_by_email(command.email)
         if not user:
-            raise UserNotFoundError()
+            raise InvalidCredentialsError("email")
 
         if not user.is_active:
             raise UserInactiveError()
 
         if not self.jwt_service.check_password(command.password, user.password_hash):
-            raise InvalidCredentialsError()
+            raise InvalidCredentialsError("password")
 
         access_token = self.jwt_service.create_access_token(
             user_uuid=user.uuid, expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES
