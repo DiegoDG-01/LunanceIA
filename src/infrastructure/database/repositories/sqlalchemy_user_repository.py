@@ -105,9 +105,7 @@ class SQLAlchemyUserRepository(UserRepository):
 
     async def exist_by_email(self, email: str) -> bool:
         """Verifica si existe un usuario con el email dado."""
-        return self.db.query(
-            exists().where(UserModel.email == email)
-        ).scalar()
+        return self.db.query(exists().where(UserModel.email == email)).scalar()
 
     async def exists_by_email(self, email: str) -> bool:
         """Verifica si existe un usuario con el email dado (alias)."""

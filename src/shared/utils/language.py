@@ -7,9 +7,9 @@ from fastapi import Request
 def detect_language_from_request(request: Request) -> str:
     """
     Detects the user's preferred language from a FastAPI request.
-    
+
     Checks for a supported language code ("es" or "en") in the query parameter `lang`, then in the `Accept-Language` header, and defaults to "es" if neither is found.
-    
+
     Returns:
         str: The detected language code ("es" or "en").
     """
@@ -43,9 +43,9 @@ def detect_language_from_request(request: Request) -> str:
 def get_user_language(request: Optional[Request] = None) -> str:
     """
     Return the user's language code, defaulting to Spanish ("es") if no request is provided.
-    
+
     If a FastAPI request is given, the language is determined from the request's query parameters or headers. Otherwise, Spanish ("es") is returned.
-     
+
     Returns:
         str: The language code, either "es" or "en".
     """

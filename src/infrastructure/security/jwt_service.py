@@ -28,9 +28,7 @@ class JWTService:
         if expires_in:
             expire = now + timedelta(minutes=expires_in)
         else:
-            expire = now + timedelta(
-                minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-            )
+            expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         to_encode = {"exp": expire, "iat": now, "sub": user_uuid}
 
         encoded_jwt = jwt.encode(
