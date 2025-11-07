@@ -407,7 +407,7 @@ class TestTokenRefresh:
 
         # Wait a moment to ensure timestamp changes
         import asyncio
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(1)
 
         refresh_data = {"refresh_token": auth_tokens.refresh_token}
         response = await http_client.post("/auth/refresh", json=refresh_data)

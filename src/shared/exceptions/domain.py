@@ -42,7 +42,7 @@ class AccountNotFoundError(NotFoundError):
 
     def __init__(self, account_uuid: str):
         super().__init__(
-            f"Cuenta con ID {account_uuid} no encontrada", "ACCOUNT_NOT_FOUND"
+            f"Cuenta con ID {account_uuid} no encontrada"
         )
 
 
