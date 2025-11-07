@@ -11,6 +11,8 @@ from fastapi import (
 )
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from PIL import Image, UnidentifiedImageError
+import io
 
 from infrastructure.external_services.gemini import GeminiService
 
@@ -153,6 +155,16 @@ async def create_transaction_from_image(
 
     # 1. Leer imagen
     image_data = await file.read()
+
+    try:
+        # Intentar abrir la imagen con PIL
+        image = Image.open(io.BytesIO(image_data))
+        # Verificar que realmente se puede cargar la imagen
+        image.verify()
+    except UnidentifiedImageError:
+        raise HTTPException(status_code=400, detail="Invalid image format")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal server error")
 
     # 2. Procesar con Gemini
 
