@@ -85,8 +85,7 @@ class TransactionNotFoundError(NotFoundError):
 
     def __init__(self, transaction_uuid: str):
         super().__init__(
-            f"Transacción con UUID {transaction_uuid} no encontrada",
-            "TRANSACTION_NOT_FOUND",
+            f"Transacción con UUID {transaction_uuid} no encontrada"
         )
 
 

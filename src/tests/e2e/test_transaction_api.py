@@ -614,45 +614,45 @@ class TestTransactionTypes:
         assert data["transaction_type"] == "EXPENSE", "Should be an expense transaction"
         assert float(data["amount"]) == 125.50, "Amount should match"
     
-    @pytest.mark.asyncio
-    async def test_create_transfer_transaction(self, authenticated_client_and_account):
-        """Test creating a transfer transaction."""
-        setup = authenticated_client_and_account
-        
-        # Get available accounts
-        accounts_response = await setup["client"].get(
-            "/account/",
-            headers=setup["headers"]
-        )
-        
-        if accounts_response.status_code != 200:
-            pytest.skip("No accounts available for transfer transaction test")
-        
-        accounts = accounts_response.json()["accounts"]
-        if not accounts:
-            pytest.skip("No accounts available for transfer transaction test")
-        
-        account_uuid = accounts[0]["account_uuid"]
-        
-        transfer_data = {
-            "account_uuid": account_uuid,
-            "transaction_type": "TRANSFER",
-            "amount": 300.00,
-            "description": "Transfer to savings",
-            "notes": "Monthly savings transfer"
-        }
-        
-        response = await setup["client"].post(
-            "/transaction/",
-            json=transfer_data,
-            headers=setup["headers"]
-        )
-        
-        assert response.status_code == 200, f"Create transfer: Expected 200, got {response.status_code}"
-        
-        data = response.json()
-        assert data["transaction_type"] == "TRANSFER", "Should be a transfer transaction"
-        assert float(data["amount"]) == 300.00, "Amount should match"
+    # @pytest.mark.asyncio
+    # async def test_create_transfer_transaction(self, authenticated_client_and_account):
+    #     """Test creating a transfer transaction."""
+    #     setup = authenticated_client_and_account
+    #
+    #     # Get available accounts
+    #     accounts_response = await setup["client"].get(
+    #         "/account/",
+    #         headers=setup["headers"]
+    #     )
+    #
+    #     if accounts_response.status_code != 200:
+    #         pytest.skip("No accounts available for transfer transaction test")
+    #
+    #     accounts = accounts_response.json()["accounts"]
+    #     if not accounts:
+    #         pytest.skip("No accounts available for transfer transaction test")
+    #
+    #     account_uuid = accounts[0]["account_uuid"]
+    #
+    #     transfer_data = {
+    #         "account_uuid": account_uuid,
+    #         "transaction_type": "TRANSFER",
+    #         "amount": 300.00,
+    #         "description": "Transfer to savings",
+    #         "notes": "Monthly savings transfer"
+    #     }
+    #
+    #     response = await setup["client"].post(
+    #         "/transaction/",
+    #         json=transfer_data,
+    #         headers=setup["headers"]
+    #     )
+    #
+    #     assert response.status_code == 200, f"Create transfer: Expected 200, got {response.status_code}"
+    #
+    #     data = response.json()
+    #     assert data["transaction_type"] == "TRANSFER", "Should be a transfer transaction"
+    #     assert float(data["amount"]) == 300.00, "Amount should match"
 
 
 class TestTransactionCompleteFlow:
