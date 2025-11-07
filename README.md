@@ -182,7 +182,7 @@ Lunance IA utiliza **Clean Architecture + Domain-Driven Design** para garantizar
 - **OAuth2**: Flujo estándar de autenticación
 - **Validación robusta**: Schemas Pydantic en todos los endpoints
 - **CORS Configurado**: Según entorno (PROD: dominio específico, DEV: abierto)
-- **Rate Limiting**: Protección contra abuso con límites por IP y usuario
+- **Rate Limiting**: Protección contra abuso con límites específicos por endpoint (ej: registro 5/hora, login 10/min)
 - **Manejo de Excepciones Robusto**: Sistema estandarizado de respuestas de error
 - **Internacionalización (i18n)**: Mensajes de error en español e inglés
 

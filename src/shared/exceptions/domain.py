@@ -41,9 +41,7 @@ class AccountNotFoundError(NotFoundError):
     """Cuenta no encontrada."""
 
     def __init__(self, account_uuid: str):
-        super().__init__(
-            f"Cuenta con ID {account_uuid} no encontrada"
-        )
+        super().__init__(f"Cuenta con ID {account_uuid} no encontrada")
 
 
 class AccountInactiveError(BusinessRuleError):
@@ -84,9 +82,7 @@ class TransactionNotFoundError(NotFoundError):
     """Transacción no encontrada."""
 
     def __init__(self, transaction_uuid: str):
-        super().__init__(
-            f"Transacción con UUID {transaction_uuid} no encontrada"
-        )
+        super().__init__(f"Transacción con UUID {transaction_uuid} no encontrada")
 
 
 class InvalidTransactionAmountError(ValidationError):
