@@ -26,7 +26,7 @@ def validate_password_strength(password: str) -> List[str]:
         errors.append("PASSWORD_MISSING_UPPERCASE")
 
     if not re.search(r"[a-z]", password):
-        errors.append("PASSWORD_MISSING LOWERCASE")
+        errors.append("PASSWORD_MISSING_LOWERCASE")
 
     if not re.search(r"\d", password):
         errors.append("PASSWORD_MISSING_DIGIT")

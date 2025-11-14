@@ -6,9 +6,9 @@ Este es un proyecto de API de finanzas personales construido con Python y FastAP
 
 ## Tech Stack
 
--   **Lenguaje:** Python 3.11+
+-   **Lenguaje:** Python 3.13+
 -   **Framework:** FastAPI
--   **Base de datos:** PostgreSQL (gestionada con Alembic)
+-   **Base de datos:** MySQL (gestionada con Alembic)
 -   **Testing:** Pytest
 -   **Linter/Formatter:** Ruff, pre-commit
 

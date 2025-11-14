@@ -6,6 +6,7 @@ ERROR_MESSAGES = {
     "es": {
         "EMAIL_REQUIRED": "El email es requerido",
         "EMAIL_INVALID_FORMAT": "Formato de email inválido",
+        "PASSWORD_REQUIRED": "La contraseña es requerida",
         "PASSWORD_TOO_SHORT": "La contraseña debe tener al menos 8 caracteres",
         "PASSWORD_MISSING_UPPERCASE": "La contraseña debe incluir al menos una mayúscula",
         "PASSWORD_MISSING_LOWERCASE": "La contraseña debe incluir al menos una minúscula",
@@ -16,6 +17,7 @@ ERROR_MESSAGES = {
     "en": {
         "EMAIL_REQUIRED": "Email is required",
         "EMAIL_INVALID_FORMAT": "Invalid email format",
+        "PASSWORD_REQUIRED": "Password is required",
         "PASSWORD_TOO_SHORT": "Password must be at least 8 characters",
         "PASSWORD_MISSING_UPPERCASE": "Password must include at least one uppercase letter",
         "PASSWORD_MISSING_LOWERCASE": "Password must include at least one lowercase letter",
