@@ -34,8 +34,8 @@ router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 
-@router.post("/register", response_model=RegisterResponse)
-@limiter.limit("5/hour")  # 5 registros por hora por IP
+# @router.post("/register", response_model=RegisterResponse)
+# @limiter.limit("5/hour")  # 5 registros por hora por IP
 async def register(
     request: Request,
     register_request: RegisterRequest,
@@ -67,8 +67,8 @@ async def me(request: Request, current_user: User = Depends(get_current_active_u
     )
 
 
-@router.post("/login", response_model=TokenResponse)
-@limiter.limit("10/minute")
+# @router.post("/login", response_model=TokenResponse)
+# @limiter.limit("10/minute")
 async def login(
     request: Request,
     login_request: LoginRequest,
@@ -84,8 +84,8 @@ async def login(
     )
 
 
-@router.post("/refresh", response_model=TokenResponse)
-@limiter.limit("20/minute")
+# @router.post("/refresh", response_model=TokenResponse)
+# @limiter.limit("20/minute")
 async def refresh_token(
     request: Request,
     refresh_request: RefreshTokenRequest,
