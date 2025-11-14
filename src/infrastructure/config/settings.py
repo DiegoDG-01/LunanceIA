@@ -9,7 +9,10 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     ENVIRONMENT: str = "PROD"
-    BANXICO_TOKEN: str
+    BANXICO_TOKEN: str = ""
+
+    AUTH0_DOMAIN: str
+    AUTH0_AUDIENCE: str
 
     DB_HOST: str = "localhost"
     DB_PORT: str = "3306"
