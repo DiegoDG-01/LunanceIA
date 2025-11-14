@@ -42,7 +42,7 @@ class TransactionModel(Base):
     account_id = Column(
         Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False
     )
-    category_id = Column(Integer, ForeignKey("categories.id"))
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     uuid = Column(
         CHAR(36),
         unique=True,

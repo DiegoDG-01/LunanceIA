@@ -11,21 +11,15 @@ from shared.exceptions.base import (
 class UserNotFoundError(NotFoundError):
     """Usuario no encontrado."""
 
-    def __init__(self, user_id: int = None, email: str = None):
-        if user_id:
-            message = f"Usuario con ID {user_id} no encontrado"
-        elif email:
-            message = f"Usuario con email {email} no encontrado"
-        else:
-            message = "Usuario no encontrado"
-        super().__init__(message, "USER_NOT_FOUND")
+    def __init__(self):
+        super().__init__("User not found")
 
 
 class InvalidCredentialsError(BusinessRuleError):
     """Credenciales inválidas."""
 
-    def __init__(self):
-        super().__init__("Las credenciales son inválidas", "INVALID_CREDENTIALS")
+    def __init__(self, type):
+        super().__init__(f"Invalid credentials for {type}")
 
 
 class UserInactiveError(BusinessRuleError):
@@ -39,7 +33,7 @@ class EmailAlreadyExistsError(ValidationError):
     """Email ya existe."""
 
     def __init__(self, email: EmailStr):
-        super().__init__(f"El email {email} ya está registrado", "EMAIL_EXISTS")
+        super().__init__(f"El email {email} ya está registrado")
 
 
 # Account Exceptions
@@ -47,9 +41,7 @@ class AccountNotFoundError(NotFoundError):
     """Cuenta no encontrada."""
 
     def __init__(self, account_uuid: str):
-        super().__init__(
-            f"Cuenta con ID {account_uuid} no encontrada", "ACCOUNT_NOT_FOUND"
-        )
+        super().__init__(f"Cuenta con ID {account_uuid} no encontrada")
 
 
 class AccountInactiveError(BusinessRuleError):
@@ -90,10 +82,7 @@ class TransactionNotFoundError(NotFoundError):
     """Transacción no encontrada."""
 
     def __init__(self, transaction_uuid: str):
-        super().__init__(
-            f"Transacción con UUID {transaction_uuid} no encontrada",
-            "TRANSACTION_NOT_FOUND",
-        )
+        super().__init__(f"Transacción con UUID {transaction_uuid} no encontrada")
 
 
 class InvalidTransactionAmountError(ValidationError):

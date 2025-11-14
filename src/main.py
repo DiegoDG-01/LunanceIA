@@ -6,6 +6,8 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
+from infrastructure.config.settings import settings
+
 # Importar la nueva estructura
 from presentation.api.v2.router import api_router  # Nueva estructura
 from presentation.middleware.exception_handler import (
@@ -30,9 +32,16 @@ app = FastAPI(
 app.state.limiter = limiter
 
 # Configurar CORS
+if settings.ENVIRONMENT.upper() == "PROD":
+    origins = ["https://lunance.app"]  # Configurar dominio de producción
+elif settings.ENVIRONMENT.upper() == "DEV":
+    origins = ["*"]
+else:
+    raise ValueError("Invalid environment")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especificar los orígenes permitidos
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -50,7 +59,7 @@ app.include_router(api_router, prefix="/api/v2")
 
 
 @app.get("/")
-@limiter.limit("100/minute")
+@limiter.limit("50/minute")
 async def root(request: Request):
     return {
         "message": "Lunance API - Clean Architecture",
@@ -59,6 +68,6 @@ async def root(request: Request):
 
 
 @app.get("/health")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 async def health_check(request: Request):
     return {"status": "healthy", "version": "2.0.0", "hello": "world"}

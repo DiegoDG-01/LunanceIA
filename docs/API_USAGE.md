@@ -304,48 +304,119 @@ curl -X PUT "http://localhost:8000/api/v2/account/123" \
 
 ## ⚠️ Manejo de Errores
 
-La API retorna errores en formato estándar con detalles descriptivos:
-
-### Errores de Autenticación
+La API retorna errores en un formato estándar con soporte de internacionalización (español e inglés). Todos los errores siguen la estructura:
 
 ```json
 {
-  "detail": "Could not validate credentials",
-  "type": "authentication_error"
+  "error_code": "ERROR_CODE",
+  "message": "Mensaje descriptivo del error",
+  "details": [
+    {
+      "loc": ["ubicación", "del", "error"],
+      "msg": "Descripción específica del error",
+      "type": "tipo_de_error",
+      "input": "valor proporcionado (opcional)"
+    }
+  ]
 }
 ```
 
-### Errores de Validación
+### Errores de Autenticación (401)
 
 ```json
 {
-  "detail": [
+  "error_code": "AUTH_INVALID_CREDENTIALS",
+  "message": "Las credenciales proporcionadas son inválidas",
+  "details": null
+}
+```
+
+**Otros códigos de autenticación:**
+- `AUTH_USER_INACTIVE`: Usuario inactivo
+- `UNAUTHORIZED`: Token inválido o faltante
+
+### Errores de Validación (422)
+
+```json
+{
+  "error_code": "VALIDATION_ERROR",
+  "message": "Los datos proporcionados no son válidos",
+  "details": [
     {
       "loc": ["body", "email"],
-      "msg": "field required",
-      "type": "value_error.missing"
+      "msg": "El campo email es requerido",
+      "type": "missing",
+      "input": null
     }
-  ],
-  "type": "validation_error"
+  ]
 }
 ```
 
-### Errores de Negocio
+**Otros códigos de validación:**
+- `VALIDATION_INVALID_AMOUNT`: Monto inválido
+- `VALIDATION_INVALID_CURRENCY`: Moneda inválida
+- `VALIDATION_INVALID_IMAGE`: Imagen inválida
+
+### Errores de Recursos No Encontrados (404)
 
 ```json
 {
-  "detail": "No se puede eliminar cuenta con balance diferente a cero",
-  "type": "business_rule_error"
+  "error_code": "NOT_FOUND_ACCOUNT",
+  "message": "La cuenta solicitada no fue encontrada",
+  "details": null
 }
 ```
 
-### Errores de Recursos No Encontrados
+**Otros códigos de recursos no encontrados:**
+- `NOT_FOUND_USER`: Usuario no encontrado
+- `NOT_FOUND_TRANSACTION`: Transacción no encontrada
+- `NOT_FOUND_CATEGORY`: Categoría no encontrada
+- `NOT_FOUND`: Recurso genérico no encontrado
+
+### Errores de Negocio (409 o 400)
 
 ```json
 {
-  "detail": "Cuenta no encontrada",
-  "type": "not_found_error"
+  "error_code": "BUSINESS_ACCOUNT_HAS_BALANCE",
+  "message": "No se puede eliminar una cuenta con balance diferente a cero",
+  "details": null
 }
+```
+
+**Otros códigos de negocio:**
+- `BUSINESS_EMAIL_EXISTS` (409): Email ya registrado
+- `BUSINESS_ACCOUNT_HAS_TRANSACTIONS` (409): Cuenta tiene transacciones
+- `BUSINESS_RULE_VIOLATION` (400): Violación de regla de negocio genérica
+- `INSUFFICIENT_FUNDS` (400): Fondos insuficientes
+
+### Rate Limit Exceeded (429)
+
+```json
+{
+  "error_code": "RATE_LIMIT_EXCEEDED",
+  "message": "Se ha excedido el límite de peticiones",
+  "details": [
+    {
+      "loc": ["rate_limit"],
+      "msg": "Rate limit exceeded: 100 per 1 minute",
+      "type": "rate_limit_exceeded",
+      "input": null
+    }
+  ]
+}
+```
+
+### Internacionalización
+
+La API detecta automáticamente el idioma del usuario mediante el header `Accept-Language`. Idiomas soportados:
+- **Español (es)**: Idioma por defecto
+- **Inglés (en)**
+
+Ejemplo de request con idioma específico:
+```bash
+curl -X GET "http://localhost:8000/api/v2/account/" \
+     -H "Authorization: Bearer $TOKEN" \
+     -H "Accept-Language: en"
 ```
 
 ## 🚦 Códigos de Estado HTTP
@@ -359,14 +430,82 @@ La API retorna errores en formato estándar con detalles descriptivos:
 | 403 | Forbidden | Sin permisos para el recurso |
 | 404 | Not Found | Recurso no encontrado |
 | 422 | Unprocessable Entity | Error de validación de datos |
+| 429 | Too Many Requests | Se excedió el límite de rate limiting |
 | 500 | Internal Server Error | Error interno del servidor |
 
 ## 📄 Límites y Paginación
 
 ### Rate Limiting
 
-- **Límite por IP**: 100 requests por minuto
-- **Límite por usuario autenticado**: 1000 requests por minuto
+La API implementa rate limiting específico por endpoint para proteger contra abuso. Los límites son aplicados por IP/usuario.
+
+#### Endpoints de Autenticación
+
+| Endpoint | Límite | Razón |
+|----------|--------|-------|
+| `POST /auth/register` | **5 requests/hora** | Prevención de spam y registro masivo |
+| `POST /auth/login` | **10 requests/minuto** | Protección contra fuerza bruta |
+| `POST /auth/refresh` | **20 requests/minuto** | Renovación frecuente permitida |
+| `POST /auth/logout` | **10 requests/minuto** | Operación normal |
+| `GET /auth/me` | **100 requests/minuto** | Lectura de perfil frecuente |
+
+#### Endpoints de Cuentas
+
+| Endpoint | Límite |
+|----------|--------|
+| `GET /account/` | **50 requests/minuto** |
+| `POST /account/` | **50 requests/minuto** |
+| `GET /account/{id}` | **50 requests/minuto** |
+| `PUT /account/{id}` | **50 requests/minuto** |
+| `DELETE /account/{id}` | **50 requests/minuto** |
+
+#### Endpoints de Transacciones
+
+| Endpoint | Límite | Nota |
+|----------|--------|------|
+| `GET /transaction/` | **50 requests/minuto** | - |
+| `POST /transaction/` | **50 requests/minuto** | - |
+| `POST /transaction/upload-image` | **5 requests/minuto** | Procesamiento intensivo de imágenes |
+| `GET /transaction/{id}` | **20 requests/minuto** | - |
+| `PUT /transaction/{id}` | **15 requests/minuto** | - |
+| `DELETE /transaction/{id}` | **10 requests/minuto** | - |
+
+#### Endpoints Generales
+
+| Endpoint | Límite |
+|----------|--------|
+| `GET /` | **50 requests/minuto** |
+| `GET /health` | **5 requests/minuto** |
+
+### ⚠️ Consideraciones Importantes
+
+**Para Desarrollo y Testing:**
+- El límite de **5 registros/hora** en `/auth/register` puede afectar la ejecución repetida de tests
+- Si ejecutas tests automatizados que crean usuarios, considera espaciarlos en el tiempo
+- Los límites se aplican por IP, por lo que múltiples ejecuciones de tests desde la misma máquina se acumularán
+- **Recomendación**: Para desarrollo local, considera aumentar temporalmente estos límites en el código o usar usuarios pre-existentes en tus tests
+
+**Respuesta al Exceder el Límite:**
+Cuando se excede el rate limit, recibirás un error `429 Too Many Requests` con el siguiente formato:
+
+```json
+{
+  "error_code": "RATE_LIMIT_EXCEEDED",
+  "message": "Se ha excedido el límite de peticiones",
+  "details": [
+    {
+      "loc": ["rate_limit"],
+      "msg": "Rate limit exceeded: 5 per 1 hour",
+      "type": "rate_limit_exceeded"
+    }
+  ]
+}
+```
+
+La respuesta también incluye headers útiles:
+- `X-RateLimit-Limit`: Límite máximo de requests
+- `X-RateLimit-Remaining`: Requests restantes en la ventana actual
+- `Retry-After`: Segundos hasta que puedas reintentar (opcional)
 
 ### Paginación (Próximamente)
 
@@ -389,11 +528,11 @@ GET /api/v2/account/?page=1&size=20
 
 ## 🔧 Herramientas Recomendadas
 
-### Postman Collection
+### Bruno Collection
 
-Importa nuestra colección de Postman para probar todos los endpoints:
+Importa nuestra colección de Bruno para probar todos los endpoints:
 ```
-[Enlace a colección Postman - Próximamente]
+[Enlace a colección Bruno - Próximamente]
 ```
 
 ### Cliente Python

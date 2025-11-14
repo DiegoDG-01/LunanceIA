@@ -80,10 +80,28 @@ class UserValidator:
         from shared.utils.validations import validate_email_format
 
         if not email or not email.strip():
-            raise ValidationError("El email es requerido")
+            raise ValidationError(
+                "Email is required",
+                [
+                    {
+                        "loc": ["body", "email"],
+                        "msg": "",
+                        "type": "EMAIL_REQUIRED",
+                    }
+                ],
+            )
 
         if not validate_email_format(email):
-            raise ValidationError("Formato de email inválido")
+            raise ValidationError(
+                "Invalid email format",
+                [
+                    {
+                        "loc": ["body", "email"],
+                        "msg": "",
+                        "type": "EMAIL_INVALID_FORMAT",
+                    }
+                ],
+            )
 
     @staticmethod
     def validate_password(password: str) -> None:
@@ -91,8 +109,28 @@ class UserValidator:
         from shared.utils.validations import validate_password_strength
 
         if not password:
-            raise ValidationError("La contraseña es requerida")
+            raise ValidationError(
+                message="El password es requerido",
+                details=[
+                    {
+                        "loc": ["body", "password"],
+                        "msg": "",
+                        "type": "PASSWORD_REQUIRED",
+                    }
+                ],
+            )
 
         errors = validate_password_strength(password)
         if errors:
-            raise ValidationError("; ".join(errors))
+            details = [
+                {
+                    "loc": ["body", "password"],
+                    "msg": "",
+                    "type": error_msg,
+                }
+                for error_msg in errors
+            ]
+            raise ValidationError(
+                message="La contraseña no cumple con los requisitos de seguridad",
+                details=details,
+            )

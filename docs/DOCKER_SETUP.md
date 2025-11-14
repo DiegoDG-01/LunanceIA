@@ -35,6 +35,9 @@ ALGORITHM="HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
 
+# API Configuration
+ENVIRONMENT=PROD  # PROD para producción, DEV para desarrollo
+
 # Database Connection Details
 DB_HOST=db  # Usar "db" para Docker Compose
 DB_PORT=3306
@@ -46,6 +49,10 @@ DB_PASSWORD=luna_root
 GEMINI_MODEL_ID=gemini-2.5-flash
 GEMINI_API_KEY=tu_clave_api_gemini
 ```
+
+**Configuración de ENVIRONMENT:**
+- **PROD**: Para producción - CORS restrictivo, logging optimizado
+- **DEV**: Para desarrollo - CORS abierto, logging detallado
 
 ```bash
 # Construir y ejecutar todos los servicios
@@ -86,6 +93,9 @@ docker ps
 
 Para desarrollo local con MySQL en Docker:
 ```env
+# API Configuration
+ENVIRONMENT=DEV  # DEV para desarrollo local
+
 # Database Connection Details
 DB_HOST=localhost  # Usar "localhost" para desarrollo local
 DB_PORT=3306

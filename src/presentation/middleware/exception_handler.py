@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from slowapi.errors import RateLimitExceeded
+from shared.i18n.messages import get_error_message
 
 from infrastructure.config.settings import settings
 
@@ -121,9 +122,9 @@ async def lunance_exception_handler(
     error_code, status_code = map_exception_to_error_code(exc)
 
     # Error logging for development and production
-    if settings.ENVIRONMENT == "DEV":
+    if settings.ENVIRONMENT.upper() == "DEV":
         logger.error(f"LunanceException: {error_code} - {exc.message}", exc_info=exc)
-    elif settings.ENVIRONMENT == "PROD":
+    elif settings.ENVIRONMENT.upper() == "PROD":
         logger.warning(f"LunanceException: {error_code} - {exc.message}")
 
     # Detectar idioma del usuario
@@ -134,8 +135,22 @@ async def lunance_exception_handler(
         code=error_code, language=user_language
     )
 
+    details_list = None
+    if hasattr(exc, "details") and exc.details:
+        details_list = []
+        for detail in exc.details:
+            msg = get_error_message(detail.get("type"), user_language)
+            details_list.append(
+                ErrorDetail(
+                    loc=detail.get("loc"),
+                    msg=msg,
+                    type=detail.get("type"),
+                    input=detail.get("input"),
+                )
+            )
+
     error_response = StandardErrorResponse(
-        error_code=error_code, message=translated_message, details=None
+        error_code=error_code, message=translated_message, details=details_list
     )
 
     return JSONResponse(status_code=status_code, content=error_response.model_dump())
@@ -324,7 +339,7 @@ async def rate_limit_exceeded_handler(
             response.headers["X-RateLimit-Limit"] = "Unknown"
 
     except Exception:
-        # Si hay cualquier error extrayendo la información, usar valor por defecto
+        # Sí hay cualquier error extrayendo la información, usar valor por defecto
         response.headers["X-RateLimit-Limit"] = "Unknown"
 
     return response

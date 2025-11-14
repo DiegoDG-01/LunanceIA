@@ -141,7 +141,8 @@ presentation/
 │   ├── auth_deps.py        # Dependencias de autenticación
 │   └── service_deps.py     # Dependencias de servicios
 └── middleware/              # Middleware HTTP
-    └── __init__.py
+    ├── __init__.py
+    └── exception_handler.py # Manejador global de excepciones estandarizado
 ```
 
 #### Características de Presentación:
@@ -164,11 +165,15 @@ shared/
 ├── constants/              # Constantes de negocio
 │   ├── __init__.py
 │   ├── business.py         # Constantes de reglas de negocio
-│   └── error_messages.py   # Mensajes de error estandarizados
+│   └── validation_messages.py # Mensajes de validación y traducción
+├── i18n/                   # Internacionalización
+│   ├── __init__.py
+│   └── messages.py         # Sistema de traducción de mensajes
 ├── utils/                  # Utilidades generales
 │   ├── __init__.py
 │   ├── money.py           # Utilidades para manejo monetario
 │   ├── date.py            # Utilidades para fechas
+│   ├── language.py        # Detección de idioma del usuario
 │   ├── prompts.py         # Prompts para IA
 │   └── validations.py     # Funciones de validación comunes
 └── validators/             # Validadores de negocio
@@ -423,7 +428,160 @@ class Account:
         return self.balance.amount >= amount.amount
 ```
 
+## 🛡️ Sistema de Manejo de Excepciones
+
+### Arquitectura de Excepciones
+
+Lunance IA implementa un sistema robusto y estandarizado de manejo de excepciones que proporciona:
+
+1. **Respuestas consistentes**: Todos los errores siguen el mismo formato
+2. **Internacionalización**: Mensajes traducidos automáticamente
+3. **Logging inteligente**: Diferentes niveles según el entorno
+4. **Detalles contextuales**: Información específica según el tipo de error
+
+### Jerarquía de Excepciones
+
+```python
+LunanceException (Base)
+├── ValidationError          # Errores de validación
+├── UnauthorizedError        # Errores de autenticación
+├── BusinessRuleError        # Violaciones de reglas de negocio
+└── Domain Exceptions        # Excepciones específicas de dominio
+    ├── UserNotFoundError
+    ├── AccountNotFoundError
+    ├── InvalidCredentialsError
+    ├── EmailAlreadyExistsError
+    └── ... (más excepciones específicas)
+```
+
+### Middleware de Excepciones
+
+El `exception_handler.py` (src/presentation/middleware/exception_handler.py:1) intercepta todas las excepciones y proporciona:
+
+```python
+# Estructura estándar de respuesta de error
+{
+    "error_code": "ERROR_CODE",      # Código de error estandarizado
+    "message": "Mensaje traducido",  # Mensaje en idioma del usuario
+    "details": [                     # Detalles específicos (opcional)
+        {
+            "loc": ["campo"],
+            "msg": "Descripción",
+            "type": "tipo_error",
+            "input": "valor"
+        }
+    ]
+}
+```
+
+### Mapeo de Excepciones
+
+Cada excepción se mapea automáticamente a:
+- **Código de error**: Identificador único (`AUTH_INVALID_CREDENTIALS`, `NOT_FOUND_ACCOUNT`, etc.)
+- **HTTP Status Code**: Código HTTP apropiado (400, 401, 404, 409, 422, 500, etc.)
+- **Mensaje traducido**: Según el idioma del usuario
+
+Ejemplo en src/presentation/middleware/exception_handler.py:54:
+
+```python
+def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
+    # Autenticación (401)
+    if isinstance(exc, InvalidCredentialsError):
+        return "AUTH_INVALID_CREDENTIALS", 401
+
+    # Recursos no encontrados (404)
+    elif isinstance(exc, AccountNotFoundError):
+        return "NOT_FOUND_ACCOUNT", 404
+
+    # Conflictos de negocio (409)
+    elif isinstance(exc, EmailAlreadyExistsError):
+        return "BUSINESS_EMAIL_EXISTS", 409
+
+    # ... más mapeos
+```
+
+### Logging Basado en Entorno
+
+- **PROD**: Logging de nivel WARNING (no expone detalles sensibles)
+- **DEV**: Logging de nivel ERROR con stack traces completos
+
+## 🌐 Sistema de Internacionalización (i18n)
+
+### Detección Automática de Idioma
+
+El sistema detecta automáticamente el idioma del usuario mediante:
+
+1. **Header HTTP**: `Accept-Language`
+2. **Fallback**: Español (es) como idioma por defecto
+
+```python
+# src/shared/utils/language.py
+def get_user_language(request: Request) -> str:
+    accept_language = request.headers.get("Accept-Language", "es")
+    # Procesa y retorna el idioma adecuado
+```
+
+### Traducción de Mensajes
+
+Todos los mensajes de error y validación se traducen automáticamente:
+
+```python
+# src/shared/i18n/messages.py
+ERROR_MESSAGES = {
+    "AUTH_INVALID_CREDENTIALS": {
+        "es": "Las credenciales proporcionadas son inválidas",
+        "en": "The provided credentials are invalid"
+    },
+    "NOT_FOUND_ACCOUNT": {
+        "es": "La cuenta solicitada no fue encontrada",
+        "en": "The requested account was not found"
+    },
+    # ... más mensajes
+}
+```
+
+### Validación Multiidioma
+
+Los errores de validación de Pydantic también se traducen:
+
+```python
+# src/shared/constants/validation_messages.py
+def translate_validation_message(
+    error_type: str,
+    field_name: str,
+    language: str
+) -> str:
+    # Traduce mensajes de validación como:
+    # "El campo email es requerido" (es)
+    # "The email field is required" (en)
+```
+
+### Idiomas Soportados
+
+- **Español (es)**: Idioma por defecto
+- **Inglés (en)**: Completamente soportado
+
 ## 🔒 Seguridad y Autenticación
+
+### Configuración CORS Basada en Entorno
+
+El sistema configura CORS dinámicamente según el entorno (src/main.py:35):
+
+```python
+if settings.ENVIRONMENT.upper() == "PROD":
+    origins = ["https://lunance.app"]  # Dominio específico en producción
+elif settings.ENVIRONMENT.upper() == "DEV":
+    origins = ["*"]  # Abierto en desarrollo
+else:
+    raise ValueError("Invalid environment")
+```
+
+### Rate Limiting
+
+Protección contra abuso con límites configurables:
+- **Por IP**: Para usuarios no autenticados
+- **Por usuario**: Para usuarios autenticados
+- **Headers informativos**: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After`
 
 ### JWT Token Management
 

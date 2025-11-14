@@ -64,21 +64,31 @@ pytest
 ### Variables de Entorno Requeridas
 
 ```env
-# Base de datos de desarrollo
-DATABASE_URL=mysql+pymysql://usuario:password@localhost:3306/lunance_dev
-
-# Base de datos de testing
-TEST_DATABASE_URL=mysql+pymysql://usuario:password@localhost:3306/lunance_test
-
 # JWT Configuration
 SECRET_KEY=tu_clave_secreta_desarrollo
-REFRESH_TOKEN_SECRET_KEY=tu_clave_refresh_desarrollo
+SECRET_KEY_REFRESH=tu_clave_refresh_desarrollo
 ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
 
-# Configuración
-DEBUG=True
-ENVIRONMENT=development
+# API Configuration
+ENVIRONMENT=DEV  # DEV para desarrollo, PROD para producción
+
+# Database Connection Details
+DB_HOST=localhost  # localhost para desarrollo local
+DB_PORT=3306
+DB_NAME=lunance
+DB_USER=luna
+DB_PASSWORD=luna_root
+
+# GEMINI Configuration (opcional)
+GEMINI_MODEL_ID=gemini-2.5-flash
+GEMINI_API_KEY=tu_clave_api_gemini
 ```
+
+**Nota sobre ENVIRONMENT:**
+- **DEV**: Activa CORS abierto (`*`), logging detallado con stack traces
+- **PROD**: CORS restrictivo (dominio específico), logging básico sin detalles sensibles
 
 ## 🔄 Flujo de Contribución
 

@@ -59,7 +59,7 @@ class RegisterHandler:
         )
 
         # Guardar usuario
-        saved_user = await self.user_repository.create(user)
+        saved_user = self.user_repository.create(user)
 
         return RegisterResponse(
             user_uuid=saved_user.uuid,

@@ -4,10 +4,10 @@
 class LunanceException(Exception):
     """Excepción base de la aplicación."""
 
-    def __init__(self, message: str, error_code: str = None):
+    def __init__(self, message: str, details: list = None):
         self.message = message
-        self.error_code = error_code
-        super().__init__(self.message)
+        self.details = details
+        super().__init__(message, details)
 
 
 class JWTException(LunanceException):
