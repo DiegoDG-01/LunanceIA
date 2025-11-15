@@ -154,6 +154,20 @@ La API REST de Lunance IA v2 utiliza autenticación JWT y sigue los principios d
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
+### 🧪 Cliente HTTP - Colección Bruno
+Lunance IA incluye una colección completa de [Bruno](https://www.usebruno.com/) con todos los endpoints de la API pre-configurados.
+
+**Ubicación**: `http/bruno collection/Lunance IA.json`
+
+**Uso**:
+1. Instala Bruno desde [usebruno.com](https://www.usebruno.com/)
+2. Abre Bruno y selecciona "Open Collection"
+3. Navega a `http/bruno collection/` y selecciona el archivo JSON
+4. Configura las variables de entorno según tu setup (local/producción)
+5. Ejecuta las peticiones pre-configuradas
+
+> 💡 **Ventajas**: Bruno es un cliente API de código abierto, offline-first, que guarda las colecciones en archivos JSON planos (ideal para Git). No requiere cuenta ni sincronización en la nube.
+
 > 📋 **Guía Completa de API**: Para ejemplos detallados, autenticación JWT, códigos de error y flujos completos, consulta [API_USAGE.md](docs/API_USAGE.md)
 
 ## 🏗️ Arquitectura

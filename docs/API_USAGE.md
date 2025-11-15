@@ -528,12 +528,67 @@ GET /api/v2/account/?page=1&size=20
 
 ## 🔧 Herramientas Recomendadas
 
-### Bruno Collection
+### 🧪 Bruno Collection
 
-Importa nuestra colección de Bruno para probar todos los endpoints:
+Lunance IA incluye una colección completa de [Bruno](https://www.usebruno.com/) con todos los endpoints de la API pre-configurados para facilitar el testing y desarrollo.
+
+**📁 Ubicación**: `http/bruno collection/Lunance IA.json`
+
+#### ¿Qué es Bruno?
+
+Bruno es un cliente API de código abierto, offline-first y Git-friendly que:
+- ✅ **No requiere cuenta**: Trabaja completamente offline
+- ✅ **Git-friendly**: Guarda colecciones en archivos JSON planos versionables
+- ✅ **Open source**: Software libre y gratuito
+- ✅ **Rápido y ligero**: Menor uso de recursos que alternativas
+- ✅ **Variables de entorno**: Soporte completo para múltiples entornos
+
+#### Instalación y Configuración
+
+**1. Instalar Bruno**
+```bash
+# macOS
+brew install bruno
+
+# O descarga desde https://www.usebruno.com/downloads
 ```
-[Enlace a colección Bruno - Próximamente]
-```
+
+**2. Importar la Colección**
+1. Abre Bruno
+2. Click en "Open Collection"
+3. Navega a `http/bruno collection/`
+4. Selecciona el archivo `Lunance IA.json`
+
+**3. Configurar Variables de Entorno**
+
+Configura las variables de entorno correspondientes.
+
+**4. Flujo de Trabajo Recomendado**
+1. Ejecuta el request de **Register** o **Login** en la carpeta `Auth`
+2. Copia el `access_token` de la respuesta y pégalo en las variables de entorno
+3. Todos los demás requests usarán ese token automáticamente desde las variables
+4. Explora las carpetas organizadas por endpoint (Auth, Accounts, etc.)
+
+> ⚠️ **Nota**: El guardado automático de tokens mediante scripts post-request estará disponible en una futura actualización.
+
+#### Ventajas sobre cURL
+
+| Característica | cURL | Bruno |
+|----------------|------|-------|
+| Interfaz visual | ❌ | ✅ |
+| Historial de requests | ❌ | ✅ |
+| Variables de entorno | Manual | ✅ Soporte completo |
+| Guardar tokens | Manual | 🔄 Manual (por ahora) |
+| Organización | ❌ | ✅ Carpetas |
+| Versionable en Git | ❌ | ✅ JSON plano |
+| Tests automatizados | ❌ | ✅ Soporte scripts |
+
+#### Tips Útiles
+
+- **Variables de entorno**: Usa variables para cambiar fácilmente entre entornos (Local, Staging, Production)
+- **Testing rápido**: Usa `Ctrl/Cmd + Enter` para ejecutar requests rápidamente
+- **Colecciones compartibles**: Comparte la colección con tu equipo vía Git
+- **Organización**: Los requests están organizados por módulos para fácil navegación
 
 ### Cliente Python
 
