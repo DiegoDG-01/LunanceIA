@@ -28,13 +28,6 @@ cp .env.example .env
 
 Editar `.env` para Docker Compose:
 ```env
-# JWT Configuration
-SECRET_KEY=tu_clave_secreta_jwt_muy_segura
-SECRET_KEY_REFRESH=tu_clave_secreta_refresh_muy_segura
-ALGORITHM="HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-REFRESH_TOKEN_EXPIRE_DAYS=7
-
 # API Configuration
 ENVIRONMENT=PROD  # PROD para producción, DEV para desarrollo
 
@@ -45,7 +38,12 @@ DB_NAME=lunance
 DB_USER=luna
 DB_PASSWORD=luna_root
 
-# GEMINI Configuration
+# Auth0 Configuration
+AUTH0_DOMAIN=tu_dominio.auth0.com
+AUTH0_AUDIENCE=tu_api_audience
+AUTH0_CLIENT_ID=tu_client_id
+
+# GEMINI Configuration (para procesamiento de imágenes)
 GEMINI_MODEL_ID=gemini-2.5-flash
 GEMINI_API_KEY=tu_clave_api_gemini
 ```

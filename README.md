@@ -12,8 +12,8 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 - **Suscripciones**: Control de pagos recurrentes con generación automática de cargos
 
 ### 🔐 Seguridad y Autenticación
-- **Autenticación JWT**: Sistema seguro basen tokens
-- **Encriptación de Contraseñas**: Usando Passlib para máxima seguridad
+- **Auth0 Integration**: Autenticación empresarial con Auth0
+- **JWT Tokens**: Validación de tokens mediante Auth0
 - **Autenticación OAuth2**: Estándar de la industria para APIs
 
 ### 🎯 Organización y Personalización
@@ -25,18 +25,19 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 ## 🛠️ Stack Tecnológico
 
 ### Core Technologies
-- **Framework**: FastAPI 0.115.12
-- **Base de Datos**: MySQL con SQLAlchemy 2.0.41 ORM
-- **Migraciones**: Alembic 1.16.1
-- **Autenticación**: JWT + OAuth2 (python-jose 3.5.0)
-- **Validación**: Pydantic 2.11.5 con soporte de email
-- **Seguridad**: Passlib 1.7.4 + bcrypt 4.3.0
-- **IA**: Google Gemini API 1.22.0
+- **Framework**: FastAPI 0.115+
+- **Base de Datos**: MySQL con SQLAlchemy 2.0+ ORM
+- **Migraciones**: Alembic 1.16+
+- **Autenticación**: Auth0 + JWT (python-jose 3.5+)
+- **Validación**: Pydantic 2.11+ con soporte de email
+- **Seguridad**: bcrypt 4.3+ + Rate Limiting (slowapi)
+- **IA**: Google Gemini API (google-genai 1.22+)
+- **Procesamiento de Imágenes**: Pillow 12.0+
 
 ### Development Tools
 - **Package Manager**: uv (gestor moderno de paquetes Python)
-- **Code Quality**: Ruff 0.11.13 (linting & formatting)
-- **Testing**: pytest 8.4.1 + pytest-asyncio + httpx
+- **Code Quality**: Ruff 0.14+ (linting & formatting)
+- **Testing**: pytest 8.4+ + pytest-asyncio + httpx
 - **Pre-commit**: Hooks automáticos de calidad de código
 
 ## 📁 Estructura del Proyecto
@@ -92,7 +93,7 @@ docker-compose up --build -d
 ### 🛠️ Opción 2: Desarrollo Local
 
 **Prerrequisitos:**
-- Python 3.8+
+- Python 3.13+
 - Docker (para MySQL)
 - pip o uv (recomendado)
 
@@ -146,9 +147,11 @@ uvicorn src.main:app --reload
 La API REST de Lunance IA v2 utiliza autenticación JWT y sigue los principios de Clean Architecture.
 
 ### Endpoints Principales
-- 🔐 **Autenticación**: `/api/v2/auth/` (login, register, refresh, logout)
-- 💳 **Cuentas**: `/api/v2/account/` (CRUD completo para gestión de cuentas)
-- 💰 **Transacciones**: `/api/v2/transaction/` (próximamente)
+- 🔐 **Autenticación**: `/api/v2/auth/` (me, logout) - Login/Register via Auth0
+- 💳 **Cuentas**: `/api/v2/account/` (CRUD completo + activación/desactivación)
+- 💰 **Transacciones**: `/api/v2/transaction/` (CRUD completo + creación desde imagen con IA)
+- 🏷️ **Categorías**: `/api/v2/category/` (listado de categorías)
+- 📊 **Dashboard**: `/api/v2/dashboard/` (resumen financiero)
 
 ### Documentación Interactiva
 - **Swagger UI**: http://localhost:8000/docs
@@ -190,15 +193,15 @@ Lunance IA utiliza **Clean Architecture + Domain-Driven Design** para garantizar
 
 ## 🔒 Seguridad
 
-- **JWT Access Tokens**: Expiración de 30 minutos
-- **Refresh Tokens**: Expiración de 7 días con rotación
-- **Password Hashing**: bcrypt con salt automático
+- **Auth0**: Autenticación y autorización empresarial
+- **JWT Tokens**: Validación de tokens emitidos por Auth0
 - **OAuth2**: Flujo estándar de autenticación
 - **Validación robusta**: Schemas Pydantic en todos los endpoints
 - **CORS Configurado**: Según entorno (PROD: dominio específico, DEV: abierto)
-- **Rate Limiting**: Protección contra abuso con límites específicos por endpoint (ej: registro 5/hora, login 10/min)
+- **Rate Limiting**: Protección contra abuso con límites específicos por endpoint
 - **Manejo de Excepciones Robusto**: Sistema estandarizado de respuestas de error
 - **Internacionalización (i18n)**: Mensajes de error en español e inglés
+- **Validación de Imágenes**: Verificación de formato en uploads
 
 ## 🛠️ Flujo de Desarrollo
 
@@ -216,26 +219,20 @@ ruff check src/ --fix
 
 ### Testing
 ```bash
-# Tests E2E (disponibles - valida API completa)
+# Tests E2E (valida API completa)
 pytest src/tests/e2e/ -v
 
-# Test específico de autenticación (22 tests)
+# Test específico de autenticación
 pytest src/tests/e2e/test_auth_api.py -v
-
-# Test de flujo completo
-pytest src/tests/e2e/test_auth_api.py::TestCompleteAuthFlow -v
 
 # Tests con output detallado para debugging
 pytest src/tests/e2e/ -v -s
-
-# Tests específicos por clase
-pytest src/tests/e2e/test_auth_api.py::TestUserAuthentication -v
 ```
 
 **Estado actual:**
-- ✅ **E2E Tests**: 22 tests funcionando (API coverage 100%)
+- ✅ **E2E Tests**: Tests de autenticación funcionando
 - 🚧 **Unit/Integration Tests**: En desarrollo
-- ⚠️ **Coverage**: No disponible (tests HTTP externos)
+- ⚠️ **Coverage**: Limitado (tests HTTP externos)
 
 > 🧪 **Documentación Completa de Tests**: Para configuración, comandos específicos y debugging, consulta [TEST USAGE](src/tests/TEST.md)
 

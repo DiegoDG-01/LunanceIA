@@ -68,45 +68,20 @@ pytest src/tests/e2e/ -v -s
 
 ### 🔐 Tests de Autenticación (`test_auth_api.py`)
 
+> **Nota**: Con la migración a Auth0, el flujo de autenticación ha cambiado. Login y registro se manejan directamente con Auth0.
+
 #### 1. **Conectividad API**
 - ✅ API está corriendo y accesible
 - ✅ Endpoints de auth están disponibles
 
-#### 2. **Validación de Email**
-- ✅ Registro con email Gmail
-- ✅ Registro con email Yahoo
-
-#### 3. **Registro de Usuario**
-- ✅ Registro exitoso de nuevo usuario
-- ✅ Error al registrar email duplicado
-
-#### 4. **Autenticación**
-- ✅ Login exitoso con credenciales correctas
-- ✅ Error con contraseña incorrecta
-- ✅ Error con usuario inexistente
-
-#### 5. **Perfil de Usuario**
-- ✅ Obtener información con token válido
+#### 2. **Perfil de Usuario** (`/auth/me`)
+- ✅ Obtener información con token Auth0 válido
 - ✅ Error sin token de autorización
 - ✅ Error con token inválido
 
-#### 6. **Renovación de Token**
-- ✅ Refresh exitoso con token válido
-- ✅ Error con token inválido
-- ✅ Error con token faltante
-
-#### 7. **Cierre de Sesión**
+#### 3. **Cierre de Sesión** (`/auth/logout`)
 - ✅ Logout exitoso
 - ✅ Verificación de token revocado
-
-#### 8. **Flujo Completo**
-- ✅ Registro → Login → Me → Refresh → Logout → Verificación
-
-#### 9. **Validación de Entrada**
-- ✅ Error con campos faltantes
-- ✅ Error con email inválido
-- ✅ Error con contraseña débil
-- ✅ Error con contraseña muy corta
 
 ## 🔧 Configuración
 
@@ -144,8 +119,8 @@ pytest src/tests/e2e/ --tb=no -q
 El sistema de coverage no está completamente configurado. Los tests E2E validan funcionalidad end-to-end pero no miden cobertura de código fuente debido a que hacen llamadas HTTP externas.
 
 **Estado actual:**
-- ✅ **E2E Tests**: 22 tests funcionando (validación completa de API)
-- ⚠️ **Coverage**: No disponible (tests HTTP externos)
+- ✅ **E2E Tests**: Tests de autenticación funcionando (requieren Auth0)
+- ⚠️ **Coverage**: Limitado (tests HTTP externos)
 - 🚧 **Integration Tests**: En desarrollo
 - 🚧 **Unit Tests**: En desarrollo
 
@@ -166,11 +141,10 @@ El sistema de coverage no está completamente configurado. Los tests E2E validan
 ## 📝 Notas
 
 ### ✅ Tests E2E (Disponibles)
-- **22 tests** que validan toda la funcionalidad de autenticación
+- Tests que validan la funcionalidad de autenticación con Auth0
 - Tests **independientes** que pueden ejecutarse en cualquier orden
-- Usan **usuarios únicos** para evitar conflictos entre tests
-- Validan funcionalidad **end-to-end completa**
-- **API coverage al 100%** - todos los endpoints de auth probados
+- Validan funcionalidad **end-to-end** de endpoints de auth
+- Requieren **token Auth0 válido** para tests autenticados
 - No requieren configuración compleja de código fuente
 
 ### 🚧 Tests de Integración (En desarrollo)

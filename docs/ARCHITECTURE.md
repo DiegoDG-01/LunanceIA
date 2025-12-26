@@ -122,8 +122,11 @@ presentation/
 │       ├── __init__.py
 │       ├── endpoints/        # Endpoints específicos por dominio
 │       │   ├── __init__.py
-│       │   ├── auth.py      # Endpoints de autenticación y registro
-│       │   └── account.py   # Endpoints CRUD para cuentas
+│       │   ├── auth.py       # Endpoints de autenticación (me, logout)
+│       │   ├── account.py    # Endpoints CRUD para cuentas
+│       │   ├── transaction.py # Endpoints CRUD para transacciones
+│       │   ├── category.py   # Endpoints para categorías
+│       │   └── dashboard.py  # Endpoint de resumen financiero
 │       └── router.py        # Router principal que agrupa endpoints
 ├── schemas/                 # Schemas Pydantic para validación
 │   ├── requests/            # DTOs de entrada (requests)
@@ -563,9 +566,17 @@ def translate_validation_message(
 
 ## 🔒 Seguridad y Autenticación
 
+### Auth0 Integration
+
+Lunance IA utiliza **Auth0** como proveedor de identidad:
+
+- **Login/Register**: Manejados directamente por Auth0
+- **Token Validation**: La API valida tokens JWT emitidos por Auth0
+- **User Sync**: Los usuarios se sincronizan automáticamente al primer acceso
+
 ### Configuración CORS Basada en Entorno
 
-El sistema configura CORS dinámicamente según el entorno (src/main.py:35):
+El sistema configura CORS dinámicamente según el entorno (src/main.py):
 
 ```python
 if settings.ENVIRONMENT.upper() == "PROD":
@@ -578,50 +589,39 @@ else:
 
 ### Rate Limiting
 
-Protección contra abuso con límites configurables:
+Protección contra abuso con límites configurables usando `slowapi`:
 - **Por IP**: Para usuarios no autenticados
 - **Por usuario**: Para usuarios autenticados
 - **Headers informativos**: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After`
 
-### JWT Token Management
+### JWT Token Validation
 
 ```python
-from datetime import datetime, timedelta
-from typing import Optional
-import jwt
+from fastapi import Depends, HTTPException
+from jose import jwt, JWTError
 
-class AuthService:
-    def __init__(self, secret_key: str, algorithm: str = "HS256"):
-        self._secret_key = secret_key
-        self._algorithm = algorithm
-    
-    def create_access_token(
-        self, 
-        user_id: str, 
-        expires_delta: Optional[timedelta] = None
-    ) -> str:
-        if expires_delta:
-            expire = datetime.utcnow() + expires_delta
-        else:
-            expire = datetime.utcnow() + timedelta(minutes=30)
-        
-        to_encode = {
-            "sub": user_id,
-            "exp": expire,
-            "type": "access"
-        }
-        
-        return jwt.encode(to_encode, self._secret_key, algorithm=self._algorithm)
-    
-    def create_refresh_token(self, user_id: str) -> str:
-        expire = datetime.utcnow() + timedelta(days=7)
-        to_encode = {
-            "sub": user_id,
-            "exp": expire,
-            "type": "refresh"
-        }
-        
-        return jwt.encode(to_encode, self._secret_key, algorithm=self._algorithm)
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    """
+    Valida el token JWT emitido por Auth0.
+
+    El token contiene:
+    - sub: ID del usuario en Auth0
+    - email: Email del usuario
+    - iat: Timestamp de emisión
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.AUTH0_PUBLIC_KEY,
+            algorithms=["RS256"],
+            audience=settings.AUTH0_AUDIENCE
+        )
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return payload
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 ```
 
 ## 🧪 Estrategia de Testing
