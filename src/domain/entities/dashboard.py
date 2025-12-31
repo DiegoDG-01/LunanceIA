@@ -7,3 +7,4 @@ class DashboardSummary:
     total_purchases: int
     top_category: str
     top_account: str
+    today_transactions: list
