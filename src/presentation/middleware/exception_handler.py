@@ -39,6 +39,7 @@ from shared.exceptions.domain import (
     GeminiInvalidResponseError,
     InvalidImageError,
     InvalidTransactionTypeError,
+    InsufficientFundsError
 )
 from presentation.schemas.responses.error import StandardErrorResponse, ErrorDetail
 from shared.constants.validation_messages import (
@@ -87,9 +88,11 @@ def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
         return "BUSINESS_ACCOUNT_HAS_TRANSACTIONS", 409
 
     # Errores de validación y reglas de negocio (400)
+    elif isinstance(exc, (InsufficientFundsError)):
+        return "INSUFFICIENT_FUNDS", 422
     elif isinstance(exc, (LunanceValidationError, BusinessRuleError)):
         return "VALIDATION_ERROR", 400
-    elif isinstance(exc, (InsufficientFundsError, AccountInactiveError)):
+    elif isinstance(exc, (AccountInactiveError)):
         return "BUSINESS_RULE_VIOLATION", 400
     elif isinstance(exc, (InvalidTransactionAmountError, NegativeAmountError)):
         return "VALIDATION_INVALID_AMOUNT", 400
@@ -97,7 +100,6 @@ def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
         return "INVALID_TRANSACTION_TYPE", 400
     elif isinstance(exc, (InvalidCurrencyError, CurrencyMismatchError)):
         return "VALIDATION_INVALID_CURRENCY", 400
-
     # Errores de API Gemini
     elif isinstance(exc, (GeminiProcessingError, GeminiInvalidResponseError)):
         return "GEMINI_PROCESSING_ERROR", 422
