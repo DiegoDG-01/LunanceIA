@@ -8,3 +8,4 @@ class DashboardSummary:
     top_category: str
     top_account: str
     today_transactions: list
+    category_distribution: list
