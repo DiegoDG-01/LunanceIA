@@ -26,7 +26,7 @@ class UserInactiveError(BusinessRuleError):
     """Usuario inactivo."""
 
     def __init__(self):
-        super().__init__("El usuario está inactivo", "USER_INACTIVE")
+        super().__init__("El usuario está inactivo")
 
 
 class EmailAlreadyExistsError(ValidationError):
@@ -48,17 +48,15 @@ class AccountInactiveError(BusinessRuleError):
     """Cuenta inactiva."""
 
     def __init__(self, account_id: int):
-        super().__init__(f"La cuenta {account_id} está inactiva", "ACCOUNT_INACTIVE")
+        super().__init__(f"La cuenta {account_id} está inactiva")
 
 
 class InsufficientFundsError(BusinessRuleError):
     """Fondos insuficientes."""
 
-    def __init__(
-        self, account_id: int, required_amount: float, available_amount: float
-    ):
-        message = f"Fondos insuficientes en cuenta {account_id}. Requerido: {required_amount}, Disponible: {available_amount}"
-        super().__init__(message, "INSUFFICIENT_FUNDS")
+    def __init__(self, required_amount: float, available_amount: float):
+        message = f"Fondos insuficientes en cuenta. Requerido: {required_amount}, Disponible: {available_amount}"
+        super().__init__(message)
 
 
 class AccountHasBalanceError(BusinessRuleError):
@@ -66,7 +64,7 @@ class AccountHasBalanceError(BusinessRuleError):
 
     def __init__(self, account_id: int, balance: float):
         message = f"No se puede eliminar la cuenta {account_id} con balance {balance}"
-        super().__init__(message, "ACCOUNT_HAS_BALANCE")
+        super().__init__(message)
 
 
 class AccountHasTransactionsError(BusinessRuleError):
@@ -74,7 +72,7 @@ class AccountHasTransactionsError(BusinessRuleError):
 
     def __init__(self, account_id: int):
         message = f"No se puede eliminar la cuenta {account_id} porque tiene transacciones asociadas"
-        super().__init__(message, "ACCOUNT_HAS_TRANSACTIONS")
+        super().__init__(message)
 
 
 # Transaction Exceptions
@@ -89,26 +87,21 @@ class InvalidTransactionAmountError(ValidationError):
     """Monto de transacción inválido."""
 
     def __init__(self, amount: float):
-        super().__init__(f"Monto de transacción inválido: {amount}", "INVALID_AMOUNT")
+        super().__init__(f"Monto de transacción inválido: {amount}")
 
 
 class InvalidTransactionTypeError(ValidationError):
     """Tipo de transacción inválido."""
 
     def __init__(self, transaction_type: str):
-        super().__init__(
-            f"Tipo de transacción inválido: {transaction_type}",
-            "INVALID_TRANSACTION_TYPE",
-        )
+        super().__init__(f"Tipo de transacción inválido: {transaction_type}")
 
 
 class CategoryNotFoundError(NotFoundError):
     """Categoría no encontrada."""
 
     def __init__(self, category_id: int):
-        super().__init__(
-            f"Categoría con ID {category_id} no encontrada", "CATEGORY_NOT_FOUND"
-        )
+        super().__init__(f"Categoría con ID {category_id} no encontrada")
 
 
 # Money Value Object Exceptions
@@ -116,29 +109,21 @@ class InvalidCurrencyError(ValidationError):
     """Moneda inválida."""
 
     def __init__(self, currency: str):
-        super().__init__(f"Moneda inválida: {currency}", "INVALID_CURRENCY")
+        super().__init__(f"Moneda inválida: {currency}")
 
 
 class CurrencyMismatchError(ValidationError):
     """Las monedas no coinciden."""
 
     def __init__(self, currency1: str, currency2: str):
-        super().__init__(
-            f"Las monedas no coinciden: {currency1} vs {currency2}", "CURRENCY_MISMATCH"
-        )
+        super().__init__(f"Las monedas no coinciden: {currency1} vs {currency2}")
 
 
 class NegativeAmountError(ValidationError):
     """Monto negativo no permitido."""
 
     def __init__(self, amount: float):
-        """
-        Initialize the exception for a negative amount value.
-
-        Parameters:
-            amount (float): The negative amount that triggered the exception.
-        """
-        super().__init__(f"Cantidad negativa no permitida: {amount}", "NEGATIVE_AMOUNT")
+        super().__init__(f"Cantidad negativa no permitida: {amount}")
 
 
 class GeminiProcessingError(LunanceException):
