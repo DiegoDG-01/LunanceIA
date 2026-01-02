@@ -122,7 +122,8 @@ TodayTransactions AS (
     LEFT JOIN categories c ON t.category_id = c.id
     LEFT JOIN accounts a ON t.account_id = a.id
     WHERE t.creation_date >= dc.today_start
-      AND t.creation_date < dc.today_end
+      AND t.creation_date < dc.today_end 
+      AND t.type = 'EXPENSE'
 )
 
 -- 7. Selección Final
