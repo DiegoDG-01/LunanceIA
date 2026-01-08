@@ -8,7 +8,6 @@ from infrastructure.config.settings import settings
 from infrastructure.security.jwt_service import JWTService
 from shared.exceptions.application import CommandValidationError
 from shared.exceptions.domain import (
-    UserNotFoundError,
     UserInactiveError,
     InvalidCredentialsError,
 )

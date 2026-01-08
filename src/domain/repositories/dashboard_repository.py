@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from domain.entities.dashboard import DashboardSummary
-from typing import List
+
 
 class DashboardRepository(ABC):
 

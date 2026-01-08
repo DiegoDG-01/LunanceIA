@@ -5,8 +5,6 @@ from sqlalchemy.orm import Session
 from domain.entities.dashboard import DashboardSummary
 from domain.repositories.dashboard_repository import DashboardRepository
 
-from datetime import datetime
-
 
 class SQLAlchemyDashboardRepository(DashboardRepository):
     """

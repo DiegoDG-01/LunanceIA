@@ -25,7 +25,6 @@ from shared.exceptions.domain import (
     EmailAlreadyExistsError,
     AccountNotFoundError,
     AccountInactiveError,
-    InsufficientFundsError,
     AccountHasBalanceError,
     AccountHasTransactionsError,
     TransactionNotFoundError,
