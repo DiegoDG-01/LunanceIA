@@ -55,6 +55,10 @@ from infrastructure.database.repositories.sqlalchemy_category_repository import 
 from infrastructure.database.repositories.sqlalchemy_dashboard_repository import SQLAlchemyDashboardRepository
 from application.queries.get_dashboard_summary_query import GetDashboardSummaryHandler
 
+from infrastructure.database.repositories.sqlalchemy_subscription_repository import SQLAlchemySubscriptionRepository
+from application.commands.create_subscription_command import CreateSubscriptionHandler
+from application.queries.get_subscriptions_query import GetSubscriptionsHandler
+
 
 # Repository Dependencies
 def get_account_repository(
@@ -81,6 +85,12 @@ def get_category_repository(
         db: Session = Depends(get_db),
 ) -> SQLAlchemyCategoryRepository:
     return SQLAlchemyCategoryRepository(db)
+
+
+def get_subscription_repository(
+        db: Session = Depends(get_db),
+) -> SQLAlchemySubscriptionRepository:
+    return SQLAlchemySubscriptionRepository(db)
 
 
 # Service Dependencies
@@ -159,6 +169,23 @@ def get_create_transaction_handler(
     )
 
 
+def get_create_subscription_handler(
+        subscription_repo: SQLAlchemySubscriptionRepository = Depends(get_subscription_repository),
+        user_repo: SQLAlchemyUserRepository = Depends(get_user_repository),
+        account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
+        category_repo: SQLAlchemyCategoryRepository = Depends(get_category_repository)
+) -> CreateSubscriptionHandler:
+    return CreateSubscriptionHandler(subscription_repo, user_repo, account_repo, category_repo)
+
+
+def get_subscriptions_handler(
+        subscription_repo: SQLAlchemySubscriptionRepository = Depends(get_subscription_repository),
+        account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
+        category_repo: SQLAlchemyCategoryRepository = Depends(get_category_repository),
+) -> GetSubscriptionsHandler:
+    return GetSubscriptionsHandler(subscription_repo, account_repo, category_repo)
+
+
 def get_delete_transaction_handler(
         transaction_repo: SQLAlchemyTransactionRepository = Depends(
             get_transaction_repository
@@ -226,6 +253,7 @@ def get_dashboard_repository(
         db: Session = Depends(get_db),
 ) -> SQLAlchemyDashboardRepository:
     return SQLAlchemyDashboardRepository(db)
+
 
 def get_dashboard_summary_handler(
         dashboard_repository: SQLAlchemyDashboardRepository = Depends(get_dashboard_repository),
