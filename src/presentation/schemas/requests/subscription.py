@@ -53,7 +53,7 @@ class UpdateSubscriptionRequest(BaseModel):
             "example": {
                 "name": "Netflix Premium",
                 "amount": 299.00,
-                "frequency": "mensual",
+                "frequency": "MONTHLY",
                 "is_active": True,
             }
         }

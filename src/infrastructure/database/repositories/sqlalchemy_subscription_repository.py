@@ -43,7 +43,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
             category_id=entity.category_id,
             name=entity.name,
             amount=entity.amount.amount,
-            frequency=entity.frequency,
+            frequency=entity.frequency.value,
             start_date=entity.start_date,
             end_date=entity.end_date,
             billing_day=entity.billing_day,
