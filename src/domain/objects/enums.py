@@ -17,14 +17,14 @@ class AccountType(str, Enum):
 
 
 class Frequency(str, Enum):
-    DAILY = "diaria"
-    WEEKLY = "semanal"
-    BIWEEKLY = "quincenal"
-    MONTHLY = "mensual"
-    BIMONTHLY = "bimensual"
-    QUARTERLY = "trimestral"
-    SEMI_ANNUAL = "semestral"
-    ANNUAL = "anual"
+    DAILY = "DAILY"
+    WEEKLY = "WEEKLY"
+    BIWEEKLY = "BIWEEKLY"
+    MONTHLY = "MONTHLY"
+    BIMONTHLY = "BIMONTHLY"
+    QUARTERLY = "QUARTERLY"
+    SEMI_ANNUAL = "SEMI_ANNUAL"
+    ANNUAL = "ANNUAL"
 
 
 class TransactionStatus(str, Enum):
