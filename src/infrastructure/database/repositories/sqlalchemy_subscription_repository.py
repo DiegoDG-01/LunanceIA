@@ -5,7 +5,7 @@ from typing import Optional, List
 from domain.entities.subscription import Subscription
 from domain.repositories.subscription_repository import SubscriptionRepository
 from domain.objects.money import Money
-from infrastructure.database.models import AccountModel, UserModel
+from infrastructure.database.models import AccountModel
 from infrastructure.database.models.subscription import SubscriptionModel
 
 
@@ -157,7 +157,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
         )
 
         if active_only:
-            results = results.filter(SubscriptionModel.is_active == True)
+            results = results.filter(SubscriptionModel.is_active)
 
         results = results.all()
 
