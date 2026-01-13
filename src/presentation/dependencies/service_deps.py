@@ -20,6 +20,7 @@ from application.commands.state_account_command import StateAccountHandler
 from application.commands.create_transaction_command import (
     CreateTransactionHandler,
 )
+from application.commands.update_subscription_command import UpdateSubscriptionHandler
 from domain.repositories.account_repository import AccountRepository
 from application.commands.delete_transaction_command import (
     DeleteTransactionHandler,
@@ -177,6 +178,12 @@ def get_create_subscription_handler(
 ) -> CreateSubscriptionHandler:
     return CreateSubscriptionHandler(subscription_repo, user_repo, account_repo, category_repo)
 
+def get_update_subscription_handler(
+        subscription_respo: SQLAlchemySubscriptionRepository = Depends(get_subscription_repository),
+        category_repo: SQLAlchemyCategoryRepository = Depends(get_category_repository),
+        account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
+) -> UpdateSubscriptionHandler:
+    return UpdateSubscriptionHandler(subscription_respo, category_repo, account_repo)
 
 def get_subscriptions_handler(
         subscription_repo: SQLAlchemySubscriptionRepository = Depends(get_subscription_repository),

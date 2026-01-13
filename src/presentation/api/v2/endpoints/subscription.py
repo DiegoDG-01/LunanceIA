@@ -13,10 +13,11 @@ from domain.entities.user import User
 from application.dto.subscription_dto import CreateSubscriptionDTO
 from application.queries.get_subscriptions_query import GetSubscriptionsQuery, GetSubscriptionsHandler
 from application.commands.create_subscription_command import CreateSubscriptionCommand, CreateSubscriptionHandler
+from application.commands.update_subscription_command import UpdateSubscriptionCommand, UpdateSubscriptionHandler
 from presentation.schemas.responses.subscription import SubscriptionResponse
-from presentation.schemas.requests.subscription import CreateSubscriptionRequest
+from presentation.schemas.requests.subscription import CreateSubscriptionRequest, UpdateSubscriptionRequest
 from presentation.dependencies.auth_deps import get_current_user
-from presentation.dependencies.service_deps import get_create_subscription_handler, get_subscriptions_handler
+from presentation.dependencies.service_deps import get_create_subscription_handler, get_subscriptions_handler, get_update_subscription_handler
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -78,3 +79,25 @@ async def create_subscription(
     result = await handler.handle(command)
 
     return SubscriptionResponse(**result.__dict__)
+
+
+@router.put("/{subscription_uuid}", response_model=SubscriptionResponse, status_code=status.HTTP_200_OK)
+@limiter.limit("20/minute")
+async def update_subscription(
+        request: Request,
+        subscription_uuid: str,
+        subscription_request: UpdateSubscriptionRequest,
+        current_user: User = Depends(get_current_user),
+        handler: UpdateSubscriptionHandler = Depends(get_update_subscription_handler),
+):
+    command = UpdateSubscriptionCommand(
+        subscription_uuid=subscription_uuid,
+        user_id=current_user.id,
+        dto=subscription_request
+    )
+
+    update_subscription = await handler.handle(command)
+    return SubscriptionResponse(**update_subscription.__dict__)
+
+async def delete_subscription():
+    pass
