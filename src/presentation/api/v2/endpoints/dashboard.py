@@ -20,7 +20,7 @@ async def get_general_data(
         current_user: User = Depends(get_current_active_user),
         handler: GetDashboardSummaryHandler = Depends(get_dashboard_summary_handler),
 ):
-    query = GetDashboardSummaryQuery(user_uuid=current_user.uuid)
+    query = GetDashboardSummaryQuery(user_uuid=current_user.uuid, user_id=current_user.id)
     summary = await handler.handle(query)
 
     return summary

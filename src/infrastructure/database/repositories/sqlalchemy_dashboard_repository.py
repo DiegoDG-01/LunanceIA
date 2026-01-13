@@ -14,7 +14,7 @@ class SQLAlchemyDashboardRepository(DashboardRepository):
     def __init__(self, db: Session):
         self.db = db
 
-    def get_dashboard_summary(self, uuid: str) -> DashboardSummary:
+    def get_dashboard_summary(self, uuid: str, user_id: int) -> DashboardSummary:
         query = text("""WITH DateConfig AS (
     SELECT
         -- Rango para métricas del MES
@@ -33,7 +33,7 @@ MonthTotals AS (
         COUNT(CASE WHEN type = 'EXPENSE' THEN 1 END)                        AS total_purchases
     FROM transactions t
     CROSS JOIN DateConfig dc
-    WHERE t.user_id = 1
+    WHERE t.user_id = :user_id 
       AND t.creation_date >= dc.month_start
       AND t.creation_date < dc.month_end
 ),
@@ -44,7 +44,7 @@ TopCategory AS (
     FROM transactions t
     INNER JOIN categories c ON t.category_id = c.id
     CROSS JOIN DateConfig dc
-    WHERE t.user_id = 1
+    WHERE t.user_id = :user_id 
       AND t.type = 'EXPENSE'
       AND t.creation_date >= dc.month_start
       AND t.creation_date < dc.month_end
@@ -59,7 +59,7 @@ TopAccount AS (
     FROM transactions t
     INNER JOIN accounts a ON t.account_id = a.id
     CROSS JOIN DateConfig dc
-    WHERE t.user_id = 1
+    WHERE t.user_id = :user_id 
       AND t.type = 'EXPENSE'
       AND t.creation_date >= dc.month_start
       AND t.creation_date < dc.month_end
@@ -79,7 +79,7 @@ CategoryDistribution AS (
     FROM transactions t
     INNER JOIN categories c ON t.category_id = c.id
     CROSS JOIN DateConfig dc
-    WHERE t.user_id = 1
+    WHERE t.user_id = :user_id 
       AND t.type = 'EXPENSE'
       AND t.creation_date >= dc.month_start
       AND t.creation_date < dc.month_end
@@ -113,7 +113,7 @@ TodayTransactions AS (
     ) as json_data
     FROM (
         SELECT * FROM transactions
-        WHERE user_id = 1
+        WHERE user_id = :user_id 
         ORDER BY creation_date DESC
     ) t
     CROSS JOIN DateConfig dc
@@ -136,7 +136,7 @@ SELECT
 
         # 3. Secure Execution
         result = self.db.execute(query, {
-            "user_id": 1
+            "user_id": user_id
         })
 
         row = result.fetchone()
