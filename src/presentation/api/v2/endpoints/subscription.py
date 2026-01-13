@@ -133,7 +133,7 @@ async def delete_subscription(
 
     if not deleted:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
         )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

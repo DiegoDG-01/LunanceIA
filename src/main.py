@@ -33,7 +33,7 @@ app.state.limiter = limiter
 
 # Configurar CORS
 if settings.ENVIRONMENT.upper() == "PROD":
-    origins = ["https://lunance.app"]  # Configurar dominio de producción
+    origins = ["https://api.lunance.app"]  # Configurar dominio de producción
 elif settings.ENVIRONMENT.upper() == "DEV":
     origins = ["*"]
 else:
