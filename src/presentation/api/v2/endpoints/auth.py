@@ -20,10 +20,10 @@ from presentation.dependencies.service_deps import (
     get_refresh_token_handler,
     get_logout_handler,
 )
-from application.auth.commands.login_command import LoginCommand, LoginHandler
-from application.auth.commands.refresh_token_command import RefreshTokenCommand, RefreshTokenHandler
-from application.auth.commands.logout_command import LogoutCommand, LogoutHandler
-from application.auth.commands.register_command import RegisterCommand, RegisterHandler
+from application.auth.commands.login import LoginCommand, LoginHandler
+from application.auth.commands.refresh_token import RefreshTokenCommand, RefreshTokenHandler
+from application.auth.commands.logout import LogoutCommand, LogoutHandler
+from application.auth.commands.register import RegisterCommand, RegisterHandler
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)

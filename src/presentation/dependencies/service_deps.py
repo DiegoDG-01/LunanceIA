@@ -1,10 +1,10 @@
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
-from application.transactions.commands.update_transaction_command import (
+from application.transactions.commands.update_transaction import (
     UpdateTransactionCommandHandler,
 )
-from application.transactions.queries.get_transactions_query import GetTransactionsHandler
+from application.transactions.queries.get_transactions import GetTransactionsHandler
 from infrastructure.external_services.gemini import GeminiService
 from infrastructure.database.connection import get_db
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
@@ -14,50 +14,50 @@ from infrastructure.database.repositories.sqlalchemy_transaction_repository impo
     SQLAlchemyTransactionRepository,
 )
 from domain.services.account_service import AccountService
-from application.accounts.commands.create_account_command import CreateAccountHandler
-from application.accounts.commands.update_account_command import UpdateAccountHandler
-from application.accounts.commands.state_account_command import StateAccountHandler
-from application.transactions.commands.create_transaction_command import (
+from application.accounts.commands.create_account import CreateAccountHandler
+from application.accounts.commands.update_account import UpdateAccountHandler
+from application.accounts.commands.state_account import StateAccountHandler
+from application.transactions.commands.create_transaction import (
     CreateTransactionHandler,
 )
-from application.subscriptions.commands.update_subscription_command import UpdateSubscriptionHandler
+from application.subscriptions.commands.update_subscription import UpdateSubscriptionHandler
 from domain.repositories.account_repository import AccountRepository
-from application.transactions.commands.delete_transaction_command import (
+from application.transactions.commands.delete_transaction import (
     DeleteTransactionHandler,
 )
 from domain.repositories.transaction_repository import TransactionRepository
 
-from application.transactions.queries.get_transaction_by_uuid_query import (
+from application.transactions.queries.get_transaction_by_uuid import (
     GetTransactionByUuidHandler,
 )
-from application.accounts.commands.delete_account_command import DeleteAccountHandler
-from application.accounts.queries.get_user_accounts_query import GetUserAccountsHandler
-from application.accounts.queries.get_account_by_id_query import GetAccountByIdHandler
+from application.accounts.commands.delete_account import DeleteAccountHandler
+from application.accounts.queries.get_user_accounts import GetUserAccountsHandler
+from application.accounts.queries.get_account_by_id import GetAccountByIdHandler
 from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
-from application.auth.commands.login_command import LoginHandler
-from application.auth.commands.refresh_token_command import RefreshTokenHandler
-from application.auth.commands.logout_command import LogoutHandler
-from application.subscriptions.commands.delete_subscription_command import DeleteSubscriptionHandler
-from application.auth.commands.register_command import RegisterHandler
+from application.auth.commands.login import LoginHandler
+from application.auth.commands.refresh_token import RefreshTokenHandler
+from application.auth.commands.logout import LogoutHandler
+from application.subscriptions.commands.delete_subscription import DeleteSubscriptionHandler
+from application.auth.commands.register import RegisterHandler
 from infrastructure.security.jwt_service import JWTService
 
 from domain.repositories.auth_token_repository import AuthTokenRepository
 from infrastructure.database.repositories.sqlalchemy_auth_token_repository import (
     SQLAlchemyAuthTokenRepository,
 )
-from application.categories.queries.get_categories_query import GetCategoriesHandler
+from application.categories.queries.get_categories import GetCategoriesHandler
 from infrastructure.database.repositories.sqlalchemy_category_repository import (
     SQLAlchemyCategoryRepository,
 )
 
 from infrastructure.database.repositories.sqlalchemy_dashboard_repository import SQLAlchemyDashboardRepository
-from application.dashboard.queries.get_dashboard_summary_query import GetDashboardSummaryHandler
+from application.dashboard.queries.get_dashboard_summary import GetDashboardSummaryHandler
 
 from infrastructure.database.repositories.sqlalchemy_subscription_repository import SQLAlchemySubscriptionRepository
-from application.subscriptions.commands.create_subscription_command import CreateSubscriptionHandler
-from application.subscriptions.queries.get_subscriptions_query import GetSubscriptionsHandler
+from application.subscriptions.commands.create_subscription import CreateSubscriptionHandler
+from application.subscriptions.queries.get_subscriptions import GetSubscriptionsHandler
 
 
 # Repository Dependencies

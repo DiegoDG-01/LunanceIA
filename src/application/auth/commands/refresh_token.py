@@ -7,7 +7,7 @@ from infrastructure.config.settings import settings
 from infrastructure.security.jwt_service import JWTService
 from shared.exceptions.application import CommandValidationError
 from shared.exceptions.application import JWTValidationError
-from application.auth.commands.login_command import LoginResponse
+from application.auth.commands.login import LoginResponse
 
 
 @dataclass
