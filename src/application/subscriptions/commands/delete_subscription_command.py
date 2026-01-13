@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 from domain.repositories.subscription_repository import SubscriptionRepository
-from domain.repositories.account_repository import AccountRepository
 
 from shared.exceptions.domain import SubscriptionNotFoundError
 

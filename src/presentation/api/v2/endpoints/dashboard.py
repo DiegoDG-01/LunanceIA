@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from application.queries.get_dashboard_summary_query import GetDashboardSummaryHandler, GetDashboardSummaryQuery
+from application.dashboard.queries.get_dashboard_summary_query import GetDashboardSummaryHandler, GetDashboardSummaryQuery
 from presentation.dependencies.service_deps import get_dashboard_summary_handler
 
 from domain.entities.user import User

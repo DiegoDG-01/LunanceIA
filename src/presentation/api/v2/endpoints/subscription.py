@@ -13,10 +13,10 @@ from typing import Optional
 
 from domain.entities.user import User
 from application.dto.subscription_dto import CreateSubscriptionDTO
-from application.queries.get_subscriptions_query import GetSubscriptionsQuery, GetSubscriptionsHandler
-from application.commands.create_subscription_command import CreateSubscriptionCommand, CreateSubscriptionHandler
-from application.commands.update_subscription_command import UpdateSubscriptionCommand, UpdateSubscriptionHandler
-from application.commands.delete_subscription_command import DeleteSubscriptionCommand, DeleteSubscriptionHandler
+from application.subscriptions.queries.get_subscriptions_query import GetSubscriptionsQuery, GetSubscriptionsHandler
+from application.subscriptions.commands.create_subscription_command import CreateSubscriptionCommand, CreateSubscriptionHandler
+from application.subscriptions.commands.update_subscription_command import UpdateSubscriptionCommand, UpdateSubscriptionHandler
+from application.subscriptions.commands.delete_subscription_command import DeleteSubscriptionCommand, DeleteSubscriptionHandler
 from presentation.schemas.responses.subscription import SubscriptionResponse
 from presentation.schemas.requests.subscription import CreateSubscriptionRequest, UpdateSubscriptionRequest
 from presentation.dependencies.auth_deps import get_current_user
@@ -55,6 +55,16 @@ async def get_subscriptions(
 
     subscriptions = await handler.handle(query)
     return [SubscriptionResponse(**subscription.__dict__) for subscription in subscriptions]
+
+
+@router.get("/{subscription_uuid}", response_model=SubscriptionResponse)
+async def get_subscription(
+        request: Request,
+        subscription_uuid: str,
+        current_user: User = Depends(get_current_user),
+        handler: GetSubscriptionsHandler = Depends(get_subscriptions_handler)
+):
+    pass
 
 
 @router.post("/", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)

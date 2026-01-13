@@ -16,8 +16,8 @@ import io
 
 from infrastructure.external_services.gemini import GeminiService
 
-from application.queries.get_transactions_query import GetTransactionsQuery
-from application.queries.get_transactions_query import GetTransactionsHandler
+from application.transactions.queries.get_transactions_query import GetTransactionsQuery
+from application.transactions.queries.get_transactions_query import GetTransactionsHandler
 from domain.entities.user import User
 from application.dto.transaction_dto import CreateTransactionDTO
 from presentation.schemas.responses.transaction import TransactionResponse
@@ -30,15 +30,15 @@ from presentation.dependencies.service_deps import (
     get_delete_transaction_handler,
     get_transaction_by_uuid_handler,
 )
-from application.commands.delete_transaction_command import (
+from application.transactions.commands.delete_transaction_command import (
     DeleteTransactionCommand,
     DeleteTransactionHandler,
 )
-from application.commands.create_transaction_command import (
+from application.transactions.commands.create_transaction_command import (
     CreateTransactionCommand,
     CreateTransactionHandler,
 )
-from application.queries.get_transaction_by_uuid_query import (
+from application.transactions.queries.get_transaction_by_uuid_query import (
     GetTransactionByUuidQuery,
     GetTransactionByUuidHandler,
 )
@@ -48,7 +48,7 @@ from fastapi import Query
 from domain.objects.enums import TransactionType
 
 from presentation.schemas.requests.transaction import UpdateTransactionRequest
-from application.commands.update_transaction_command import (
+from application.transactions.commands.update_transaction_command import (
     UpdateTransactionCommand,
     UpdateTransactionCommandHandler,
 )

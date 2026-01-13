@@ -17,27 +17,27 @@ from presentation.dependencies.service_deps import (
     get_account_by_id_handler,
     get_state_account_handler,
 )
-from application.commands.create_account_command import (
+from application.accounts.commands.create_account_command import (
     CreateAccountCommand,
     CreateAccountHandler,
 )
-from application.commands.state_account_command import (
+from application.accounts.commands.state_account_command import (
     StateAccountCommand,
     StateAccountHandler,
 )
-from application.commands.update_account_command import (
+from application.accounts.commands.update_account_command import (
     UpdateAccountCommand,
     UpdateAccountHandler,
 )
-from application.commands.delete_account_command import (
+from application.accounts.commands.delete_account_command import (
     DeleteAccountCommand,
     DeleteAccountHandler,
 )
-from application.queries.get_user_accounts_query import (
+from application.accounts.queries.get_user_accounts_query import (
     GetUserAccountsQuery,
     GetUserAccountsHandler,
 )
-from application.queries.get_account_by_id_query import (
+from application.accounts.queries.get_account_by_id_query import (
     GetAccountByIdQuery,
     GetAccountByIdHandler,
 )
