@@ -38,7 +38,8 @@ from shared.exceptions.domain import (
     GeminiInvalidResponseError,
     InvalidImageError,
     InvalidTransactionTypeError,
-    InsufficientFundsError
+    InsufficientFundsError,
+    SubscriptionNotFoundError
 )
 from presentation.schemas.responses.error import StandardErrorResponse, ErrorDetail
 from shared.constants.validation_messages import (
@@ -77,6 +78,8 @@ def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
         return "NOT_FOUND_TRANSACTION", 404
     elif isinstance(exc, CategoryNotFoundError):
         return "NOT_FOUND_CATEGORY", 404
+    elif isinstance(exc, SubscriptionNotFoundError):
+        return "NOT_FOUND_SUBSCRIPTION", 404
 
     # Conflictos de negocio (409)
     elif isinstance(exc, EmailAlreadyExistsError):

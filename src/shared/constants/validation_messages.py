@@ -139,6 +139,7 @@ HTTP_CODES_ERRORS = {
         "NOT_FOUND_ACCOUNT": "Cuenta no encontrada",
         "NOT_FOUND_TRANSACTION": "Transacción no encontrada",
         "NOT_FOUND_CATEGORY": "Categoría no encontrada",
+        "NOT_FOUND_SUBSCRIPTION": "Suscripción no encontrada",
         # Códigos específicos de Lunance - Conflictos de negocio
         "BUSINESS_EMAIL_EXISTS": "El email ya está registrado",
         "BUSINESS_ACCOUNT_HAS_BALANCE": "La cuenta tiene saldo pendiente",
@@ -178,6 +179,7 @@ HTTP_CODES_ERRORS = {
         "NOT_FOUND_ACCOUNT": "Account not found",
         "NOT_FOUND_TRANSACTION": "Transaction not found",
         "NOT_FOUND_CATEGORY": "Category not found",
+        "NOT_FOUND_SUBSCRIPTION": "Subscription not found",
         # Códigos específicos de Lunance - Conflictos de negocio
         "BUSINESS_EMAIL_EXISTS": "Email already registered",
         "BUSINESS_ACCOUNT_HAS_BALANCE": "Account has pending balance",

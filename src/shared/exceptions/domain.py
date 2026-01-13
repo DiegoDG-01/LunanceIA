@@ -44,6 +44,15 @@ class AccountNotFoundError(NotFoundError):
         super().__init__(f"Cuenta con ID {account_uuid} no encontrada")
 
 
+class SubscriptionNotFoundError(NotFoundError):
+    """Suscripción no encontrada."""
+
+    def __init__(self, subscription_uuid: str):
+
+        super().__init__(
+            f"Suscripción con ID {subscription_uuid} no encontrada")
+
+
 class AccountInactiveError(BusinessRuleError):
     """Cuenta inactiva."""
 
