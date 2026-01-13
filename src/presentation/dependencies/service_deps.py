@@ -41,6 +41,7 @@ from application.commands.auth_commands import (
     RefreshTokenHandler,
     LogoutHandler,
 )
+from application.commands.delete_subscription_command import DeleteSubscriptionHandler
 from application.commands.register_commands import RegisterHandler
 from infrastructure.security.jwt_service import JWTService
 
@@ -191,6 +192,11 @@ def get_subscriptions_handler(
         category_repo: SQLAlchemyCategoryRepository = Depends(get_category_repository),
 ) -> GetSubscriptionsHandler:
     return GetSubscriptionsHandler(subscription_repo, account_repo, category_repo)
+
+def get_delete_subscription_handler(
+        subscription_repo: SQLAlchemySubscriptionRepository = Depends(get_subscription_repository),
+) -> DeleteSubscriptionHandler:
+    return DeleteSubscriptionHandler(subscription_repo)
 
 
 def get_delete_transaction_handler(

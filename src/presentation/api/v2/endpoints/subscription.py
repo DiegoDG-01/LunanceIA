@@ -2,6 +2,8 @@ from fastapi import (
     APIRouter,
     Depends,
     status,
+    HTTPException,
+    Response,
     Request,
     Query
 )
@@ -14,10 +16,16 @@ from application.dto.subscription_dto import CreateSubscriptionDTO
 from application.queries.get_subscriptions_query import GetSubscriptionsQuery, GetSubscriptionsHandler
 from application.commands.create_subscription_command import CreateSubscriptionCommand, CreateSubscriptionHandler
 from application.commands.update_subscription_command import UpdateSubscriptionCommand, UpdateSubscriptionHandler
+from application.commands.delete_subscription_command import DeleteSubscriptionCommand, DeleteSubscriptionHandler
 from presentation.schemas.responses.subscription import SubscriptionResponse
 from presentation.schemas.requests.subscription import CreateSubscriptionRequest, UpdateSubscriptionRequest
 from presentation.dependencies.auth_deps import get_current_user
-from presentation.dependencies.service_deps import get_create_subscription_handler, get_subscriptions_handler, get_update_subscription_handler
+from presentation.dependencies.service_deps import (
+    get_create_subscription_handler,
+    get_subscriptions_handler,
+    get_update_subscription_handler,
+    get_delete_subscription_handler,
+)
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -99,5 +107,23 @@ async def update_subscription(
     update_subscription = await handler.handle(command)
     return SubscriptionResponse(**update_subscription.__dict__)
 
-async def delete_subscription():
-    pass
+
+@router.delete("/{subscription_uuid}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_subscription(
+        subscription_uuid: str,
+        current_user: User = Depends(get_current_user),
+        handler: DeleteSubscriptionHandler = Depends(get_delete_subscription_handler),
+):
+    command = DeleteSubscriptionCommand(
+        subscription_uuid=subscription_uuid,
+        user_id=current_user.id
+    )
+
+    deleted = handler.handle(command)
+
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found"
+        )
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
