@@ -39,34 +39,78 @@ domain/
 
 ### ⚡ Capa de Aplicación (`src/application/`)
 
-Orquesta casos de uso utilizando el patrón CQRS.
+Orquesta casos de uso utilizando el patrón CQRS, organizada por feature/dominio.
 
 ```
 application/
-├── commands/                  # CQRS - Operaciones de escritura
+├── accounts/                  # Feature: Gestión de cuentas
 │   ├── __init__.py
-│   ├── create_account_command.py    # Comando para crear cuenta
-│   ├── update_account_command.py    # Comando para actualizar cuenta
-│   ├── delete_account_command.py    # Comando para eliminar cuenta
-│   ├── auth_commands.py             # Comandos de autenticación
-│   └── register_commands.py         # Comandos de registro
-├── queries/                   # CQRS - Operaciones de lectura
+│   ├── commands/             # Operaciones de escritura de cuentas
+│   │   ├── __init__.py
+│   │   ├── create_account.py      # Crear cuenta
+│   │   ├── update_account.py      # Actualizar cuenta
+│   │   ├── delete_account.py      # Eliminar cuenta
+│   │   └── state_account.py       # Cambiar estado de cuenta
+│   └── queries/              # Operaciones de lectura de cuentas
+│       ├── __init__.py
+│       ├── get_account_by_id.py   # Consultar cuenta por ID
+│       └── get_user_accounts.py   # Consultar cuentas de usuario
+├── transactions/             # Feature: Gestión de transacciones
 │   ├── __init__.py
-│   ├── get_account_by_id_query.py   # Consulta específica por ID
-│   └── get_user_accounts_query.py   # Consulta múltiple por usuario
-├── dto/                       # Data Transfer Objects
+│   ├── commands/             # Operaciones de escritura de transacciones
+│   │   ├── __init__.py
+│   │   ├── create_transaction.py
+│   │   ├── update_transaction.py
+│   │   └── delete_transaction.py
+│   └── queries/              # Operaciones de lectura de transacciones
+│       ├── __init__.py
+│       ├── get_transactions.py
+│       └── get_transaction_by_uuid.py
+├── subscriptions/            # Feature: Gestión de suscripciones
 │   ├── __init__.py
-│   ├── account_dto.py         # DTO para transferencia de datos de cuenta
-│   └── transaction_dto.py     # DTO para transferencia de datos transacción
-└── interfaces/                # Interfaces de aplicación
+│   ├── commands/
+│   │   ├── __init__.py
+│   │   ├── create_subscription.py
+│   │   ├── update_subscription.py
+│   │   └── delete_subscription.py
+│   └── queries/
+│       ├── __init__.py
+│       └── get_subscriptions.py
+├── auth/                     # Feature: Autenticación y registro
+│   ├── __init__.py
+│   └── commands/
+│       ├── __init__.py
+│       ├── login.py          # Autenticación de usuario
+│       ├── logout.py         # Cerrar sesión
+│       ├── refresh_token.py  # Renovar token
+│       └── register.py       # Registro de usuario
+├── categories/               # Feature: Gestión de categorías
+│   ├── __init__.py
+│   └── queries/
+│       ├── __init__.py
+│       └── get_categories.py
+├── dashboard/                # Feature: Dashboard y resumen
+│   ├── __init__.py
+│   └── queries/
+│       ├── __init__.py
+│       └── get_dashboard_summary.py
+├── dto/                      # Data Transfer Objects (compartidos)
+│   ├── __init__.py
+│   ├── account_dto.py        # DTOs para transferencia de datos
+│   ├── transaction_dto.py
+│   ├── subscription_dto.py
+│   └── category_dto.py
+└── interfaces/               # Interfaces de aplicación
     └── __init__.py
 ```
 
 #### Características de Aplicación:
-- **Separación CQRS**: Comandos y consultas separados
-- **DTOs**: Objetos de transferencia sin lógica de negocio
+- **Organización por Feature**: Cada dominio tiene su propia carpeta con comandos y queries
+- **Separación CQRS**: Comandos (escritura) y queries (lectura) claramente separados
+- **DTOs Centralizados**: Objetos de transferencia compartidos entre features
 - **Handlers**: Cada comando/consulta tiene su handler específico
 - **Use Cases**: Orquestación de entidades de dominio
+- **Nomenclatura limpia**: Los nombres de archivos no repiten "command" o "query" ya que la carpeta provee el contexto
 
 ### 🔧 Capa de Infraestructura (`src/infrastructure/`)
 
@@ -238,9 +282,10 @@ tests/
 
 ### 2. CQRS (Command Query Responsibility Segregation)
 
-Separación entre operaciones de lectura y escritura:
+Separación entre operaciones de lectura y escritura, organizadas por feature:
 
 ```python
+# application/accounts/commands/create_account.py
 # Comando - Operación de escritura
 @dataclass
 class CreateAccountCommand:
@@ -254,11 +299,12 @@ class CreateAccountCommand:
 class CreateAccountCommandHandler:
     def __init__(self, account_repo: AccountRepository):
         self._account_repo = account_repo
-    
+
     async def handle(self, command: CreateAccountCommand) -> Account:
         # Lógica de creación
         pass
 
+# application/accounts/queries/get_user_accounts.py
 # Consulta - Operación de lectura
 @dataclass
 class GetUserAccountsQuery:
@@ -269,10 +315,21 @@ class GetUserAccountsQuery:
 class GetUserAccountsQueryHandler:
     def __init__(self, account_repo: AccountRepository):
         self._account_repo = account_repo
-    
+
     async def handle(self, query: GetUserAccountsQuery) -> List[Account]:
         # Lógica de consulta
         pass
+
+# Ejemplo de uso en endpoints
+# presentation/api/v2/endpoints/account.py
+from application.accounts.commands.create_account import (
+    CreateAccountCommand,
+    CreateAccountCommandHandler
+)
+from application.accounts.queries.get_user_accounts import (
+    GetUserAccountsQuery,
+    GetUserAccountsQueryHandler
+)
 ```
 
 ### 3. Repository Pattern

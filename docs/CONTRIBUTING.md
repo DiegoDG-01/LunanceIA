@@ -167,7 +167,8 @@ MAX_ACCOUNT_NAME_LENGTH = 100
 DEFAULT_CURRENCY = "MXN"
 
 # Archivos: snake_case
-create_account_command.py
+create_account.py  # Dentro de accounts/commands/
+get_user_accounts.py  # Dentro de accounts/queries/
 sqlalchemy_account_repository.py
 ```
 
@@ -175,7 +176,7 @@ sqlalchemy_account_repository.py
 
 #### Comandos (CQRS)
 ```python
-# src/application/commands/create_account_command.py
+# src/application/accounts/commands/create_account.py
 from dataclasses import dataclass
 from domain.repositories.account_repository import AccountRepository
 
@@ -189,11 +190,13 @@ class CreateAccountCommand:
 class CreateAccountHandler:
     def __init__(self, account_repo: AccountRepository):
         self._account_repo = account_repo
-    
+
     async def handle(self, command: CreateAccountCommand) -> Account:
         # Lógica del caso de uso
         pass
 ```
+
+**Nota**: Los comandos y queries están organizados por feature (accounts, transactions, etc.) con carpetas separadas para commands y queries. El nombre del archivo ya no incluye los sufijos "_command" o "_query" ya que la estructura de carpetas provee ese contexto.
 
 #### Entidades de Dominio
 ```python
