@@ -1,7 +1,7 @@
 """Manejador global de excepciones para estandarizar respuestas de error."""
 
 import logging
-from typing import Union
+from typing import Union, Dict, Tuple, Type
 
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
@@ -58,6 +58,50 @@ from shared.utils.language import get_user_language
 
 logger = logging.getLogger(__name__)
 
+# Definición del diccionario de mapeo
+EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
+    # --- Autenticación y Autorización (401) ---
+    InvalidCredentialsError: ("AUTH_INVALID_CREDENTIALS", 401),
+    UnauthorizedError: ("AUTH_INVALID_CREDENTIALS", 401),
+    UserInactiveError: ("AUTH_USER_INACTIVE", 401),
+    JWTValidationError: ("JWT_VALIDATION_ERROR", 401),
+
+    # --- Recursos No Encontrados (404) ---
+    UserNotFoundError: ("NOT_FOUND_USER", 404),
+    AccountNotFoundError: ("NOT_FOUND_ACCOUNT", 404),
+    TransactionNotFoundError: ("NOT_FOUND_TRANSACTION", 404),
+    CategoryNotFoundError: ("NOT_FOUND_CATEGORY", 404),
+    SubscriptionNotFoundError: ("NOT_FOUND_SUBSCRIPTION", 404),
+
+    # --- Conflictos de Negocio (409) ---
+    EmailAlreadyExistsError: ("BUSINESS_EMAIL_EXISTS", 409),
+    AccountHasBalanceError: ("BUSINESS_ACCOUNT_HAS_BALANCE", 409),
+    AccountHasTransactionsError: ("BUSINESS_ACCOUNT_HAS_TRANSACTIONS", 409),
+
+    # --- Errores de Validación y Reglas de Negocio (400 / 422) ---
+    InsufficientFundsError: ("INSUFFICIENT_FUNDS", 422),
+    AccountInactiveError: ("BUSINESS_RULE_VIOLATION", 400),
+    InvalidTransactionAmountError: ("VALIDATION_INVALID_AMOUNT", 400),
+    NegativeAmountError: ("VALIDATION_INVALID_AMOUNT", 400),
+    InvalidTransactionTypeError: ("INVALID_TRANSACTION_TYPE", 400),
+    InvalidCurrencyError: ("VALIDATION_INVALID_CURRENCY", 400),
+    CurrencyMismatchError: ("VALIDATION_INVALID_CURRENCY", 400),
+    CommandValidationError: ("VALIDATION_ERROR", 400),
+    QueryValidationError: ("VALIDATION_ERROR", 400),
+    LunanceValidationError: ("VALIDATION_ERROR", 400),
+    BusinessRuleError: ("VALIDATION_ERROR", 400),
+
+    # --- Errores de API Gemini ---
+    GeminiProcessingError: ("GEMINI_PROCESSING_ERROR", 422),
+    GeminiInvalidResponseError: ("GEMINI_PROCESSING_ERROR", 422),
+    GeminiAPIError: ("GEMINI_API_ERROR", 503),
+    InvalidImageError: ("VALIDATION_INVALID_IMAGE", 400),
+
+    # --- Infraestructura y Servicios Externos (500 / 503) ---
+    RepositoryError: ("INTERNAL_SERVER_ERROR", 500),
+    ExternalServiceError: ("SERVICE_UNAVAILABLE", 503),
+}
+
 
 def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
     """
@@ -70,70 +114,16 @@ def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
         tuple[str, int]: A tuple containing the error code and corresponding HTTP status code.
     """
 
-    # Excepciones de autenticación y autorización (401)
-    if isinstance(exc, (InvalidCredentialsError, UnauthorizedError)):
-        return "AUTH_INVALID_CREDENTIALS", 401
-    elif isinstance(exc, UserInactiveError):
-        return "AUTH_USER_INACTIVE", 401
-    elif isinstance(exc, JWTValidationError):
-        return "AUTH_TOKEN_ERROR", 401
+    exc_type = type(exc)
 
-    # Excepciones de recursos no encontrados (404)
-    elif isinstance(exc, UserNotFoundError):
-        return "NOT_FOUND_USER", 404
-    elif isinstance(exc, AccountNotFoundError):
-        return "NOT_FOUND_ACCOUNT", 404
-    elif isinstance(exc, TransactionNotFoundError):
-        return "NOT_FOUND_TRANSACTION", 404
-    elif isinstance(exc, CategoryNotFoundError):
-        return "NOT_FOUND_CATEGORY", 404
-    elif isinstance(exc, SubscriptionNotFoundError):
-        return "NOT_FOUND_SUBSCRIPTION", 404
+    if exc_type in EXCEPTION_MAP:
+        return EXCEPTION_MAP[exc_type]
 
-    # Conflictos de negocio (409)
-    elif isinstance(exc, EmailAlreadyExistsError):
-        return "BUSINESS_EMAIL_EXISTS", 409
-    elif isinstance(exc, AccountHasBalanceError):
-        return "BUSINESS_ACCOUNT_HAS_BALANCE", 409
-    elif isinstance(exc, AccountHasTransactionsError):
-        return "BUSINESS_ACCOUNT_HAS_TRANSACTIONS", 409
+    for error_class, response in EXCEPTION_MAP.items():
+        if isinstance(exc, error_class):
+            return response
 
-    # Errores de validación y reglas de negocio (400)
-    elif isinstance(exc, (InsufficientFundsError)):
-        return "INSUFFICIENT_FUNDS", 422
-    elif isinstance(exc, (AccountInactiveError)):
-        return "BUSINESS_RULE_VIOLATION", 400
-    elif isinstance(exc, (InvalidTransactionAmountError, NegativeAmountError)):
-        return "VALIDATION_INVALID_AMOUNT", 400
-    elif isinstance(exc, InvalidTransactionTypeError):
-        return "INVALID_TRANSACTION_TYPE", 400
-    elif isinstance(exc, (InvalidCurrencyError, CurrencyMismatchError)):
-        return "VALIDATION_INVALID_CURRENCY", 400
-    elif isinstance(exc, CommandValidationError):
-        return "VALIDATION_ERROR", 400
-    elif isinstance(exc, QueryValidationError):
-        return "VALIDATION_ERROR", 400
-    elif isinstance(exc, (LunanceValidationError, BusinessRuleError)):
-        return "VALIDATION_ERROR", 400
-
-
-    # Errores de API Gemini
-    elif isinstance(exc, (GeminiProcessingError, GeminiInvalidResponseError)):
-        return "GEMINI_PROCESSING_ERROR", 422
-    elif isinstance(exc, GeminiAPIError):
-        return "GEMINI_API_ERROR", 503  # Service unavailable
-    elif isinstance(exc, InvalidImageError):
-        return "VALIDATION_INVALID_IMAGE", 400
-    # Errores de repositorio (500)
-    elif isinstance(exc, RepositoryError):
-        return "INTERNAL_SERVER_ERROR", 500
-    # Errores de external service (500)
-    elif isinstance(exc, ExternalServiceError):
-        return "SERVICE_UNAVAILABLE", 503
-
-    # Error genérico del sistema (500)
-    else:
-        return "INTERNAL_SERVER_ERROR", 500
+    return "INTERNAL_SERVER_ERROR", 500
 
 
 async def lunance_exception_handler(
