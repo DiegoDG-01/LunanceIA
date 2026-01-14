@@ -76,7 +76,7 @@ class LokiHandler(logging.Handler):
             "labels": {
                 "app": self.app_name,
                 "env": self.environment,
-                "leve": record.levelname,
+                "level": record.levelname,
                 "logger": record.name,
                 "module": record.module,
                 "function": record.funcName.lower()

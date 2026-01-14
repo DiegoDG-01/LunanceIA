@@ -70,6 +70,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             }
         )
 
-        response.headers['X-Resquest-ID'] = request_id
+        response.headers['X-Request-ID'] = request_id
         return response
 
