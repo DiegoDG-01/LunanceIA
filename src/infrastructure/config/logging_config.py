@@ -74,7 +74,8 @@ def get_logging_config(settings: LoggingSettings) -> dict:
             "url": settings.LOKI_URL,
             "username": settings.LOKI_USERNAME,
             "password": settings.LOKI_PASSWORD,
-            "formatter": settings.LOG_FORMAT.value,
+            "app_name": settings.LOKI_APP_NAME,
+            "environment": settings.LOKI_ENV,
             "level": settings.LOG_LEVEL
         }
         root_handlers = ["loki"]
@@ -95,12 +96,12 @@ def get_logging_config(settings: LoggingSettings) -> dict:
             "()": "infrastructure.logging.providers.grafana_loki.LokiHandler",
             "url": settings.LOKI_URL,
             "username": settings.LOKI_USERNAME,
+            "password": settings.LOKI_PASSWORD,
             "app_name": settings.LOKI_APP_NAME,
             "environment": settings.LOKI_ENV,
             "level": settings.LOG_LEVEL
         }
-
-        root_handlers = ["console","loki"]
+        root_handlers = ["console", "loki"]
 
     return {
         "version": 1,
