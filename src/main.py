@@ -1,3 +1,7 @@
+from infrastructure.config.logging_config import setup_logging
+
+setup_logging()
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
@@ -18,6 +22,7 @@ from presentation.middleware.exception_handler import (
     rate_limit_exceeded_handler,
 )
 from shared.exceptions.base import LunanceException
+from presentation.middleware.request_logging import RequestLoggingMiddleware
 
 # Configurar rate limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -46,6 +51,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestLoggingMiddleware)
 
 # Registrar manejadores de excepciones
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
