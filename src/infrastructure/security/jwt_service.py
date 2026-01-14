@@ -59,8 +59,7 @@ class JWTService:
             if user_uuid is None:
                 return None
             return user_uuid
-        except JWTError as e:
-            print(e)
+        except JWTError:
             return None
 
     async def verify_refresh_token(self, token: str):

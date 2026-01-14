@@ -1,21 +1,24 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from domain.entities.user import User
+from shared.exceptions.domain import UserInactiveError
 from infrastructure.database.connection import get_db
 from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
 from infrastructure.config.settings import settings
 from shared.exceptions.base import UnauthorizedError
+from shared.exceptions.application import JWTValidationError
 
 import httpx
 from cachetools import TTLCache, cached
 
 security = HTTPBearer()
 jwks_cache = TTLCache(maxsize=1, ttl=3600)
+
 
 @cached(cache=jwks_cache)
 def get_auth_jwtks():
@@ -28,6 +31,7 @@ def get_user_ifno(access_token: str) -> dict:
     headers = {"Authorization": f"Bearer {access_token}"}
     response = httpx.get(url, headers=headers)
     return response.json()
+
 
 def validate_token(token: str) -> dict:
     try:
@@ -61,7 +65,7 @@ def validate_token(token: str) -> dict:
         return payload
 
     except JWTError:
-        raise UnauthorizedError("Invalid token")
+        raise JWTValidationError("Invalid token")
     except Exception as e:
         raise UnauthorizedError("Authentication failed")
 
@@ -98,6 +102,8 @@ async def get_current_user(
 
         return user
 
+    except JWTValidationError:
+        raise JWTValidationError("Invalid token")
     except Exception as e:
         raise UnauthorizedError("Authentication failed")
 
@@ -107,7 +113,5 @@ async def get_current_active_user(
 ) -> User:
     """Obtiene el usuario actual y verifica que esté activo."""
     if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
-        )
+        raise UserInactiveError()
     return current_user

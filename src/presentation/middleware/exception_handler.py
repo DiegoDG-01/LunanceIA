@@ -41,6 +41,13 @@ from shared.exceptions.domain import (
     InsufficientFundsError,
     SubscriptionNotFoundError
 )
+from shared.exceptions.application import (
+    JWTValidationError,
+    CommandValidationError,
+    QueryValidationError,
+    RepositoryError,
+    ExternalServiceError
+)
 from presentation.schemas.responses.error import StandardErrorResponse, ErrorDetail
 from shared.constants.validation_messages import (
     translate_validation_message,
@@ -68,6 +75,8 @@ def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
         return "AUTH_INVALID_CREDENTIALS", 401
     elif isinstance(exc, UserInactiveError):
         return "AUTH_USER_INACTIVE", 401
+    elif isinstance(exc, JWTValidationError):
+        return "AUTH_TOKEN_ERROR", 401
 
     # Excepciones de recursos no encontrados (404)
     elif isinstance(exc, UserNotFoundError):
@@ -92,8 +101,6 @@ def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
     # Errores de validación y reglas de negocio (400)
     elif isinstance(exc, (InsufficientFundsError)):
         return "INSUFFICIENT_FUNDS", 422
-    elif isinstance(exc, (LunanceValidationError, BusinessRuleError)):
-        return "VALIDATION_ERROR", 400
     elif isinstance(exc, (AccountInactiveError)):
         return "BUSINESS_RULE_VIOLATION", 400
     elif isinstance(exc, (InvalidTransactionAmountError, NegativeAmountError)):
@@ -102,6 +109,14 @@ def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
         return "INVALID_TRANSACTION_TYPE", 400
     elif isinstance(exc, (InvalidCurrencyError, CurrencyMismatchError)):
         return "VALIDATION_INVALID_CURRENCY", 400
+    elif isinstance(exc, CommandValidationError):
+        return "VALIDATION_ERROR", 400
+    elif isinstance(exc, QueryValidationError):
+        return "VALIDATION_ERROR", 400
+    elif isinstance(exc, (LunanceValidationError, BusinessRuleError)):
+        return "VALIDATION_ERROR", 400
+
+
     # Errores de API Gemini
     elif isinstance(exc, (GeminiProcessingError, GeminiInvalidResponseError)):
         return "GEMINI_PROCESSING_ERROR", 422
@@ -109,6 +124,12 @@ def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
         return "GEMINI_API_ERROR", 503  # Service unavailable
     elif isinstance(exc, InvalidImageError):
         return "VALIDATION_INVALID_IMAGE", 400
+    # Errores de repositorio (500)
+    elif isinstance(exc, RepositoryError):
+        return "INTERNAL_SERVER_ERROR", 500
+    # Errores de external service (500)
+    elif isinstance(exc, ExternalServiceError):
+        return "SERVICE_UNAVAILABLE", 503
 
     # Error genérico del sistema (500)
     else:
@@ -116,7 +137,7 @@ def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
 
 
 async def lunance_exception_handler(
-    request: Request, exc: LunanceException
+        request: Request, exc: LunanceException
 ) -> JSONResponse:
     """
     Handles custom Lunance exceptions and returns a standardized JSON error response.
@@ -161,7 +182,7 @@ async def lunance_exception_handler(
 
 
 async def validation_exception_handler(
-    request: Request, exc: RequestValidationError
+        request: Request, exc: RequestValidationError
 ) -> JSONResponse:
     """
     Handle FastAPI/Pydantic validation errors and return a standardized, localized error response.
@@ -213,7 +234,7 @@ async def validation_exception_handler(
 
 
 async def http_exception_handler(
-    request: Request, exc: Union[HTTPException, StarletteHTTPException]
+        request: Request, exc: Union[HTTPException, StarletteHTTPException]
 ) -> JSONResponse:
     """
     Handle standard HTTP exceptions and return a standardized JSON error response.
@@ -278,7 +299,7 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
 
 
 async def rate_limit_exceeded_handler(
-    request: Request, exc: RateLimitExceeded
+        request: Request, exc: RateLimitExceeded
 ) -> JSONResponse:
     """
     Handle rate limit exceeded errors and return a standardized JSON error response.

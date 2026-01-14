@@ -1,3 +1,18 @@
+"""
+⚠️ DEPRECADO: Este archivo está deprecado.
+Usar shared/constants/validation_messages.py en su lugar.
+
+Mantenido solo por compatibilidad hacia atrás.
+"""
+
+import warnings
+
+warnings.warn(
+    "error_messages.py está deprecado. Usar validation_messages.py",
+    DeprecationWarning,
+    stacklevel=2
+)
+
 """Mensajes de error estandarizados."""
 
 # Errores de autenticación

@@ -129,11 +129,5 @@ async def delete_subscription(
         user_id=current_user.id
     )
 
-    deleted = handler.handle(command)
-
-    if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found"
-        )
-
+    handler.handle(command)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
