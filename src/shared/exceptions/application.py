@@ -7,7 +7,7 @@ class JWTValidationError(JWTException):
     """Error de validación en JWT."""
 
     def __init__(self, message: str):
-        super().__init__(message, "JWT_VALIDATION_ERROR")
+        super().__init__(message)
 
 
 class CommandValidationError(ValidationError):
@@ -32,7 +32,7 @@ class QueryValidationError(ValidationError):
         message = (
             f"Error de validación en query {query_name}: {', '.join(validation_errors)}"
         )
-        super().__init__(message, "QUERY_VALIDATION_ERROR")
+        super().__init__(message)
 
 
 class RepositoryError(LunanceException):
@@ -42,7 +42,7 @@ class RepositoryError(LunanceException):
         message = f"Error en repositorio durante {operation} de {entity}"
         if details:
             message += f": {details}"
-        super().__init__(message, "REPOSITORY_ERROR")
+        super().__init__(message)
 
 
 class ExternalServiceError(LunanceException):
@@ -52,4 +52,4 @@ class ExternalServiceError(LunanceException):
         message = f"Error en servicio externo {service_name} durante {operation}"
         if details:
             message += f": {details}"
-        super().__init__(message, "EXTERNAL_SERVICE_ERROR")
+        super().__init__(message)

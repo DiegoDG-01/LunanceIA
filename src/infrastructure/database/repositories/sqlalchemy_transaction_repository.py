@@ -23,7 +23,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         transaction_model: TransactionModel,
         account_model: AccountModel,
         category_model: CategoryModel,
-    ) -> tuple[Transaction, str, AccountType, Optional[str]]:
+    ) -> tuple[Transaction, str, AccountType, Optional[str], Optional[str]]:
         transaction = self._model_to_entity(transaction_model)
         category_name = category_model.name if category_model else None
         return (
@@ -41,19 +41,18 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             uuid=model.uuid,
             user_id=model.user_id,
             account_id=model.account_id,
-            category_id=model.category_id,
             transaction_type=model.type,
             amount=Money(amount=model.amount, currency="MXN"),  # Asumo MXN por defecto
             transaction_date=model.transaction_date,
             description=model.description,
             notes=model.notes,
             creation_date=model.creation_date,
+            category_id=model.category_id,
         )
 
     def _entity_to_model(self, entity: Transaction) -> TransactionModel:
         """Convierte entidad de dominio a modelo SQLAlchemy."""
         return TransactionModel(
-            id=None,
             uuid=entity.uuid,
             user_id=entity.user_id,
             account_id=entity.account_id,
@@ -120,7 +119,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
 
     def get_by_user(
         self, user_id: int, limit: int = 100, offset: int = 0
-    ) -> List[Transaction]:
+    ) -> List[Tuple[Transaction, str, AccountType, Optional[str], Optional[str]]]:
         """Obtiene todas las transacciones de un usuario con paginación."""
         results = (
             self.db.query(TransactionModel, AccountModel, CategoryModel)
@@ -165,11 +164,12 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         end_date: Optional[date] = None,
         account_uuid: Optional[str] = None,
         transaction_type: Optional[TransactionType] = None,
-    ) -> List[Transaction]:
+    ) -> List[Tuple[Transaction, str, AccountType, Optional[str], Optional[str]]]:
         """Obtiene transacciones en un rango de fechas."""
         query = (
-            self.db.query(TransactionModel, AccountModel)
+            self.db.query(TransactionModel, AccountModel, CategoryModel)
             .join(AccountModel, TransactionModel.account_id == AccountModel.id)
+            .outerjoin(CategoryModel, TransactionModel.category_id == CategoryModel.id)
             .filter(TransactionModel.user_id == user_id)
         )
 
@@ -188,8 +188,8 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         results = query.order_by(desc(TransactionModel.transaction_date)).all()
 
         return [
-            self._models_to_entity_with_account(transaction, acc)
-            for transaction, acc in results
+            self._models_to_entity_with_account(transaction, acc, cat)
+            for transaction, acc, cat in results
         ]
 
     def get_by_category(
@@ -219,7 +219,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
 
     def get_by_uuid_with_account_details(
         self, uuid: str, user_id: int
-    ) -> Optional[Tuple[Transaction, str, AccountType, Optional[str]]]:
+    ) -> Optional[Tuple[Transaction, str, AccountType, Optional[str], Optional[str]]]:
         result = (
             self.db.query(TransactionModel, AccountModel, CategoryModel)
             .join(AccountModel, TransactionModel.account_id == AccountModel.id)

@@ -39,34 +39,78 @@ domain/
 
 ### ⚡ Capa de Aplicación (`src/application/`)
 
-Orquesta casos de uso utilizando el patrón CQRS.
+Orquesta casos de uso utilizando el patrón CQRS, organizada por feature/dominio.
 
 ```
 application/
-├── commands/                  # CQRS - Operaciones de escritura
+├── accounts/                  # Feature: Gestión de cuentas
 │   ├── __init__.py
-│   ├── create_account_command.py    # Comando para crear cuenta
-│   ├── update_account_command.py    # Comando para actualizar cuenta
-│   ├── delete_account_command.py    # Comando para eliminar cuenta
-│   ├── auth_commands.py             # Comandos de autenticación
-│   └── register_commands.py         # Comandos de registro
-├── queries/                   # CQRS - Operaciones de lectura
+│   ├── commands/             # Operaciones de escritura de cuentas
+│   │   ├── __init__.py
+│   │   ├── create_account.py      # Crear cuenta
+│   │   ├── update_account.py      # Actualizar cuenta
+│   │   ├── delete_account.py      # Eliminar cuenta
+│   │   └── state_account.py       # Cambiar estado de cuenta
+│   └── queries/              # Operaciones de lectura de cuentas
+│       ├── __init__.py
+│       ├── get_account_by_id.py   # Consultar cuenta por ID
+│       └── get_user_accounts.py   # Consultar cuentas de usuario
+├── transactions/             # Feature: Gestión de transacciones
 │   ├── __init__.py
-│   ├── get_account_by_id_query.py   # Consulta específica por ID
-│   └── get_user_accounts_query.py   # Consulta múltiple por usuario
-├── dto/                       # Data Transfer Objects
+│   ├── commands/             # Operaciones de escritura de transacciones
+│   │   ├── __init__.py
+│   │   ├── create_transaction.py
+│   │   ├── update_transaction.py
+│   │   └── delete_transaction.py
+│   └── queries/              # Operaciones de lectura de transacciones
+│       ├── __init__.py
+│       ├── get_transactions.py
+│       └── get_transaction_by_uuid.py
+├── subscriptions/            # Feature: Gestión de suscripciones
 │   ├── __init__.py
-│   ├── account_dto.py         # DTO para transferencia de datos de cuenta
-│   └── transaction_dto.py     # DTO para transferencia de datos transacción
-└── interfaces/                # Interfaces de aplicación
+│   ├── commands/
+│   │   ├── __init__.py
+│   │   ├── create_subscription.py
+│   │   ├── update_subscription.py
+│   │   └── delete_subscription.py
+│   └── queries/
+│       ├── __init__.py
+│       └── get_subscriptions.py
+├── auth/                     # Feature: Autenticación y registro
+│   ├── __init__.py
+│   └── commands/
+│       ├── __init__.py
+│       ├── login.py          # Autenticación de usuario
+│       ├── logout.py         # Cerrar sesión
+│       ├── refresh_token.py  # Renovar token
+│       └── register.py       # Registro de usuario
+├── categories/               # Feature: Gestión de categorías
+│   ├── __init__.py
+│   └── queries/
+│       ├── __init__.py
+│       └── get_categories.py
+├── dashboard/                # Feature: Dashboard y resumen
+│   ├── __init__.py
+│   └── queries/
+│       ├── __init__.py
+│       └── get_dashboard_summary.py
+├── dto/                      # Data Transfer Objects (compartidos)
+│   ├── __init__.py
+│   ├── account_dto.py        # DTOs para transferencia de datos
+│   ├── transaction_dto.py
+│   ├── subscription_dto.py
+│   └── category_dto.py
+└── interfaces/               # Interfaces de aplicación
     └── __init__.py
 ```
 
 #### Características de Aplicación:
-- **Separación CQRS**: Comandos y consultas separados
-- **DTOs**: Objetos de transferencia sin lógica de negocio
+- **Organización por Feature**: Cada dominio tiene su propia carpeta con comandos y queries
+- **Separación CQRS**: Comandos (escritura) y queries (lectura) claramente separados
+- **DTOs Centralizados**: Objetos de transferencia compartidos entre features
 - **Handlers**: Cada comando/consulta tiene su handler específico
 - **Use Cases**: Orquestación de entidades de dominio
+- **Nomenclatura limpia**: Los nombres de archivos no repiten "command" o "query" ya que la carpeta provee el contexto
 
 ### 🔧 Capa de Infraestructura (`src/infrastructure/`)
 
@@ -122,8 +166,11 @@ presentation/
 │       ├── __init__.py
 │       ├── endpoints/        # Endpoints específicos por dominio
 │       │   ├── __init__.py
-│       │   ├── auth.py      # Endpoints de autenticación y registro
-│       │   └── account.py   # Endpoints CRUD para cuentas
+│       │   ├── auth.py       # Endpoints de autenticación (me, logout)
+│       │   ├── account.py    # Endpoints CRUD para cuentas
+│       │   ├── transaction.py # Endpoints CRUD para transacciones
+│       │   ├── category.py   # Endpoints para categorías
+│       │   └── dashboard.py  # Endpoint de resumen financiero
 │       └── router.py        # Router principal que agrupa endpoints
 ├── schemas/                 # Schemas Pydantic para validación
 │   ├── requests/            # DTOs de entrada (requests)
@@ -235,9 +282,10 @@ tests/
 
 ### 2. CQRS (Command Query Responsibility Segregation)
 
-Separación entre operaciones de lectura y escritura:
+Separación entre operaciones de lectura y escritura, organizadas por feature:
 
 ```python
+# application/accounts/commands/create_account.py
 # Comando - Operación de escritura
 @dataclass
 class CreateAccountCommand:
@@ -251,11 +299,12 @@ class CreateAccountCommand:
 class CreateAccountCommandHandler:
     def __init__(self, account_repo: AccountRepository):
         self._account_repo = account_repo
-    
+
     async def handle(self, command: CreateAccountCommand) -> Account:
         # Lógica de creación
         pass
 
+# application/accounts/queries/get_user_accounts.py
 # Consulta - Operación de lectura
 @dataclass
 class GetUserAccountsQuery:
@@ -266,10 +315,21 @@ class GetUserAccountsQuery:
 class GetUserAccountsQueryHandler:
     def __init__(self, account_repo: AccountRepository):
         self._account_repo = account_repo
-    
+
     async def handle(self, query: GetUserAccountsQuery) -> List[Account]:
         # Lógica de consulta
         pass
+
+# Ejemplo de uso en endpoints
+# presentation/api/v2/endpoints/account.py
+from application.accounts.commands.create_account import (
+    CreateAccountCommand,
+    CreateAccountCommandHandler
+)
+from application.accounts.queries.get_user_accounts import (
+    GetUserAccountsQuery,
+    GetUserAccountsQueryHandler
+)
 ```
 
 ### 3. Repository Pattern
@@ -563,9 +623,17 @@ def translate_validation_message(
 
 ## 🔒 Seguridad y Autenticación
 
+### Auth0 Integration
+
+Lunance IA utiliza **Auth0** como proveedor de identidad:
+
+- **Login/Register**: Manejados directamente por Auth0
+- **Token Validation**: La API valida tokens JWT emitidos por Auth0
+- **User Sync**: Los usuarios se sincronizan automáticamente al primer acceso
+
 ### Configuración CORS Basada en Entorno
 
-El sistema configura CORS dinámicamente según el entorno (src/main.py:35):
+El sistema configura CORS dinámicamente según el entorno (src/main.py):
 
 ```python
 if settings.ENVIRONMENT.upper() == "PROD":
@@ -578,50 +646,39 @@ else:
 
 ### Rate Limiting
 
-Protección contra abuso con límites configurables:
+Protección contra abuso con límites configurables usando `slowapi`:
 - **Por IP**: Para usuarios no autenticados
 - **Por usuario**: Para usuarios autenticados
 - **Headers informativos**: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After`
 
-### JWT Token Management
+### JWT Token Validation
 
 ```python
-from datetime import datetime, timedelta
-from typing import Optional
-import jwt
+from fastapi import Depends, HTTPException
+from jose import jwt, JWTError
 
-class AuthService:
-    def __init__(self, secret_key: str, algorithm: str = "HS256"):
-        self._secret_key = secret_key
-        self._algorithm = algorithm
-    
-    def create_access_token(
-        self, 
-        user_id: str, 
-        expires_delta: Optional[timedelta] = None
-    ) -> str:
-        if expires_delta:
-            expire = datetime.utcnow() + expires_delta
-        else:
-            expire = datetime.utcnow() + timedelta(minutes=30)
-        
-        to_encode = {
-            "sub": user_id,
-            "exp": expire,
-            "type": "access"
-        }
-        
-        return jwt.encode(to_encode, self._secret_key, algorithm=self._algorithm)
-    
-    def create_refresh_token(self, user_id: str) -> str:
-        expire = datetime.utcnow() + timedelta(days=7)
-        to_encode = {
-            "sub": user_id,
-            "exp": expire,
-            "type": "refresh"
-        }
-        
-        return jwt.encode(to_encode, self._secret_key, algorithm=self._algorithm)
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    """
+    Valida el token JWT emitido por Auth0.
+
+    El token contiene:
+    - sub: ID del usuario en Auth0
+    - email: Email del usuario
+    - iat: Timestamp de emisión
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.AUTH0_PUBLIC_KEY,
+            algorithms=["RS256"],
+            audience=settings.AUTH0_AUDIENCE
+        )
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return payload
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 ```
 
 ## 🧪 Estrategia de Testing

@@ -16,8 +16,8 @@ import io
 
 from infrastructure.external_services.gemini import GeminiService
 
-from application.queries.get_transactions_query import GetTransactionsQuery
-from application.queries.get_transactions_query import GetTransactionsHandler
+from application.transactions.queries.get_transactions import GetTransactionsQuery
+from application.transactions.queries.get_transactions import GetTransactionsHandler
 from domain.entities.user import User
 from application.dto.transaction_dto import CreateTransactionDTO
 from presentation.schemas.responses.transaction import TransactionResponse
@@ -30,15 +30,15 @@ from presentation.dependencies.service_deps import (
     get_delete_transaction_handler,
     get_transaction_by_uuid_handler,
 )
-from application.commands.delete_transaction_command import (
+from application.transactions.commands.delete_transaction import (
     DeleteTransactionCommand,
     DeleteTransactionHandler,
 )
-from application.commands.create_transaction_command import (
+from application.transactions.commands.create_transaction import (
     CreateTransactionCommand,
     CreateTransactionHandler,
 )
-from application.queries.get_transaction_by_uuid_query import (
+from application.transactions.queries.get_transaction_by_uuid import (
     GetTransactionByUuidQuery,
     GetTransactionByUuidHandler,
 )
@@ -48,7 +48,7 @@ from fastapi import Query
 from domain.objects.enums import TransactionType
 
 from presentation.schemas.requests.transaction import UpdateTransactionRequest
-from application.commands.update_transaction_command import (
+from application.transactions.commands.update_transaction import (
     UpdateTransactionCommand,
     UpdateTransactionCommandHandler,
 )
@@ -140,7 +140,7 @@ async def create_transaction(
     return TransactionResponse(**result.__dict__)
 
 
-@router.post("/image", response_model=TransactionResponse)
+@router.post("/image/", response_model=TransactionResponse)
 @limiter.limit("5/minute")  # Más restrictivo por ser procesamiento de imagen
 async def create_transaction_from_image(
     request: Request,
@@ -189,7 +189,7 @@ async def create_transaction_from_image(
     return TransactionResponse(**result.__dict__)
 
 
-@router.put("/{transaction_uuid}", response_model=TransactionResponse)
+@router.put("/{transaction_uuid}/", response_model=TransactionResponse)
 @limiter.limit("15/minute")
 async def update_transaction(
     request: Request,
@@ -213,7 +213,7 @@ async def update_transaction(
     return TransactionResponse(**updated_transaction.__dict__)
 
 
-@router.delete("/{transaction_uuid}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{transaction_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("10/minute")
 async def delete_transaction(
     request: Request,

@@ -9,7 +9,7 @@ from presentation.schemas.responses.category import (
     CategoryListResponse,
 )
 from presentation.dependencies.service_deps import get_categories_handler
-from application.queries.get_categories_query import (
+from application.categories.queries.get_categories import (
     GetCategoriesQuery,
     GetCategoriesHandler,
 )

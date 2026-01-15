@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
+from shared.exceptions.domain import InsufficientFundsError
+
 
 @dataclass(frozen=True)
 class Money:
@@ -23,7 +25,10 @@ class Money:
             raise ValueError("Currencies must be the same to subtract")
         result_amount = self.amount - other.amount
         if result_amount < 0:
-            raise ValueError("Subtraction would result in negative amount")
+            raise InsufficientFundsError(
+                required_amount=other.amount,
+                available_amount=self.amount,
+            )
         return Money(result_amount, self.currency)
 
     def __str__(self):

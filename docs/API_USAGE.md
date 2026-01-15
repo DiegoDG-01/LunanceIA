@@ -11,49 +11,50 @@ Esta guía te mostrará cómo usar la API REST de Lunance IA v2, incluyendo aute
 - [Códigos de Estado](#códigos-de-estado)
 - [Límites y Paginación](#límites-y-paginación)
 
-## 🔐 Autenticación JWT
+## 🔐 Autenticación con Auth0
 
-La API utiliza JWT (JSON Web Tokens) para autenticación. Todos los endpoints requieren autenticación excepto login y register.
+La API utiliza **Auth0** para autenticación. Los tokens JWT son emitidos por Auth0 y validados por la API.
 
-### Obtener Token de Acceso
+### Flujo de Autenticación
 
-```bash
-curl -X POST "http://localhost:8000/api/v2/auth/login" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "email": "usuario@ejemplo.com",
-       "password": "tu_password_seguro"
-     }'
-```
-
-**Respuesta exitosa:**
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer",
-  "expires_in": 1800
-}
-```
+1. **Login/Register**: Se realiza directamente con Auth0 (frontend)
+2. **Token JWT**: Auth0 emite un access token
+3. **API Requests**: Incluir el token en el header `Authorization`
 
 ### Usar Token en Requests
 
-Incluye el token en el header `Authorization` de todos los requests autenticados:
+Incluye el token de Auth0 en el header `Authorization` de todos los requests autenticados:
 
 ```bash
 curl -X GET "http://localhost:8000/api/v2/account/" \
-     -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+     -H "Authorization: Bearer <auth0_access_token>"
 ```
 
-### Renovar Token
-
-Cuando el access token expire, usa el refresh token para obtener uno nuevo:
+### Obtener Información del Usuario
 
 ```bash
-curl -X POST "http://localhost:8000/api/v2/auth/refresh" \
+curl -X GET "http://localhost:8000/api/v2/auth/me" \
+     -H "Authorization: Bearer <auth0_access_token>"
+```
+
+**Respuesta:**
+```json
+{
+  "user_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Juan Pérez",
+  "email": "juan@ejemplo.com",
+  "is_active": true
+}
+```
+
+### Cerrar Sesión
+
+```bash
+curl -X POST "http://localhost:8000/api/v2/auth/logout" \
+     -H "Authorization: Bearer <auth0_access_token>" \
      -H "Content-Type: application/json" \
      -d '{
-       "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+       "refresh_token": "<refresh_token>"
      }'
 ```
 
@@ -61,42 +62,40 @@ curl -X POST "http://localhost:8000/api/v2/auth/refresh" \
 
 ### 🔐 Autenticación - `/api/v2/auth/`
 
-#### Registrar Usuario
+> **Nota**: Login y registro se manejan directamente con Auth0. La API solo expone endpoints para obtener información del usuario y cerrar sesión.
+
+#### Obtener Información del Usuario
 ```bash
-POST /api/v2/auth/register
+GET /api/v2/auth/me
+```
+
+**Response:**
+```json
+{
+  "user_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Juan Pérez",
+  "email": "juan@ejemplo.com",
+  "is_active": true
+}
+```
+
+#### Cerrar Sesión
+```bash
+POST /api/v2/auth/logout
 ```
 
 **Request:**
 ```json
 {
-  "email": "nuevo@ejemplo.com",
-  "password": "password_seguro123",
-  "first_name": "Juan",
-  "last_name": "Pérez"
+  "refresh_token": "<refresh_token>"
 }
 ```
 
 **Response:**
 ```json
 {
-  "message": "Usuario registrado exitosamente",
-  "user_id": "550e8400-e29b-41d4-a716-446655440000"
+  "message": "Logout exitoso"
 }
-```
-
-#### Iniciar Sesión
-```bash
-POST /api/v2/auth/login
-```
-
-#### Renovar Token
-```bash
-POST /api/v2/auth/refresh
-```
-
-#### Cerrar Sesión
-```bash
-POST /api/v2/auth/logout
 ```
 
 ### 💳 Cuentas - `/api/v2/account/`
@@ -216,41 +215,155 @@ DELETE /api/v2/account/{account_id}
 }
 ```
 
-### 💰 Transacciones - `/api/v2/transaction/` (Próximamente)
+### 💰 Transacciones - `/api/v2/transaction/`
 
-Los endpoints de transacciones estarán disponibles próximamente con funcionalidades como:
+#### Listar Transacciones
+```bash
+GET /api/v2/transaction/
+```
 
-- `GET /` - Listar transacciones con filtros
-- `POST /` - Crear nueva transacción
-- `GET /{transaction_id}` - Obtener transacción específica
-- `PUT /{transaction_id}` - Actualizar transacción
-- `DELETE /{transaction_id}` - Eliminar transacción
+**Query Parameters:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `skip` | int | Saltar N transacciones (default: 0) |
+| `limit` | int | Máximo de resultados (default: 100, max: 1000) |
+| `start_date` | date | Filtrar desde esta fecha |
+| `end_date` | date | Filtrar hasta esta fecha |
+| `transaction_type` | string | Tipo: `INCOME` o `EXPENSE` |
+| `category_id` | int | ID de categoría |
+| `account_uuid` | string | UUID de la cuenta |
+
+**Response:**
+```json
+[
+  {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "category": "Alimentación",
+    "transaction_type": "EXPENSE",
+    "amount": 250.50,
+    "transaction_date": "2024-12-14",
+    "description": "Compra en supermercado",
+    "notes": "Compra semanal",
+    "creation_date": "2024-12-14T10:30:00Z",
+    "account_name": "Cuenta Principal",
+    "account_type": "CHECKING",
+    "account_bank": "BBVA"
+  }
+]
+```
+
+#### Obtener Transacción por UUID
+```bash
+GET /api/v2/transaction/{transaction_uuid}
+```
+
+#### Crear Transacción
+```bash
+POST /api/v2/transaction/
+```
+
+**Request:**
+```json
+{
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "category_id": 1,
+  "transaction_type": "EXPENSE",
+  "amount": 250.50,
+  "description": "Compra en supermercado",
+  "notes": "Compra semanal",
+  "transaction_date": "2024-12-14"
+}
+```
+
+#### Crear Transacción desde Imagen (IA)
+```bash
+POST /api/v2/transaction/image/
+```
+
+Usa Google Gemini para extraer datos de una imagen de recibo/ticket.
+
+**Request:** `multipart/form-data`
+- `file`: Archivo de imagen (PNG, JPG, etc.)
+- `account_uuid`: UUID de la cuenta
+
+**Response:** Misma estructura que crear transacción normal.
+
+#### Actualizar Transacción
+```bash
+PUT /api/v2/transaction/{transaction_uuid}/
+```
+
+**Request:**
+```json
+{
+  "description": "Descripción actualizada",
+  "notes": "Notas actualizadas",
+  "category_id": 2,
+  "transaction_type": "EXPENSE",
+  "amount": 300.00,
+  "transaction_date": "2024-12-15"
+}
+```
+
+#### Eliminar Transacción
+```bash
+DELETE /api/v2/transaction/{transaction_uuid}/
+```
+
+**Response:** `204 No Content`
+
+### 🏷️ Categorías - `/api/v2/category/`
+
+#### Listar Categorías
+```bash
+GET /api/v2/category/
+```
+
+**Query Parameters:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `only_active` | bool | Solo categorías activas (default: true) |
+
+**Response:**
+```json
+{
+  "categories": [
+    {
+      "id": 1,
+      "name": "Alimentación",
+      "description": "Gastos de comida y supermercado",
+      "color": "#FF5733",
+      "icon": "food",
+      "is_active": true
+    }
+  ],
+  "total": 1
+}
+```
+
+### 📊 Dashboard - `/api/v2/dashboard/`
+
+#### Obtener Resumen Financiero
+```bash
+GET /api/v2/dashboard/
+```
+
+Retorna un resumen del estado financiero del usuario.
 
 ## 💡 Ejemplos de Uso
 
-### Flujo Completo: Registro y Creación de Cuenta
+### Flujo Completo con Auth0
 
 ```bash
-# 1. Registrar nuevo usuario
-curl -X POST "http://localhost:8000/api/v2/auth/register" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "email": "maria@ejemplo.com",
-       "password": "MiPassword123",
-       "first_name": "María",
-       "last_name": "González"
-     }'
+# 1. Obtener token de Auth0 (desde tu aplicación frontend)
+# El login/registro se maneja directamente con Auth0
 
-# 2. Iniciar sesión
-curl -X POST "http://localhost:8000/api/v2/auth/login" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "email": "maria@ejemplo.com",
-       "password": "MiPassword123"
-     }'
+# 2. Guardar el token de Auth0
+export ACCESS_TOKEN="<auth0_access_token>"
 
-# 3. Guardar el token de la respuesta
-export ACCESS_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+# 3. Verificar usuario autenticado
+curl -X GET "http://localhost:8000/api/v2/auth/me" \
+     -H "Authorization: Bearer $ACCESS_TOKEN"
 
 # 4. Crear primera cuenta
 curl -X POST "http://localhost:8000/api/v2/account/" \
@@ -443,11 +556,10 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 
 | Endpoint | Límite | Razón |
 |----------|--------|-------|
-| `POST /auth/register` | **5 requests/hora** | Prevención de spam y registro masivo |
-| `POST /auth/login` | **10 requests/minuto** | Protección contra fuerza bruta |
-| `POST /auth/refresh` | **20 requests/minuto** | Renovación frecuente permitida |
-| `POST /auth/logout` | **10 requests/minuto** | Operación normal |
 | `GET /auth/me` | **100 requests/minuto** | Lectura de perfil frecuente |
+| `POST /auth/logout` | **10 requests/minuto** | Operación normal |
+
+> **Nota**: Login y registro se manejan a través de Auth0, no tienen rate limiting en esta API.
 
 #### Endpoints de Cuentas
 
@@ -463,12 +575,24 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 
 | Endpoint | Límite | Nota |
 |----------|--------|------|
-| `GET /transaction/` | **50 requests/minuto** | - |
-| `POST /transaction/` | **50 requests/minuto** | - |
-| `POST /transaction/upload-image` | **5 requests/minuto** | Procesamiento intensivo de imágenes |
-| `GET /transaction/{id}` | **20 requests/minuto** | - |
-| `PUT /transaction/{id}` | **15 requests/minuto** | - |
-| `DELETE /transaction/{id}` | **10 requests/minuto** | - |
+| `GET /transaction/` | **50 requests/minuto** | Listado con filtros |
+| `POST /transaction/` | **20 requests/minuto** | Creación manual |
+| `POST /transaction/image/` | **5 requests/minuto** | Procesamiento IA de imágenes |
+| `GET /transaction/{uuid}` | **50 requests/minuto** | Detalle de transacción |
+| `PUT /transaction/{uuid}/` | **15 requests/minuto** | Actualización |
+| `DELETE /transaction/{uuid}/` | **10 requests/minuto** | Eliminación |
+
+#### Endpoints de Categorías
+
+| Endpoint | Límite |
+|----------|--------|
+| `GET /category/` | **50 requests/minuto** |
+
+#### Endpoints de Dashboard
+
+| Endpoint | Límite |
+|----------|--------|
+| `GET /dashboard/` | **10 requests/minuto** |
 
 #### Endpoints Generales
 
@@ -480,10 +604,9 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 ### ⚠️ Consideraciones Importantes
 
 **Para Desarrollo y Testing:**
-- El límite de **5 registros/hora** en `/auth/register` puede afectar la ejecución repetida de tests
-- Si ejecutas tests automatizados que crean usuarios, considera espaciarlos en el tiempo
+- El límite de **5 requests/minuto** en `/transaction/image/` puede afectar tests con procesamiento de imágenes
 - Los límites se aplican por IP, por lo que múltiples ejecuciones de tests desde la misma máquina se acumularán
-- **Recomendación**: Para desarrollo local, considera aumentar temporalmente estos límites en el código o usar usuarios pre-existentes en tus tests
+- **Recomendación**: Para desarrollo local, considera usar usuarios pre-existentes en tus tests
 
 **Respuesta al Exceder el Límite:**
 Cuando se excede el rate limit, recibirás un error `429 Too Many Requests` con el siguiente formato:
@@ -528,12 +651,67 @@ GET /api/v2/account/?page=1&size=20
 
 ## 🔧 Herramientas Recomendadas
 
-### Bruno Collection
+### 🧪 Bruno Collection
 
-Importa nuestra colección de Bruno para probar todos los endpoints:
+Lunance IA incluye una colección completa de [Bruno](https://www.usebruno.com/) con todos los endpoints de la API pre-configurados para facilitar el testing y desarrollo.
+
+**📁 Ubicación**: `http/bruno collection/Lunance IA.json`
+
+#### ¿Qué es Bruno?
+
+Bruno es un cliente API de código abierto, offline-first y Git-friendly que:
+- ✅ **No requiere cuenta**: Trabaja completamente offline
+- ✅ **Git-friendly**: Guarda colecciones en archivos JSON planos versionables
+- ✅ **Open source**: Software libre y gratuito
+- ✅ **Rápido y ligero**: Menor uso de recursos que alternativas
+- ✅ **Variables de entorno**: Soporte completo para múltiples entornos
+
+#### Instalación y Configuración
+
+**1. Instalar Bruno**
+```bash
+# macOS
+brew install bruno
+
+# O descarga desde https://www.usebruno.com/downloads
 ```
-[Enlace a colección Bruno - Próximamente]
-```
+
+**2. Importar la Colección**
+1. Abre Bruno
+2. Click en "Open Collection"
+3. Navega a `http/bruno collection/`
+4. Selecciona el archivo `Lunance IA.json`
+
+**3. Configurar Variables de Entorno**
+
+Configura las variables de entorno correspondientes.
+
+**4. Flujo de Trabajo Recomendado**
+1. Ejecuta el request de **Register** o **Login** en la carpeta `Auth`
+2. Copia el `access_token` de la respuesta y pégalo en las variables de entorno
+3. Todos los demás requests usarán ese token automáticamente desde las variables
+4. Explora las carpetas organizadas por endpoint (Auth, Accounts, etc.)
+
+> ⚠️ **Nota**: El guardado automático de tokens mediante scripts post-request estará disponible en una futura actualización.
+
+#### Ventajas sobre cURL
+
+| Característica | cURL | Bruno |
+|----------------|------|-------|
+| Interfaz visual | ❌ | ✅ |
+| Historial de requests | ❌ | ✅ |
+| Variables de entorno | Manual | ✅ Soporte completo |
+| Guardar tokens | Manual | 🔄 Manual (por ahora) |
+| Organización | ❌ | ✅ Carpetas |
+| Versionable en Git | ❌ | ✅ JSON plano |
+| Tests automatizados | ❌ | ✅ Soporte scripts |
+
+#### Tips Útiles
+
+- **Variables de entorno**: Usa variables para cambiar fácilmente entre entornos (Local, Staging, Production)
+- **Testing rápido**: Usa `Ctrl/Cmd + Enter` para ejecutar requests rápidamente
+- **Colecciones compartibles**: Comparte la colección con tu equipo vía Git
+- **Organización**: Los requests están organizados por módulos para fácil navegación
 
 ### Cliente Python
 

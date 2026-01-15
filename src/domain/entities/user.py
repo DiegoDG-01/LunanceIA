@@ -1,32 +1,33 @@
 from pydantic import EmailStr
-from dataclasses import dataclass
+from typing import Optional
+from dataclasses import dataclass, field
 from datetime import datetime
 from email_validator import validate_email, EmailNotValidError
-
-import uuid
+import uuid as uuid_lib
 
 
 @dataclass
 class User:
-    id: int
-    uuid: str
+    auth0_id: str
     name: str
     email: EmailStr
-    password_hash: str
-    registration_date: datetime
+    id: Optional[int] = None  # ← Opcional, se asigna al guardar en DB
+    uuid: str = field(default_factory=lambda: str(uuid_lib.uuid4()))  # ← Auto-genera
+    picture: Optional[str] = None
+    email_verified: bool = False
+    last_login: datetime = field(default_factory=datetime.now)  # ← Auto-genera
+    registration_date: datetime = field(default_factory=datetime.now)  # ← Auto-genera
     is_active: bool = True
 
     @classmethod
-    def create_new(cls, name: str, email: str, password_hash: str):
+    def create_new(cls, auth0_id: str, name: str, email: str, picture: str, email_verified: bool, last_login: datetime):
         """Factory method to create a new user"""
         return cls(
-            id=None,
-            uuid=str(uuid.uuid4()),
+            auth0_id=auth0_id,
             name=name,
             email=email,
-            password_hash=password_hash,
-            registration_date=datetime.now(),
-            is_active=True,
+            picture=picture,
+            email_verified=email_verified,
         )
 
     def deactivate(self):

@@ -1,5 +1,5 @@
 from typing import Optional, List
-from sqlalchemy.orm import session
+from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
 from domain.entities.account import Account
@@ -13,7 +13,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
     Implementation of AccountRepository using SQLAlchemy
     """
 
-    def __init__(self, db: session):
+    def __init__(self, db: Session):
         self.db = db
 
     @staticmethod

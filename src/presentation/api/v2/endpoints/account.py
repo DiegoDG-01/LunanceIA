@@ -17,27 +17,27 @@ from presentation.dependencies.service_deps import (
     get_account_by_id_handler,
     get_state_account_handler,
 )
-from application.commands.create_account_command import (
+from application.accounts.commands.create_account import (
     CreateAccountCommand,
     CreateAccountHandler,
 )
-from application.commands.state_account_command import (
+from application.accounts.commands.state_account import (
     StateAccountCommand,
     StateAccountHandler,
 )
-from application.commands.update_account_command import (
+from application.accounts.commands.update_account import (
     UpdateAccountCommand,
     UpdateAccountHandler,
 )
-from application.commands.delete_account_command import (
+from application.accounts.commands.delete_account import (
     DeleteAccountCommand,
     DeleteAccountHandler,
 )
-from application.queries.get_user_accounts_query import (
+from application.accounts.queries.get_user_accounts import (
     GetUserAccountsQuery,
     GetUserAccountsHandler,
 )
-from application.queries.get_account_by_id_query import (
+from application.accounts.queries.get_account_by_id import (
     GetAccountByIdQuery,
     GetAccountByIdHandler,
 )
@@ -106,7 +106,7 @@ async def create_account(
     return AccountResponse(**account.__dict__)
 
 
-@router.patch("/{account_uuid}", response_model=AccountResponse)
+@router.patch("/{account_uuid}/", response_model=AccountResponse)
 @limiter.limit("50/minute")
 async def update_account(
     request: Request,
@@ -130,7 +130,7 @@ async def update_account(
     return AccountResponse(**account.__dict__)
 
 
-@router.delete("/{account_uuid}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{account_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("50/minute")
 async def delete_account(
     request: Request,
@@ -148,7 +148,7 @@ async def delete_account(
         )
 
 
-@router.patch("/{account_uuid}/status", response_model=AccountResponse)
+@router.patch("/{account_uuid}/status/", response_model=AccountResponse)
 @limiter.limit("50/minute")
 async def activate_account(
     request: Request,
