@@ -1,6 +1,7 @@
 import json
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
 
 class JsonFormatter(logging.Formatter):
@@ -18,7 +19,7 @@ class JsonFormatter(logging.Formatter):
 
 
     def format(self, record: logging.LogRecord) -> str:
-        log_data = {
+        log_data: dict[str, Any] = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
@@ -37,7 +38,9 @@ class JsonFormatter(logging.Formatter):
 
         for field in extra_fields:
             if hasattr(record, field):
-                log_data[field] = getattr(record, field)
+                value = getattr(record, field)
+                if value is not None:
+                    log_data[field] = value
 
         if record.exc_info:
             log_data['exception'] = {

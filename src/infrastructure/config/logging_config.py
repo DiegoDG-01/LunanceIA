@@ -62,7 +62,8 @@ def get_logging_config(settings: LoggingSettings) -> dict:
         "class": "logging.StreamHandler",
         "level": settings.LOG_LEVEL,
         "formatter": settings.LOG_FORMAT.value,
-        "stream": "ext://sys.stdout"
+        "stream": "ext://sys.stdout",
+        "filters": ["request_context"]
     }
 
     if settings.LOG_PROVIDER == LogProvider.CONSOLE:
@@ -76,7 +77,8 @@ def get_logging_config(settings: LoggingSettings) -> dict:
             "password": settings.LOKI_PASSWORD,
             "app_name": settings.LOKI_APP_NAME,
             "environment": settings.LOKI_ENV,
-            "level": settings.LOG_LEVEL
+            "level": settings.LOG_LEVEL,
+            "filters": ["request_context"]
         }
         root_handlers = ["loki"]
 
@@ -117,7 +119,6 @@ def get_logging_config(settings: LoggingSettings) -> dict:
             "": {
                 "handlers": root_handlers,
                 "level": settings.LOG_LEVEL,
-                "filters": ["request_context"]
             },
             "src": {
                 "handlers": root_handlers,
@@ -151,7 +152,7 @@ def setup_logging():
 
     logger = logging.getLogger(__name__)
     logger.info(
-        f"Logging initialized",
+        "Logging initialized",
         extra={
             "provider": settings.LOG_PROVIDER.value,
             "format": settings.LOG_FORMAT.value,

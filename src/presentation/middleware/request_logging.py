@@ -5,7 +5,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from infrastructure.logging.context import set_request_id, set_user_id
+from infrastructure.logging.context import set_request_id
 
 
 logger = logging.getLogger(__name__)
@@ -23,10 +23,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4())[:8])
         set_request_id(request_id)
-
-        # user_id = getattr(request.state, "user_id", None)
-        # if user_id:
-        #     set_user_id(user_id)
 
         start_time = time.perf_counter()
 
