@@ -1,8 +1,11 @@
 #!/bin/sh
 set -e
 
+DB_HOST=${DB_HOST:-db}
+DB_PORT=${DB_PORT:-3306}
+
 echo "Esperando a que MySQL esté listo..."
-while ! nc -z db 3306; do
+while ! nc -z $DB_HOST $DB_PORT; do
   sleep 1
 done
 echo "MySQL está listo"
