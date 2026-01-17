@@ -46,12 +46,15 @@ jobs:
       - name: Trigger n8n webhook for deployment
         if: success()
         run: |
+          # Extraer solo el primer tag (dev)
+          IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+
           curl -X POST \
             -H "Content-Type: application/json" \
-            -d '{
-              "image": "${{ steps.meta.outputs.tags }}",
-              "commit_sha": "${{ github.sha }}",
-              "branch": "${{ github.ref_name }}",
-              "repository": "${{ github.repository }}"
-            }' \
+            -d "{
+              \"image\": \"${IMAGE_TAG}\",
+              \"commit_sha\": \"${{ github.sha }}\",
+              \"branch\": \"${{ github.ref_name }}\",
+              \"repository\": \"${{ github.repository }}\"
+            }" \
             ${{ secrets.N8N_WEBHOOK_URL }}
