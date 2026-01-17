@@ -84,7 +84,7 @@ app.include_router(api_router, prefix="/api/v2")
 @limiter.limit("10/minute")
 async def root(request: Request):
     return {
-        "message": "Hello 🌌",
+        "message": "Hello World",
         "version": "3.0.0",
     }
 
