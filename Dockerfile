@@ -33,10 +33,6 @@ RUN addgroup -S lunance && adduser -S lunance -G lunance
 RUN chown -R lunance:lunance /app
 USER lunance
 
-# Health check to monitor container status
-#HEALTHCHECK --interval=10s --timeout=10s --start-period=5s --retries=3 \
-#    CMD curl --fail http://localhost:8000/health || exit 1
-
 # Wait for database, run migrations, then start the application
 COPY entrypoint.sh ./
 ENTRYPOINT ["./entrypoint.sh"]
