@@ -46,7 +46,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Lunance IA - Your Personal Intelligence Assistant",
     description="Manage your finances efficiently with our API",
-    version="2.0.0",
+    version="3.0.0",
+    docs_url=False,
+    redoc_url=False
 )
 
 # Agregar el limiter al estado de la app
