@@ -28,6 +28,7 @@ from presentation.middleware.exception_handler import (
 )
 from shared.exceptions.base import LunanceException
 from presentation.middleware.request_logging import RequestLoggingMiddleware
+from infrastructure.scheduler.service import scheduler_service
 
 # Configurar rate limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -35,7 +36,9 @@ limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    scheduler_service.start()
     yield
+    scheduler_service.shutdown()
 
     for handler in logging.getLogger().handlers:
         if hasattr(handler, "close"):
