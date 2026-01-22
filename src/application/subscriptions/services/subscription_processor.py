@@ -68,7 +68,7 @@ class SubscriptionProcessor:
         return stats
         
 
-    async def _should_generate_transaction(
+    def _should_generate_transaction(
         self, 
         subscription: Subscription, 
         db: AsyncSession
