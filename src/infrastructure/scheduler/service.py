@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from pytz import utc
@@ -14,19 +15,16 @@ class SchedulerService:
 
 
     def start(self):
-
         self.scheduler.add_job(
             process_subscriptions_job,
-            trigger=CronTrigger(hour=0, minute=1),
+            trigger=CronTrigger(hour=0),
             id="process_subscriptions_job",
             name="Process daily subscriptions",
-            replace_existing=True
+            replace_existing=True,
+            next_run_time=datetime.now(utc),
         )
 
         self.scheduler.start()
-        logger.info("Scheduler started")
-
-
     def shutdown(self):
         self.scheduler.shutdown()
         logger.info("Scheduler shutdown")

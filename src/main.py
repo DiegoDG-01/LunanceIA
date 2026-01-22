@@ -51,7 +51,8 @@ app = FastAPI(
     description="Manage your finances efficiently with our API",
     version="3.0.0",
     docs_url=False,
-    redoc_url=False
+    redoc_url=False,
+    lifespan=lifespan
 )
 
 # Agregar el limiter al estado de la app
