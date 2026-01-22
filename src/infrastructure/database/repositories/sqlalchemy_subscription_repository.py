@@ -162,3 +162,14 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
         results = results.all()
 
         return [self._model_to_entity(subscription) for subscription in results]
+
+    def get_active_subscriptions(self) -> List[Subscription]:
+        results = (
+            self.db.query(SubscriptionModel)
+            .filter(
+                SubscriptionModel.is_active
+            )
+            .all()
+        )
+
+        return [self._model_to_entity(subscription) for subscription in results]

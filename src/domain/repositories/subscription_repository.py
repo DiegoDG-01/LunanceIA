@@ -49,3 +49,8 @@ class SubscriptionRepository(ABC):
     def get_by_user(self, user_id: int, active_only: bool = False) -> List[Subscription]:
         """Get all subscriptions for a user, optionally filter by active status"""
         pass
+
+    @abstractmethod
+    def get_active_subscriptions(self) -> List[Subscription]:
+        """Get all active subscriptions"""
+        pass
