@@ -56,8 +56,10 @@ from infrastructure.database.repositories.sqlalchemy_dashboard_repository import
 from application.dashboard.queries.get_dashboard_summary import GetDashboardSummaryHandler
 
 from infrastructure.database.repositories.sqlalchemy_subscription_repository import SQLAlchemySubscriptionRepository
+from infrastructure.database.repositories.sqlalchemy_subscription_charge_repository import SQLAlchemySubscriptionChargeRepository
 from application.subscriptions.commands.create_subscription import CreateSubscriptionHandler
 from application.subscriptions.queries.get_subscriptions import GetSubscriptionsHandler
+from application.subscriptions.queries.get_subscription_charges import GetSubscriptionChargesHandler
 
 
 # Repository Dependencies
@@ -91,6 +93,12 @@ def get_subscription_repository(
         db: Session = Depends(get_db),
 ) -> SQLAlchemySubscriptionRepository:
     return SQLAlchemySubscriptionRepository(db)
+
+
+def get_subscription_charge_repository(
+        db: Session = Depends(get_db),
+) -> SQLAlchemySubscriptionChargeRepository:
+    return SQLAlchemySubscriptionChargeRepository(db)
 
 
 # Service Dependencies
@@ -190,6 +198,11 @@ def get_subscriptions_handler(
         category_repo: SQLAlchemyCategoryRepository = Depends(get_category_repository),
 ) -> GetSubscriptionsHandler:
     return GetSubscriptionsHandler(subscription_repo, account_repo, category_repo)
+
+def get_subscription_charges_handler(
+        subscription_charge_repo: SQLAlchemySubscriptionChargeRepository = Depends(get_subscription_charge_repository),
+) -> GetSubscriptionChargesHandler:
+    return GetSubscriptionChargesHandler(subscription_charge_repo)
 
 def get_delete_subscription_handler(
         subscription_repo: SQLAlchemySubscriptionRepository = Depends(get_subscription_repository),

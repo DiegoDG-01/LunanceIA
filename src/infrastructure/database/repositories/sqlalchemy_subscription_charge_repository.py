@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, asc, extract
+from sqlalchemy import and_, asc, extract, desc
 from typing import Optional, List
 from datetime import date
 
@@ -7,7 +7,7 @@ from domain.entities.subscription_charge import SubscriptionCharge
 from domain.repositories.subscription_charge_repository import SubscriptionChargeRepository
 from domain.objects.money import Money
 from domain.objects.enums import TransactionStatus
-from infrastructure.database.models import SubscriptionChargeModel
+from infrastructure.database.models import SubscriptionChargeModel, SubscriptionModel, TransactionModel, CategoryModel, AccountModel
 
 
 class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
@@ -129,7 +129,7 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
         return self._model_to_entity(model) if model else None
 
 
-    def get_pending_charges(self) -> List[SubscriptionCharge]:  
+    def get_pending_charges(self) -> List[SubscriptionCharge]:
         models = (
             self.db.query(SubscriptionChargeModel)
             .filter(SubscriptionChargeModel.status == TransactionStatus.PENDIENTE)
@@ -138,3 +138,46 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
         )
 
         return [self._model_to_entity(model) for model in models]
+
+    def get_by_user_with_details(self, user_id: int) -> List[tuple]:
+        """Retorna subscription_charges con datos relacionados via JOIN"""
+        results = (
+            self.db.query(
+                SubscriptionChargeModel,
+                SubscriptionModel,
+                TransactionModel,
+                CategoryModel,
+                AccountModel
+            )
+            .join(SubscriptionModel, SubscriptionChargeModel.subscription_id == SubscriptionModel.id)
+            .join(TransactionModel, SubscriptionChargeModel.transaction_id == TransactionModel.id)
+            .outerjoin(CategoryModel, TransactionModel.category_id == CategoryModel.id)
+            .join(AccountModel, TransactionModel.account_id == AccountModel.id)
+            .filter(SubscriptionModel.user_id == user_id)
+            .order_by(desc(SubscriptionChargeModel.charge_date))
+            .all()
+        )
+
+        return [
+            self._models_to_charge_detail(charge, sub, trans, cat, acc)
+            for charge, sub, trans, cat, acc in results
+        ]
+
+    @staticmethod
+    def _models_to_charge_detail(
+        charge_model: SubscriptionChargeModel,
+        subscription_model: SubscriptionModel,
+        transaction_model: TransactionModel,
+        category_model: Optional[CategoryModel],
+        account_model: AccountModel,
+    ) -> tuple:
+        """Convierte modelos a tupla con datos necesarios"""
+        return (
+            charge_model,
+            subscription_model.name,
+            transaction_model.uuid,
+            transaction_model.amount,
+            transaction_model.description,
+            category_model.name if category_model else None,
+            account_model.name,
+        )

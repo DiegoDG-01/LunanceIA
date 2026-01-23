@@ -13,10 +13,11 @@ from typing import Optional
 from domain.entities.user import User
 from application.dto.subscription_dto import CreateSubscriptionDTO
 from application.subscriptions.queries.get_subscriptions import GetSubscriptionsQuery, GetSubscriptionsHandler
+from application.subscriptions.queries.get_subscription_charges import GetSubscriptionChargesQuery, GetSubscriptionChargesHandler
 from application.subscriptions.commands.create_subscription import CreateSubscriptionCommand, CreateSubscriptionHandler
 from application.subscriptions.commands.update_subscription import UpdateSubscriptionCommand, UpdateSubscriptionHandler
 from application.subscriptions.commands.delete_subscription import DeleteSubscriptionCommand, DeleteSubscriptionHandler
-from presentation.schemas.responses.subscription import SubscriptionResponse
+from presentation.schemas.responses.subscription import SubscriptionResponse, SubscriptionChargeDetailResponse
 from presentation.schemas.requests.subscription import CreateSubscriptionRequest, UpdateSubscriptionRequest
 from presentation.dependencies.auth_deps import get_current_user
 from presentation.dependencies.service_deps import (
@@ -24,6 +25,7 @@ from presentation.dependencies.service_deps import (
     get_subscriptions_handler,
     get_update_subscription_handler,
     get_delete_subscription_handler,
+    get_subscription_charges_handler,
 )
 
 router = APIRouter()
@@ -54,6 +56,29 @@ async def get_subscriptions(
 
     subscriptions = await handler.handle(query)
     return [SubscriptionResponse(**subscription.__dict__) for subscription in subscriptions]
+
+
+@router.get("/charges", response_model=list[SubscriptionChargeDetailResponse])
+@limiter.limit("50/minute")
+async def get_subscription_charges(
+    request: Request,
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(get_current_user),
+    handler: GetSubscriptionChargesHandler = Depends(get_subscription_charges_handler),
+):
+    """
+    Obtiene todos los cargos de suscripciones del usuario con detalles de transacciones,
+    categorías y cuentas.
+    """
+    query = GetSubscriptionChargesQuery(
+        user_id=current_user.id,
+        limit=limit,
+        offset=offset,
+    )
+
+    charges = handler.handle(query)
+    return [SubscriptionChargeDetailResponse(**charge.__dict__) for charge in charges]
 
 
 @router.get("/{subscription_uuid}", response_model=SubscriptionResponse)
