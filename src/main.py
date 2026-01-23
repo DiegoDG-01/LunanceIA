@@ -31,7 +31,10 @@ from presentation.middleware.request_logging import RequestLoggingMiddleware
 from infrastructure.scheduler.service import scheduler_service
 
 # Configurar rate limiter
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(
+    key_func=get_remote_address,
+    enabled=settings.ENVIRONMENT.upper() != "TEST"
+)
 
 
 @asynccontextmanager
@@ -61,7 +64,7 @@ app.state.limiter = limiter
 # Configurar CORS
 if settings.ENVIRONMENT.upper() == "PROD":
     origins = ["https://api.lunance.app"]  # Configurar dominio de producción
-elif settings.ENVIRONMENT.upper() == "DEV":
+elif settings.ENVIRONMENT.upper() in ["DEV", "TEST"]:
     origins = ["*"]
 else:
     raise ValueError("Invalid environment")
