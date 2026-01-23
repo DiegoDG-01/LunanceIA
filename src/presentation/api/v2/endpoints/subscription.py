@@ -12,6 +12,7 @@ from typing import Optional
 
 from domain.entities.user import User
 from application.dto.subscription_dto import CreateSubscriptionDTO
+from application.subscriptions.queries.get_subscriptions_by_id import GetSubscriptionsByIdQuery, GetSubscriptionsByIdHandler
 from application.subscriptions.queries.get_subscriptions import GetSubscriptionsQuery, GetSubscriptionsHandler
 from application.subscriptions.queries.get_subscription_charges import GetSubscriptionChargesQuery, GetSubscriptionChargesHandler
 from application.subscriptions.commands.create_subscription import CreateSubscriptionCommand, CreateSubscriptionHandler
@@ -26,6 +27,7 @@ from presentation.dependencies.service_deps import (
     get_update_subscription_handler,
     get_delete_subscription_handler,
     get_subscription_charges_handler,
+    get_subscription_by_id_handler,
 )
 
 router = APIRouter()
@@ -58,6 +60,22 @@ async def get_subscriptions(
     return [SubscriptionResponse(**subscription.__dict__) for subscription in subscriptions]
 
 
+@router.get("/{subscription_uuid}", response_model=SubscriptionResponse)
+async def get_subscription(
+        request: Request,
+        subscription_uuid: str,
+        current_user: User = Depends(get_current_user),
+        handler: GetSubscriptionsByIdHandler = Depends(get_subscription_by_id_handler)
+):
+    query = GetSubscriptionsByIdQuery(
+        user_id=current_user.id,
+        subscription_uuid=subscription_uuid
+    )
+
+    subscription = await handler.handle(query)
+    return SubscriptionResponse(**subscription.__dict__)
+
+
 @router.get("/charges", response_model=list[SubscriptionChargeDetailResponse])
 @limiter.limit("50/minute")
 async def get_subscription_charges(
@@ -79,17 +97,6 @@ async def get_subscription_charges(
 
     charges = handler.handle(query)
     return [SubscriptionChargeDetailResponse(**charge.__dict__) for charge in charges]
-
-
-@router.get("/{subscription_uuid}", response_model=SubscriptionResponse)
-async def get_subscription(
-        request: Request,
-        subscription_uuid: str,
-        current_user: User = Depends(get_current_user),
-        handler: GetSubscriptionsHandler = Depends(get_subscriptions_handler)
-):
-    pass
-
 
 @router.post("/", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("20/minute")

@@ -31,6 +31,7 @@ class SubscriptionRepository(ABC):
         """Get subscription by uuid"""
         pass
 
+
     @abstractmethod
     def get_by_account(
             self, account_uuid: str, user_id: int, limit: int = 100, offset: int = 0

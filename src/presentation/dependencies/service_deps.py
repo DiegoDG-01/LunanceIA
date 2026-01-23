@@ -59,6 +59,7 @@ from infrastructure.database.repositories.sqlalchemy_subscription_repository imp
 from infrastructure.database.repositories.sqlalchemy_subscription_charge_repository import SQLAlchemySubscriptionChargeRepository
 from application.subscriptions.commands.create_subscription import CreateSubscriptionHandler
 from application.subscriptions.queries.get_subscriptions import GetSubscriptionsHandler
+from application.subscriptions.queries.get_subscriptions_by_id import GetSubscriptionsByIdHandler
 from application.subscriptions.queries.get_subscription_charges import GetSubscriptionChargesHandler
 
 
@@ -198,6 +199,13 @@ def get_subscriptions_handler(
         category_repo: SQLAlchemyCategoryRepository = Depends(get_category_repository),
 ) -> GetSubscriptionsHandler:
     return GetSubscriptionsHandler(subscription_repo, account_repo, category_repo)
+
+def get_subscription_by_id_handler(
+        subscription_repo: SQLAlchemySubscriptionRepository = Depends(get_subscription_repository),
+        account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
+        category_repo: SQLAlchemyCategoryRepository = Depends(get_category_repository),
+) -> GetSubscriptionsByIdHandler:
+    return GetSubscriptionsByIdHandler(subscription_repo, account_repo, category_repo)
 
 def get_subscription_charges_handler(
         subscription_charge_repo: SQLAlchemySubscriptionChargeRepository = Depends(get_subscription_charge_repository),
