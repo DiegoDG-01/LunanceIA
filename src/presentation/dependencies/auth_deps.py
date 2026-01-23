@@ -59,23 +59,22 @@ def validate_token(token: str) -> dict:
             rsa_key,
             algorithms=["RS256"],
             audience=settings.AUTH0_AUDIENCE,
-            issuer=f"https://{settings.AUTH0_DOMAIN}/"
+            issuer=f"https://{settings.AUTH0_DOMAIN}/",
         )
 
         return payload
 
     except JWTError:
         raise JWTValidationError("Invalid token")
-    except Exception as e:
+    except Exception:
         raise UnauthorizedError("Authentication failed")
 
 
 async def get_current_user(
-        credentials: HTTPAuthorizationCredentials = Depends(security),
-        db: Session = Depends(get_db)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
 ) -> User:
     try:
-
         token = credentials.credentials
 
         payload = validate_token(token)
@@ -104,12 +103,12 @@ async def get_current_user(
 
     except JWTValidationError:
         raise JWTValidationError("Invalid token")
-    except Exception as e:
+    except Exception:
         raise UnauthorizedError("Authentication failed")
 
 
 async def get_current_active_user(
-        current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> User:
     """Obtiene el usuario actual y verifica que esté activo."""
     if not current_user.is_active:

@@ -6,7 +6,10 @@ from domain.repositories.user_repository import UserRepository
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.category_repository import CategoryRepository
 from domain.objects.money import Money
-from application.dto.subscription_dto import CreateSubscriptionDTO, SubscriptionResponseDTO
+from application.dto.subscription_dto import (
+    CreateSubscriptionDTO,
+    SubscriptionResponseDTO,
+)
 from shared.exceptions.domain import UserNotFoundError, AccountNotFoundError
 
 
@@ -16,20 +19,21 @@ class CreateSubscriptionCommand:
 
 
 class CreateSubscriptionHandler:
-
     def __init__(
-            self,
-            subscription_repository: SubscriptionRepository,
-            user_repository: UserRepository,
-            account_repository: AccountRepository,
-            category_repository: CategoryRepository
+        self,
+        subscription_repository: SubscriptionRepository,
+        user_repository: UserRepository,
+        account_repository: AccountRepository,
+        category_repository: CategoryRepository,
     ):
         self.subscription_repository = subscription_repository
         self.user_repository = user_repository
         self.account_repository = account_repository
         self.category_repository = category_repository
 
-    async def handle(self, command: CreateSubscriptionCommand) -> SubscriptionResponseDTO:
+    async def handle(
+        self, command: CreateSubscriptionCommand
+    ) -> SubscriptionResponseDTO:
         dto = command.dto
 
         user = await self.user_repository.get_by_id(dto.user_id)
@@ -37,8 +41,7 @@ class CreateSubscriptionHandler:
             raise UserNotFoundError()
 
         account = await self.account_repository.get_by_uuid_and_user_id(
-            account_uuid=dto.account_uuid,
-            user_id=dto.user_id
+            account_uuid=dto.account_uuid, user_id=dto.user_id
         )
 
         if not account:
@@ -71,7 +74,5 @@ class CreateSubscriptionHandler:
         saved_subscription = self.subscription_repository.create(subscription)
 
         return SubscriptionResponseDTO.from_entity(
-            saved_subscription,
-            account_name=account.name,
-            category_name=category_name
+            saved_subscription, account_name=account.name, category_name=category_name
         )

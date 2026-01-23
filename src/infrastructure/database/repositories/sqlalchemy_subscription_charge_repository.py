@@ -4,17 +4,23 @@ from typing import Optional, List
 from datetime import date
 
 from domain.entities.subscription_charge import SubscriptionCharge
-from domain.repositories.subscription_charge_repository import SubscriptionChargeRepository
+from domain.repositories.subscription_charge_repository import (
+    SubscriptionChargeRepository,
+)
 from domain.objects.money import Money
 from domain.objects.enums import TransactionStatus
-from infrastructure.database.models import SubscriptionChargeModel, SubscriptionModel, TransactionModel, CategoryModel, AccountModel
+from infrastructure.database.models import (
+    SubscriptionChargeModel,
+    SubscriptionModel,
+    TransactionModel,
+    CategoryModel,
+    AccountModel,
+)
 
 
 class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
-
     def __init__(self, db: Session):
         self.db = db
-
 
     @staticmethod
     def _model_to_entity(model: SubscriptionChargeModel) -> SubscriptionCharge:
@@ -26,7 +32,7 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
             amount=Money(model.amount),
             status=model.status,
             transaction_id=model.transaction_id,
-            processing_date=model.processing_date
+            processing_date=model.processing_date,
         )
 
     @staticmethod
@@ -39,7 +45,7 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
             amount=entity.amount.amount,
             status=entity.status,
             transaction_id=entity.transaction_id,
-            processing_date=entity.processing_date
+            processing_date=entity.processing_date,
         )
 
     def create(self, subscription: SubscriptionCharge) -> SubscriptionCharge:
@@ -48,7 +54,6 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
         self.db.commit()
         self.db.refresh(model)
         return self._model_to_entity(model)
-
 
     def update(self, charge: SubscriptionCharge) -> SubscriptionCharge:
         model = (
@@ -68,7 +73,6 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
         self.db.refresh(model)
         return self._model_to_entity(model)
 
-
     def get_by_id(self, charge_id: int) -> Optional[SubscriptionCharge]:
         model = (
             self.db.query(SubscriptionChargeModel)
@@ -77,7 +81,6 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
         )
 
         return self._model_to_entity(model) if model else None
-
 
     def get_by_subscription(
         self, subscription_id: int, limit: int = 100, offset: int = 0
@@ -92,7 +95,6 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
         )
 
         return [self._model_to_entity(model) for model in models]
-
 
     def get_by_subscription_and_month(
         self, subscription_id: int, year: int, month: int
@@ -111,7 +113,6 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
 
         return self._model_to_entity(model) if model else None
 
-
     def get_by_subscription_and_date(
         self, subscription_id: int, charge_date: date
     ) -> Optional[SubscriptionCharge]:
@@ -127,7 +128,6 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
         )
 
         return self._model_to_entity(model) if model else None
-
 
     def get_pending_charges(self) -> List[SubscriptionCharge]:
         models = (
@@ -147,10 +147,16 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
                 SubscriptionModel,
                 TransactionModel,
                 CategoryModel,
-                AccountModel
+                AccountModel,
             )
-            .join(SubscriptionModel, SubscriptionChargeModel.subscription_id == SubscriptionModel.id)
-            .join(TransactionModel, SubscriptionChargeModel.transaction_id == TransactionModel.id)
+            .join(
+                SubscriptionModel,
+                SubscriptionChargeModel.subscription_id == SubscriptionModel.id,
+            )
+            .join(
+                TransactionModel,
+                SubscriptionChargeModel.transaction_id == TransactionModel.id,
+            )
             .outerjoin(CategoryModel, TransactionModel.category_id == CategoryModel.id)
             .join(AccountModel, TransactionModel.account_id == AccountModel.id)
             .filter(SubscriptionModel.user_id == user_id)

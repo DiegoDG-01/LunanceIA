@@ -17,4 +17,3 @@ class UserModel(Base):
     last_login = Column(DateTime(timezone=True), nullable=True)
     is_active = Column(Boolean, default=True)
     registration_date = Column(DateTime(timezone=True), server_default=func.now())
-

@@ -17,13 +17,12 @@ class SubscriptionCharge:
     transaction_id: Optional[int] = None
     processing_date: Optional[datetime] = None
 
-
     @classmethod
     def create_pending(
-            cls,
-            subscription_id: int,
-            charge_date: date,
-            amount: Money,
+        cls,
+        subscription_id: int,
+        charge_date: date,
+        amount: Money,
     ):
         return cls(
             id=None,
@@ -44,7 +43,6 @@ class SubscriptionCharge:
     def mark_as_failed(self):
         self.status = TransactionStatus.FALLIDO
         self.processing_date = datetime.now()
-
 
     def mark_as_cancelled(self):
         self.status = TransactionStatus.CANCELADO

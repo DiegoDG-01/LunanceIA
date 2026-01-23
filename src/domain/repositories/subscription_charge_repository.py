@@ -6,7 +6,6 @@ from domain.entities.subscription_charge import SubscriptionCharge
 
 
 class SubscriptionChargeRepository(ABC):
-
     @abstractmethod
     def create(self, charge: SubscriptionCharge) -> SubscriptionCharge:
         pass

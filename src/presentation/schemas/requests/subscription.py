@@ -7,7 +7,6 @@ from domain.objects.enums import Frequency
 
 
 class CreateSubscriptionRequest(BaseModel):
-
     account_uuid: str = Field(..., description="UUID de la cuenta")
     category_id: int = Field(..., gt=0, description="ID de la categoria")
     name: str = Field(
@@ -20,9 +19,7 @@ class CreateSubscriptionRequest(BaseModel):
     billing_day: Optional[int] = Field(
         None, ge=1, le=31, description="Día de cobro del mes (1-31)"
     )
-    description: Optional[str] = Field(
-        None, max_length=500, description="Descripción"
-    )
+    description: Optional[str] = Field(None, max_length=500, description="Descripción")
     service_url: Optional[str] = Field(
         None, max_length=255, description="URL del servicio"
     )

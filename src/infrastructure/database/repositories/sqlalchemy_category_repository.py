@@ -16,6 +16,7 @@ class SQLAlchemyCategoryRepository(CategoryRepository):
         return Category(
             id=model.id,
             name=model.name,
+            type=model.type,
             description=model.description,
             color=model.color,
             icon=model.icon,
