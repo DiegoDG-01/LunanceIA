@@ -23,7 +23,7 @@ def base_url() -> str:
 
 @pytest_asyncio.fixture
 async def http_client(base_url: str) -> AsyncGenerator[httpx.AsyncClient, None]:
-    """HTTP client for API tests.""" 
+    """HTTP client for API tests."""
     async with httpx.AsyncClient(base_url=base_url, timeout=30.0) as client:
         yield client
 
@@ -43,7 +43,7 @@ def debug_user_data() -> dict:
     """Debug user data for testing."""
     return {
         "name": "Debug User",
-        "email": "debuguser@gmail.com", 
+        "email": "debuguser@gmail.com",
         "password": "Password123!"
     }
 
@@ -60,18 +60,18 @@ def flow_user_data() -> dict:
 
 class AuthTokens:
     """Container for authentication tokens."""
-    
+
     def __init__(self):
         self.access_token: str = ""
         self.refresh_token: str = ""
         self.token_type: str = "bearer"
-    
+
     def set_tokens(self, access_token: str, refresh_token: str, token_type: str = "bearer"):
         """Set the authentication tokens."""
         self.access_token = access_token
         self.refresh_token = refresh_token
         self.token_type = token_type
-    
+
     def get_auth_headers(self) -> dict:
         """Get authorization headers."""
         return {"Authorization": f"{self.token_type} {self.access_token}"}
