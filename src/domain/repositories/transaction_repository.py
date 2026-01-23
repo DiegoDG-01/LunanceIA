@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List, Tuple
 from datetime import date
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.entities.transaction import Transaction
 from domain.objects.enums import TransactionType, AccountType

@@ -1,7 +1,6 @@
-from datetime import datetime, date
+from datetime import date
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from domain.entities.subscription import Subscription
 from domain.entities.transaction import Transaction
@@ -9,7 +8,7 @@ from domain.entities.subscription_charge import SubscriptionCharge
 from domain.repositories.subscription_repository import SubscriptionRepository
 from domain.repositories.subscription_charge_repository import SubscriptionChargeRepository
 from domain.repositories.transaction_repository import TransactionRepository
-from domain.objects.enums import TransactionStatus, TransactionType
+from domain.objects.enums import TransactionType
 
 logger = logging.getLogger(__name__)
 
@@ -48,10 +47,10 @@ class SubscriptionProcessor:
                     if self._should_generate_transaction(subscription, db):
                         self._create_transaction_from_subscription(subscription, db)
                         stats["created"] += 1
-                        logger.info(f"Transaction created for subscription {subscription.uuid}")
+                        logger.debug(f"Transaction created for subscription {subscription.uuid}")
                     else:
                         stats["skipped"] += 1
-                        logger.info(f"Transaction skipped for subscription {subscription.uuid}")
+                        logger.debug(f"Transaction skipped for subscription {subscription.uuid}")
 
                 except Exception as e:
                     logger.error(f"Error processing due subscription {subscription.uuid}: {e}")

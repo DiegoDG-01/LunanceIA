@@ -8,7 +8,6 @@ from domain.repositories.subscription_charge_repository import SubscriptionCharg
 from domain.objects.money import Money
 from domain.objects.enums import TransactionStatus
 from infrastructure.database.models import SubscriptionChargeModel
-from infrastructure.database.models.subscription import SubscriptionModel
 
 
 class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
