@@ -38,3 +38,29 @@ dev = [
 
 [tool.ruff]
 exclude = ["src/tests", "alembic/", "src/run_tests.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["src/tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "src/tests/*",
+    "alembic/*",
+    "src/main.py",
+    "src/__init__.py"
+]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\b\\):",
+    "@(abc\\.)?abstractmethod"
+]
