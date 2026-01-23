@@ -344,15 +344,15 @@ class AccountRepository(ABC):
     @abstractmethod
     async def save(self, account: Account) -> Account:
         pass
-    
+
     @abstractmethod
     async def find_by_id(self, account_id: str) -> Optional[Account]:
         pass
-    
+
     @abstractmethod
     async def find_by_user_id(self, user_id: str) -> List[Account]:
         pass
-    
+
     @abstractmethod
     async def delete(self, account_id: str) -> bool:
         pass
@@ -361,13 +361,13 @@ class AccountRepository(ABC):
 class SQLAlchemyAccountRepository(AccountRepository):
     def __init__(self, session: AsyncSession):
         self._session = session
-    
+
     async def save(self, account: Account) -> Account:
         db_account = AccountModel.from_entity(account)
         self._session.add(db_account)
         await self._session.commit()
         return db_account.to_entity()
-    
+
     # ... otras implementaciones
 ```
 
@@ -384,18 +384,18 @@ from typing import Optional
 class Money:
     amount: Decimal
     currency: str = "MXN"
-    
+
     def __post_init__(self):
         if self.amount < 0:
             raise ValueError("Money amount cannot be negative")
         if not self.currency:
             raise ValueError("Currency cannot be empty")
-    
+
     def add(self, other: 'Money') -> 'Money':
         if self.currency != other.currency:
             raise ValueError(f"Cannot add {self.currency} with {other.currency}")
         return Money(self.amount + other.amount, self.currency)
-    
+
     def subtract(self, other: 'Money') -> 'Money':
         if self.currency != other.currency:
             raise ValueError(f"Cannot subtract {other.currency} from {self.currency}")
@@ -403,13 +403,13 @@ class Money:
         if result_amount < 0:
             raise ValueError("Subtraction would result in negative amount")
         return Money(result_amount, self.currency)
-    
+
     def multiply(self, factor: Decimal) -> 'Money':
         return Money(self.amount * factor, self.currency)
-    
+
     def is_zero(self) -> bool:
         return self.amount == Decimal('0')
-    
+
     def __str__(self) -> str:
         return f"${self.amount:,.2f} {self.currency}"
 ```
@@ -435,7 +435,7 @@ class Account:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = None
-    
+
     @classmethod
     def create_new(
         cls,
@@ -450,7 +450,7 @@ class Account:
             raise ValueError("User ID is required")
         if not name.strip():
             raise ValueError("Account name cannot be empty")
-        
+
         return cls(
             user_id=user_id,
             name=name.strip(),
@@ -458,33 +458,33 @@ class Account:
             balance=initial_balance,
             bank=bank
         )
-    
+
     def update_balance(self, new_balance: Money) -> None:
         """Actualiza el balance con validaciones de negocio"""
         if new_balance.currency != self.balance.currency:
             raise ValueError("Cannot change account currency")
-        
+
         self.balance = new_balance
         self.updated_at = datetime.utcnow()
-    
+
     def deactivate(self) -> None:
         """Desactiva la cuenta"""
         if not self.balance.is_zero():
             raise ValueError("Cannot deactivate account with non-zero balance")
-        
+
         self.is_active = False
         self.updated_at = datetime.utcnow()
-    
+
     def can_withdraw(self, amount: Money) -> bool:
         """Verifica si se puede retirar el monto especificado"""
         if amount.currency != self.balance.currency:
             return False
-        
+
         # Lógica específica por tipo de cuenta
         if self.account_type == AccountType.CREDIT:
             # Las cuentas de crédito tienen lógica diferente
             return True
-        
+
         return self.balance.amount >= amount.amount
 ```
 
@@ -695,18 +695,18 @@ class TestMoney:
         money = Money(Decimal('100.50'), 'USD')
         assert money.amount == Decimal('100.50')
         assert money.currency == 'USD'
-    
+
     def test_add_same_currency(self):
         money1 = Money(Decimal('100'), 'USD')
         money2 = Money(Decimal('50'), 'USD')
         result = money1.add(money2)
         assert result.amount == Decimal('150')
         assert result.currency == 'USD'
-    
+
     def test_add_different_currency_raises_error(self):
         money1 = Money(Decimal('100'), 'USD')
         money2 = Money(Decimal('50'), 'EUR')
-        
+
         with pytest.raises(ValueError, match="Cannot add USD with EUR"):
             money1.add(money2)
 ```
@@ -732,7 +732,7 @@ class TestAccountEndpoints:
                 },
                 headers=auth_headers
             )
-            
+
             assert response.status_code == 201
             data = response.json()
             assert data["name"] == "Mi Cuenta de Ahorros"
