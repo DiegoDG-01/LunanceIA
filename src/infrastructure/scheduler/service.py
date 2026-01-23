@@ -13,7 +13,6 @@ class SchedulerService:
     def __init__(self):
         self.scheduler = AsyncIOScheduler(timezone=utc)
 
-
     def start(self):
         self.scheduler.add_job(
             process_subscriptions_job,
@@ -25,6 +24,7 @@ class SchedulerService:
         )
 
         self.scheduler.start()
+
     def shutdown(self):
         self.scheduler.shutdown()
         logger.info("Scheduler shutdown")

@@ -26,8 +26,9 @@ dependencies = [
     "pytz>=2025.2",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
+    "virtualenv>=20.36.1",
     "ruff>=0.14.3",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",

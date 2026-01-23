@@ -6,7 +6,9 @@ from domain.entities.subscription import Subscription
 from domain.entities.transaction import Transaction
 from domain.entities.subscription_charge import SubscriptionCharge
 from domain.repositories.subscription_repository import SubscriptionRepository
-from domain.repositories.subscription_charge_repository import SubscriptionChargeRepository
+from domain.repositories.subscription_charge_repository import (
+    SubscriptionChargeRepository,
+)
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.objects.enums import TransactionType
 
@@ -14,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 class SubscriptionProcessor:
-
     def __init__(
         self,
         subscription_repository: SubscriptionRepository,
@@ -24,10 +25,8 @@ class SubscriptionProcessor:
         self.subscription_repository = subscription_repository
         self.subscription_charge_repository = subscription_charge_repository
         self.transaction_repository = transaction_repository
-        
 
     def process_due_subscriptions(self, db: AsyncSession) -> dict:
-
         logger.info("Processing due subscriptions")
 
         stats = {
@@ -38,7 +37,9 @@ class SubscriptionProcessor:
         }
 
         try:
-            active_subscriptions = self.subscription_repository.get_active_subscriptions()
+            active_subscriptions = (
+                self.subscription_repository.get_active_subscriptions()
+            )
 
             for subscription in active_subscriptions:
                 stats["processed"] += 1
@@ -47,13 +48,19 @@ class SubscriptionProcessor:
                     if self._should_generate_transaction(subscription, db):
                         self._create_transaction_from_subscription(subscription, db)
                         stats["created"] += 1
-                        logger.debug(f"Transaction created for subscription {subscription.uuid}")
+                        logger.debug(
+                            f"Transaction created for subscription {subscription.uuid}"
+                        )
                     else:
                         stats["skipped"] += 1
-                        logger.debug(f"Transaction skipped for subscription {subscription.uuid}")
+                        logger.debug(
+                            f"Transaction skipped for subscription {subscription.uuid}"
+                        )
 
                 except Exception as e:
-                    logger.error(f"Error processing due subscription {subscription.uuid}: {e}")
+                    logger.error(
+                        f"Error processing due subscription {subscription.uuid}: {e}"
+                    )
                     stats["failed"] += 1
 
             db.commit()
@@ -65,14 +72,10 @@ class SubscriptionProcessor:
             raise
 
         return stats
-        
 
     def _should_generate_transaction(
-        self, 
-        subscription: Subscription, 
-        db: AsyncSession
+        self, subscription: Subscription, db: AsyncSession
     ) -> bool:
-        
         today = date.today()
 
         if subscription.end_date and subscription.end_date < today:
@@ -81,10 +84,12 @@ class SubscriptionProcessor:
         if subscription.billing_day != today.day:
             return False
 
-        existing_charge = self.subscription_charge_repository.get_by_subscription_and_month(
-            subscription_id=subscription.id,
-            year=today.year,
-            month=today.month,
+        existing_charge = (
+            self.subscription_charge_repository.get_by_subscription_and_month(
+                subscription_id=subscription.id,
+                year=today.year,
+                month=today.month,
+            )
         )
 
         if existing_charge:
@@ -94,19 +99,15 @@ class SubscriptionProcessor:
             return False
         return True
 
-
     def _create_transaction_from_subscription(
-        self,
-        subscription: Subscription,
-        db: AsyncSession
+        self, subscription: Subscription, db: AsyncSession
     ) -> Transaction:
-        
         today = date.today()
 
         charge = SubscriptionCharge.create_pending(
             subscription_id=subscription.id,
             charge_date=today,
-            amount=subscription.amount
+            amount=subscription.amount,
         )
 
         save_charge = self.subscription_charge_repository.create(charge)

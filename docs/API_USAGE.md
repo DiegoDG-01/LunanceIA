@@ -723,7 +723,7 @@ class LunanceClient:
         self.base_url = base_url
         self.token = token
         self.client = httpx.Client()
-    
+
     async def login(self, email: str, password: str):
         response = await self.client.post(
             f"{self.base_url}/api/v2/auth/login",
@@ -732,7 +732,7 @@ class LunanceClient:
         data = response.json()
         self.token = data["access_token"]
         return data
-    
+
     async def get_accounts(self):
         headers = {"Authorization": f"Bearer {self.token}"}
         response = await self.client.get(

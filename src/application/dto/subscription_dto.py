@@ -54,12 +54,7 @@ class SubscriptionResponseDTO:
     creation_date: datetime
 
     @classmethod
-    def from_entity(
-            cls,
-            subscription,
-            account_name: str,
-            category_name: Optional[str]
-    ):
+    def from_entity(cls, subscription, account_name: str, category_name: Optional[str]):
         return cls(
             uuid=subscription.uuid,
             account_name=account_name,
@@ -81,6 +76,7 @@ class SubscriptionResponseDTO:
 @dataclass
 class SubscriptionChargeDetailResponseDTO:
     """DTO para subscription_charges con datos relacionados"""
+
     charge_id: str  # sc.id (UUID)
     subscription_name: str  # s.name
     charge_date: date  # sc.charge_date
@@ -96,14 +92,14 @@ class SubscriptionChargeDetailResponseDTO:
 
     @classmethod
     def from_entity(
-            cls,
-            charge,
-            subscription_name: str,
-            transaction_uuid: Optional[str],
-            transaction_amount: Decimal,
-            transaction_description: Optional[str],
-            category_name: Optional[str],
-            account_name: str
+        cls,
+        charge,
+        subscription_name: str,
+        transaction_uuid: Optional[str],
+        transaction_amount: Decimal,
+        transaction_description: Optional[str],
+        category_name: Optional[str],
+        account_name: str,
     ):
         return cls(
             charge_id=charge.uuid,

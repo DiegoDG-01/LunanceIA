@@ -153,7 +153,7 @@ HTTP_CODES_ERRORS = {
         "GEMINI_PROCESSING_ERROR": "Error procesando imagen con Gemini",
         "GEMINI_API_ERROR": "Error de API de Gemini",
         "VALIDATION_INVALID_IMAGE": "Imagen no válida o no procesable",
-        "INSUFFICIENT_FUNDS": "Fondos insuficientes"
+        "INSUFFICIENT_FUNDS": "Fondos insuficientes",
     },
     "en": {
         # Códigos HTTP genéricos
@@ -193,7 +193,7 @@ HTTP_CODES_ERRORS = {
         "GEMINI_PROCESSING_ERROR": "Error processing image with Gemini",
         "GEMINI_API_ERROR": "Gemini API error",
         "VALIDATION_INVALID_IMAGE": "Invalid or unprocessable image",
-        "INSUFFICIENT_FUNDS": "Insufficient funds"
+        "INSUFFICIENT_FUNDS": "Insufficient funds",
     },
 }
 
@@ -223,6 +223,7 @@ ERROR_DETAIL_MESSAGES = {
         "INSUFFICIENT_FUNDS": "Insufficient funds",
     },
 }
+
 
 def get_error_detail_message(code: str, language: str = "es") -> str:
     """

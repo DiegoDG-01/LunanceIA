@@ -32,8 +32,7 @@ from infrastructure.scheduler.service import scheduler_service
 
 # Configurar rate limiter
 limiter = Limiter(
-    key_func=get_remote_address,
-    enabled=settings.ENVIRONMENT.upper() != "TEST"
+    key_func=get_remote_address, enabled=settings.ENVIRONMENT.upper() != "TEST"
 )
 
 
@@ -55,7 +54,7 @@ app = FastAPI(
     version="3.0.0",
     docs_url=False,
     redoc_url=False,
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Agregar el limiter al estado de la app
@@ -100,18 +99,11 @@ async def root(request: Request):
 
 @app.get("/health")
 @limiter.limit("5/minute")
-async def health_check(
-        request: Request,
-        db: AsyncSession = Depends(get_db)
-):
+async def health_check(request: Request, db: AsyncSession = Depends(get_db)):
     try:
         db.execute(text("SELECT 1"))
         db_status = {"status": "healthy"}
     except Exception:
         db_status = {"status": "unhealthy"}
 
-    return {
-        "API": "healthy",
-        "version": "3.0.0",
-        "services":db_status
-    }
+    return {"API": "healthy", "version": "3.0.0", "services": db_status}

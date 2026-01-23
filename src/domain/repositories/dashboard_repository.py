@@ -3,7 +3,6 @@ from domain.entities.dashboard import DashboardSummary
 
 
 class DashboardRepository(ABC):
-
     @abstractmethod
     def get_dashboard_summary(self, user_uuid: str, user_id: int) -> DashboardSummary:
         """

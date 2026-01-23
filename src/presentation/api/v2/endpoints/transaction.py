@@ -58,7 +58,7 @@ router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 
-@router.get("/", response_model=list[TransactionResponse])
+@router.get("", response_model=list[TransactionResponse])
 @limiter.limit("50/minute")
 async def get_transactions(
     request: Request,
@@ -114,7 +114,7 @@ async def get_transaction_by_uuid(
     return TransactionResponse(**transaction.__dict__)
 
 
-@router.post("/", response_model=TransactionResponse)
+@router.post("", response_model=TransactionResponse)
 @limiter.limit("20/minute")
 async def create_transaction(
     request: Request,
@@ -140,7 +140,7 @@ async def create_transaction(
     return TransactionResponse(**result.__dict__)
 
 
-@router.post("/image/", response_model=TransactionResponse)
+@router.post("/image", response_model=TransactionResponse)
 @limiter.limit("5/minute")  # Más restrictivo por ser procesamiento de imagen
 async def create_transaction_from_image(
     request: Request,
@@ -189,7 +189,7 @@ async def create_transaction_from_image(
     return TransactionResponse(**result.__dict__)
 
 
-@router.put("/{transaction_uuid}/", response_model=TransactionResponse)
+@router.put("/{transaction_uuid}", response_model=TransactionResponse)
 @limiter.limit("15/minute")
 async def update_transaction(
     request: Request,
@@ -213,7 +213,7 @@ async def update_transaction(
     return TransactionResponse(**updated_transaction.__dict__)
 
 
-@router.delete("/{transaction_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{transaction_uuid}", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("10/minute")
 async def delete_transaction(
     request: Request,
