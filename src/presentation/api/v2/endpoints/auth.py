@@ -21,7 +21,10 @@ from presentation.dependencies.service_deps import (
     get_logout_handler,
 )
 from application.auth.commands.login import LoginCommand, LoginHandler
-from application.auth.commands.refresh_token import RefreshTokenCommand, RefreshTokenHandler
+from application.auth.commands.refresh_token import (
+    RefreshTokenCommand,
+    RefreshTokenHandler,
+)
 from application.auth.commands.logout import LogoutCommand, LogoutHandler
 from application.auth.commands.register import RegisterCommand, RegisterHandler
 

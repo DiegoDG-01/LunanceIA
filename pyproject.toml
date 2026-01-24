@@ -22,10 +22,13 @@ dependencies = [
     "pre-commit>=4.2.0",
     "slowapi>=0.1.9",
     "pillow>=12.0.0",
+    "apscheduler>=3.11.2",
+    "pytz>=2025.2",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
+    "virtualenv>=20.36.1",
     "ruff>=0.14.3",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
@@ -36,3 +39,29 @@ dev = [
 
 [tool.ruff]
 exclude = ["src/tests", "alembic/", "src/run_tests.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["src/tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "src/tests/*",
+    "alembic/*",
+    "src/main.py",
+    "src/__init__.py"
+]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\b\\):",
+    "@(abc\\.)?abstractmethod"
+]

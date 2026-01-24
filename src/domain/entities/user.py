@@ -20,7 +20,15 @@ class User:
     is_active: bool = True
 
     @classmethod
-    def create_new(cls, auth0_id: str, name: str, email: str, picture: str, email_verified: bool, last_login: datetime):
+    def create_new(
+        cls,
+        auth0_id: str,
+        name: str,
+        email: str,
+        picture: str,
+        email_verified: bool,
+        last_login: datetime,
+    ):
         """Factory method to create a new user"""
         return cls(
             auth0_id=auth0_id,

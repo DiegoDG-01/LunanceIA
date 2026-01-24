@@ -33,7 +33,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 "method": request.method,
                 "client_ip": request.client.host,
                 "user_agent": request.headers.get("user-agent"),
-            }
+            },
         )
 
         try:
@@ -48,7 +48,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                     "duration_ms": round(duration_ms, 2),
                     "error": str(e),
                 },
-                exc_info=True
+                exc_info=True,
             )
             raise
 
@@ -63,9 +63,8 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 "method": request.method,
                 "status_code": response.status_code,
                 "duration_ms": round(duration_ms, 2),
-            }
+            },
         )
 
-        response.headers['X-Request-ID'] = request_id
+        response.headers["X-Request-ID"] = request_id
         return response
-

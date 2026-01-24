@@ -61,7 +61,6 @@ class SQLAlchemyUserRepository(UserRepository):
         user_model = self.db.query(UserModel).filter(UserModel.auth0_id == id).first()
         return user_model if user_model else None
 
-
     async def get_by_email(self, email: str) -> Optional[User]:
         """Obtiene usuario por email."""
         model = self.db.query(UserModel).filter(UserModel.email == email).first()

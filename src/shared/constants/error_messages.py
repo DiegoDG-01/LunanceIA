@@ -10,7 +10,7 @@ import warnings
 warnings.warn(
     "error_messages.py está deprecado. Usar validation_messages.py",
     DeprecationWarning,
-    stacklevel=2
+    stacklevel=2,
 )
 
 """Mensajes de error estandarizados."""

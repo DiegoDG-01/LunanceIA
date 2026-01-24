@@ -10,7 +10,6 @@ from infrastructure.database.models.subscription import SubscriptionModel
 
 
 class SQLAlchemySubscriptionRepository(SubscriptionRepository):
-
     def __init__(self, db: Session):
         self.db = db
 
@@ -82,8 +81,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
             self.db.query(SubscriptionModel)
             .filter(
                 and_(
-                    SubscriptionModel.uuid == uuid,
-                    SubscriptionModel.user_id == user_id
+                    SubscriptionModel.uuid == uuid, SubscriptionModel.user_id == user_id
                 )
             )
             .delete(synchronize_session=False)
@@ -92,24 +90,25 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
         self.db.commit()
         return result > 0
 
-    def get_by_uuid_and_user_id(self, subscription_uuid: str, user_id: int) -> Optional[Subscription]:
+    def get_by_uuid_and_user_id(
+        self, subscription_uuid: str, user_id: int
+    ) -> Optional[Subscription]:
         model = (
             self.db.query(SubscriptionModel)
             .filter(
                 and_(
                     SubscriptionModel.uuid == subscription_uuid,
-                    SubscriptionModel.user_id == user_id)
+                    SubscriptionModel.user_id == user_id,
+                )
             )
             .first()
         )
 
         return self._model_to_entity(model) if model else None
 
-
     def get_by_account(
-            self, account_uuid: str, user_id: int, limit: int = 100, offset: int = 0
+        self, account_uuid: str, user_id: int, limit: int = 100, offset: int = 0
     ) -> List[Subscription]:
-
         models = (
             self.db.query(SubscriptionModel, AccountModel)
             .join(AccountModel, SubscriptionModel.account_id == AccountModel.id)
@@ -128,9 +127,10 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
         return [self._model_to_entity(subscription) for subscription, _ in models]
 
     def get_by_category(
-            self, user_id: int, category_id: int,
+        self,
+        user_id: int,
+        category_id: int,
     ) -> List[Subscription]:
-
         models = (
             self.db.query(SubscriptionModel)
             .filter(
@@ -145,20 +145,23 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
 
         return [self._model_to_entity(model) for model in models]
 
-
-    def get_by_user(self, user_id: int, active_only: bool = False) -> List[Subscription]:
-        results = (
-            self.db.query(SubscriptionModel)
-            .filter(
-                and_(
-                    SubscriptionModel.user_id == user_id
-                )
-            )
+    def get_by_user(
+        self, user_id: int, active_only: bool = False
+    ) -> List[Subscription]:
+        results = self.db.query(SubscriptionModel).filter(
+            and_(SubscriptionModel.user_id == user_id)
         )
 
         if active_only:
             results = results.filter(SubscriptionModel.is_active)
 
         results = results.all()
+
+        return [self._model_to_entity(subscription) for subscription in results]
+
+    def get_active_subscriptions(self) -> List[Subscription]:
+        results = (
+            self.db.query(SubscriptionModel).filter(SubscriptionModel.is_active).all()
+        )
 
         return [self._model_to_entity(subscription) for subscription in results]

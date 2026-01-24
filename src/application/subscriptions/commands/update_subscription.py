@@ -3,7 +3,10 @@ from dataclasses import dataclass
 from domain.repositories.subscription_repository import SubscriptionRepository
 from domain.repositories.category_repository import CategoryRepository
 from domain.repositories.account_repository import AccountRepository
-from application.dto.subscription_dto import UpdateSubscriptionDTO, SubscriptionResponseDTO
+from application.dto.subscription_dto import (
+    UpdateSubscriptionDTO,
+    SubscriptionResponseDTO,
+)
 from shared.exceptions.domain import SubscriptionNotFoundError, CategoryNotFoundError
 
 
@@ -15,18 +18,19 @@ class UpdateSubscriptionCommand:
 
 
 class UpdateSubscriptionHandler:
-
     def __init__(
-            self,
-            subscription_repository: SubscriptionRepository,
-            category_repository: CategoryRepository,
-            account_repository: AccountRepository,
+        self,
+        subscription_repository: SubscriptionRepository,
+        category_repository: CategoryRepository,
+        account_repository: AccountRepository,
     ):
         self.subscription_repository = subscription_repository
         self.category_repository = category_repository
         self.account_repository = account_repository
 
-    async def handle(self, command: UpdateSubscriptionCommand) -> SubscriptionResponseDTO:
+    async def handle(
+        self, command: UpdateSubscriptionCommand
+    ) -> SubscriptionResponseDTO:
         dto = command.dto
 
         subscription = self.subscription_repository.get_by_uuid_and_user_id(
@@ -57,6 +61,6 @@ class UpdateSubscriptionHandler:
         )
         category_name = category.name if category else None
 
-        return SubscriptionResponseDTO.from_entity(updated_subscription, account_name, category_name)
-
-
+        return SubscriptionResponseDTO.from_entity(
+            updated_subscription, account_name, category_name
+        )

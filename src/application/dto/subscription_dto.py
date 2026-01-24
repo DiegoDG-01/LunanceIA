@@ -3,11 +3,11 @@ from decimal import Decimal
 from typing import Optional
 from datetime import date, datetime
 
-from domain.objects.enums import Frequency
+from domain.objects.enums import Frequency, TransactionStatus
+
 
 @dataclass
 class CreateSubscriptionDTO:
-
     user_id: int
     category_id: int
     account_uuid: str
@@ -54,12 +54,7 @@ class SubscriptionResponseDTO:
     creation_date: datetime
 
     @classmethod
-    def from_entity(
-            cls,
-            subscription,
-            account_name: str,
-            category_name: Optional[str]
-    ):
+    def from_entity(cls, subscription, account_name: str, category_name: Optional[str]):
         return cls(
             uuid=subscription.uuid,
             account_name=account_name,
@@ -78,3 +73,43 @@ class SubscriptionResponseDTO:
         )
 
 
+@dataclass
+class SubscriptionChargeDetailResponseDTO:
+    """DTO para subscription_charges con datos relacionados"""
+
+    charge_id: str  # sc.id (UUID)
+    subscription_name: str  # s.name
+    charge_date: date  # sc.charge_date
+    charge_amount: Decimal  # sc.amount
+    charge_status: TransactionStatus  # sc.status
+
+    transaction_id: Optional[str]  # t.uuid
+    transaction_amount: Decimal  # t.amount
+    transaction_description: Optional[str]  # t.description
+
+    category_name: Optional[str]  # c.name
+    account_name: str  # a.name
+
+    @classmethod
+    def from_entity(
+        cls,
+        charge,
+        subscription_name: str,
+        transaction_uuid: Optional[str],
+        transaction_amount: Decimal,
+        transaction_description: Optional[str],
+        category_name: Optional[str],
+        account_name: str,
+    ):
+        return cls(
+            charge_id=charge.uuid,
+            subscription_name=subscription_name,
+            charge_date=charge.charge_date,
+            charge_amount=charge.amount,
+            charge_status=charge.status,
+            transaction_id=transaction_uuid,
+            transaction_amount=transaction_amount,
+            transaction_description=transaction_description,
+            category_name=category_name,
+            account_name=account_name,
+        )

@@ -19,21 +19,25 @@ class GetSubscriptionsQuery:
 
 
 class GetSubscriptionsHandler:
-
     def __init__(
-            self,
-            subscription_repository: SubscriptionRepository,
-            account_repository: AccountRepository,
-            category_repository: CategoryRepository,
+        self,
+        subscription_repository: SubscriptionRepository,
+        account_repository: AccountRepository,
+        category_repository: CategoryRepository,
     ):
         self.subscription_repository = subscription_repository
         self.account_repository = account_repository
         self.category_repository = category_repository
 
-    async def handle(self, query: GetSubscriptionsQuery) -> List[SubscriptionResponseDTO]:
+    async def handle(
+        self, query: GetSubscriptionsQuery
+    ) -> List[SubscriptionResponseDTO]:
         if query.account_uuid:
             subscriptions = self.subscription_repository.get_by_account(
-                account_uuid=query.account_uuid, user_id=query.user_id, limit=query.limit, offset=query.offset
+                account_uuid=query.account_uuid,
+                user_id=query.user_id,
+                limit=query.limit,
+                offset=query.offset,
             )
         elif query.category_id:
             subscriptions = self.subscription_repository.get_by_category(
@@ -41,7 +45,8 @@ class GetSubscriptionsHandler:
             )
         else:
             subscriptions = self.subscription_repository.get_by_user(
-                user_id=query.user_id, active_only=query.active_only,
+                user_id=query.user_id,
+                active_only=query.active_only,
             )
 
         response_dtos = []
@@ -57,7 +62,9 @@ class GetSubscriptionsHandler:
 
             category_name = category.name if category else None
 
-            dto = SubscriptionResponseDTO.from_entity(subscription, account_name, category_name)
+            dto = SubscriptionResponseDTO.from_entity(
+                subscription, account_name, category_name
+            )
             response_dtos.append(dto)
 
         return response_dtos
