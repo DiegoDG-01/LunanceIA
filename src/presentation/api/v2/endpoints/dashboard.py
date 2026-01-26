@@ -16,7 +16,7 @@ router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 
-@router.get("")
+@router.get("/")
 @limiter.limit("10/minute")
 async def get_general_data(
     request: Request,

@@ -82,7 +82,7 @@ async def get_account(
     return AccountResponse(**account.__dict__)
 
 
-@router.post("", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("50/minute")
 async def create_account(
     request: Request,
@@ -106,7 +106,7 @@ async def create_account(
     return AccountResponse(**account.__dict__)
 
 
-@router.patch("/{account_uuid}", response_model=AccountResponse)
+@router.patch("/{account_uuid}/", response_model=AccountResponse)
 @limiter.limit("50/minute")
 async def update_account(
     request: Request,
@@ -130,7 +130,7 @@ async def update_account(
     return AccountResponse(**account.__dict__)
 
 
-@router.delete("/{account_uuid}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{account_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("50/minute")
 async def delete_account(
     request: Request,
@@ -148,7 +148,7 @@ async def delete_account(
         )
 
 
-@router.patch("/{account_uuid}/status", response_model=AccountResponse)
+@router.patch("/{account_uuid}/status/", response_model=AccountResponse)
 @limiter.limit("50/minute")
 async def activate_account(
     request: Request,

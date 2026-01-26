@@ -19,7 +19,7 @@ router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 
-@router.get("", response_model=CategoryListResponse)
+@router.get("/", response_model=CategoryListResponse)
 @limiter.limit("50/minute")
 async def get_categories(
     request: Request,

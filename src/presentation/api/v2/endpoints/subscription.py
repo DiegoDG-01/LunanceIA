@@ -51,7 +51,7 @@ router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 
-@router.get("", response_model=list[SubscriptionResponse])
+@router.get("/", response_model=list[SubscriptionResponse])
 @limiter.limit("50/minute")
 async def get_subscriptions(
     request: Request,
@@ -78,22 +78,7 @@ async def get_subscriptions(
     ]
 
 
-@router.get("/{subscription_uuid}", response_model=SubscriptionResponse)
-async def get_subscription(
-    request: Request,
-    subscription_uuid: str,
-    current_user: User = Depends(get_current_user),
-    handler: GetSubscriptionsByIdHandler = Depends(get_subscription_by_id_handler),
-):
-    query = GetSubscriptionsByIdQuery(
-        user_id=current_user.id, subscription_uuid=subscription_uuid
-    )
-
-    subscription = await handler.handle(query)
-    return SubscriptionResponse(**subscription.__dict__)
-
-
-@router.get("/charges", response_model=list[SubscriptionChargeDetailResponse])
+@router.get("/charges/", response_model=list[SubscriptionChargeDetailResponse])
 @limiter.limit("50/minute")
 async def get_subscription_charges(
     request: Request,
@@ -116,8 +101,23 @@ async def get_subscription_charges(
     return [SubscriptionChargeDetailResponse(**charge.__dict__) for charge in charges]
 
 
+@router.get("/{subscription_uuid}/", response_model=SubscriptionResponse)
+async def get_subscription(
+    request: Request,
+    subscription_uuid: str,
+    current_user: User = Depends(get_current_user),
+    handler: GetSubscriptionsByIdHandler = Depends(get_subscription_by_id_handler),
+):
+    query = GetSubscriptionsByIdQuery(
+        user_id=current_user.id, subscription_uuid=subscription_uuid
+    )
+
+    subscription = await handler.handle(query)
+    return SubscriptionResponse(**subscription.__dict__)
+
+
 @router.post(
-    "", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED
+    "/", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED
 )
 @limiter.limit("20/minute")
 async def create_subscription(
@@ -151,7 +151,7 @@ async def create_subscription(
 
 
 @router.put(
-    "/{subscription_uuid}",
+    "/{subscription_uuid}/",
     response_model=SubscriptionResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -173,7 +173,7 @@ async def update_subscription(
     return SubscriptionResponse(**update_subscription.__dict__)
 
 
-@router.delete("/{subscription_uuid}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{subscription_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_subscription(
     subscription_uuid: str,
     current_user: User = Depends(get_current_user),
