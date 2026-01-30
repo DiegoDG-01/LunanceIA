@@ -28,6 +28,7 @@ class CreateSubscriptionRequest(BaseModel):
 class UpdateSubscriptionRequest(BaseModel):
     """Schema para actualizar suscripción."""
 
+    account_uuid: str = Field(..., description="UUID de la cuenta")
     name: Optional[str] = Field(
         None, min_length=1, max_length=100, description="Nombre de la suscripción"
     )
