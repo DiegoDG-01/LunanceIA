@@ -9,6 +9,7 @@ class SubscriptionResponse(BaseModel):
     uuid: str
     name: str
     account_name: str
+    account_uuid: str
     category_name: Optional[str]
     frequency: Frequency
     amount: Decimal

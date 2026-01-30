@@ -52,6 +52,7 @@ class GetSubscriptionsHandler:
         response_dtos = []
         for subscription in subscriptions:
             account = await self.account_repository.get_by_id(subscription.account_id)
+            account_uuid = account.uuid if account else None
             account_name = account.name if account else None
 
             category = (
@@ -63,7 +64,7 @@ class GetSubscriptionsHandler:
             category_name = category.name if category else None
 
             dto = SubscriptionResponseDTO.from_entity(
-                subscription, account_name, category_name
+                subscription, account_uuid, account_name, category_name
             )
             response_dtos.append(dto)
 

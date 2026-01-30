@@ -24,6 +24,7 @@ class CreateSubscriptionDTO:
 
 @dataclass
 class UpdateSubscriptionDTO:
+    account_uuid: str = None
     name: Optional[str] = None
     amount: Optional[Decimal] = None
     frequency: Optional[Frequency] = None
@@ -39,6 +40,7 @@ class UpdateSubscriptionDTO:
 @dataclass
 class SubscriptionResponseDTO:
     uuid: str
+    account_uuid: str
     account_name: str
     category_name: Optional[str]
     name: str
@@ -54,9 +56,16 @@ class SubscriptionResponseDTO:
     creation_date: datetime
 
     @classmethod
-    def from_entity(cls, subscription, account_name: str, category_name: Optional[str]):
+    def from_entity(
+        cls,
+        subscription,
+        account_uuid: str,
+        account_name: str,
+        category_name: Optional[str],
+    ):
         return cls(
             uuid=subscription.uuid,
+            account_uuid=account_uuid,
             account_name=account_name,
             category_name=category_name,
             name=subscription.name,
