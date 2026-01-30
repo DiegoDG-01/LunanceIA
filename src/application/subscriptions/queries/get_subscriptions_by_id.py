@@ -37,6 +37,7 @@ class GetSubscriptionsByIdHandler:
             raise SubscriptionNotFoundError(subscription_uuid=query.subscription_uuid)
 
         account = await self.account_repository.get_by_id(subscription.account_id)
+        account_uuid = account.uuid if account else None
         account_name = account.name if account else None
 
         category = (
@@ -48,6 +49,7 @@ class GetSubscriptionsByIdHandler:
 
         return SubscriptionResponseDTO.from_entity(
             subscription=subscription,
+            account_uuid=account_uuid,
             account_name=account_name,
             category_name=category_name,
         )

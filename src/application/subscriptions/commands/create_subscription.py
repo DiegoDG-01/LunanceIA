@@ -74,5 +74,8 @@ class CreateSubscriptionHandler:
         saved_subscription = self.subscription_repository.create(subscription)
 
         return SubscriptionResponseDTO.from_entity(
-            saved_subscription, account_name=account.name, category_name=category_name
+            saved_subscription,
+            account_uuid=account.uuid,
+            account_name=account.name,
+            category_name=category_name,
         )
