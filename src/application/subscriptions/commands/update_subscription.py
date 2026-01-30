@@ -7,7 +7,11 @@ from application.dto.subscription_dto import (
     UpdateSubscriptionDTO,
     SubscriptionResponseDTO,
 )
-from shared.exceptions.domain import SubscriptionNotFoundError, CategoryNotFoundError
+from shared.exceptions.domain import (
+    SubscriptionNotFoundError,
+    CategoryNotFoundError,
+    AccountNotFoundError,
+)
 
 
 @dataclass
@@ -45,6 +49,15 @@ class UpdateSubscriptionHandler:
             if not category:
                 raise CategoryNotFoundError(dto.category_id)
 
+        if dto.account_uuid is not None:
+            account = await self.account_repository.get_by_uuid_and_user_id(
+                account_uuid=dto.account_uuid, user_id=command.user_id
+            )
+            if not account:
+                raise AccountNotFoundError(dto.account_uuid)
+
+            subscription.account_id = account.id
+
         for key, value in dto.dict().items():
             if value is not None:
                 setattr(subscription, key, value)
@@ -52,6 +65,7 @@ class UpdateSubscriptionHandler:
         updated_subscription = self.subscription_repository.update(subscription)
 
         account = await self.account_repository.get_by_id(subscription.account_id)
+        account_uuid = account.uuid if account else None
         account_name = account.name if account else None
 
         category = (
@@ -62,5 +76,5 @@ class UpdateSubscriptionHandler:
         category_name = category.name if category else None
 
         return SubscriptionResponseDTO.from_entity(
-            updated_subscription, account_name, category_name
+            updated_subscription, account_uuid, account_name, category_name
         )
