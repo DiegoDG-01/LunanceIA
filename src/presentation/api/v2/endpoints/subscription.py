@@ -29,6 +29,10 @@ from application.subscriptions.commands.delete_subscription import (
     DeleteSubscriptionCommand,
     DeleteSubscriptionHandler,
 )
+from application.subscriptions.commands.state_subscription import (
+    StateSubscriptionCommand,
+    StateSubscriptionHandler,
+)
 from presentation.schemas.responses.subscription import (
     SubscriptionResponse,
     SubscriptionChargeDetailResponse,
@@ -45,6 +49,7 @@ from presentation.dependencies.service_deps import (
     get_delete_subscription_handler,
     get_subscription_charges_handler,
     get_subscription_by_id_handler,
+    get_state_subscription_handler,
 )
 
 router = APIRouter()
@@ -173,8 +178,26 @@ async def update_subscription(
     return SubscriptionResponse(**update_subscription.__dict__)
 
 
+@router.patch("/{subscription_uuid}/activate/", response_model=SubscriptionResponse)
+@limiter.limit("5/minute")
+async def activate_subscription(
+    request: Request,
+    subscription_uuid: str,
+    current_user: User = Depends(get_current_user),
+    handler: StateSubscriptionHandler = Depends(get_state_subscription_handler),
+):
+    command = StateSubscriptionCommand(
+        subscription_uuid=subscription_uuid, user_id=current_user.id
+    )
+
+    subscription = await handler.handle(command)
+    return SubscriptionResponse(**subscription.__dict__)
+
+
 @router.delete("/{subscription_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/minute")
 async def delete_subscription(
+    request: Request,
     subscription_uuid: str,
     current_user: User = Depends(get_current_user),
     handler: DeleteSubscriptionHandler = Depends(get_delete_subscription_handler),

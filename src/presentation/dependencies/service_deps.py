@@ -17,6 +17,9 @@ from domain.services.account_service import AccountService
 from application.accounts.commands.create_account import CreateAccountHandler
 from application.accounts.commands.update_account import UpdateAccountHandler
 from application.accounts.commands.state_account import StateAccountHandler
+from application.subscriptions.commands.state_subscription import (
+    StateSubscriptionHandler,
+)
 from application.transactions.commands.create_transaction import (
     CreateTransactionHandler,
 )
@@ -154,6 +157,16 @@ def get_state_account_handler(
     account_service: AccountService = Depends(get_account_service),
 ) -> StateAccountHandler:
     return StateAccountHandler(account_repo, account_service)
+
+
+def get_state_subscription_handler(
+    subscription_repo: SQLAlchemySubscriptionRepository = Depends(
+        get_subscription_repository
+    ),
+    category_repo: SQLAlchemyCategoryRepository = Depends(get_category_repository),
+    account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
+) -> StateSubscriptionHandler:
+    return StateSubscriptionHandler(subscription_repo, category_repo, account_repo)
 
 
 # Query Handler Dependencies

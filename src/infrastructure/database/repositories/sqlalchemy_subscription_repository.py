@@ -69,8 +69,18 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
         if not model:
             raise ValueError("Subscription no encontrada")
 
-        for field, value in subscription.__dict__.items():
-            setattr(model, field, value)
+        model.user_id = subscription.user_id
+        model.account_id = subscription.account_id
+        model.category_id = subscription.category_id
+        model.name = subscription.name
+        model.amount = subscription.amount.amount
+        model.frequency = subscription.frequency.value
+        model.start_date = subscription.start_date
+        model.end_date = subscription.end_date
+        model.billing_day = subscription.billing_day
+        model.is_active = subscription.is_active
+        model.description = subscription.description
+        model.service_url = subscription.service_url
 
         self.db.commit()
         self.db.refresh(model)
@@ -165,3 +175,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
         )
 
         return [self._model_to_entity(subscription) for subscription in results]
+
+    def switch_status(self, subscription: Subscription) -> Subscription:
+        subscription.is_active = not subscription.is_active
+        return self.update(subscription)
