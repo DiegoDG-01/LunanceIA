@@ -17,6 +17,9 @@ from domain.services.account_service import AccountService
 from application.accounts.commands.create_account import CreateAccountHandler
 from application.accounts.commands.update_account import UpdateAccountHandler
 from application.accounts.commands.state_account import StateAccountHandler
+from application.subscriptions.commands.state_subscription import (
+    StateSubscriptionHandler,
+)
 from application.transactions.commands.create_transaction import (
     CreateTransactionHandler,
 )
@@ -79,6 +82,12 @@ from application.subscriptions.queries.get_subscriptions_by_id import (
 from application.subscriptions.queries.get_subscription_charges import (
     GetSubscriptionChargesHandler,
 )
+from infrastructure.database.repositories.sqlalchemy_credit_card_repository import (
+    SQLAlchemyCreditCardSettingsRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_investment_card_repository import (
+    SQLAlchemyInvestmentSettingsRepository,
+)
 
 
 # Repository Dependencies
@@ -125,12 +134,32 @@ def get_account_service() -> AccountService:
     return AccountService()
 
 
+def get_credit_card_settings_repository(
+    db: Session = Depends(get_db),
+) -> SQLAlchemyCreditCardSettingsRepository:
+    return SQLAlchemyCreditCardSettingsRepository(db)
+
+
+def get_investment_settings_repository(
+    db: Session = Depends(get_db),
+) -> SQLAlchemyInvestmentSettingsRepository:
+    return SQLAlchemyInvestmentSettingsRepository(db)
+
+
 # Command Handler Dependencies
 def get_create_account_handler(
     account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
     user_repo: SQLAlchemyUserRepository = Depends(get_user_repository),
+    cc_settings_repo: SQLAlchemyCreditCardSettingsRepository = Depends(
+        get_credit_card_settings_repository
+    ),
+    investment_settings_repo: SQLAlchemyInvestmentSettingsRepository = Depends(
+        get_investment_settings_repository
+    ),
 ) -> CreateAccountHandler:
-    return CreateAccountHandler(account_repo, user_repo)
+    return CreateAccountHandler(
+        account_repo, user_repo, cc_settings_repo, investment_settings_repo
+    )
 
 
 def get_update_account_handler(
@@ -154,6 +183,16 @@ def get_state_account_handler(
     account_service: AccountService = Depends(get_account_service),
 ) -> StateAccountHandler:
     return StateAccountHandler(account_repo, account_service)
+
+
+def get_state_subscription_handler(
+    subscription_repo: SQLAlchemySubscriptionRepository = Depends(
+        get_subscription_repository
+    ),
+    category_repo: SQLAlchemyCategoryRepository = Depends(get_category_repository),
+    account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
+) -> StateSubscriptionHandler:
+    return StateSubscriptionHandler(subscription_repo, category_repo, account_repo)
 
 
 # Query Handler Dependencies

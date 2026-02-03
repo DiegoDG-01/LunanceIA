@@ -136,7 +136,7 @@
           "type": "http",
           "name": "Account",
           "filename": "Account.bru",
-          "seq": 2,
+          "seq": 1,
           "settings": {},
           "tags": [],
           "examples": [],
@@ -181,7 +181,7 @@
           "type": "http",
           "name": "All Accounts",
           "filename": "All Accounts.bru",
-          "seq": 3,
+          "seq": 2,
           "settings": {},
           "tags": [],
           "examples": [],
@@ -226,7 +226,7 @@
           "type": "http",
           "name": "Change Status",
           "filename": "Change Status.bru",
-          "seq": 5,
+          "seq": 4,
           "settings": {},
           "tags": [],
           "examples": [],
@@ -269,55 +269,9 @@
         },
         {
           "type": "http",
-          "name": "Create",
-          "filename": "Create.bru",
-          "seq": 1,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "http://{{URL_HOST}}/api/v2/account",
-            "method": "POST",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              },
-              {
-                "name": "Authorization",
-                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
-                "enabled": true
-              },
-              {
-                "name": "Accept-Language",
-                "value": "{{LANG}}",
-                "enabled": true
-              }
-            ],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"name\": \"Fondo de Inversión Crecimiento\",\n  \"account_type\": \"INVESTMENT\",\n  \"bank\": \"Scotiabank\",\n  \"initial_balance\": \"125000.00\",\n  \"currency\": \"MXN\",\n  \"is_active\": true\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "inherit"
-            }
-          }
-        },
-        {
-          "type": "http",
           "name": "Delete Account",
           "filename": "Delete Account.bru",
-          "seq": 6,
+          "seq": 5,
           "settings": {},
           "tags": [],
           "examples": [],
@@ -362,7 +316,7 @@
           "type": "http",
           "name": "Update Account",
           "filename": "Update Account.bru",
-          "seq": 4,
+          "seq": 3,
           "settings": {},
           "tags": [],
           "examples": [],
@@ -403,6 +357,164 @@
               "mode": "inherit"
             }
           }
+        },
+        {
+          "type": "folder",
+          "name": "Create",
+          "filename": "Create",
+          "seq": 6,
+          "examples": [],
+          "root": {
+            "request": {
+              "auth": {
+                "mode": "inherit"
+              }
+            },
+            "meta": {
+              "name": "Create",
+              "seq": 6
+            }
+          },
+          "items": [
+            {
+              "type": "http",
+              "name": "Simple_Account",
+              "filename": "Simple_Account.bru",
+              "seq": 1,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/account",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"name\": \"Fondo de Inversión Crecimiento\",\n  \"account_type\": \"SAVINGS\",\n  \"bank\": \"Scotiabank\",\n  \"initial_balance\": \"125000.00\",\n  \"currency\": \"MXN\",\n  \"is_active\": true\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Credit_Card",
+              "filename": "Credit_Card.bru",
+              "seq": 2,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/account",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"name\": \"Fondo de Inversión Crecimiento\",\n  \"account_type\": \"CREDIT_CARD\",\n  \"bank\": \"Scotiabank\",\n  \"initial_balance\": \"125000.00\",\n  \"currency\": \"MXN\",\n  \"is_active\": true,\n  \"credit_card_settings\": {\n    \"billing_cycle_day\": 15,\n    \"payment_due_day\": 5,\n    \"credit_limit\": 50000.00,\n    \"minimum_payment_percentage\": 5.0\n  }\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Investment_Card",
+              "filename": "Investment_Card.bru",
+              "seq": 3,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/account",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"name\": \"Fondo de Inversión Crecimiento\",\n  \"account_type\": \"INVESTMENT\",\n  \"bank\": \"Scotiabank\",\n  \"initial_balance\": \"125000.00\",\n  \"currency\": \"MXN\",\n  \"is_active\": true,\n  \"investment_settings\": {\n    \"investment_type\": \"fixed_term\",\n    \"interest_rate\": 7.5,\n    \"lock_period_end_date\": \"2027-01-01\",\n    \"maturity_date\": \"2027-01-01\",\n    \"early_withdrawal_penalty\": 2.0\n  }\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            }
+          ]
         }
       ]
     },
@@ -410,7 +522,7 @@
       "type": "folder",
       "name": "Dashboard",
       "filename": "Dashboard",
-      "seq": 8,
+      "seq": 7,
       "examples": [],
       "root": {
         "request": {
@@ -420,7 +532,7 @@
         },
         "meta": {
           "name": "Dashboard",
-          "seq": 8
+          "seq": 7
         }
       },
       "items": [
@@ -478,7 +590,7 @@
       "type": "folder",
       "name": "Category",
       "filename": "Category",
-      "seq": 6,
+      "seq": 5,
       "examples": [],
       "root": {
         "request": {
@@ -488,7 +600,7 @@
         },
         "meta": {
           "name": "Category",
-          "seq": 6
+          "seq": 5
         }
       },
       "items": [
@@ -546,7 +658,7 @@
       "type": "folder",
       "name": "Deprecated",
       "filename": "Deprecated",
-      "seq": 7,
+      "seq": 6,
       "examples": [],
       "root": {
         "request": {
@@ -556,7 +668,7 @@
         },
         "meta": {
           "name": "Deprecated",
-          "seq": 7
+          "seq": 6
         }
       },
       "items": [
@@ -708,7 +820,7 @@
       "type": "folder",
       "name": "Healthy",
       "filename": "Healthy",
-      "seq": 9,
+      "seq": 8,
       "examples": [],
       "root": {
         "request": {
@@ -718,7 +830,7 @@
         },
         "meta": {
           "name": "Healthy",
-          "seq": 9
+          "seq": 8
         }
       },
       "items": [
@@ -775,326 +887,6 @@
               "formUrlEncoded": [],
               "multipartForm": [],
               "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "inherit"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "type": "folder",
-      "name": "Other",
-      "filename": "Other",
-      "seq": 5,
-      "examples": [],
-      "root": {
-        "request": {
-          "auth": {
-            "mode": "inherit"
-          }
-        },
-        "meta": {
-          "name": "Other",
-          "seq": 5
-        }
-      },
-      "items": [
-        {
-          "type": "http",
-          "name": "Analazy receipt",
-          "filename": "Analazy receipt.bru",
-          "seq": 2,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "http://{{URL_HOST}}/api/v1/transactions/upload_receipt/",
-            "method": "POST",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              },
-              {
-                "name": "Authorization",
-                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
-                "enabled": true
-              },
-              {
-                "name": "Accept-Language",
-                "value": "{{LANG}}",
-                "enabled": true
-              }
-            ],
-            "params": [],
-            "body": {
-              "mode": "multipartForm",
-              "formUrlEncoded": [],
-              "multipartForm": [
-                {
-                  "type": "file",
-                  "name": "file",
-                  "value": [
-                    ""
-                  ],
-                  "enabled": true
-                }
-              ],
-              "file": [
-                {
-                  "filePath": "/Users/diegodg/Desktop/Screenshot 2025-06-25 at 18.15.34.png",
-                  "contentType": "image/png",
-                  "selected": true
-                }
-              ]
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "inherit"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Create transactions",
-          "filename": "Create transactions.bru",
-          "seq": 2,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "http://{{URL_HOST}}/api/v1/transactions",
-            "method": "POST",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              },
-              {
-                "name": "Authorization",
-                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
-                "enabled": true
-              },
-              {
-                "name": "Accept-Language",
-                "value": "{{LANG}}",
-                "enabled": true
-              }
-            ],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"account_id\": 1,\n  \"category_id\": 1,\n  \"type\": \"gasto\",\n  \"amount\": 25.50,\n  \"transaction_date\": \"2025-10-24\",\n  \"description\": \"\",\n  \"notes\": \"\"\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "inherit"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Delete transaction",
-          "filename": "Delete transaction.bru",
-          "seq": 2,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "http://localhost:8000/api/v1/transactions/ia/",
-            "method": "DELETE",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              },
-              {
-                "name": "Authorization",
-                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
-                "enabled": true
-              },
-              {
-                "name": "Accept-Language",
-                "value": "{{LANG}}",
-                "enabled": true
-              }
-            ],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "inherit"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Get All transactions",
-          "filename": "Get All transactions.bru",
-          "seq": 2,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "http://{{URL_HOST}}/api/v1/transactions/3",
-            "method": "GET",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              },
-              {
-                "name": "Authorization",
-                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
-                "enabled": true
-              },
-              {
-                "name": "Accept-Language",
-                "value": "{{LANG}}",
-                "enabled": true
-              }
-            ],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "inherit"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Get all accounts",
-          "filename": "Get all accounts.bru",
-          "seq": 2,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "http://{{URL_HOST}}/api/v2/account/",
-            "method": "GET",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              },
-              {
-                "name": "Authorization",
-                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
-                "enabled": true
-              },
-              {
-                "name": "Accept-Language",
-                "value": "{{LANG}}",
-                "enabled": true
-              }
-            ],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": [
-                {
-                  "filePath": "/Users/diegodg/Desktop/Screenshot 2025-06-25 at 18.15.34.png",
-                  "contentType": "image/png",
-                  "selected": true
-                }
-              ]
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "inherit"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Get all categories",
-          "filename": "Get all categories.bru",
-          "seq": 2,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "http://{{URL_HOST}}/api/v1/category/",
-            "method": "GET",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              },
-              {
-                "name": "Authorization",
-                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
-                "enabled": true
-              },
-              {
-                "name": "Accept-Language",
-                "value": "{{LANG}}",
-                "enabled": true
-              }
-            ],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": [
-                {
-                  "filePath": "/Users/diegodg/Desktop/Screenshot 2025-06-25 at 18.15.34.png",
-                  "contentType": "image/png",
-                  "selected": true
-                }
-              ]
             },
             "script": {},
             "vars": {},
@@ -1402,6 +1194,374 @@
             "body": {
               "mode": "json",
               "json": "{\n  \"amount\": 299,\n  \"frequency\": \"MONTHLY\",\n  \"is_active\": false,\n  \"name\": \"HBO Max\",\n  \"billing_day\": 1,\n  \"description\": \"Suscripción a HBO plan super mega premium\",\n  \"service_url\": \"https://lunance.app\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "folder",
+          "name": "Other",
+          "filename": "Other",
+          "seq": 5,
+          "examples": [],
+          "root": {
+            "request": {
+              "auth": {
+                "mode": "inherit"
+              }
+            },
+            "meta": {
+              "name": "Other",
+              "seq": 5
+            }
+          },
+          "items": [
+            {
+              "type": "http",
+              "name": "Analazy receipt",
+              "filename": "Analazy receipt.bru",
+              "seq": 2,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v1/transactions/upload_receipt/",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "multipartForm",
+                  "formUrlEncoded": [],
+                  "multipartForm": [
+                    {
+                      "type": "file",
+                      "name": "file",
+                      "value": [
+                        ""
+                      ],
+                      "enabled": true
+                    }
+                  ],
+                  "file": [
+                    {
+                      "filePath": "/Users/diegodg/Desktop/Screenshot 2025-06-25 at 18.15.34.png",
+                      "contentType": "image/png",
+                      "selected": true
+                    }
+                  ]
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Delete transaction",
+              "filename": "Delete transaction.bru",
+              "seq": 2,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://localhost:8000/api/v1/transactions/ia/",
+                "method": "DELETE",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Get all categories",
+              "filename": "Get all categories.bru",
+              "seq": 2,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v1/category/",
+                "method": "GET",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "none",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": [
+                    {
+                      "filePath": "/Users/diegodg/Desktop/Screenshot 2025-06-25 at 18.15.34.png",
+                      "contentType": "image/png",
+                      "selected": true
+                    }
+                  ]
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Create transactions",
+              "filename": "Create transactions.bru",
+              "seq": 2,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v1/transactions",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"account_id\": 1,\n  \"category_id\": 1,\n  \"type\": \"gasto\",\n  \"amount\": 25.50,\n  \"transaction_date\": \"2025-10-24\",\n  \"description\": \"\",\n  \"notes\": \"\"\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Get All transactions",
+              "filename": "Get All transactions.bru",
+              "seq": 2,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v1/transactions/3",
+                "method": "GET",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Get all accounts",
+              "filename": "Get all accounts.bru",
+              "seq": 2,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/account/",
+                "method": "GET",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "none",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": [
+                    {
+                      "filePath": "/Users/diegodg/Desktop/Screenshot 2025-06-25 at 18.15.34.png",
+                      "contentType": "image/png",
+                      "selected": true
+                    }
+                  ]
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "http",
+          "name": "Activate/Deactivate subscription",
+          "filename": "Activate-Deactivate subscription.bru",
+          "seq": 7,
+          "settings": {
+            "encodeUrl": true,
+            "timeout": 0
+          },
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "http://{{URL_HOST}}/api/v2/subscription/4a8da55d-94d2-4cbd-93b6-4f16a65a7bf5/activate",
+            "method": "PATCH",
+            "headers": [
+              {
+                "name": "Authorization",
+                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                "enabled": true
+              },
+              {
+                "name": "Accept-Language",
+                "value": "{{LANG}}",
+                "enabled": true
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "none",
               "formUrlEncoded": [],
               "multipartForm": [],
               "file": []
@@ -1747,6 +1907,6 @@
     "size": 0.011059761047363281,
     "filesCount": 43
   },
-  "exportedAt": "2026-01-30T01:58:56.694Z",
+  "exportedAt": "2026-02-03T02:21:36.396Z",
   "exportedUsing": "Bruno/3.0.2"
 }

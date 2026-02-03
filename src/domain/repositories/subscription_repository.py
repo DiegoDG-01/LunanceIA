@@ -59,3 +59,8 @@ class SubscriptionRepository(ABC):
     def get_active_subscriptions(self) -> List[Subscription]:
         """Get all active subscriptions"""
         pass
+
+    @abstractmethod
+    def switch_status(self, subscription: Subscription) -> Subscription:
+        """Switch subscription status"""
+        pass
