@@ -1,5 +1,5 @@
 # Base image with uv package manager and Python 3.13 on Alpine Linux
-FROM ghcr.io/astral-sh/uv:0.7.19-python3.13-alpine
+FROM ghcr.io/astral-sh/uv:python3.13-alpine
 
 # Environment variables for Python optimization and uv configuration
 ENV PYTHONUNBUFFERED=1 \
