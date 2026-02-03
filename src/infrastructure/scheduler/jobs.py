@@ -1,5 +1,4 @@
 import logging
-import asyncio
 from datetime import datetime
 
 from infrastructure.database.connection import AsyncSessionLocal
@@ -20,7 +19,8 @@ from application.subscriptions.services.subscription_processor import (
 logger = logging.getLogger(__name__)
 
 
-async def process_subscriptions_job_async():
+async def process_subscriptions_job():
+    """Process due subscriptions - runs in the existing event loop"""
     logger.info(f"Processing subscriptions job at {datetime.now()}")
 
     async with AsyncSessionLocal() as db:
@@ -41,8 +41,3 @@ async def process_subscriptions_job_async():
 
         except Exception as e:
             logger.error(f"Error processing subscriptions job: {e}")
-
-
-def process_subscriptions_job():
-    """Synchronous wrapper for the scheduler to call"""
-    asyncio.run(process_subscriptions_job_async())
