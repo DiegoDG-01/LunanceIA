@@ -71,7 +71,7 @@ class CreateSubscriptionHandler:
             service_url=dto.service_url,
         )
 
-        saved_subscription = self.subscription_repository.create(subscription)
+        saved_subscription = await self.subscription_repository.create(subscription)
 
         return SubscriptionResponseDTO.from_entity(
             saved_subscription,

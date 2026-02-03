@@ -80,7 +80,7 @@ class CreateTransactionHandler:
         )
         category_name = category.name if category else None
 
-        transaction = self.transaction_repository.create(transaction)
+        transaction = await self.transaction_repository.create(transaction)
 
         return TransactionResponseDTO.from_entity(
             transaction,

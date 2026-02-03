@@ -4,8 +4,10 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.13"
 dependencies = [
+    "aiomysql>=0.3.2",
     "alembic>=1.16.1",
     "fastapi>=0.115.12",
+    "greenlet>=3.3.1",
     "passlib>=1.7.4",
     "pydantic[email]>=2.11.5",
     "pydantic-settings>=2.9.1",
@@ -28,6 +30,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "aiosqlite>=0.22.1",
     "virtualenv>=20.36.1",
     "ruff>=0.14.3",
     "pytest>=8.4.2",

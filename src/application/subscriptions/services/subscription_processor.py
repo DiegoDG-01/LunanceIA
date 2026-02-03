@@ -26,7 +26,7 @@ class SubscriptionProcessor:
         self.subscription_charge_repository = subscription_charge_repository
         self.transaction_repository = transaction_repository
 
-    def process_due_subscriptions(self, db: AsyncSession) -> dict:
+    async def process_due_subscriptions(self, db: AsyncSession) -> dict:
         logger.info("Processing due subscriptions")
 
         stats = {
@@ -38,15 +38,17 @@ class SubscriptionProcessor:
 
         try:
             active_subscriptions = (
-                self.subscription_repository.get_active_subscriptions()
+                await self.subscription_repository.get_active_subscriptions()
             )
 
             for subscription in active_subscriptions:
                 stats["processed"] += 1
 
                 try:
-                    if self._should_generate_transaction(subscription, db):
-                        self._create_transaction_from_subscription(subscription, db)
+                    if await self._should_generate_transaction(subscription, db):
+                        await self._create_transaction_from_subscription(
+                            subscription, db
+                        )
                         stats["created"] += 1
                         logger.debug(
                             f"Transaction created for subscription {subscription.uuid}"
@@ -63,7 +65,7 @@ class SubscriptionProcessor:
                     )
                     stats["failed"] += 1
 
-            db.commit()
+            await db.commit()
             logger.info(f"Processed {stats['processed']} subscriptions")
 
         except Exception as e:
@@ -73,7 +75,7 @@ class SubscriptionProcessor:
 
         return stats
 
-    def _should_generate_transaction(
+    async def _should_generate_transaction(
         self, subscription: Subscription, db: AsyncSession
     ) -> bool:
         today = date.today()
@@ -85,7 +87,7 @@ class SubscriptionProcessor:
             return False
 
         existing_charge = (
-            self.subscription_charge_repository.get_by_subscription_and_month(
+            await self.subscription_charge_repository.get_by_subscription_and_month(
                 subscription_id=subscription.id,
                 year=today.year,
                 month=today.month,
@@ -99,7 +101,7 @@ class SubscriptionProcessor:
             return False
         return True
 
-    def _create_transaction_from_subscription(
+    async def _create_transaction_from_subscription(
         self, subscription: Subscription, db: AsyncSession
     ) -> Transaction:
         today = date.today()
@@ -110,7 +112,7 @@ class SubscriptionProcessor:
             amount=subscription.amount,
         )
 
-        save_charge = self.subscription_charge_repository.create(charge)
+        save_charge = await self.subscription_charge_repository.create(charge)
 
         transaction = Transaction.create_new(
             user_id=subscription.user_id,
@@ -122,9 +124,9 @@ class SubscriptionProcessor:
             transaction_date=today,
         )
 
-        created_transaction = self.transaction_repository.create(transaction)
+        created_transaction = await self.transaction_repository.create(transaction)
 
         save_charge.mark_as_paid(created_transaction.id)
-        self.subscription_charge_repository.update(save_charge)
+        await self.subscription_charge_repository.update(save_charge)
 
         return created_transaction

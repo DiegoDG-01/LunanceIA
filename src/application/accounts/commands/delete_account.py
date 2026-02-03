@@ -40,7 +40,7 @@ class DeleteAccountHandler:
             raise ValueError("No se puede eliminar cuenta con balance diferente a cero")
 
         # Verificar que no hay transacciones pendientes
-        transactions = self.transaction_repository.get_by_account(
+        transactions = await self.transaction_repository.get_by_account(
             command.account_uuid, command.user_id
         )
         if transactions:

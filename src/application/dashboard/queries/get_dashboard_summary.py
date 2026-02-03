@@ -14,6 +14,6 @@ class GetDashboardSummaryHandler:
         self.dashboard_repository = dashboard_repository
 
     async def handle(self, query: GetDashboardSummaryQuery) -> DashboardSummary:
-        return self.dashboard_repository.get_dashboard_summary(
+        return await self.dashboard_repository.get_dashboard_summary(
             query.user_uuid, query.user_id
         )

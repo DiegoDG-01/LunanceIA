@@ -1,5 +1,5 @@
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from domain.repositories.category_repository import CategoryRepository
@@ -9,7 +9,7 @@ from infrastructure.database.models.category import CategoryModel
 
 
 class SQLAlchemyCategoryRepository(CategoryRepository):
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
     def _model_to_entity(self, model: CategoryModel) -> Category:
@@ -25,13 +25,13 @@ class SQLAlchemyCategoryRepository(CategoryRepository):
 
     async def get_all(self) -> List[Category]:
         stmt = select(CategoryModel)
-        result = self.db.execute(stmt)
+        result = await self.db.execute(stmt)
         category_models = result.scalars().all()
 
         return [self._model_to_entity(model) for model in category_models]
 
     async def get_by_id(self, category_id: int) -> Optional[Category]:
-        category_model = self.db.get(CategoryModel, category_id)
+        category_model = await self.db.get(CategoryModel, category_id)
         if category_model:
             return self._model_to_entity(category_model)
         return None
@@ -47,13 +47,13 @@ class SQLAlchemyCategoryRepository(CategoryRepository):
         )
 
         self.db.add(category_model)
-        self.db.commit()
-        self.db.refresh(category_model)
+        await self.db.commit()
+        await self.db.refresh(category_model)
 
         return self._model_to_entity(category_model)
 
     async def update(self, category: Category) -> Category:
-        category_model = self.db.get(CategoryModel, category.id)
+        category_model = await self.db.get(CategoryModel, category.id)
         if not category_model:
             raise CategoryNotFoundError(category.id)
 
@@ -63,15 +63,15 @@ class SQLAlchemyCategoryRepository(CategoryRepository):
         category_model.icon = category.icon
         category_model.is_active = category.is_active
 
-        self.db.commit()
-        self.db.refresh(category_model)
+        await self.db.commit()
+        await self.db.refresh(category_model)
 
         return self._model_to_entity(category_model)
 
     async def delete(self, category_id: int) -> None:
-        category_model = self.db.get(CategoryModel, category_id)
+        category_model = await self.db.get(CategoryModel, category_id)
         if not category_model:
             raise CategoryNotFoundError(category_id)
 
-        self.db.delete(category_model)
-        self.db.commit()
+        await self.db.delete(category_model)
+        await self.db.commit()

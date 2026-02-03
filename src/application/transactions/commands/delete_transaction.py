@@ -22,7 +22,7 @@ class DeleteTransactionHandler:
         self.account_repository = account_repository
 
     async def handle(self, command: DeleteTransactionCommand):
-        transaction = self.transaction_repository.get_by_uuid_and_user_id(
+        transaction = await self.transaction_repository.get_by_uuid_and_user_id(
             command.uuid, command.user_id
         )
 
@@ -42,7 +42,7 @@ class DeleteTransactionHandler:
 
         await self.account_repository.update(account)
 
-        deleted = self.transaction_repository.delete_by_uuid(
+        deleted = await self.transaction_repository.delete_by_uuid(
             command.uuid, command.user_id
         )
 

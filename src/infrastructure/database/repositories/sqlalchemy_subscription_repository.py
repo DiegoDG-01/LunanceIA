@@ -1,5 +1,5 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, desc
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_, desc, select
 from typing import Optional, List
 
 from domain.entities.subscription import Subscription
@@ -10,7 +10,7 @@ from infrastructure.database.models.subscription import SubscriptionModel
 
 
 class SQLAlchemySubscriptionRepository(SubscriptionRepository):
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
     @staticmethod
@@ -52,19 +52,19 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
             creation_date=entity.creation_date,
         )
 
-    def create(self, subscription: Subscription) -> Subscription:
+    async def create(self, subscription: Subscription) -> Subscription:
         model = self._entity_to_model(subscription)
         self.db.add(model)
-        self.db.commit()
-        self.db.refresh(model)
+        await self.db.commit()
+        await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    def update(self, subscription: Subscription) -> Subscription:
-        model = (
-            self.db.query(SubscriptionModel)
-            .filter(SubscriptionModel.uuid == subscription.uuid)
-            .first()
+    async def update(self, subscription: Subscription) -> Subscription:
+        stmt = select(SubscriptionModel).where(
+            SubscriptionModel.uuid == subscription.uuid
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         if not model:
             raise ValueError("Subscription no encontrada")
@@ -82,47 +82,45 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
         model.description = subscription.description
         model.service_url = subscription.service_url
 
-        self.db.commit()
-        self.db.refresh(model)
+        await self.db.commit()
+        await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    def delete(self, uuid: str, user_id: int) -> bool:
-        result = (
-            self.db.query(SubscriptionModel)
-            .filter(
-                and_(
-                    SubscriptionModel.uuid == uuid, SubscriptionModel.user_id == user_id
-                )
-            )
-            .delete(synchronize_session=False)
+    async def delete(self, uuid: str, user_id: int) -> bool:
+        stmt = select(SubscriptionModel).where(
+            and_(SubscriptionModel.uuid == uuid, SubscriptionModel.user_id == user_id)
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
-        self.db.commit()
-        return result > 0
+        if model:
+            await self.db.delete(model)
+            await self.db.commit()
+            return True
 
-    def get_by_uuid_and_user_id(
+        return False
+
+    async def get_by_uuid_and_user_id(
         self, subscription_uuid: str, user_id: int
     ) -> Optional[Subscription]:
-        model = (
-            self.db.query(SubscriptionModel)
-            .filter(
-                and_(
-                    SubscriptionModel.uuid == subscription_uuid,
-                    SubscriptionModel.user_id == user_id,
-                )
+        stmt = select(SubscriptionModel).where(
+            and_(
+                SubscriptionModel.uuid == subscription_uuid,
+                SubscriptionModel.user_id == user_id,
             )
-            .first()
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         return self._model_to_entity(model) if model else None
 
-    def get_by_account(
+    async def get_by_account(
         self, account_uuid: str, user_id: int, limit: int = 100, offset: int = 0
     ) -> List[Subscription]:
-        models = (
-            self.db.query(SubscriptionModel, AccountModel)
+        stmt = (
+            select(SubscriptionModel, AccountModel)
             .join(AccountModel, SubscriptionModel.account_id == AccountModel.id)
-            .filter(
+            .where(
                 and_(
                     AccountModel.uuid == account_uuid,
                     SubscriptionModel.user_id == user_id,
@@ -131,51 +129,52 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
             .order_by(desc(SubscriptionModel.creation_date))
             .limit(limit)
             .offset(offset)
-            .all()
         )
+        result = await self.db.execute(stmt)
+        models = result.all()
 
         return [self._model_to_entity(subscription) for subscription, _ in models]
 
-    def get_by_category(
+    async def get_by_category(
         self,
         user_id: int,
         category_id: int,
     ) -> List[Subscription]:
-        models = (
-            self.db.query(SubscriptionModel)
-            .filter(
+        stmt = (
+            select(SubscriptionModel)
+            .where(
                 and_(
                     SubscriptionModel.user_id == user_id,
                     SubscriptionModel.category_id == category_id,
                 )
             )
             .order_by(desc(SubscriptionModel.creation_date))
-            .all()
         )
+        result = await self.db.execute(stmt)
+        models = result.scalars().all()
 
         return [self._model_to_entity(model) for model in models]
 
-    def get_by_user(
+    async def get_by_user(
         self, user_id: int, active_only: bool = False
     ) -> List[Subscription]:
-        results = self.db.query(SubscriptionModel).filter(
-            and_(SubscriptionModel.user_id == user_id)
-        )
+        stmt = select(SubscriptionModel).where(SubscriptionModel.user_id == user_id)
 
         if active_only:
-            results = results.filter(SubscriptionModel.is_active)
+            stmt = stmt.where(SubscriptionModel.is_active)
 
-        results = results.all()
-
-        return [self._model_to_entity(subscription) for subscription in results]
-
-    def get_active_subscriptions(self) -> List[Subscription]:
-        results = (
-            self.db.query(SubscriptionModel).filter(SubscriptionModel.is_active).all()
-        )
+        result = await self.db.execute(stmt)
+        results = result.scalars().all()
 
         return [self._model_to_entity(subscription) for subscription in results]
 
-    def switch_status(self, subscription: Subscription) -> Subscription:
+    async def get_active_subscriptions(self) -> List[Subscription]:
+        stmt = select(SubscriptionModel).where(SubscriptionModel.is_active)
+        result = await self.db.execute(stmt)
+        results = result.scalars().all()
+
+        return [self._model_to_entity(subscription) for subscription in results]
+
+    async def switch_status(self, subscription: Subscription) -> Subscription:
         subscription.is_active = not subscription.is_active
-        return self.update(subscription)
+        return await self.update(subscription)
