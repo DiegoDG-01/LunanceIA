@@ -5,6 +5,12 @@ from sqlalchemy import and_
 from domain.entities.account import Account
 from domain.repositories.account_repository import AccountRepository
 from domain.objects.money import Money
+from domain.objects.credit_card_settings import CreditCardSettings
+from domain.objects.investment_settings import InvestmentCardSettings
+from infrastructure.database.models import (
+    CreditCardSettingsModel,
+    InvestmentCardSettingsModel,
+)
 from infrastructure.database.models.account import AccountModel
 
 
@@ -138,3 +144,48 @@ class SQLAlchemyAccountRepository(AccountRepository):
     async def switch_status(self, account: Account) -> Account:
         account.is_active = not account.is_active
         return await self.update(account)
+
+    async def get_by_uuid_and_user_id_with_settings(
+        self, account_uuid: str, user_id: int
+    ) -> tuple:
+        result = (
+            self.db.query(
+                AccountModel, CreditCardSettingsModel, InvestmentCardSettingsModel
+            )
+            .outerjoin(
+                CreditCardSettingsModel,
+                AccountModel.id == CreditCardSettingsModel.account_id,
+            )
+            .outerjoin(
+                InvestmentCardSettingsModel,
+                AccountModel.id == InvestmentCardSettingsModel.account_id,
+            )
+            .filter(AccountModel.uuid == account_uuid, AccountModel.user_id == user_id)
+            .first()
+        )
+
+        if not result:
+            return None
+
+        account_model, cc_settings_model, inv_settings_model = result
+
+        account = self._model_to_entity(account_model)
+
+        if cc_settings_model:
+            account.credit_card_settings = CreditCardSettings(
+                billing_cycle_day=cc_settings_model.billing_cycle_day,
+                payment_due_day=cc_settings_model.payment_due_day,
+                credit_limit=cc_settings_model.credit_limit,
+                minimum_payment_percentage=cc_settings_model.minimum_payment_percentage,
+            )
+
+        if inv_settings_model:
+            account.investment_card_settings = InvestmentCardSettings(
+                investment_type=inv_settings_model.investment_type,
+                interest_rate=inv_settings_model.interest_rate,
+                lock_period_end_date=inv_settings_model.lock_period_end_date,
+                maturity_date=inv_settings_model.maturity_date,
+                early_withdrawal_penalty=inv_settings_model.early_withdrawal_penalty,
+            )
+
+        return account

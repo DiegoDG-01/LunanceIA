@@ -48,3 +48,9 @@ class AccountRepository(ABC):
     async def delete(self, account: Account) -> bool:
         """This method is used to completely delete an account"""
         pass
+
+    @abstractmethod
+    async def get_by_uuid_and_user_id_with_settings(
+        self, uuid: str, user_id: int
+    ) -> tuple:
+        pass

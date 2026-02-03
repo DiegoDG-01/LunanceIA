@@ -1,9 +1,31 @@
 from pydantic import BaseModel, Field
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 
 from domain.objects.enums import AccountType
+
+
+class CreditCardSettingsResponse(BaseModel):
+    billing_cycle_day: int = Field(..., description="Dias de facturacion")
+    payment_due_day: int = Field(..., description="Dias de pago")
+    credit_limit: Optional[Decimal] = Field(None, description="Limite de credito")
+
+    class Config:
+        from_attributes = True
+        json_encoders = {Decimal: str}
+
+
+class InvestmentSettingsResponse(BaseModel):
+    investment_type: str
+    interest_rate: Decimal
+    lock_period_end_date: Optional[date]
+    maturity_date: Optional[date]
+    early_withdrawal_penalty: Optional[Decimal]
+
+    class Config:
+        from_attributes = True
+        json_encoders = {Decimal: str}
 
 
 class AccountResponse(BaseModel):
@@ -16,6 +38,8 @@ class AccountResponse(BaseModel):
     current_balance: Decimal = Field(..., description="Balance actual")
     currency: str = Field(..., description="Moneda")
     is_active: bool = Field(..., description="Estado de la cuenta")
+    credit_card_settings: Optional[CreditCardSettingsResponse] = None
+    investment_settings: Optional[InvestmentSettingsResponse] = None
 
     class Config:
         from_attributes = True

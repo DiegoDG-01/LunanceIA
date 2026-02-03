@@ -41,7 +41,12 @@ from application.accounts.queries.get_account_by_id import (
     GetAccountByIdQuery,
     GetAccountByIdHandler,
 )
-from application.dto.account_dto import CreateAccountDTO, UpdateAccountDTO
+from application.dto.account_dto import (
+    CreateAccountDTO,
+    UpdateAccountDTO,
+    CreditCardSettingsDTO,
+    InvestmentCardSettingsDTO,
+)
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -91,6 +96,25 @@ async def create_account(
     handler: CreateAccountHandler = Depends(get_create_account_handler),
 ):
     """Crea una nueva cuenta."""
+    cc_settings_dto = None
+    if account_request.credit_card_settings:
+        cc_settings_dto = CreditCardSettingsDTO(
+            billing_cycle_day=account_request.credit_card_settings.billing_cycle_day,
+            payment_due_day=account_request.credit_card_settings.payment_due_day,
+            credit_limit=account_request.credit_card_settings.credit_limit,
+            minimum_payment_percentage=account_request.credit_card_settings.minimum_payment_percentage,
+        )
+
+    inv_settings_dto = None
+    if account_request.investment_settings:
+        inv_settings_dto = InvestmentCardSettingsDTO(
+            investment_type=account_request.investment_settings.investment_type,
+            interest_rate=account_request.investment_settings.interest_rate,
+            lock_period_end_date=account_request.investment_settings.lock_period_end_date,
+            maturity_date=account_request.investment_settings.maturity_date,
+            early_withdrawal_penalty=account_request.investment_settings.early_withdrawal_penalty,
+        )
+
     dto = CreateAccountDTO(
         user_id=current_user.id,
         name=account_request.name,
@@ -98,12 +122,23 @@ async def create_account(
         bank=account_request.bank,
         initial_balance=account_request.initial_balance,
         currency=account_request.currency,
+        credit_card_settings=cc_settings_dto,
+        investment_settings=inv_settings_dto,
     )
 
     command = CreateAccountCommand(dto=dto)
-
     account = await handler.handle(command)
+
     return AccountResponse(**account.__dict__)
+
+
+# @router.patch("/{account_uuid}/settings/", response_model=AccountResponse)
+# async def update_account_settings(
+#         account_uuid: str,
+#         settings_request: UpdateAccountSettingsRequest,
+#         current_user: User = Depends(get_current_active_user),
+#         handler: UpdateAccountSettingsHandler = Depends(get_update_account_settings_handler),
+# )
 
 
 @router.patch("/{account_uuid}/", response_model=AccountResponse)

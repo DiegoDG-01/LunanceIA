@@ -9,6 +9,8 @@ from .transaction import TransactionModel
 from .user import UserModel
 from .account import AccountModel
 from .saving_goal import SavingGoalModel
+from .credit_card import CreditCardSettingsModel
+from .investment_account import InvestmentCardSettingsModel
 
 __all__ = [
     "BudgetModel",
@@ -22,4 +24,6 @@ __all__ = [
     "UserModel",
     "AccountModel",
     "SavingGoalModel",
+    "CreditCardSettingsModel",
+    "InvestmentCardSettingsModel",
 ]
