@@ -18,8 +18,16 @@ class TestCreateAccountHandler:
         return MagicMock()
 
     @pytest.fixture
-    def handler(self, mock_account_repo, mock_user_repo):
-        return CreateAccountHandler(mock_account_repo, mock_user_repo)
+    def mock_credit_card_repo(self):
+        return MagicMock()
+
+    @pytest.fixture
+    def mock_investment_repo(self):
+        return MagicMock()
+
+    @pytest.fixture
+    def handler(self, mock_account_repo, mock_user_repo, mock_credit_card_repo, mock_investment_repo):
+        return CreateAccountHandler(mock_account_repo, mock_user_repo, mock_credit_card_repo, mock_investment_repo)
 
     @pytest.mark.asyncio
     async def test_handle_success(self, handler, mock_account_repo, mock_user_repo):

@@ -30,6 +30,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "aiosqlite>=0.22.1",
     "virtualenv>=20.36.1",
     "ruff>=0.14.3",
     "pytest>=8.4.2",

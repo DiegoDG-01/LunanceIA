@@ -71,7 +71,7 @@ class TestCreateTransactionHandler:
             creation_date=datetime.now()
         )
 
-        mocks["transaction_repo"].create = MagicMock(return_value=saved_tx)
+        mocks["transaction_repo"].create = AsyncMock(return_value=saved_tx)
 
         # 2. Execute
         dto = CreateTransactionDTO(
@@ -128,7 +128,7 @@ class TestCreateTransactionHandler:
             creation_date=datetime.now()
         )
 
-        mocks["transaction_repo"].create = MagicMock(return_value=saved_tx)
+        mocks["transaction_repo"].create = AsyncMock(return_value=saved_tx)
         mocks["category_repo"].get_by_id = AsyncMock(return_value=Category(id=2, name="Job", type="INCOME"))
 
         # 2. Execute

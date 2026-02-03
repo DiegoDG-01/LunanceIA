@@ -24,7 +24,7 @@ class TestSecurityBoundaries:
             email="other@test.com"
         )
         db_session.add(other_user)
-        db_session.commit()
+        await db_session.commit()
 
         other_account = AccountModel(
             uuid="stolen-account-uuid",
@@ -35,7 +35,7 @@ class TestSecurityBoundaries:
             currency="MXN"
         )
         db_session.add(other_account)
-        db_session.commit()
+        await db_session.commit()
 
         # 2. Try to access it with our standard mock user (ID=1)
         response = await http_client.get(
@@ -64,7 +64,7 @@ class TestSecurityBoundaries:
             description="Other's tx"
         )
         db_session.add(other_tx)
-        db_session.commit()
+        await db_session.commit()
 
         # 2. Try to delete it
         response = await http_client.delete(
