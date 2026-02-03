@@ -32,7 +32,7 @@ class UpdateTransactionCommandHandler:
         self.account_repository = account_repository
 
     async def handle(self, command: UpdateTransactionCommand) -> TransactionResponseDTO:
-        transaction = self.transaction_repository.get_by_uuid_and_user_id(
+        transaction = await self.transaction_repository.get_by_uuid_and_user_id(
             command.transaction_uuid, command.user_id
         )
         if not transaction:
@@ -86,14 +86,14 @@ class UpdateTransactionCommandHandler:
 
         # 4. GUARDAR ambos: transacción y cuenta
         try:
-            self.transaction_repository.update(transaction)
+            await self.transaction_repository.update(transaction)
             await self.account_repository.update(account)
         except Exception as e:
             raise TransactionNotFoundError(f"Error updating transaction: {e}")
 
         # 5. OBTENER resultado para respuesta
         try:
-            result = self.transaction_repository.get_by_uuid_with_account_details(
+            result = await self.transaction_repository.get_by_uuid_with_account_details(
                 transaction.uuid, command.user_id
             )
         except Exception as e:

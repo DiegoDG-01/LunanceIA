@@ -94,7 +94,7 @@ async def get_transactions(
     )
 
     # ⚙️ Ejecutar el caso de uso
-    transactions = handler.handle(query)
+    transactions = await handler.handle(query)
 
     # 📤 Convertir DTOs → Response schema para HTTP
     return [TransactionResponse(**transaction.__dict__) for transaction in transactions]

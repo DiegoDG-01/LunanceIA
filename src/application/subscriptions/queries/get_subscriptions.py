@@ -33,18 +33,18 @@ class GetSubscriptionsHandler:
         self, query: GetSubscriptionsQuery
     ) -> List[SubscriptionResponseDTO]:
         if query.account_uuid:
-            subscriptions = self.subscription_repository.get_by_account(
+            subscriptions = await self.subscription_repository.get_by_account(
                 account_uuid=query.account_uuid,
                 user_id=query.user_id,
                 limit=query.limit,
                 offset=query.offset,
             )
         elif query.category_id:
-            subscriptions = self.subscription_repository.get_by_category(
+            subscriptions = await self.subscription_repository.get_by_category(
                 category_id=query.category_id, user_id=query.user_id
             )
         else:
-            subscriptions = self.subscription_repository.get_by_user(
+            subscriptions = await self.subscription_repository.get_by_user(
                 user_id=query.user_id,
                 active_only=query.active_only,
             )

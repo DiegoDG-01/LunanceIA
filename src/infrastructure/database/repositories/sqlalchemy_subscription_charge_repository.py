@@ -1,5 +1,5 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, asc, extract, desc
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_, asc, extract, desc, select
 from typing import Optional, List
 from datetime import date
 
@@ -19,7 +19,7 @@ from infrastructure.database.models import (
 
 
 class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
     @staticmethod
@@ -48,19 +48,19 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
             processing_date=entity.processing_date,
         )
 
-    def create(self, subscription: SubscriptionCharge) -> SubscriptionCharge:
+    async def create(self, subscription: SubscriptionCharge) -> SubscriptionCharge:
         model = self._entity_to_model(subscription)
         self.db.add(model)
-        self.db.commit()
-        self.db.refresh(model)
+        await self.db.commit()
+        await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    def update(self, charge: SubscriptionCharge) -> SubscriptionCharge:
-        model = (
-            self.db.query(SubscriptionChargeModel)
-            .filter(SubscriptionChargeModel.uuid == charge.uuid)
-            .first()
+    async def update(self, charge: SubscriptionCharge) -> SubscriptionCharge:
+        stmt = select(SubscriptionChargeModel).where(
+            SubscriptionChargeModel.uuid == charge.uuid
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         model.subscription_id = charge.subscription_id
         model.charge_date = charge.charge_date
@@ -69,80 +69,78 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
         model.transaction_id = charge.transaction_id
         model.processing_date = charge.processing_date
 
-        self.db.commit()
-        self.db.refresh(model)
+        await self.db.commit()
+        await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    def get_by_id(self, charge_id: int) -> Optional[SubscriptionCharge]:
-        model = (
-            self.db.query(SubscriptionChargeModel)
-            .filter(SubscriptionChargeModel.id == charge_id)
-            .first()
+    async def get_by_id(self, charge_id: int) -> Optional[SubscriptionCharge]:
+        stmt = select(SubscriptionChargeModel).where(
+            SubscriptionChargeModel.id == charge_id
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         return self._model_to_entity(model) if model else None
 
-    def get_by_subscription(
+    async def get_by_subscription(
         self, subscription_id: int, limit: int = 100, offset: int = 0
     ) -> List[SubscriptionCharge]:
-        models = (
-            self.db.query(SubscriptionChargeModel)
-            .filter(SubscriptionChargeModel.subscription_id == subscription_id)
+        stmt = (
+            select(SubscriptionChargeModel)
+            .where(SubscriptionChargeModel.subscription_id == subscription_id)
             .order_by(asc(SubscriptionChargeModel.charge_date))
             .offset(offset)
             .limit(limit)
-            .all()
         )
+        result = await self.db.execute(stmt)
+        models = result.scalars().all()
 
         return [self._model_to_entity(model) for model in models]
 
-    def get_by_subscription_and_month(
+    async def get_by_subscription_and_month(
         self, subscription_id: int, year: int, month: int
     ) -> Optional[SubscriptionCharge]:
-        model = (
-            self.db.query(SubscriptionChargeModel)
-            .filter(
-                and_(
-                    SubscriptionChargeModel.subscription_id == subscription_id,
-                    extract("year", SubscriptionChargeModel.charge_date) == year,
-                    extract("month", SubscriptionChargeModel.charge_date) == month,
-                )
+        stmt = select(SubscriptionChargeModel).where(
+            and_(
+                SubscriptionChargeModel.subscription_id == subscription_id,
+                extract("year", SubscriptionChargeModel.charge_date) == year,
+                extract("month", SubscriptionChargeModel.charge_date) == month,
             )
-            .first()
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         return self._model_to_entity(model) if model else None
 
-    def get_by_subscription_and_date(
+    async def get_by_subscription_and_date(
         self, subscription_id: int, charge_date: date
     ) -> Optional[SubscriptionCharge]:
-        model = (
-            self.db.query(SubscriptionChargeModel)
-            .filter(
-                and_(
-                    SubscriptionChargeModel.subscription_id == subscription_id,
-                    SubscriptionChargeModel.charge_date == charge_date,
-                )
+        stmt = select(SubscriptionChargeModel).where(
+            and_(
+                SubscriptionChargeModel.subscription_id == subscription_id,
+                SubscriptionChargeModel.charge_date == charge_date,
             )
-            .first()
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         return self._model_to_entity(model) if model else None
 
-    def get_pending_charges(self) -> List[SubscriptionCharge]:
-        models = (
-            self.db.query(SubscriptionChargeModel)
-            .filter(SubscriptionChargeModel.status == TransactionStatus.PENDIENTE)
+    async def get_pending_charges(self) -> List[SubscriptionCharge]:
+        stmt = (
+            select(SubscriptionChargeModel)
+            .where(SubscriptionChargeModel.status == TransactionStatus.PENDIENTE)
             .order_by(asc(SubscriptionChargeModel.charge_date))
-            .all()
         )
+        result = await self.db.execute(stmt)
+        models = result.scalars().all()
 
         return [self._model_to_entity(model) for model in models]
 
-    def get_by_user_with_details(self, user_id: int) -> List[tuple]:
+    async def get_by_user_with_details(self, user_id: int) -> List[tuple]:
         """Retorna subscription_charges con datos relacionados via JOIN"""
-        results = (
-            self.db.query(
+        stmt = (
+            select(
                 SubscriptionChargeModel,
                 SubscriptionModel,
                 TransactionModel,
@@ -159,10 +157,11 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
             )
             .outerjoin(CategoryModel, TransactionModel.category_id == CategoryModel.id)
             .join(AccountModel, TransactionModel.account_id == AccountModel.id)
-            .filter(SubscriptionModel.user_id == user_id)
+            .where(SubscriptionModel.user_id == user_id)
             .order_by(desc(SubscriptionChargeModel.charge_date))
-            .all()
         )
+        result = await self.db.execute(stmt)
+        results = result.all()
 
         return [
             self._models_to_charge_detail(charge, sub, trans, cat, acc)

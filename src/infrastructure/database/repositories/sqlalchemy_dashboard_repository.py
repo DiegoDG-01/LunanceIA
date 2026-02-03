@@ -1,6 +1,6 @@
 import json
 from sqlalchemy import text
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.entities.dashboard import DashboardSummary
 from domain.repositories.dashboard_repository import DashboardRepository
@@ -11,10 +11,10 @@ class SQLAlchemyDashboardRepository(DashboardRepository):
     Implementation of DashboardRepository using SQLAlchemy
     """
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
-    def get_dashboard_summary(self, uuid: str, user_id: int) -> DashboardSummary:
+    async def get_dashboard_summary(self, uuid: str, user_id: int) -> DashboardSummary:
         # Check if we are running on SQLite (for tests)
         try:
             is_sqlite = self.db.bind and self.db.bind.dialect.name == "sqlite"
@@ -22,7 +22,7 @@ class SQLAlchemyDashboardRepository(DashboardRepository):
             is_sqlite = False
 
         if is_sqlite:
-            return self._get_sqlite_dashboard_summary(user_id)
+            return await self._get_sqlite_dashboard_summary(user_id)
 
         query = text("""WITH DateConfig AS (
     SELECT
@@ -144,7 +144,7 @@ SELECT
     COALESCE((SELECT json_data FROM TodayTransactions), JSON_ARRAY()) AS today_transactions;""")
 
         # 3. Secure Execution
-        result = self.db.execute(query, {"user_id": user_id})
+        result = await self.db.execute(query, {"user_id": user_id})
 
         row = result.fetchone()
 
@@ -165,14 +165,14 @@ SELECT
 
         return None
 
-    def _get_sqlite_dashboard_summary(self, user_id: int) -> DashboardSummary:
+    async def _get_sqlite_dashboard_summary(self, user_id: int) -> DashboardSummary:
         """Simplified version of dashboard summary for SQLite (tests)"""
         from infrastructure.database.models import (
             TransactionModel,
             CategoryModel,
             AccountModel,
         )
-        from sqlalchemy import func, case
+        from sqlalchemy import func, case, select
         from datetime import date
 
         # Get start of current month
@@ -180,59 +180,60 @@ SELECT
         month_start = date(today.year, today.month, 1)
 
         # Total Spent & Income
-        # Note: We use case syntax correctly here
-        totals = (
-            self.db.query(
-                func.sum(
-                    case(
-                        (TransactionModel.type == "EXPENSE", TransactionModel.amount),
-                        else_=0,
-                    )
-                ).label("total_spent"),
-                func.sum(
-                    case(
-                        (TransactionModel.type == "INCOME", TransactionModel.amount),
-                        else_=0,
-                    )
-                ).label("total_income"),
-                func.count(case((TransactionModel.type == "EXPENSE", 1))).label(
-                    "total_purchases"
-                ),
-            )
-            .filter(
-                TransactionModel.user_id == user_id,
-                TransactionModel.transaction_date >= month_start,
-            )
-            .first()
+        stmt_totals = select(
+            func.sum(
+                case(
+                    (TransactionModel.type == "EXPENSE", TransactionModel.amount),
+                    else_=0,
+                )
+            ).label("total_spent"),
+            func.sum(
+                case(
+                    (TransactionModel.type == "INCOME", TransactionModel.amount),
+                    else_=0,
+                )
+            ).label("total_income"),
+            func.count(case((TransactionModel.type == "EXPENSE", 1))).label(
+                "total_purchases"
+            ),
+        ).where(
+            TransactionModel.user_id == user_id,
+            TransactionModel.transaction_date >= month_start,
         )
+        result_totals = await self.db.execute(stmt_totals)
+        totals = result_totals.first()
 
         # Top Category
-        top_cat = (
-            self.db.query(CategoryModel.name)
+        stmt_top_cat = (
+            select(CategoryModel.name)
             .join(TransactionModel, TransactionModel.category_id == CategoryModel.id)
-            .filter(
+            .where(
                 TransactionModel.user_id == user_id,
                 TransactionModel.type == "EXPENSE",
                 TransactionModel.transaction_date >= month_start,
             )
             .group_by(CategoryModel.name)
             .order_by(func.count(TransactionModel.id).desc())
-            .first()
+            .limit(1)
         )
+        result_top_cat = await self.db.execute(stmt_top_cat)
+        top_cat = result_top_cat.first()
 
         # Top Account
-        top_acc = (
-            self.db.query(AccountModel.name)
+        stmt_top_acc = (
+            select(AccountModel.name)
             .join(TransactionModel, TransactionModel.account_id == AccountModel.id)
-            .filter(
+            .where(
                 TransactionModel.user_id == user_id,
                 TransactionModel.type == "EXPENSE",
                 TransactionModel.transaction_date >= month_start,
             )
             .group_by(AccountModel.name)
             .order_by(func.count(TransactionModel.id).desc())
-            .first()
+            .limit(1)
         )
+        result_top_acc = await self.db.execute(stmt_top_acc)
+        top_acc = result_top_acc.first()
 
         return DashboardSummary(
             total_spent=float(totals.total_spent or 0),

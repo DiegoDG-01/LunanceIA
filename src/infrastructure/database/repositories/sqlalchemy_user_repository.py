@@ -1,6 +1,6 @@
 from typing import Optional
-from sqlalchemy import exists
-from sqlalchemy.orm import Session
+from sqlalchemy import exists, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.entities.user import User
 from domain.repositories.user_repository import UserRepository
@@ -10,7 +10,7 @@ from infrastructure.database.models.user import UserModel
 class SQLAlchemyUserRepository(UserRepository):
     """Implementación SQLAlchemy del repositorio de usuarios."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
     def _model_to_entity(self, model: UserModel) -> User:
@@ -43,39 +43,49 @@ class SQLAlchemyUserRepository(UserRepository):
             is_active=entity.is_active,
         )
 
-    def create(self, user: User) -> User:
+    async def create(self, user: User) -> User:
         """Crea un nuevo usuario."""
         model = self._entity_to_model(user)
         self.db.add(model)
-        self.db.commit()
-        self.db.refresh(model)
+        await self.db.commit()
+        await self.db.refresh(model)
         return self._model_to_entity(model)
 
     async def get_by_id(self, user_id: int) -> Optional[User]:
         """Obtiene usuario por ID."""
-        model = self.db.query(UserModel).filter(UserModel.id == user_id).first()
+        stmt = select(UserModel).where(UserModel.id == user_id)
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         return self._model_to_entity(model) if model else None
 
     async def get_by_auth0_uuid(self, id: str) -> Optional[User]:
-        user_model = self.db.query(UserModel).filter(UserModel.auth0_id == id).first()
+        stmt = select(UserModel).where(UserModel.auth0_id == id)
+        result = await self.db.execute(stmt)
+        user_model = result.scalar_one_or_none()
         return user_model if user_model else None
 
     async def get_by_email(self, email: str) -> Optional[User]:
         """Obtiene usuario por email."""
-        model = self.db.query(UserModel).filter(UserModel.email == email).first()
+        stmt = select(UserModel).where(UserModel.email == email)
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         return self._model_to_entity(model) if model else None
 
     async def get_by_uuid(self, uuid: str) -> Optional[User]:
         """Obtiene usuario por UUID."""
-        model = self.db.query(UserModel).filter(UserModel.uuid == uuid).first()
+        stmt = select(UserModel).where(UserModel.uuid == uuid)
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         return self._model_to_entity(model) if model else None
 
     async def update(self, user: User) -> User:
         """Actualiza un usuario."""
-        model = self.db.query(UserModel).filter(UserModel.id == user.id).first()
+        stmt = select(UserModel).where(UserModel.id == user.id)
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         if not model:
             raise ValueError("Usuario no encontrado")
@@ -86,36 +96,42 @@ class SQLAlchemyUserRepository(UserRepository):
         model.password_hash = user.password_hash
         model.is_active = user.is_active
 
-        self.db.commit()
-        self.db.refresh(model)
+        await self.db.commit()
+        await self.db.refresh(model)
         return self._model_to_entity(model)
 
     async def deactivate(self, user: User) -> User:
         """Desactiva un usuario (soft delete)."""
-        model = self.db.query(UserModel).filter(UserModel.id == user.id).first()
+        stmt = select(UserModel).where(UserModel.id == user.id)
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         if not model:
             raise ValueError("Usuario no encontrado")
 
         model.is_active = False
-        self.db.commit()
-        self.db.refresh(model)
+        await self.db.commit()
+        await self.db.refresh(model)
         return self._model_to_entity(model)
 
     async def delete(self, user: User) -> User:
         """Elimina completamente un usuario."""
-        model = self.db.query(UserModel).filter(UserModel.id == user.id).first()
+        stmt = select(UserModel).where(UserModel.id == user.id)
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         if not model:
             raise ValueError("Usuario no encontrado")
 
-        self.db.delete(model)
-        self.db.commit()
+        await self.db.delete(model)
+        await self.db.commit()
         return user
 
     async def exist_by_email(self, email: str) -> bool:
         """Verifica si existe un usuario con el email dado."""
-        return self.db.query(exists().where(UserModel.email == email)).scalar()
+        stmt = select(exists().where(UserModel.email == email))
+        result = await self.db.execute(stmt)
+        return result.scalar()
 
     async def exists_by_email(self, email: str) -> bool:
         """Verifica si existe un usuario con el email dado (alias)."""
