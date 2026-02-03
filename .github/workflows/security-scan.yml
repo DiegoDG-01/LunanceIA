@@ -16,7 +16,8 @@ jobs:
     runs-on: self-hosted
     permissions:
       contents: read
-      security-events: write # Para subir resultados a GitHub Security
+      security-events: write
+      actions: read # Necesario para self-hosted runners
 
     steps:
       - name: Checkout code
@@ -42,10 +43,20 @@ jobs:
           exit-code: '1' # Falla el build si encuentra vulnerabilidades
 
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always() # Sube resultados incluso si el scan falla
+        continue-on-error: true # No falla si no puede subir (útil para repos privados sin Advanced Security)
         with:
           sarif_file: 'trivy-results.sarif'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload SARIF as artifact (backup)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-results-${{ github.sha }}
+          path: trivy-results.sarif
+          retention-days: 30
 
       - name: Run Trivy for human-readable output
         uses: aquasecurity/trivy-action@master
