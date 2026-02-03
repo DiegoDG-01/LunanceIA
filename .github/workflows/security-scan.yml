@@ -1,0 +1,62 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ master, dev ]
+  pull_request:
+    branches: [ master, dev ]
+  schedule:
+    # Escaneo semanal los lunes a las 9 AM
+    - cron: '0 9 * * 1'
+  workflow_dispatch: # Permite ejecutar manualmente
+
+jobs:
+  trivy-scan:
+    name: Trivy Security Scan
+    runs-on: self-hosted
+    permissions:
+      contents: read
+      security-events: write # Para subir resultados a GitHub Security
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Clean up old Docker images
+        run: |
+          docker image prune -af --filter "until=24h" || true
+          docker builder prune -af --filter "until=24h" || true
+
+      - name: Build Docker image
+        run: |
+          docker build -t lunance:${{ github.sha }} .
+          docker tag lunance:${{ github.sha }} lunance:latest
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'lunance:latest'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '1' # Falla el build si encuentra vulnerabilidades
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() # Sube resultados incluso si el scan falla
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run Trivy for human-readable output
+        uses: aquasecurity/trivy-action@master
+        if: always()
+        with:
+          image-ref: 'lunance:latest'
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Cleanup after scan
+        if: always()
+        run: |
+          docker rmi lunance:${{ github.sha }} || true
+          docker rmi lunance:latest || true
