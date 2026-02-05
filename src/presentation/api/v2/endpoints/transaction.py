@@ -23,7 +23,7 @@ from application.dto.transaction_dto import CreateTransactionDTO
 from presentation.schemas.responses.transaction import TransactionResponse
 from presentation.schemas.requests.transaction import CreateTransactionRequest
 from presentation.dependencies.auth_deps import get_current_user
-from presentation.dependencies.service_deps import (
+from presentation.dependencies import (
     get_create_transaction_handler,
     get_gemini_service,
     get_transactions_handler,
@@ -52,7 +52,7 @@ from application.transactions.commands.update_transaction import (
     UpdateTransactionCommand,
     UpdateTransactionCommandHandler,
 )
-from presentation.dependencies.service_deps import get_update_transaction_handler
+from presentation.dependencies import get_update_transaction_handler
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)

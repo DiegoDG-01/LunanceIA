@@ -8,7 +8,7 @@ from presentation.schemas.responses.category import (
     CategoryResponse,
     CategoryListResponse,
 )
-from presentation.dependencies.service_deps import get_categories_handler
+from presentation.dependencies import get_categories_handler
 from application.categories.queries.get_categories import (
     GetCategoriesQuery,
     GetCategoriesHandler,

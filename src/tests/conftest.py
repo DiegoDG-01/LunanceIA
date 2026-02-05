@@ -16,7 +16,7 @@ os.environ["ENVIRONMENT"] = "TEST"
 from main import app
 from infrastructure.database.connection import Base, get_db
 from presentation.dependencies.auth_deps import get_current_user, get_current_active_user
-from presentation.dependencies.service_deps import get_gemini_service
+from presentation.dependencies import get_gemini_service
 from domain.entities.user import User
 from infrastructure.external_services.gemini import GeminiService, GeminiTransactionResult
 from domain.objects.enums import TransactionType
