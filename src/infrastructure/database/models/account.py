@@ -21,6 +21,9 @@ class AccountModel(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    bank_id = Column(
+        Integer, ForeignKey("banks.id", ondelete="SET NULL"), nullable=True
+    )
     uuid = Column(
         CHAR(36),
         unique=True,
@@ -30,7 +33,6 @@ class AccountModel(Base):
     )
     name = Column(String(100), nullable=False)
     type = Column(Enum(AccountType), nullable=False)
-    bank = Column(String(100))
     current_balance = Column(DECIMAL(12, 2), default=0.00)
     currency = Column(String(3), default="MXN")
     is_active = Column(Boolean, default=True)

@@ -30,9 +30,9 @@ class CreateAccountDTO:
     """
 
     user_id: int
+    bank_id: Optional[int]
     name: str
     account_type: AccountType
-    bank: Optional[str]
     initial_balance: Decimal = Decimal("0.00")
     currency: str = "MXN"
     credit_card_settings: Optional[CreditCardSettingsDTO] = None
@@ -47,8 +47,8 @@ class UpdateAccountDTO:
 
     account_uuid: str
     user_id: int
+    bank_id: Optional[int]
     name: Optional[str] = None
-    bank: Optional[str] = None
     current_balance: Optional[Decimal] = None
     credit_card_settings: Optional[CreditCardSettingsDTO] = None
     investment_settings: Optional[InvestmentCardSettingsDTO] = None
@@ -57,11 +57,13 @@ class UpdateAccountDTO:
 @dataclass
 class AccountResponseDTO:
     account_uuid: str
+    bank_id: Optional[int]
     name: str
     account_type: AccountType
     current_balance: Decimal
     currency: str
-    bank: Optional[str]
     is_active: bool
+    bank_name: Optional[str]
+    bank_code: Optional[str]
     credit_card_settings: Optional[CreditCardSettingsDTO] = None
     investment_settings: Optional[InvestmentCardSettingsDTO] = None

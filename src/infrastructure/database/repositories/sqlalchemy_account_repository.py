@@ -33,7 +33,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
             user_id=model.user_id,
             name=model.name,
             account_type=model.type,
-            bank=model.bank,
+            bank_id=model.bank_id,
             current_balance=Money(
                 amount=model.current_balance, currency=model.currency
             ),
@@ -50,7 +50,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
             user_id=entity.user_id,
             name=entity.name,
             type=entity.account_type,
-            bank=entity.bank,
+            bank_id=entity.bank_id,
             current_balance=entity.current_balance.amount,
             currency=entity.current_balance.currency,
             is_active=entity.is_active,
@@ -111,7 +111,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
 
         model.name = account.name
         model.type = account.account_type
-        model.bank = account.bank
+        model.bank_id = account.bank_id
         model.current_balance = account.current_balance.amount
         model.currency = account.current_balance.currency
         model.is_active = account.is_active
