@@ -42,7 +42,7 @@ from presentation.schemas.requests.subscription import (
     UpdateSubscriptionRequest,
 )
 from presentation.dependencies.auth_deps import get_current_user
-from presentation.dependencies.service_deps import (
+from presentation.dependencies import (
     get_create_subscription_handler,
     get_subscriptions_handler,
     get_update_subscription_handler,

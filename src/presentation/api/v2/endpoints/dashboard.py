@@ -6,7 +6,7 @@ from application.dashboard.queries.get_dashboard_summary import (
     GetDashboardSummaryHandler,
     GetDashboardSummaryQuery,
 )
-from presentation.dependencies.service_deps import get_dashboard_summary_handler
+from presentation.dependencies import get_dashboard_summary_handler
 
 from domain.entities.user import User
 from presentation.dependencies.auth_deps import get_current_active_user

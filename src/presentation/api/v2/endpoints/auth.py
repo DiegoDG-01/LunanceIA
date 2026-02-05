@@ -14,7 +14,7 @@ from presentation.schemas.responses.auth import (
     UserInfoResponse,
 )
 from presentation.dependencies.auth_deps import get_current_active_user
-from presentation.dependencies.service_deps import (
+from presentation.dependencies import (
     get_login_handler,
     get_register_handler,
     get_refresh_token_handler,
