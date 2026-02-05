@@ -9,7 +9,7 @@ from presentation.schemas.requests.account import (
 )
 from presentation.schemas.responses.account import AccountResponse, AccountListResponse
 from presentation.dependencies.auth_deps import get_current_active_user
-from presentation.dependencies.service_deps import (
+from presentation.dependencies import (
     get_create_account_handler,
     get_update_account_handler,
     get_delete_account_handler,
@@ -116,10 +116,10 @@ async def create_account(
         )
 
     dto = CreateAccountDTO(
+        bank_id=account_request.bank_id,
         user_id=current_user.id,
         name=account_request.name,
         account_type=account_request.account_type,
-        bank=account_request.bank,
         initial_balance=account_request.initial_balance,
         currency=account_request.currency,
         credit_card_settings=cc_settings_dto,
@@ -155,7 +155,7 @@ async def update_account(
         account_uuid=account_uuid,
         user_id=current_user.id,
         name=update_request.name,
-        bank=update_request.bank,
+        bank_id=update_request.bank_id,
         current_balance=update_request.current_balance,
     )
 
@@ -199,10 +199,12 @@ async def activate_account(
 
     account = await handler.handle(command)
     return AccountResponse(
+        bank_id=account.bank_id,
+        bank_name=account.bank_name,
+        bank_code=account.bank_code,
         account_uuid=account.uuid,
         name=account.name,
         account_type=account.account_type,
-        bank=account.bank,
         current_balance=account.current_balance.amount,
         currency=account.current_balance.currency,
         is_active=account.is_active,

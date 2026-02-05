@@ -16,10 +16,10 @@ class Account:
     id: Optional[int]
     uuid: Optional[str]
     user_id: int
+    bank_id: Optional[int]
     name: str
     account_type: AccountType
     current_balance: Money
-    bank: Optional[str]
     is_active: bool
     creation_date: datetime
     credit_card_settings: Optional[CreditCardSettings] = None
@@ -29,9 +29,9 @@ class Account:
     def create_new(
         cls,
         user_id: int,
+        bank_id: Optional[int],
         name: str,
         account_type: AccountType,
-        bank: Optional[str],
         initial_balance: Money = None,
     ) -> "Account":
         if initial_balance is None:
@@ -41,10 +41,10 @@ class Account:
             id=None,
             uuid=None,
             user_id=user_id,
+            bank_id=bank_id,
             name=name,
             account_type=account_type,
             current_balance=initial_balance,
-            bank=bank,
             is_active=True,
             creation_date=datetime.now(),
         )

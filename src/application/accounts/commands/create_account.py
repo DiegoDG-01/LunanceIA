@@ -9,6 +9,7 @@ from domain.repositories.credit_card_repository import CreditCardSettingsReposit
 from domain.repositories.investment_card_repository import (
     InvestmentCardSettingsRepository,
 )
+from domain.repositories.bank_repository import BankRepository
 from domain.repositories.user_repository import UserRepository
 from domain.objects.money import Money
 from application.dto.account_dto import CreateAccountDTO, AccountResponseDTO
@@ -34,11 +35,13 @@ class CreateAccountHandler:
         user_repository: UserRepository,
         credit_card_settings_repository: CreditCardSettingsRepository,
         investment_settings_repository: InvestmentCardSettingsRepository,
+        bank_repository: BankRepository,
     ):
         self.account_repository = account_repository
         self.user_repository = user_repository
         self.credit_card_settings_repository = credit_card_settings_repository
         self.investment_settings_repository = investment_settings_repository
+        self.bank_repository = bank_repository
 
     async def handle(self, command: CreateAccountCommand) -> AccountResponseDTO:
         """
@@ -67,9 +70,9 @@ class CreateAccountHandler:
         initial_balance = Money(amount=dto.initial_balance, currency=dto.currency)
         account = Account.create_new(
             user_id=dto.user_id,
+            bank_id=dto.bank_id,
             name=dto.name,
             account_type=dto.account_type,
-            bank=dto.bank,
             initial_balance=initial_balance,
         )
 
@@ -78,6 +81,7 @@ class CreateAccountHandler:
         # Create settings if provided
         cc_settings_dto = None
         inv_settings_dto = None
+        bank = None
 
         if dto.credit_card_settings:
             cc_settings_dto = CreditCardSettings(
@@ -104,13 +108,18 @@ class CreateAccountHandler:
             )
             inv_settings_dto = dto.investment_settings
 
+        if dto.bank_id:
+            bank = await self.bank_repository.get_by_id(dto.bank_id)
+
         return AccountResponseDTO(
             account_uuid=saved_account.uuid,
             name=saved_account.name,
             account_type=saved_account.account_type,
             current_balance=saved_account.current_balance.amount,
             currency=saved_account.current_balance.currency,
-            bank=saved_account.bank,
+            bank_id=saved_account.bank_id,
+            bank_name=bank.name if bank else None,
+            bank_code=bank.code if bank else None,
             is_active=saved_account.is_active,
             credit_card_settings=cc_settings_dto,
             investment_settings=inv_settings_dto,

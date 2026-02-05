@@ -28,11 +28,11 @@ class InvestmentCardSettingsRequest(BaseModel):
 class CreateAccountRequest(BaseModel):
     """Schema para crear cuenta."""
 
+    bank_id: Optional[int] = Field(None, description="ID del banco")
     name: str = Field(
         ..., min_length=1, max_length=100, description="Nombre de la cuenta"
     )
     account_type: AccountType = Field(..., description="Tipo de cuenta")
-    bank: Optional[str] = Field(None, max_length=100, description="Banco")
     initial_balance: Decimal = Field(
         Decimal("0.00"), ge=0, description="Balance inicial"
     )
@@ -61,10 +61,10 @@ class CreateAccountRequest(BaseModel):
 class UpdateAccountRequest(BaseModel):
     """Schema para actualizar cuenta."""
 
+    bank_id: Optional[int] = Field(None, description="ID del banco")
     name: Optional[str] = Field(
         None, min_length=1, max_length=100, description="Nombre de la cuenta"
     )
-    bank: Optional[str] = Field(None, max_length=100, description="Banco")
     current_balance: Optional[Decimal] = Field(None, ge=0, description="Balance actual")
 
 
