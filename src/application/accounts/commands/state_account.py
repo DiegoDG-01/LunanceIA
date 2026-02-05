@@ -32,9 +32,13 @@ class StateAccountHandler:
             raise AccountNotFoundError(account_uuid=command.account_uuid)
 
         account_updated = await self.account_repository.switch_status(account)
-        bank = await self.bank_repository.get_by_id(account.bank_id)
 
-        account_updated.bank_name = bank.name
-        account_updated.bank_code = bank.code
+        if account.bank_id:
+            bank = await self.bank_repository.get_by_id(account.bank_id)
+            account_updated.bank_name = bank.name if bank else None
+            account_updated.bank_code = bank.code if bank else None
+        else:
+            account_updated.bank_name = None
+            account_updated.bank_code = None
 
         return account_updated

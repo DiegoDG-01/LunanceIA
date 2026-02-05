@@ -9,5 +9,5 @@ from infrastructure.database.repositories.sqlalchemy_bank_repository import (
 
 
 def get_banks_handler(db: Session = Depends(get_db)) -> GetBanksHandler:
-    bank_repository = GetBanksHandler(bank_repository=SQLAlchemyBankRepository(db))
-    return bank_repository
+    bank_repository = SQLAlchemyBankRepository(db)
+    return GetBanksHandler(bank_repository=bank_repository)

@@ -48,12 +48,13 @@ class UpdateAccountHandler:
         # Guardar cambios
         updated_account = await self.account_repository.update(account)
 
-        bank = await self.bank_repository.get_by_id(account.bank_id)
-        if not bank:
-            raise ValueError("Banco no encontrado")
-
-        updated_account.bank_name = bank.name
-        updated_account.bank_code = bank.code
+        if account.bank_id:
+            bank = await self.bank_repository.get_by_id(account.bank_id)
+            updated_account.bank_name = bank.name if bank else None
+            updated_account.bank_code = bank.code if bank else None
+        else:
+            updated_account.bank_name = None
+            updated_account.bank_code = None
 
         # Retornar DTO de respuesta
         return AccountResponseDTO(

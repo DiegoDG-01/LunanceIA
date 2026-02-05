@@ -27,12 +27,16 @@ from infrastructure.database.repositories.sqlalchemy_user_repository import (
 from infrastructure.database.repositories.sqlalchemy_category_repository import (
     SQLAlchemyCategoryRepository,
 )
+from infrastructure.database.repositories.sqlalchemy_bank_repository import (
+    SQLAlchemyBankRepository,
+)
 
 from presentation.dependencies.repositories import (
     get_account_repository,
     get_user_repository,
     get_transaction_repository,
     get_category_repository,
+    get_bank_repository,
 )
 
 
@@ -57,9 +61,10 @@ def get_create_transaction_handler(
         get_transaction_repository
     ),
     category_repo: SQLAlchemyCategoryRepository = Depends(get_category_repository),
+    bank_repo: SQLAlchemyBankRepository = Depends(get_bank_repository),
 ) -> CreateTransactionHandler:
     return CreateTransactionHandler(
-        user_repo, account_repo, transaction_repo, category_repo
+        user_repo, account_repo, transaction_repo, category_repo, bank_repo
     )
 
 

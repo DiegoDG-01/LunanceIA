@@ -9,6 +9,7 @@ from domain.repositories.user_repository import UserRepository
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.category_repository import CategoryRepository
 from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.bank_repository import BankRepository
 from application.dto.transaction_dto import CreateTransactionDTO, TransactionResponseDTO
 from shared.exceptions.domain import InvalidTransactionTypeError
 
@@ -29,11 +30,13 @@ class CreateTransactionHandler:
         account_repository: AccountRepository,
         transaction_repository: TransactionRepository,
         category_repository: CategoryRepository,
+        bank_repository: BankRepository,
     ):
         self.user_repository = user_repository
         self.account_repository = account_repository
         self.transaction_repository = transaction_repository
         self.category_repository = category_repository
+        self.bank_repository = bank_repository
 
     async def handle(self, command: CreateTransactionCommand) -> TransactionResponseDTO:
         dto = command.dto
@@ -82,10 +85,15 @@ class CreateTransactionHandler:
 
         transaction = await self.transaction_repository.create(transaction)
 
+        bank_name = None
+        if account.bank_id:
+            bank = await self.bank_repository.get_by_id(account.bank_id)
+            bank_name = bank.name if bank else None
+
         return TransactionResponseDTO.from_entity(
             transaction,
             account.name,
             account.account_type,
-            account.bank,
+            bank_name,
             category_name,
         )

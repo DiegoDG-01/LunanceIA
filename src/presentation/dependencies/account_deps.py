@@ -90,5 +90,6 @@ def get_user_accounts_handler(
 
 def get_account_by_id_handler(
     account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
+    bank_repo: SQLAlchemyBankRepository = Depends(get_bank_repository),
 ) -> GetAccountByIdHandler:
-    return GetAccountByIdHandler(account_repo)
+    return GetAccountByIdHandler(account_repo, bank_repo)

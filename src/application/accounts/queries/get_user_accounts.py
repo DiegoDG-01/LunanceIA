@@ -33,9 +33,13 @@ class GetUserAccountsHandler:
             accounts = await self.account_repository.get_by_user_id(query.user_id)
 
         for account in accounts:
-            bank = await self.bank_repository.get_by_id(account.bank_id)
-            account.bank_name = bank.name
-            account.bank_code = bank.code
+            if account.bank_id:
+                bank = await self.bank_repository.get_by_id(account.bank_id)
+                account.bank_name = bank.name if bank else None
+                account.bank_code = bank.code if bank else None
+            else:
+                account.bank_name = None
+                account.bank_code = None
         # Convertir a DTOs
         return [
             AccountResponseDTO(
