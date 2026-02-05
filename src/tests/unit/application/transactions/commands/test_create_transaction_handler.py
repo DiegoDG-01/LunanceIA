@@ -20,7 +20,8 @@ class TestCreateTransactionHandler:
             "user_repo": MagicMock(),
             "account_repo": MagicMock(),
             "transaction_repo": MagicMock(),
-            "category_repo": MagicMock()
+            "category_repo": MagicMock(),
+            "bank_repo": MagicMock()
         }
 
     @pytest.fixture
@@ -29,7 +30,8 @@ class TestCreateTransactionHandler:
             mocks["user_repo"],
             mocks["account_repo"],
             mocks["transaction_repo"],
-            mocks["category_repo"]
+            mocks["category_repo"],
+            mocks["bank_repo"]
         )
 
     @pytest.mark.asyncio
@@ -45,7 +47,7 @@ class TestCreateTransactionHandler:
             name="Bank",
             account_type=AccountType.CHECKING,
             current_balance=Money(Decimal("1000.00")),
-            bank="Bank",
+            bank_id=None,
             is_active=True,
             creation_date=datetime.now()
         )
@@ -106,7 +108,7 @@ class TestCreateTransactionHandler:
             name="Bank",
             account_type=AccountType.CHECKING,
             current_balance=Money(Decimal("1000.00")),
-            bank="Bank",
+            bank_id=None,
             is_active=True,
             creation_date=datetime.now()
         )
@@ -154,7 +156,7 @@ class TestCreateTransactionHandler:
         mock_account = Account(
             id=10, uuid="acc", user_id=user_id, name="B", account_type=AccountType.CASH,
             current_balance=Money(Decimal("50.00")),
-            bank="Bank", is_active=True, creation_date=datetime.now()
+            bank_id=None, is_active=True, creation_date=datetime.now()
         )
 
         mocks["user_repo"].get_by_id = AsyncMock(return_value=mock_user)

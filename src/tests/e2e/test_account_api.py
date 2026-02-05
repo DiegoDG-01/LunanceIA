@@ -15,7 +15,7 @@ class TestAccountStatusToggle:
         account_data = {
             "name": "Test Account",
             "account_type": "SAVINGS",
-            "bank": "Test Bank",
+            "bank_id": None,
             "initial_balance": 1000.00,
             "currency": "MXN"
         }
@@ -109,7 +109,7 @@ class TestAccountStatusConsistency:
         account_data = {
             "name": "Toggle Test Account",
             "account_type": "CHECKING",
-            "bank": "Test Bank",
+            "bank_id": None,
             "initial_balance": 500.00,
             "currency": "MXN"
         }
@@ -156,7 +156,7 @@ class TestAccountStatusValidation:
         account_data = {
             "name": "Preservation Test Account",
             "account_type": "SAVINGS",
-            "bank": "Preservation Bank",
+            "bank_id": None,
             "initial_balance": 1234.56,
             "currency": "MXN"
         }
@@ -186,7 +186,7 @@ class TestAccountStatusValidation:
         assert updated_account["account_uuid"] == original_account["account_uuid"]
         assert updated_account["name"] == original_account["name"]
         assert updated_account["account_type"] == original_account["account_type"]
-        assert updated_account["bank"] == original_account["bank"]
+        assert updated_account["bank_id"] == original_account["bank_id"]
         assert updated_account["current_balance"] == original_account["current_balance"]
         assert updated_account["currency"] == original_account["currency"]
         assert updated_account["is_active"] != original_account["is_active"]
