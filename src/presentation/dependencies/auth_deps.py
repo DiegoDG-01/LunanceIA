@@ -97,7 +97,7 @@ async def get_current_user(
                 email_verified=user_info.get("email_verified"),
                 last_login=user_info.get("last_login"),
             )
-            user = user_repo.create(new_user)
+            user = await user_repo.create(new_user)
 
         return user
 
