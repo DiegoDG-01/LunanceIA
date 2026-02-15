@@ -39,8 +39,8 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
         model = self._vo_to_model(settings)
         model.account_id = account_id
         self.db.add(model)
-        self.db.commit()
-        self.db.refresh(model)
+        await self.db.commit()
+        await self.db.refresh(model)
         return self._model_to_vo(model)
 
     async def get_by_account_id(
