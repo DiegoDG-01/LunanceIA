@@ -1,13 +1,14 @@
 from typing import Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from domain.repositories.credit_card_repository import CreditCardSettingsRepository
 from domain.objects.credit_card_settings import CreditCardSettings
 from infrastructure.database.models.credit_card import CreditCardSettingsModel
 
 
 class SQLAlchemyCreditCardSettingsRepository(CreditCardSettingsRepository):
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
     @staticmethod
@@ -39,21 +40,21 @@ class SQLAlchemyCreditCardSettingsRepository(CreditCardSettingsRepository):
         return self._model_to_vo(model)
 
     async def get_by_account_id(self, account_id: int) -> Optional[CreditCardSettings]:
-        model = (
-            self.db.query(CreditCardSettingsModel)
-            .filter(CreditCardSettingsModel.account_id == account_id)
-            .first()
+        stmt = select(CreditCardSettingsModel).where(
+            CreditCardSettingsModel.account_id == account_id
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
         return self._model_to_vo(model) if model else None
 
     async def update(
         self, account_id: int, settings: CreditCardSettings
     ) -> CreditCardSettings:
-        model = (
-            self.db.query(CreditCardSettingsModel)
-            .filter(CreditCardSettingsModel.account_id == account_id)
-            .first()
+        stmt = select(CreditCardSettingsModel).where(
+            CreditCardSettingsModel.account_id == account_id
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         if model is None:
             raise ValueError("Credit card settings no encontrada")
@@ -63,19 +64,19 @@ class SQLAlchemyCreditCardSettingsRepository(CreditCardSettingsRepository):
         model.credit_limit = settings.credit_limit
         model.minimum_payment_percentage = settings.minimum_payment_percentage
 
-        self.db.commit()
-        self.db.refresh(model)
+        await self.db.commit()
+        await self.db.refresh(model)
         return self._model_to_vo(model)
 
-    async def delete(self, account_id: int) -> None:
-        model = (
-            self.db.query(CreditCardSettingsModel)
-            .filter(CreditCardSettingsModel.account_id == account_id)
-            .first()
+    async def delete(self, account_id: int) -> bool:
+        stmt = select(CreditCardSettingsModel).where(
+            CreditCardSettingsModel.account_id == account_id
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         if model:
-            self.db.delete(model)
-            self.db.commit()
+            await self.db.delete(model)
+            await self.db.commit()
             return True
         return False

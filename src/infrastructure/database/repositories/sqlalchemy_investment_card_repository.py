@@ -1,5 +1,6 @@
 from typing import Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from domain.repositories.investment_card_repository import (
     InvestmentCardSettingsRepository,
 )
@@ -10,7 +11,7 @@ from infrastructure.database.models.investment_account import (
 
 
 class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
     @staticmethod
@@ -46,21 +47,22 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
     async def get_by_account_id(
         self, account_id: int
     ) -> Optional[InvestmentCardSettings]:
-        model = (
-            self.db.query(InvestmentCardSettingsModel)
-            .filter(InvestmentCardSettingsModel.account_id == account_id)
-            .first()
+        stmt = select(InvestmentCardSettingsModel).where(
+            InvestmentCardSettingsModel.account_id == account_id
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
+
         return self._model_to_vo(model) if model else None
 
     async def update(
         self, account_id: int, settings: InvestmentCardSettings
     ) -> InvestmentCardSettings:
-        model = (
-            self.db.query(InvestmentCardSettingsModel)
-            .filter(InvestmentCardSettingsModel.account_id == account_id)
-            .first()
+        stmt = select(InvestmentCardSettingsModel).where(
+            InvestmentCardSettingsModel.account_id == account_id
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         if model is None:
             raise ValueError("Credit card settings no encontrada")
@@ -71,19 +73,19 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
         model.maturity_date = settings.maturity_date
         model.early_withdrawal_penalty = settings.early_withdrawal_penalty
 
-        self.db.commit()
-        self.db.refresh(model)
+        await self.db.commit()
+        await self.db.refresh(model)
         return self._model_to_vo(model)
 
     async def delete(self, account_id: int) -> None:
-        model = (
-            self.db.query(InvestmentCardSettingsModel)
-            .filter(InvestmentCardSettingsModel.account_id == account_id)
-            .first()
+        stmt = select(InvestmentCardSettingsModel).where(
+            InvestmentCardSettingsModel.account_id == account_id
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         if model:
-            self.db.delete(model)
-            self.db.commit()
+            await self.db.delete(model)
+            await self.db.commit()
             return True
         return False
