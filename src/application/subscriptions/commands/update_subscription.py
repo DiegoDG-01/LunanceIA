@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from domain.objects.money import Money
 from domain.repositories.subscription_repository import SubscriptionRepository
 from domain.repositories.category_repository import CategoryRepository
 from domain.repositories.account_repository import AccountRepository
@@ -37,7 +38,7 @@ class UpdateSubscriptionHandler:
     ) -> SubscriptionResponseDTO:
         dto = command.dto
 
-        subscription = self.subscription_repository.get_by_uuid_and_user_id(
+        subscription = await self.subscription_repository.get_by_uuid_and_user_id(
             command.subscription_uuid, command.user_id
         )
 
@@ -60,9 +61,16 @@ class UpdateSubscriptionHandler:
 
         for key, value in dto.dict().items():
             if value is not None:
-                setattr(subscription, key, value)
+                if key == "amount":
+                    setattr(
+                        subscription,
+                        key,
+                        Money(value, currency=subscription.amount.currency),
+                    )
+                else:
+                    setattr(subscription, key, value)
 
-        updated_subscription = self.subscription_repository.update(subscription)
+        updated_subscription = await self.subscription_repository.update(subscription)
 
         account = await self.account_repository.get_by_id(subscription.account_id)
         account_uuid = account.uuid if account else None

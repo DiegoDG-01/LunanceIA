@@ -81,10 +81,18 @@ def get_state_account_handler(
 def get_user_accounts_handler(
     account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
     bank_repo: SQLAlchemyBankRepository = Depends(get_bank_repository),
+    credit_card_repository: SQLAlchemyCreditCardSettingsRepository = Depends(
+        get_credit_card_settings_repository
+    ),
+    investment_card_repository: SQLAlchemyInvestmentSettingsRepository = Depends(
+        get_investment_settings_repository
+    ),
 ) -> GetUserAccountsHandler:
     return GetUserAccountsHandler(
         account_repo,
         bank_repo,
+        credit_card_repository,
+        investment_card_repository,
     )
 
 

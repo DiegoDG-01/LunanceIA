@@ -26,7 +26,7 @@ class StateSubscriptionHandler:
         self.account_repository = account_repository
 
     async def handle(self, command: StateSubscriptionCommand) -> bool:
-        subscription = self.subscription_repository.get_by_uuid_and_user_id(
+        subscription = await self.subscription_repository.get_by_uuid_and_user_id(
             command.subscription_uuid, command.user_id
         )
         if not subscription:
@@ -43,7 +43,9 @@ class StateSubscriptionHandler:
         )
         category_name = category.name if category else None
 
-        subscription_update = self.subscription_repository.switch_status(subscription)
+        subscription_update = await self.subscription_repository.switch_status(
+            subscription
+        )
 
         return SubscriptionResponseDTO.from_entity(
             subscription_update, account_uuid, account_name, category_name
