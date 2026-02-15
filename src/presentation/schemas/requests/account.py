@@ -66,6 +66,8 @@ class UpdateAccountRequest(BaseModel):
         None, min_length=1, max_length=100, description="Nombre de la cuenta"
     )
     current_balance: Optional[Decimal] = Field(None, ge=0, description="Balance actual")
+    credit_card_settings: Optional[CreditCardSettingsRequest] = None
+    investment_settings: Optional[InvestmentCardSettingsRequest] = None
 
 
 class UpdateAccountSettingsRequest(BaseModel):

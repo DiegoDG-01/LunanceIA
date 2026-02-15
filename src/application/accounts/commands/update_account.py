@@ -2,8 +2,14 @@ from dataclasses import dataclass
 
 from domain.repositories.account_repository import AccountRepository
 from domain.objects.money import Money
+from domain.objects.credit_card_settings import CreditCardSettings
+from domain.objects.investment_settings import InvestmentCardSettings
 from application.dto.account_dto import UpdateAccountDTO, AccountResponseDTO
 from domain.repositories.bank_repository import BankRepository
+from domain.repositories.credit_card_repository import CreditCardSettingsRepository
+from domain.repositories.investment_card_repository import (
+    InvestmentCardSettingsRepository,
+)
 
 
 @dataclass
@@ -17,10 +23,16 @@ class UpdateAccountHandler:
     """Handler para actualizar cuenta."""
 
     def __init__(
-        self, account_repository: AccountRepository, bank_repository: BankRepository
+        self,
+        account_repository: AccountRepository,
+        bank_repository: BankRepository,
+        credit_card_settings_repository: CreditCardSettingsRepository,
+        investment_settings_repository: InvestmentCardSettingsRepository,
     ):
         self.account_repository = account_repository
         self.bank_repository = bank_repository
+        self.credit_card_settings_repository = credit_card_settings_repository
+        self.investment_settings_repository = investment_settings_repository
 
     async def handle(self, command: UpdateAccountCommand) -> AccountResponseDTO:
         """Ejecuta el comando de actualizar cuenta."""
@@ -48,13 +60,38 @@ class UpdateAccountHandler:
         # Guardar cambios
         updated_account = await self.account_repository.update(account)
 
-        if account.bank_id:
-            bank = await self.bank_repository.get_by_id(account.bank_id)
-            updated_account.bank_name = bank.name if bank else None
-            updated_account.bank_code = bank.code if bank else None
-        else:
-            updated_account.bank_name = None
-            updated_account.bank_code = None
+        # Update settings if provided
+        cc_settings_dto = None
+        inv_settings_dto = None
+
+        if dto.credit_card_settings:
+            cc_settings_dto = CreditCardSettings(
+                billing_cycle_day=dto.credit_card_settings.billing_cycle_day,
+                payment_due_day=dto.credit_card_settings.payment_due_day,
+                credit_limit=dto.credit_card_settings.credit_limit,
+                minimum_payment_percentage=dto.credit_card_settings.minimum_payment_percentage,
+            )
+            await self.credit_card_settings_repository.update(
+                updated_account.id, cc_settings_dto
+            )
+            cc_settings_dto = dto.credit_card_settings
+
+        if dto.investment_settings:
+            inv_settings_dto = InvestmentCardSettings(
+                investment_type=dto.investment_settings.investment_type,
+                interest_rate=dto.investment_settings.interest_rate,
+                lock_period_end_date=dto.investment_settings.lock_period_end_date,
+                maturity_date=dto.investment_settings.maturity_date,
+                early_withdrawal_penalty=dto.investment_settings.early_withdrawal_penalty,
+            )
+            await self.investment_settings_repository.update(
+                updated_account.id, inv_settings_dto
+            )
+            inv_settings_dto = dto.investment_settings
+
+        bank = await self.bank_repository.get_by_id(account.bank_id)
+        updated_account.bank_name = bank.name if bank else None
+        updated_account.bank_code = bank.code if bank else None
 
         # Retornar DTO de respuesta
         return AccountResponseDTO(
@@ -67,4 +104,6 @@ class UpdateAccountHandler:
             current_balance=updated_account.current_balance.amount,
             currency=updated_account.current_balance.currency,
             is_active=updated_account.is_active,
+            credit_card_settings=cc_settings_dto,
+            investment_settings=inv_settings_dto,
         )

@@ -10,6 +10,9 @@ class CreditCardSettingsResponse(BaseModel):
     billing_cycle_day: int = Field(..., description="Dias de facturacion")
     payment_due_day: int = Field(..., description="Dias de pago")
     credit_limit: Optional[Decimal] = Field(None, description="Limite de credito")
+    minimum_payment_percentage: Optional[Decimal] = Field(
+        None, description="Percentage de credito"
+    )
 
     class Config:
         from_attributes = True

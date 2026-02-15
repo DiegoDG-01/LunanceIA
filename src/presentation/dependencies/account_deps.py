@@ -56,8 +56,16 @@ def get_create_account_handler(
 def get_update_account_handler(
     account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
     bank_repo: SQLAlchemyBankRepository = Depends(get_bank_repository),
+    credit_card_repo: SQLAlchemyCreditCardSettingsRepository = Depends(
+        get_credit_card_settings_repository
+    ),
+    investment_card_repo: SQLAlchemyInvestmentSettingsRepository = Depends(
+        get_investment_settings_repository
+    ),
 ) -> UpdateAccountHandler:
-    return UpdateAccountHandler(account_repo, bank_repo)
+    return UpdateAccountHandler(
+        account_repo, bank_repo, credit_card_repo, investment_card_repo
+    )
 
 
 def get_delete_account_handler(
