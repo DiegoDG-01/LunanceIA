@@ -13,7 +13,7 @@ dependencies = [
     "pydantic-settings>=2.9.1",
     "pymysql>=1.1.1",
     "python-dotenv>=1.1.0",
-    "python-jose>=3.5.0",
+    "python-jose[cryptography]>=3.5.0",
     "sqlalchemy>=2.0.41",
     "uvicorn>=0.34.3",
     "cryptography>=45.0.4",
@@ -38,6 +38,11 @@ dev = [
     "httpx>=0.28.1",
     "pytest-cov>=7.0.0",
     "pre-commit>=4.3.0",
+]
+
+[tool.uv]
+exclude-dependencies = [
+    "ecdsa"
 ]
 
 [tool.ruff]
