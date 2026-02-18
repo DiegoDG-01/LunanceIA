@@ -1,5 +1,5 @@
 # Base image with uv package manager and Python 3.13 on Alpine Linux
-FROM ghcr.io/astral-sh/uv:python3.13-alpine
+FROM ghcr.io/astral-sh/uv:python3.14-trixie
 
 # Environment variables for Python optimization and uv configuration
 ENV PYTHONUNBUFFERED=1 \
@@ -14,7 +14,7 @@ WORKDIR /app
 EXPOSE 8000
 
 # Install netcat for database connection testing
-RUN apk add --no-cache netcat-openbsd
+RUN apt-get update && apt-get install -y --no-install-recommends netcat-openbsd
 
 # Copy dependency files for layer caching optimization
 COPY pyproject.toml ./
@@ -29,7 +29,7 @@ COPY alembic/ ./alembic/
 COPY alembic.ini ./
 
 # Create non-root user for security
-RUN addgroup -S lunance && adduser -S lunance -G lunance
+RUN groupadd --system lunance && useradd --system --gid lunance --no-create-home lunance
 RUN chown -R lunance:lunance /app
 USER lunance
 
