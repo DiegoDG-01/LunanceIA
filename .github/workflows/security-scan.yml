@@ -36,6 +36,8 @@ jobs:
           format: 'table'
           severity: 'CRITICAL,HIGH,MEDIUM'
           exit-code: '1' # Falla el build si encuentra vulnerabilidades CRITICAL/HIGH/MEDIUM
+        env:
+          TRIVY_DISABLE_VEX_NOTICE: "true"
 
       - name: Cleanup after scan
         if: always()
