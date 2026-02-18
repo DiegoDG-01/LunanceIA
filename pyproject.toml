@@ -2,7 +2,7 @@
 name = "lunance"
 version = "0.1.0"
 description = "Add your description here"
-requires-python = ">=3.14.3"
+requires-python = ">=3.13"
 dependencies = [
     "aiomysql>=0.3.2",
     "alembic>=1.16.1",
