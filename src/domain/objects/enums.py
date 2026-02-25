@@ -1,6 +1,10 @@
 from enum import Enum
 
 
+class InterestType(str, Enum):
+    SIMPLE = "SIMPLE"
+    COMPOUND = "COMPOUND"
+
 class TransactionType(str, Enum):
     INCOME = "INCOME"
     EXPENSE = "EXPENSE"
