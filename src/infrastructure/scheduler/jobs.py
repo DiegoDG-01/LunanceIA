@@ -1,6 +1,7 @@
 import logging
-from datetime import datetime
+from datetime import datetime, date
 
+from infrastructure.config.settings import settings
 from infrastructure.database.connection import AsyncSessionLocal
 from infrastructure.database.repositories.sqlalchemy_subscription_repository import (
     SQLAlchemySubscriptionRepository,
@@ -41,3 +42,39 @@ async def process_subscriptions_job():
 
         except Exception as e:
             logger.error(f"Error processing subscriptions job: {e}")
+
+
+async def process_investment_yield_job():
+    logger.info(f"Processing investment yield job at {datetime.now()}")
+
+    async with AsyncSessionLocal() as db:
+        try:
+            from infrastructure.database.repositories.sqlalchemy_account_repository import (
+                SQLAlchemyAccountRepository,
+            )
+            from infrastructure.database.repositories.sqlalchemy_investment_yield_repository import (
+                SQLAlchemyInvestmentYieldRepository,
+            )
+            from infrastructure.database.repositories.sqlalchemy_investment_card_repository import (
+                SQLAlchemyInvestmentSettingsRepository
+            )
+            from application.investments.commands.generate_daily_yields import (
+                GenerateDailyYieldCommand, GenerateDailyYieldHandler
+            )
+
+            account_repo = SQLAlchemyAccountRepository(db)
+            yield_repo = SQLAlchemyInvestmentYieldRepository(db)
+            settings_repo = SQLAlchemyInvestmentSettingsRepository(db)
+
+            handler = GenerateDailyYieldHandler(
+                account_repository=account_repo,
+                investment_yield_repository=yield_repo,
+                investment_settings_repository=settings_repo,
+            )
+
+            stats = await handler.handle(
+                GenerateDailyYieldCommand(target_date=date.today())
+            )
+            logger.info(f"Job finished at {datetime.now()} with stats: {stats}")
+        except Exception as e:
+            logger.error(f"Error processing investment yield job: {e}")
