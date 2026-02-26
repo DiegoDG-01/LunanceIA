@@ -23,6 +23,7 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
             lock_period_end_date=model.lock_period_end_date,
             maturity_date=model.maturity_date,
             early_withdrawal_penalty=model.early_withdrawal_penalty,
+            base_principal=model.base_principal,
         )
 
     @staticmethod
@@ -75,6 +76,7 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
         model.lock_period_end_date = settings.lock_period_end_date
         model.maturity_date = settings.maturity_date
         model.early_withdrawal_penalty = settings.early_withdrawal_penalty
+        model.base_principal = settings.base_principal
 
         await self.db.commit()
         await self.db.refresh(model)
