@@ -72,14 +72,7 @@ class GenerateDailyYieldHandler:
                     principal = account.current_balance.amount
                 else:
                     # SIMPLE: usar el principal original (primer registro)
-                    first_yield = await self.investment_yield_repository.get_first_by_account_id(
-                        account_id=account.id
-                    )
-                    if first_yield:
-                        principal = first_yield.principal_amount
-                    else:
-                        # Primera vez: usar el balance actual como principal base
-                        principal = account.current_balance.amount
+                    principal = settings.base_principal or account.current_balance.amount
 
                 annual_rate = settings.interest_rate
                 if settings.interest_type == InterestType.COMPOUND:
