@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, select
 
 from domain.entities.account import Account
+from domain.objects.enums import AccountType
 from domain.repositories.account_repository import AccountRepository
 from domain.objects.money import Money
 from domain.objects.credit_card_settings import CreditCardSettings
@@ -175,9 +176,21 @@ class SQLAlchemyAccountRepository(AccountRepository):
             account.investment_card_settings = InvestmentCardSettings(
                 investment_type=inv_settings_model.investment_type,
                 interest_rate=inv_settings_model.interest_rate,
+                interest_type=inv_settings_model.interest_type,
                 lock_period_end_date=inv_settings_model.lock_period_end_date,
                 maturity_date=inv_settings_model.maturity_date,
                 early_withdrawal_penalty=inv_settings_model.early_withdrawal_penalty,
             )
 
         return account
+
+    async def get_active_investment_accounts(self) -> List[Account]:
+        stmt = select(AccountModel).where(
+            and_(
+                AccountModel.type == AccountType.INVESTMENT,
+                AccountModel.is_active == True,
+            )
+        )
+        result = await self.db.execute(stmt)
+        models = result.scalars().all()
+        return [self._model_to_entity(m) for m in models]

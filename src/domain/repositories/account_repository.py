@@ -54,3 +54,7 @@ class AccountRepository(ABC):
         self, uuid: str, user_id: int
     ) -> tuple:
         pass
+
+    @abstractmethod
+    async def get_active_investment_accounts(self) -> List[Account]:
+        pass

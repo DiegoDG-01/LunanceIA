@@ -19,6 +19,7 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
         return InvestmentCardSettings(
             investment_type=model.investment_type,
             interest_rate=model.investment_rate,
+            interest_type=model.interest_type,
             lock_period_end_date=model.lock_period_end_date,
             maturity_date=model.maturity_date,
             early_withdrawal_penalty=model.early_withdrawal_penalty,
@@ -29,6 +30,7 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
         return InvestmentCardSettingsModel(
             investment_type=vo.investment_type,
             investment_rate=vo.interest_rate,
+            interest_type=vo.interest_type,
             maturity_date=vo.maturity_date,
             lock_period_end_date=vo.lock_period_end_date,
             early_withdrawal_penalty=vo.early_withdrawal_penalty,
@@ -69,6 +71,7 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
 
         model.investment_type = settings.investment_type
         model.investment_rate = settings.interest_rate
+        model.interest_type = settings.interest_type
         model.lock_period_end_date = settings.lock_period_end_date
         model.maturity_date = settings.maturity_date
         model.early_withdrawal_penalty = settings.early_withdrawal_penalty

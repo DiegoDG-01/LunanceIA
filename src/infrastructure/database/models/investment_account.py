@@ -1,8 +1,9 @@
-from sqlalchemy import Column, Integer, ForeignKey, DECIMAL, Date, String, Index
+from sqlalchemy import Column, Integer, ForeignKey, DECIMAL, Date, String, Index, Enum
 from sqlalchemy.dialects.mysql import CHAR
 from infrastructure.database.connection import Base
 
 import uuid
+from domain.objects.enums import InterestType
 
 
 class InvestmentCardSettingsModel(Base):
@@ -26,6 +27,9 @@ class InvestmentCardSettingsModel(Base):
 
     investment_type = Column(String(50), nullable=False)
     investment_rate = Column(DECIMAL(5, 2), nullable=False)
+    interest_type = Column(
+        Enum(InterestType), nullable=False, default=InterestType.COMPOUND
+    )
     lock_period_end_date = Column(Date, nullable=False)
     maturity_date = Column(Date, nullable=True)
     early_withdrawal_penalty = Column(DECIMAL(5, 2), nullable=True)
