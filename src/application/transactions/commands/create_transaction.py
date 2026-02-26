@@ -1,6 +1,10 @@
+import dataclasses
 from dataclasses import dataclass
+from decimal import Decimal
 
 from datetime import date
+
+from domain.objects.enums import AccountType
 from domain.objects.money import Money
 from domain.entities.transaction import Transaction
 from shared.exceptions.domain import AccountNotFoundError
@@ -12,6 +16,7 @@ from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.bank_repository import BankRepository
 from application.dto.transaction_dto import CreateTransactionDTO, TransactionResponseDTO
 from shared.exceptions.domain import InvalidTransactionTypeError
+from domain.repositories.investment_card_repository import InvestmentCardSettingsRepository
 
 
 @dataclass
@@ -25,18 +30,20 @@ class CreateTransactionCommand:
 
 class CreateTransactionHandler:
     def __init__(
-        self,
-        user_repository: UserRepository,
-        account_repository: AccountRepository,
-        transaction_repository: TransactionRepository,
-        category_repository: CategoryRepository,
-        bank_repository: BankRepository,
+            self,
+            user_repository: UserRepository,
+            account_repository: AccountRepository,
+            transaction_repository: TransactionRepository,
+            category_repository: CategoryRepository,
+            bank_repository: BankRepository,
+            investment_settings_repository: InvestmentCardSettingsRepository
     ):
         self.user_repository = user_repository
         self.account_repository = account_repository
         self.transaction_repository = transaction_repository
         self.category_repository = category_repository
         self.bank_repository = bank_repository
+        self.investment_settings_repository = investment_settings_repository
 
     async def handle(self, command: CreateTransactionCommand) -> TransactionResponseDTO:
         dto = command.dto
