@@ -1,6 +1,5 @@
 import dataclasses
 from dataclasses import dataclass
-from decimal import Decimal
 
 from datetime import date
 
@@ -16,7 +15,9 @@ from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.bank_repository import BankRepository
 from application.dto.transaction_dto import CreateTransactionDTO, TransactionResponseDTO
 from shared.exceptions.domain import InvalidTransactionTypeError
-from domain.repositories.investment_card_repository import InvestmentCardSettingsRepository
+from domain.repositories.investment_card_repository import (
+    InvestmentCardSettingsRepository,
+)
 
 
 @dataclass
@@ -30,13 +31,13 @@ class CreateTransactionCommand:
 
 class CreateTransactionHandler:
     def __init__(
-            self,
-            user_repository: UserRepository,
-            account_repository: AccountRepository,
-            transaction_repository: TransactionRepository,
-            category_repository: CategoryRepository,
-            bank_repository: BankRepository,
-            investment_settings_repository: InvestmentCardSettingsRepository
+        self,
+        user_repository: UserRepository,
+        account_repository: AccountRepository,
+        transaction_repository: TransactionRepository,
+        category_repository: CategoryRepository,
+        bank_repository: BankRepository,
+        investment_settings_repository: InvestmentCardSettingsRepository,
     ):
         self.user_repository = user_repository
         self.account_repository = account_repository
@@ -75,18 +76,19 @@ class CreateTransactionHandler:
         if transaction.is_expense():
             new_balance = account.current_balance.subtract(money)
         elif transaction.is_income():
-
             if account.account_type is AccountType.INVESTMENT:
-                settings = await self.investment_settings_repository.get_by_account_id(account_id=account.id)
+                settings = await self.investment_settings_repository.get_by_account_id(
+                    account_id=account.id
+                )
                 updated_settings = dataclasses.replace(
                     settings,
                     base_principal=(
                         settings.base_principal or account.current_balance.amount
-                    ) + money.amount,
+                    )
+                    + money.amount,
                 )
                 await self.investment_settings_repository.update(
-                    account_id=account.id,
-                    settings=updated_settings
+                    account_id=account.id, settings=updated_settings
                 )
 
             new_balance = account.current_balance.add(money)

@@ -188,7 +188,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         stmt = select(AccountModel).where(
             and_(
                 AccountModel.type == AccountType.INVESTMENT,
-                AccountModel.is_active == True,
+                AccountModel.is_active,
             )
         )
         result = await self.db.execute(stmt)
