@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime, date
 
-from infrastructure.config.settings import settings
 from infrastructure.database.connection import AsyncSessionLocal
 from infrastructure.database.repositories.sqlalchemy_subscription_repository import (
     SQLAlchemySubscriptionRepository,
@@ -15,6 +14,19 @@ from infrastructure.database.repositories.sqlalchemy_transaction_repository impo
 
 from application.subscriptions.services.subscription_processor import (
     SubscriptionProcessor,
+)
+from infrastructure.database.repositories.sqlalchemy_account_repository import (
+    SQLAlchemyAccountRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_investment_yield_repository import (
+    SQLAlchemyInvestmentYieldRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_investment_card_repository import (
+    SQLAlchemyInvestmentSettingsRepository,
+)
+from application.investments.commands.generate_daily_yields import (
+    GenerateDailyYieldCommand,
+    GenerateDailyYieldHandler,
 )
 
 logger = logging.getLogger(__name__)
@@ -49,19 +61,6 @@ async def process_investment_yield_job():
 
     async with AsyncSessionLocal() as db:
         try:
-            from infrastructure.database.repositories.sqlalchemy_account_repository import (
-                SQLAlchemyAccountRepository,
-            )
-            from infrastructure.database.repositories.sqlalchemy_investment_yield_repository import (
-                SQLAlchemyInvestmentYieldRepository,
-            )
-            from infrastructure.database.repositories.sqlalchemy_investment_card_repository import (
-                SQLAlchemyInvestmentSettingsRepository
-            )
-            from application.investments.commands.generate_daily_yields import (
-                GenerateDailyYieldCommand, GenerateDailyYieldHandler
-            )
-
             account_repo = SQLAlchemyAccountRepository(db)
             yield_repo = SQLAlchemyInvestmentYieldRepository(db)
             settings_repo = SQLAlchemyInvestmentSettingsRepository(db)
