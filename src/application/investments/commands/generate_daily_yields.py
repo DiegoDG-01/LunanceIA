@@ -6,7 +6,9 @@ from decimal import Decimal
 from domain.objects.enums import InterestType
 from domain.objects.money import Money
 from domain.entities.investment_yield import InvestmentYield
-from domain.repositories.investment_card_repository import InvestmentCardSettingsRepository
+from domain.repositories.investment_card_repository import (
+    InvestmentCardSettingsRepository,
+)
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.investment_yield_repository import InvestmentYieldRepository
 
@@ -17,14 +19,12 @@ logger = logging.getLogger(__name__)
 EXCLUDED_INVESTMENT_TYPES = {"stocks", "etf", "mutual_fund"}
 
 
-
 @dataclass
 class GenerateDailyYieldCommand:
     target_date: date
 
 
 class GenerateDailyYieldHandler:
-
     def __init__(
         self,
         account_repository: AccountRepository,
@@ -61,25 +61,25 @@ class GenerateDailyYieldHandler:
                     continue
 
                 # Idempotency: Does today's performance already exist?
-                existing = await self.investment_yield_repository.get_by_account_and_date(
-                    account_id=account.id, yield_date=today
+                existing = (
+                    await self.investment_yield_repository.get_by_account_and_date(
+                        account_id=account.id, yield_date=today
+                    )
                 )
                 if existing:
                     skipped += 1
                     continue
 
-                if settings.interest_type == InterestType.COMPOUND:
-                    principal = account.current_balance.amount
-                else:
-                    # SIMPLE: usar el principal original (primer registro)
-                    principal = settings.base_principal or account.current_balance.amount
-
                 annual_rate = settings.interest_rate
                 if settings.interest_type == InterestType.COMPOUND:
+                    principal = account.current_balance.amount
                     daily_rate = (1 + annual_rate / Decimal(100)) ** (
                         Decimal(1) / Decimal(365)
                     ) - Decimal(1)
                 else:
+                    principal = (
+                        settings.base_principal or account.current_balance.amount
+                    )
                     daily_rate = annual_rate / Decimal(100) / Decimal(365)
 
                 yield_amount = (principal * daily_rate).quantize(Decimal("0.01"))
@@ -104,10 +104,7 @@ class GenerateDailyYieldHandler:
                 await self.account_repository.update(account)
 
                 processed += 1
-                logger.info(
-                    f"generated daily yield for account {account.id}, "
-                    f"yield={yield_amount}, balance={cumulative_balance}"
-                )
+                logger.info(f"generated daily yield for account {account.id}")
 
             except Exception as e:
                 errors += 1
