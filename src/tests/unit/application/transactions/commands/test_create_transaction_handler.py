@@ -21,7 +21,8 @@ class TestCreateTransactionHandler:
             "account_repo": MagicMock(),
             "transaction_repo": MagicMock(),
             "category_repo": MagicMock(),
-            "bank_repo": MagicMock()
+            "bank_repo": MagicMock(),
+            "investment_settings_repo": MagicMock()
         }
 
     @pytest.fixture
@@ -31,7 +32,8 @@ class TestCreateTransactionHandler:
             mocks["account_repo"],
             mocks["transaction_repo"],
             mocks["category_repo"],
-            mocks["bank_repo"]
+            mocks["bank_repo"],
+            mocks["investment_settings_repo"]
         )
 
     @pytest.mark.asyncio
