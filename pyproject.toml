@@ -6,7 +6,7 @@ requires-python = ">=3.13"
 dependencies = [
     "aiomysql>=0.3.2",
     "alembic>=1.16.1",
-    "fastapi>=0.129.0",
+    "fastapi>=0.133.1",
     "greenlet>=3.3.1",
     "passlib>=1.7.4",
     "pydantic[email]>=2.12.5",
