@@ -827,7 +827,7 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 
 | Endpoint | Límite |
 |----------|--------|
-| `GET /` | **50 requests/minuto** |
+| `GET /` | **10 requests/minuto** |
 | `GET /health` | **5 requests/minuto** |
 
 ### ⚠️ Consideraciones Importantes
