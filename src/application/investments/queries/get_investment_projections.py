@@ -8,12 +8,12 @@ from domain.repositories.account_repository import AccountRepository
 from domain.repositories.investment_card_repository import (
     InvestmentCardSettingsRepository,
 )
-from domain.repositories.investment_yield_repository import InvestmentYieldRepository
 from application.dto.investment_yield_dto import (
     InvestmentProjectionResponseDTO,
     ProjectionDayDTO,
 )
 from shared.exceptions.domain import AccountNotFoundError
+from shared.utils.date import get_year_day_basis
 
 
 @dataclass
@@ -27,11 +27,9 @@ class GetInvestmentProjectionsHandler:
     def __init__(
         self,
         account_repository: AccountRepository,
-        investment_yield_repository: InvestmentYieldRepository,
         investment_card_settings_repository: InvestmentCardSettingsRepository,
     ):
         self.account_repository = account_repository
-        self.investment_yield_repository = investment_yield_repository
         self.investment_card_settings_repository = investment_card_settings_repository
 
     async def handle(
@@ -58,7 +56,7 @@ class GetInvestmentProjectionsHandler:
         else:
             days = 365  # Default 1 year
 
-        days = min(max(0, days), 365)  # Limit 10 years
+        days = min(max(0, days), 3650)  # Limit 10 years
 
         original_principal = current_balance
         if settings and settings.interest_type == InterestType.SIMPLE:
@@ -72,14 +70,15 @@ class GetInvestmentProjectionsHandler:
 
         for i in range(1, days + 1):
             projection_date = today + timedelta(days=i)
+            year_basis = Decimal(get_year_day_basis(projection_date))
 
             if interest_type == InterestType.COMPOUND:
                 daily_rate = (1 + annual_rate / Decimal("100")) ** (
-                    Decimal("1") / Decimal("365")
+                    Decimal("1") / year_basis
                 ) - Decimal("1")
                 principal = balance
             else:
-                daily_rate = annual_rate / Decimal("100") / Decimal("365")
+                daily_rate = annual_rate / Decimal("100") / year_basis
                 principal = original_principal
 
             yield_amount = (principal * daily_rate).quantize(Decimal("0.01"))

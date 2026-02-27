@@ -11,6 +11,7 @@ from domain.repositories.investment_card_repository import (
 )
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.investment_yield_repository import InvestmentYieldRepository
+from shared.utils.date import get_year_day_basis
 
 
 logger = logging.getLogger(__name__)
@@ -71,16 +72,18 @@ class GenerateDailyYieldHandler:
                     continue
 
                 annual_rate = settings.interest_rate
+                year_basis = Decimal(get_year_day_basis(today))
+
                 if settings.interest_type == InterestType.COMPOUND:
                     principal = account.current_balance.amount
                     daily_rate = (1 + annual_rate / Decimal(100)) ** (
-                        Decimal(1) / Decimal(365)
+                        Decimal(1) / year_basis
                     ) - Decimal(1)
                 else:
                     principal = (
                         settings.base_principal or account.current_balance.amount
                     )
-                    daily_rate = annual_rate / Decimal(100) / Decimal(365)
+                    daily_rate = annual_rate / Decimal(100) / year_basis
 
                 yield_amount = (principal * daily_rate).quantize(Decimal("0.01"))
                 cumulative_balance = account.current_balance.amount + yield_amount
