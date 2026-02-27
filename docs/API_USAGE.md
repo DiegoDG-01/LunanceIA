@@ -975,22 +975,14 @@ class LunanceClient:
 
 # Uso
 client = LunanceClient()
-await client.login("user@example.com", "password")
+client.set_token("<auth0_access_token>")
+user = await client.get_me()
 accounts = await client.get_accounts()
 ```
 
-## 📚 Documentación Interactiva
+## 📚 Documentación
 
-Una vez iniciado el servidor, accede a la documentación interactiva:
-
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
-Estas herramientas te permiten:
-- ✅ Probar todos los endpoints directamente
-- ✅ Ver esquemas de request/response
-- ✅ Generar código en múltiples lenguajes
-- ✅ Descargar especificación OpenAPI
+> **Nota**: Swagger UI y ReDoc están deshabilitados por defecto en la configuración actual. Usa esta guía y la colección de Bruno como referencia principal para la API.
 
 ---
 
