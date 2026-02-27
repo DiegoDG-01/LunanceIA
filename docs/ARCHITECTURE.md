@@ -4,31 +4,126 @@
 
 Este documento describe la arquitectura técnica detallada de Lunance IA, incluyendo la estructura interna de cada capa, patrones de diseño implementados, y las decisiones arquitectónicas tomadas para construir un sistema robusto y escalable.
 
+## 🗺️ Visión General Visual
+
+```mermaid
+graph TD
+    subgraph Presentation ["🌐 Capa de Presentación (src/presentation/)"]
+        API[FastAPI Endpoints]
+        Schemas[Pydantic Schemas]
+        Middleware[Exception Handler / Logging]
+    end
+
+    subgraph Application ["⚡ Capa de Aplicación (src/application/)"]
+        subgraph CQRS
+            Commands[Commands & Handlers]
+            Queries[Queries & Handlers]
+        end
+        DTOs[Data Transfer Objects]
+        ServicesApp[Application Services]
+    end
+
+    subgraph Domain ["🎯 Capa de Dominio (src/domain/)"]
+        Entities[Entities - Account, User, Transaction]
+        VO[Value Objects - Money, Settings]
+        RepoInterfaces[Repository Interfaces]
+        DomainServices[Domain Services]
+    end
+
+    subgraph Infrastructure ["🔧 Capa de Infraestructura (src/infrastructure/)"]
+        DB[SQLAlchemy Models]
+        SQLRepo[SQLAlchemy Repositories]
+        ExtServices[External Services - Gemini AI]
+        Security[Auth0 / JWT Security]
+    end
+
+    %% Dependencies
+    Presentation --> Application
+    Application --> Domain
+    Infrastructure --> Domain
+    Presentation -.-> Infrastructure
+```
+
 ## 📁 Estructura Detallada del Proyecto
 
 ### 🎯 Capa de Dominio (`src/domain/`)
 
 La capa de dominio contiene la lógica de negocio pura sin dependencias externas.
 
+```mermaid
+classDiagram
+    class User {
+        +String id
+        +String email
+        +sync_from_auth0()
+    }
+
+    class Account {
+        +String id
+        +String name
+        +AccountType type
+        +Money balance
+        +update_balance(Money)
+        +deactivate()
+    }
+
+    class Transaction {
+        +String id
+        +Money amount
+        +DateTime date
+        +String category_id
+    }
+
+    class Money {
+        <<Value Object>>
+        +Decimal amount
+        +String currency
+        +add(Money)
+        +subtract(Money)
+    }
+
+    User "1" --> "*" Account : owns
+    Account "1" --> "*" Transaction : has
+    Account "*" --> "1" Money : balance
+    Transaction "*" --> "1" Money : amount
+```
+
 ```
 domain/
-├── entities/                   # Entidades de negocio con identidad
+├── entities/                          # Entidades de negocio con identidad
 │   ├── __init__.py
-│   ├── account.py             # Entidad Account con reglas de negocio
-│   ├── user.py                # Entidad User con validaciones
-│   └── transaction.py         # Entidad Transaction con cálculos
-├── objects/                   # Value Objects inmutables
+│   ├── account.py                    # Entidad Account con reglas de negocio
+│   ├── bank.py                       # Entidad Bank (metadatos bancarios)
+│   ├── category.py                   # Entidad Category (clasificación de transacciones)
+│   ├── dashboard.py                  # Entidad Dashboard (resumen financiero agregado)
+│   ├── investment_yield.py           # Entidad InvestmentYield (rendimientos diarios)
+│   ├── subscription.py              # Entidad Subscription (pagos recurrentes)
+│   ├── subscription_charge.py       # Entidad SubscriptionCharge (cargos individuales)
+│   ├── transaction.py               # Entidad Transaction con cálculos
+│   └── user.py                      # Entidad User con validaciones
+├── objects/                          # Value Objects inmutables
 │   ├── __init__.py
-│   ├── money.py              # Value Object Money con validaciones
-│   └── enums.py              # Enumeraciones de negocio (AccountType, etc.)
-├── repositories/              # Interfaces abstractas para persistencia
+│   ├── credit_card_settings.py      # Configuración de tarjetas de crédito
+│   ├── enums.py                     # Enumeraciones de negocio (AccountType, InterestType, etc.)
+│   ├── investment_settings.py       # Configuración de inversiones (tasa, tipo interés, base_principal)
+│   └── money.py                     # Value Object Money con validaciones
+├── repositories/                     # Interfaces abstractas para persistencia
 │   ├── __init__.py
-│   ├── account_repository.py  # Interface para operaciones de Account
-│   ├── user_repository.py     # Interface para operaciones de User
-│   └── transaction_repository.py
-└── services/                  # Servicios de dominio
+│   ├── account_repository.py        # Interface para operaciones de Account
+│   ├── auth_token_repository.py     # Interface para tokens JWT/refresh
+│   ├── bank_repository.py           # Interface para operaciones de Bank
+│   ├── category_repository.py       # Interface para operaciones de Category
+│   ├── credit_card_repository.py    # Interface para configuración de tarjetas de crédito
+│   ├── dashboard_repository.py      # Interface para datos agregados del dashboard
+│   ├── investment_card_repository.py # Interface para configuración de inversiones
+│   ├── investment_yield_repository.py # Interface para rendimientos de inversión
+│   ├── subscription_charge_repository.py # Interface para cargos de suscripción
+│   ├── subscription_repository.py   # Interface para operaciones de Subscription
+│   ├── transaction_repository.py    # Interface para operaciones de Transaction
+│   └── user_repository.py          # Interface para operaciones de User
+└── services/                        # Servicios de dominio
     ├── __init__.py
-    └── account_service.py     # Lógica compleja entre entidades
+    └── account_service.py           # Lógica compleja entre entidades
 ```
 
 #### Características del Dominio:
@@ -36,10 +131,35 @@ domain/
 - **Reglas de negocio centralizadas**: Todas las validaciones en un lugar
 - **Inmutabilidad**: Value Objects son inmutables por diseño
 - **Interfaces puras**: Contratos sin implementación específica
+- **13 repositorios abstractos**: Contratos completos para cada agregado
 
 ### ⚡ Capa de Aplicación (`src/application/`)
 
 Orquesta casos de uso utilizando el patrón CQRS, organizada por feature/dominio.
+
+```mermaid
+sequenceDiagram
+    participant U as Usuario
+    participant P as Presentation (API)
+    participant A as Application (Handler)
+    participant D as Domain (Entity)
+    participant I as Infrastructure (DB)
+
+    U->>P: POST /api/v2/account/
+    P->>P: Validar Schema (Pydantic)
+    P->>A: CreateAccountCommand
+    
+    A->>D: Account.create_new()
+    Note over D: Aplica Reglas de Negocio
+    D-->>A: Entity Instance
+    
+    A->>I: repository.save(entity)
+    I->>I: Convertir a Model SQLAlchemy
+    I-->>A: Saved Entity
+    
+    A-->>P: AccountDTO
+    P-->>U: 201 Created + Response JSON
+```
 
 ```
 application/
@@ -47,7 +167,7 @@ application/
 │   ├── __init__.py
 │   ├── commands/             # Operaciones de escritura de cuentas
 │   │   ├── __init__.py
-│   │   ├── create_account.py      # Crear cuenta
+│   │   ├── create_account.py      # Crear cuenta (+ settings de crédito/inversión)
 │   │   ├── update_account.py      # Actualizar cuenta
 │   │   ├── delete_account.py      # Eliminar cuenta
 │   │   └── state_account.py       # Cambiar estado de cuenta
@@ -59,7 +179,7 @@ application/
 │   ├── __init__.py
 │   ├── commands/             # Operaciones de escritura de transacciones
 │   │   ├── __init__.py
-│   │   ├── create_transaction.py
+│   │   ├── create_transaction.py  # Crear transacción (+ actualiza base_principal en inversiones)
 │   │   ├── update_transaction.py
 │   │   └── delete_transaction.py
 │   └── queries/              # Operaciones de lectura de transacciones
@@ -72,11 +192,30 @@ application/
 │   │   ├── __init__.py
 │   │   ├── create_subscription.py
 │   │   ├── update_subscription.py
-│   │   └── delete_subscription.py
+│   │   ├── delete_subscription.py
+│   │   └── state_subscription.py  # Activar/desactivar suscripción
+│   ├── queries/
+│   │   ├── __init__.py
+│   │   ├── get_subscriptions.py
+│   │   ├── get_subscriptions_by_id.py
+│   │   └── get_subscription_charges.py  # Historial de cargos
+│   └── services/
+│       └── subscription_processor.py    # Procesamiento automático de suscripciones
+├── investments/              # Feature: Gestión de rendimientos de inversión
+│   ├── __init__.py
+│   ├── commands/
+│   │   ├── __init__.py
+│   │   └── generate_daily_yields.py  # Generación diaria de rendimientos (scheduled)
 │   └── queries/
 │       ├── __init__.py
-│       └── get_subscriptions.py
-├── auth/                     # Feature: Autenticación y registro
+│       ├── get_investment_yields.py       # Consultar rendimientos históricos
+│       └── get_investment_projections.py  # Proyecciones de inversión
+├── banks/                    # Feature: Catálogo de bancos
+│   ├── __init__.py
+│   └── queries/
+│       ├── __init__.py
+│       └── get_banks.py
+├── auth/                     # Feature: Autenticación (Auth0)
 │   ├── __init__.py
 │   └── commands/
 │       ├── __init__.py
@@ -96,10 +235,12 @@ application/
 │       └── get_dashboard_summary.py
 ├── dto/                      # Data Transfer Objects (compartidos)
 │   ├── __init__.py
-│   ├── account_dto.py        # DTOs para transferencia de datos
-│   ├── transaction_dto.py
+│   ├── account_dto.py
+│   ├── bank_dto.py
+│   ├── category_dto.py
+│   ├── investment_yield_dto.py
 │   ├── subscription_dto.py
-│   └── category_dto.py
+│   └── transaction_dto.py
 └── interfaces/               # Interfaces de aplicación
     └── __init__.py
 ```
@@ -109,7 +250,8 @@ application/
 - **Separación CQRS**: Comandos (escritura) y queries (lectura) claramente separados
 - **DTOs Centralizados**: Objetos de transferencia compartidos entre features
 - **Handlers**: Cada comando/consulta tiene su handler específico
-- **Use Cases**: Orquestación de entidades de dominio
+- **Services**: Lógica de aplicación compleja (ej. `SubscriptionProcessor` para procesamiento automático)
+- **Scheduled Jobs**: `GenerateDailyYieldHandler` para cálculo diario de rendimientos
 - **Nomenclatura limpia**: Los nombres de archivos no repiten "command" o "query" ya que la carpeta provee el contexto
 
 ### 🔧 Capa de Infraestructura (`src/infrastructure/`)
@@ -120,40 +262,69 @@ Implementa todos los detalles técnicos y servicios externos.
 infrastructure/
 ├── database/                  # Persistencia de datos
 │   ├── __init__.py
-│   ├── connection.py          # Configuración de conexión SQLAlchemy
-│   ├── models/               # Modelos de base de datos
+│   ├── connection.py          # Configuración de conexión SQLAlchemy (async)
+│   ├── models/               # Modelos de base de datos (SQLAlchemy ORM)
 │   │   ├── __init__.py
-│   │   ├── account.py        # Modelo SQLAlchemy para Account
-│   │   ├── user.py           # Modelo SQLAlchemy para User
-│   │   ├── transaction.py    # Modelo SQLAlchemy para Transaction
-│   │   ├── budget.py         # Modelo SQLAlchemy para Budget
-│   │   ├── category.py       # Modelo SQLAlchemy para Category
-│   │   ├── subscription.py   # Modelo SQLAlchemy para Subscription
-│   │   ├── tag.py            # Modelo SQLAlchemy para Tag
-│   │   ├── saving_goal.py    # Modelo SQLAlchemy para SavingGoal
-│   │   ├── reminder.py       # Modelo SQLAlchemy para Reminder
-│   │   └── refresh_token.py  # Modelo SQLAlchemy para RefreshToken
+│   │   ├── account.py        # Modelo Account
+│   │   ├── bank.py           # Modelo Bank
+│   │   ├── budget.py         # Modelo Budget
+│   │   ├── category.py       # Modelo Category
+│   │   ├── credit_card.py    # Modelo CreditCard (settings)
+│   │   ├── investment_account.py  # Modelo InvestmentCard (settings)
+│   │   ├── investment_yield.py    # Modelo InvestmentYield (rendimientos)
+│   │   ├── refresh_token.py  # Modelo RefreshToken
+│   │   ├── reminder.py       # Modelo Reminder
+│   │   ├── saving_goal.py    # Modelo SavingGoal
+│   │   ├── subscription.py   # Modelo Subscription
+│   │   ├── tag.py            # Modelo Tag
+│   │   ├── transaction.py    # Modelo Transaction
+│   │   └── user.py           # Modelo User
 │   └── repositories/         # Implementaciones concretas de repositorios
 │       ├── __init__.py
-│       ├── sqlalchemy_account_repository.py    # Implementación Account
-│       ├── sqlalchemy_user_repository.py       # Implementación User
-│       └── sqlalchemy_transaction_repository.py # Implementación Transaction
+│       ├── sqlalchemy_account_repository.py
+│       ├── sqlalchemy_auth_token_repository.py
+│       ├── sqlalchemy_bank_repository.py
+│       ├── sqlalchemy_category_repository.py
+│       ├── sqlalchemy_credit_card_repository.py
+│       ├── sqlalchemy_dashboard_repository.py
+│       ├── sqlalchemy_investment_card_repository.py
+│       ├── sqlalchemy_investment_yield_repository.py
+│       ├── sqlalchemy_subscription_charge_repository.py
+│       ├── sqlalchemy_subscription_repository.py
+│       ├── sqlalchemy_transaction_repository.py
+│       └── sqlalchemy_user_repository.py
 ├── external_services/         # Integraciones con servicios externos
 │   ├── __init__.py
-│   └── gemini.py             # Cliente para Google Gemini AI
+│   └── gemini.py             # Cliente para Google Gemini AI (extracción de recibos)
 ├── security/                 # Servicios de seguridad
 │   ├── __init__.py
 │   └── auth_service.py       # Autenticación JWT y manejo de tokens
+├── scheduler/                # Tareas programadas
+│   ├── __init__.py
+│   ├── jobs.py               # Definición de jobs (suscripciones, rendimientos)
+│   └── service.py            # SchedulerService (APScheduler wrapper)
+├── logging/                  # Sistema de logging estructurado
+│   ├── __init__.py
+│   ├── context.py            # Request correlation IDs
+│   ├── filters.py            # Filtros de log personalizados
+│   ├── formatters.py         # Formateadores de log
+│   └── providers/            # Proveedores de log
+│       ├── __init__.py
+│       ├── base.py           # Provider base
+│       └── grafana_loki.py   # Integración con Grafana Loki
 └── config/                   # Configuración de aplicación
     ├── __init__.py
-    └── settings.py           # Variables de entorno y configuración
+    ├── logging_config.py     # Configuración centralizada de logging
+    └── settings.py           # Variables de entorno (pydantic-settings)
 ```
 
 #### Características de Infraestructura:
-- **Implementaciones concretas**: De las interfaces definidas en dominio
-- **Adaptadores**: Para servicios externos (Gemini AI)
-- **Configuración**: Manejo centralizado de variables de entorno
-- **Persistencia**: Modelos SQLAlchemy separados de entidades de dominio
+- **Implementaciones concretas**: 13 repositorios SQLAlchemy implementando interfaces del dominio
+- **Adaptadores**: Para servicios externos (Google Gemini AI)
+- **Scheduler**: APScheduler con AsyncIOScheduler para jobs diarios
+- **Logging estructurado**: Correlation IDs, filtros personalizados, integración Grafana Loki
+- **Configuración**: Variables de entorno con pydantic-settings
+- **Persistencia async**: Modelos SQLAlchemy con AsyncSession (aiomysql driver)
 
 ### 🌐 Capa de Presentación (`src/presentation/`)
 
@@ -162,41 +333,63 @@ Expone la aplicación através de API REST.
 ```
 presentation/
 ├── api/
-│   └── v2/                   # API versión 2 con Clean Architecture
+│   └── v2/                        # API versión 2 con Clean Architecture
 │       ├── __init__.py
-│       ├── endpoints/        # Endpoints específicos por dominio
+│       ├── endpoints/             # Endpoints específicos por dominio
 │       │   ├── __init__.py
-│       │   ├── auth.py       # Endpoints de autenticación (me, logout)
-│       │   ├── account.py    # Endpoints CRUD para cuentas
-│       │   ├── transaction.py # Endpoints CRUD para transacciones
-│       │   ├── category.py   # Endpoints para categorías
-│       │   └── dashboard.py  # Endpoint de resumen financiero
-│       └── router.py        # Router principal que agrupa endpoints
-├── schemas/                 # Schemas Pydantic para validación
-│   ├── requests/            # DTOs de entrada (requests)
+│       │   ├── auth.py            # Autenticación (me, logout)
+│       │   ├── account.py         # CRUD cuentas + activación/desactivación
+│       │   ├── transaction.py     # CRUD transacciones + creación desde imagen (IA)
+│       │   ├── subscription.py    # CRUD suscripciones + cargos + activación
+│       │   ├── investment_yield.py # Rendimientos y proyecciones de inversión
+│       │   ├── bank.py            # Catálogo de bancos
+│       │   ├── category.py        # Catálogo de categorías
+│       │   └── dashboard.py       # Resumen financiero
+│       └── router.py             # Router principal que agrupa endpoints
+├── schemas/                      # Schemas Pydantic para validación
+│   ├── requests/                 # DTOs de entrada (requests)
 │   │   ├── __init__.py
-│   │   ├── auth.py         # Schemas para requests de auth
-│   │   ├── account.py      # Schemas para requests de cuenta
-│   │   └── transaction.py  # Schemas para requests de transacción
-│   └── responses/           # DTOs de salida (responses)
+│   │   ├── auth.py              # Schemas para requests de auth
+│   │   ├── account.py           # Schemas para requests de cuenta
+│   │   ├── subscription.py     # Schemas para requests de suscripción
+│   │   └── transaction.py      # Schemas para requests de transacción
+│   └── responses/                # DTOs de salida (responses)
 │       ├── __init__.py
-│       ├── auth.py         # Schemas para responses de auth
-│       ├── account.py      # Schemas para responses de cuenta
-│       └── transaction.py  # Schemas para responses de transacción
-├── dependencies/            # Inyección de dependencias FastAPI
+│       ├── auth.py              # Schemas para responses de auth
+│       ├── account.py           # Schemas para responses de cuenta
+│       ├── bank.py              # Schemas para responses de banco
+│       ├── category.py          # Schemas para responses de categoría
+│       ├── error.py             # Schema estandarizado de errores
+│       ├── gemini.py            # Schemas para responses de Gemini AI
+│       ├── investment_yield.py  # Schemas para rendimientos/proyecciones
+│       ├── subscription.py      # Schemas para responses de suscripción
+│       └── transaction.py       # Schemas para responses de transacción
+├── dependencies/                 # Inyección de dependencias FastAPI
 │   ├── __init__.py
-│   ├── auth_deps.py        # Dependencias de autenticación
-│   └── service_deps.py     # Dependencias de servicios
-└── middleware/              # Middleware HTTP
+│   ├── auth_deps.py             # Dependencias de autenticación (JWT, usuario activo)
+│   ├── auth_handler_deps.py     # Factories de handlers de auth
+│   ├── repositories.py          # Factories de repositorios
+│   ├── services.py              # Factories de servicios
+│   ├── account_deps.py          # Factories de handlers de cuentas
+│   ├── transaction_deps.py      # Factories de handlers de transacciones
+│   ├── subscription_deps.py     # Factories de handlers de suscripciones
+│   ├── investment_yield_deps.py # Factories de handlers de inversiones
+│   ├── bank_deps.py             # Factories de handlers de bancos
+│   ├── category_deps.py         # Factories de handlers de categorías
+│   └── dashboard_deps.py        # Factories de handlers de dashboard
+└── middleware/                   # Middleware HTTP
     ├── __init__.py
-    └── exception_handler.py # Manejador global de excepciones estandarizado
+    ├── exception_handler.py     # Manejador global de excepciones estandarizado
+    └── request_logging.py       # Middleware de logging de requests HTTP
 ```
 
 #### Características de Presentación:
-- **API REST**: Endpoints organizados por dominio
+- **API REST**: 8 módulos de endpoints organizados por dominio
 - **Validación**: Schemas Pydantic para entrada y salida
-- **Dependency Injection**: Sistema de DI de FastAPI
+- **Dependency Injection**: Sistema granular de DI de FastAPI (un archivo por feature)
+- **Rate Limiting**: Protección por endpoint con slowapi
 - **Versionado**: API v2 para nueva arquitectura
+- **Middleware**: Logging de requests + manejo estandarizado de excepciones
 
 ### 🔄 Recursos Compartidos (`src/shared/`)
 
@@ -206,56 +399,49 @@ Utilidades y recursos transversales a todas las capas.
 shared/
 ├── exceptions/              # Sistema de excepciones personalizado
 │   ├── __init__.py
-│   ├── base.py             # Excepciones base del sistema
-│   ├── domain.py           # Excepciones específicas de dominio
-│   └── application.py      # Excepciones de casos de uso
+│   ├── base.py             # Excepciones base del sistema (LunanceException)
+│   ├── domain.py           # Excepciones de dominio (NotFound, InsufficientFunds, etc.)
+│   └── application.py      # Excepciones de aplicación (CommandValidation, JWT, etc.)
 ├── constants/              # Constantes de negocio
 │   ├── __init__.py
 │   ├── business.py         # Constantes de reglas de negocio
+│   ├── error_messages.py   # ⚠️ DEPRECADO - usar validation_messages.py
 │   └── validation_messages.py # Mensajes de validación y traducción
 ├── i18n/                   # Internacionalización
 │   ├── __init__.py
-│   └── messages.py         # Sistema de traducción de mensajes
+│   └── messages.py         # Sistema de traducción de mensajes (es/en)
 ├── utils/                  # Utilidades generales
 │   ├── __init__.py
 │   ├── money.py           # Utilidades para manejo monetario
 │   ├── date.py            # Utilidades para fechas
-│   ├── language.py        # Detección de idioma del usuario
-│   ├── prompts.py         # Prompts para IA
+│   ├── language.py        # Detección de idioma del usuario (Accept-Language)
+│   ├── prompts.py         # Prompts para Google Gemini AI
 │   └── validations.py     # Funciones de validación comunes
 └── validators/             # Validadores de negocio
     ├── __init__.py
-    └── business.py         # Validadores de reglas de negocio
+    └── business.py         # UserValidator, EmailValidator, PasswordValidator
 ```
 
 ### 🧪 Testing (`src/tests/`)
 
-Estrategia completa de testing por capas.
+Estrategia de testing por capas.
 
 ```
 tests/
 ├── conftest.py             # Configuración global de pytest
 ├── test_settings.py        # Configuración específica para tests
+├── TEST.md                 # Documentación de testing
 ├── fixtures/               # Fixtures reutilizables
 │   ├── __init__.py
 │   ├── database.py         # Fixtures de base de datos
 │   ├── users.py           # Fixtures de usuarios
 │   └── accounts.py        # Fixtures de cuentas
 ├── unit/                  # Pruebas unitarias (sin dependencias externas)
-│   ├── __init__.py
 │   ├── domain/            # Tests de la capa de dominio
-│   │   ├── __init__.py
-│   │   └── test_money_value_object.py  # Test del Value Object Money
 │   ├── application/       # Tests de casos de uso
-│   │   └── __init__.py
 │   └── infrastructure/    # Tests de implementaciones
-│       └── __init__.py
 ├── integration/           # Pruebas de integración (con BD)
-│   ├── __init__.py
-│   ├── test_account_endpoints.py      # Tests de endpoints de cuenta
-│   └── test_auth_endpoints.py         # Tests de endpoints de auth
 └── e2e/                   # Pruebas end-to-end (flujos completos)
-    └── __init__.py
 ```
 
 ## 🔄 Patrones de Diseño Implementados
@@ -283,6 +469,39 @@ tests/
 ### 2. CQRS (Command Query Responsibility Segregation)
 
 Separación entre operaciones de lectura y escritura, organizadas por feature:
+
+```mermaid
+flowchart LR
+    subgraph Presentation
+        R[API Router]
+    end
+
+    subgraph Application
+        subgraph Escritura [Commands]
+            C1[CreateTransaction]
+            C2[UpdateAccount]
+            CH[Command Handlers]
+        end
+        
+        subgraph Lectura [Queries]
+            Q1[GetDashboardSummary]
+            Q2[GetUserAccounts]
+            QH[Query Handlers]
+        end
+    end
+
+    subgraph Domain
+        Repo[(Repository Interfaces)]
+    end
+
+    R --> C1 & C2
+    C1 & C2 --> CH
+    CH --> Repo
+
+    R --> Q1 & Q2
+    Q1 & Q2 --> QH
+    QH --> Repo
+```
 
 ```python
 # application/accounts/commands/create_account.py
