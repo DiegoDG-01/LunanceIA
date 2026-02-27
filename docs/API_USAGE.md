@@ -215,6 +215,15 @@ DELETE /api/v2/account/{account_id}
 }
 ```
 
+#### Activar/Desactivar Cuenta
+```bash
+PATCH /api/v2/account/{account_uuid}/status/
+```
+
+Alterna el estado activo/inactivo de la cuenta.
+
+**Response:** Misma estructura que obtener cuenta por ID.
+
 ### 💰 Transacciones - `/api/v2/transaction/`
 
 #### Listar Transacciones
@@ -942,16 +951,19 @@ class LunanceClient:
     def __init__(self, base_url="http://localhost:8000", token=None):
         self.base_url = base_url
         self.token = token
-        self.client = httpx.Client()
+        self.client = httpx.AsyncClient()
 
-    async def login(self, email: str, password: str):
-        response = await self.client.post(
-            f"{self.base_url}/api/v2/auth/login",
-            json={"email": email, "password": password}
+    def set_token(self, auth0_token: str):
+        """Configura el token de Auth0 obtenido desde el frontend."""
+        self.token = auth0_token
+
+    async def get_me(self):
+        headers = {"Authorization": f"Bearer {self.token}"}
+        response = await self.client.get(
+            f"{self.base_url}/api/v2/auth/me",
+            headers=headers
         )
-        data = response.json()
-        self.token = data["access_token"]
-        return data
+        return response.json()
 
     async def get_accounts(self):
         headers = {"Authorization": f"Bearer {self.token}"}
