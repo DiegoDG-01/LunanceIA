@@ -1,5 +1,4 @@
 from datetime import date
-from decimal import Decimal
 from typing import Optional, List
 
 from sqlalchemy import and_, asc, desc, select
@@ -13,7 +12,6 @@ from infrastructure.database.models.investment_yield import InvestmentYieldModel
 class SQLAlchemyInvestmentYieldRepository(InvestmentYieldRepository):
     def __init__(self, db: AsyncSession):
         self.db = db
-
 
     @staticmethod
     def _model_to_entity(model: InvestmentYieldModel) -> InvestmentYield:
@@ -82,7 +80,8 @@ class SQLAlchemyInvestmentYieldRepository(InvestmentYieldRepository):
         return self._model_to_entity(model) if model else None
 
     async def get_first_by_account_id(
-        self, account_id: int,
+        self,
+        account_id: int,
     ) -> Optional[InvestmentYield]:
         stmt = (
             select(InvestmentYieldModel)

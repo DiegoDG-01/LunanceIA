@@ -33,6 +33,7 @@ class InvestmentCardSettingsModel(Base):
     lock_period_end_date = Column(Date, nullable=False)
     maturity_date = Column(Date, nullable=True)
     early_withdrawal_penalty = Column(DECIMAL(5, 2), nullable=True)
+    base_principal = Column(DECIMAL(15, 2), nullable=True)
 
     __table_args__ = (
         Index("idx_lock_period_end_date", "lock_period_end_date"),

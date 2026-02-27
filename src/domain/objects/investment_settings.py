@@ -14,6 +14,7 @@ class InvestmentCardSettings:
     lock_period_end_date: Optional[date] = None
     maturity_date: Optional[date] = None
     early_withdrawal_penalty: Optional[Decimal] = None
+    base_principal: Optional[Decimal] = None
 
     def __post_init__(self):
         if self.interest_rate < 0:
