@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from domain.objects.money import Money
 from domain.entities.transaction import TransactionType
-from shared.exceptions.domain import TransactionNotFoundError
+from shared.exceptions.domain import TransactionNotFoundError, AccountNotFoundError
 from application.dto.transaction_dto import TransactionResponseDTO
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.transaction_repository import TransactionRepository
@@ -39,6 +39,9 @@ class UpdateTransactionCommandHandler:
             raise TransactionNotFoundError(command.transaction_uuid)
 
         account = await self.account_repository.get_by_id(transaction.account_id)
+
+        if not account:
+            raise AccountNotFoundError(command.user_id)
 
         # 1. REVERTIR el efecto de la transacción original
         if transaction.transaction_type == TransactionType.EXPENSE:

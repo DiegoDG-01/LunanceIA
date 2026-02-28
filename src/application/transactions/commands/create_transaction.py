@@ -6,7 +6,10 @@ from datetime import date
 from domain.objects.enums import AccountType
 from domain.objects.money import Money
 from domain.entities.transaction import Transaction
-from shared.exceptions.domain import AccountNotFoundError
+from shared.exceptions.domain import (
+    AccountNotFoundError,
+    InvestmentSettingsNotFoundError,
+)
 from shared.exceptions.domain import UserNotFoundError
 from domain.repositories.user_repository import UserRepository
 from domain.repositories.account_repository import AccountRepository
@@ -80,6 +83,9 @@ class CreateTransactionHandler:
                 settings = await self.investment_settings_repository.get_by_account_id(
                     account_id=account.id
                 )
+                if not settings:
+                    raise InvestmentSettingsNotFoundError(transaction.transaction_type)
+
                 updated_settings = dataclasses.replace(
                     settings,
                     base_principal=(

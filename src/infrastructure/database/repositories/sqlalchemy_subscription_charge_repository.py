@@ -16,6 +16,7 @@ from infrastructure.database.models import (
     CategoryModel,
     AccountModel,
 )
+from shared.exceptions.domain import SubscriptionNotFoundError
 
 
 class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
@@ -61,6 +62,9 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
         )
         result = await self.db.execute(stmt)
         model = result.scalar_one_or_none()
+
+        if not model:
+            raise SubscriptionNotFoundError(charge.uuid)
 
         model.subscription_id = charge.subscription_id
         model.charge_date = charge.charge_date

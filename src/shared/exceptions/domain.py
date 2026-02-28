@@ -121,6 +121,23 @@ class InvalidCurrencyError(ValidationError):
         super().__init__(f"Moneda inválida: {currency}")
 
 
+class InvestmentSettingsNotFoundError(NotFoundError):
+    def __init__(self, investment_uuid: str):
+        super().__init__(f"Investment con UUID {investment_uuid} no encontrada")
+
+
+class CreditCardSettingsNotFoundError(NotFoundError):
+    def __init__(self, credit_card_uuid: str):
+        super().__init__(f"Credit Card Setting para {credit_card_uuid} no encontrada")
+
+
+class InvalidAccountSettingsError(BusinessRuleError):
+    def __init__(self, type_account: str):
+        super().__init__(
+            f"Los Settings para el tipo cuenta son invalidos ({type_account}) "
+        )
+
+
 class CurrencyMismatchError(ValidationError):
     """Las monedas no coinciden."""
 

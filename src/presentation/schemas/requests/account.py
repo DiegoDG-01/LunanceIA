@@ -4,6 +4,7 @@ from typing import Optional
 from datetime import date
 
 from domain.objects.enums import AccountType
+from shared.exceptions.domain import InvalidAccountSettingsError
 
 
 class CreditCardSettingsRequest(BaseModel):
@@ -45,16 +46,20 @@ class CreateAccountRequest(BaseModel):
     @classmethod
     def validate_credit_card_settings(cls, v, values):
         if v and values.data.get("account_type") != AccountType.CREDIT_CARD:
-            raise ValueError("Credit card settings can only be set for credit accounts")
+            raise InvalidAccountSettingsError(
+                "Credit card settings can only be set for credit cards"
+            )
+            # raise ValueError("Credit card settings can only be set for credit accounts")
         return v
 
     @field_validator("investment_settings")
     @classmethod
     def validate_investment_settings(cls, v, values):
         if v and values.data.get("account_type") != AccountType.INVESTMENT:
-            raise ValueError(
-                "Investment settings can only be set for investment accounts"
+            raise InvalidAccountSettingsError(
+                "Investment settings can only be set for investments"
             )
+            # raise ValueError("Investment settings can only be set for investment accounts")
         return v
 
 

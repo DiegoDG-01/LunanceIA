@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.account_repository import AccountRepository
 
-from shared.exceptions.domain import TransactionNotFoundError
+from shared.exceptions.domain import TransactionNotFoundError, AccountNotFoundError
 
 
 @dataclass
@@ -30,6 +30,9 @@ class DeleteTransactionHandler:
             raise TransactionNotFoundError(command.uuid)
 
         account = await self.account_repository.get_by_id(transaction.account_id)
+
+        if not account:
+            raise AccountNotFoundError(command.user_id)
 
         if transaction.is_expense():
             new_balance = account.current_balance.add(transaction.amount)

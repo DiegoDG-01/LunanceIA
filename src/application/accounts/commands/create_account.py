@@ -13,6 +13,11 @@ from domain.repositories.bank_repository import BankRepository
 from domain.repositories.user_repository import UserRepository
 from domain.objects.money import Money
 from application.dto.account_dto import CreateAccountDTO, AccountResponseDTO
+from shared.exceptions.domain import (
+    InvalidAccountSettingsError,
+    UserNotFoundError,
+    UserInactiveError,
+)
 
 
 @dataclass
@@ -53,18 +58,16 @@ class CreateAccountHandler:
         user = await self.user_repository.get_by_id(dto.user_id)
 
         if not user:
-            raise ValueError("User not found")
+            raise UserNotFoundError()
 
         if not user.is_active:
-            raise ValueError("User is inactive")
+            raise UserInactiveError()
 
         if dto.credit_card_settings and dto.account_type != AccountType.CREDIT_CARD:
-            raise ValueError("Credit card settings can only be set for credit accounts")
+            raise InvalidAccountSettingsError(AccountType.CREDIT_CARD)
 
         if dto.investment_settings and dto.account_type != AccountType.INVESTMENT:
-            raise ValueError(
-                "Investment settings can only be set for investment accounts"
-            )
+            raise InvalidAccountSettingsError(AccountType.INVESTMENT)
 
         # Create entity to domain
         initial_balance = Money(amount=dto.initial_balance, currency=dto.currency)

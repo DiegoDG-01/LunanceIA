@@ -10,7 +10,7 @@ from domain.objects.enums import AccountType
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.credit_card_repository import CreditCardSettingsRepository
 from domain.repositories.bank_repository import BankRepository
-from shared.exceptions.domain import AccountNotFoundError
+from shared.exceptions.domain import AccountNotFoundError, InvalidAccountSettingsError
 from domain.objects.credit_card_settings import CreditCardSettings
 from domain.objects.investment_settings import InvestmentCardSettings
 
@@ -46,9 +46,7 @@ class UpdateAccountSettingsHandler:
 
         if command.credit_card_settings:
             if account.account_type != AccountType.CREDIT_CARD:
-                raise ValueError(
-                    "Credit card settings can only be set for credit accounts"
-                )
+                raise InvalidAccountSettingsError(command.account_uuid)
 
             cc_settings = CreditCardSettings(
                 billing_cycle_day=command.credit_card_settings.billing_cycle_day,
@@ -70,6 +68,9 @@ class UpdateAccountSettingsHandler:
                 )
 
         if command.investment_settings:
+            if account.account_type != AccountType.INVESTMENT:
+                raise InvalidAccountSettingsError(command.account_uuid)
+
             inv_settings = InvestmentCardSettings(
                 investment_type=command.investment_settings.investment_type,
                 interest_rate=command.investment_settings.interest_rate,
