@@ -41,7 +41,7 @@ from presentation.schemas.requests.subscription import (
     CreateSubscriptionRequest,
     UpdateSubscriptionRequest,
 )
-from presentation.dependencies.auth_deps import get_current_user
+from presentation.dependencies.auth_deps import get_current_active_user
 from presentation.dependencies import (
     get_create_subscription_handler,
     get_subscriptions_handler,
@@ -65,7 +65,7 @@ async def get_subscriptions(
     active_only: bool = Query(False, description="Solo suscripciones activas"),
     limit: int = Query(100, ge=1, le=1000, description="Máximo de resultados"),
     offset: int = Query(0, ge=0, description="Offset para paginación"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     handler: GetSubscriptionsHandler = Depends(get_subscriptions_handler),
 ):
     query = GetSubscriptionsQuery(
@@ -89,7 +89,7 @@ async def get_subscription_charges(
     request: Request,
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     handler: GetSubscriptionChargesHandler = Depends(get_subscription_charges_handler),
 ):
     """
@@ -110,7 +110,7 @@ async def get_subscription_charges(
 async def get_subscription(
     request: Request,
     subscription_uuid: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     handler: GetSubscriptionsByIdHandler = Depends(get_subscription_by_id_handler),
 ):
     query = GetSubscriptionsByIdQuery(
@@ -128,7 +128,7 @@ async def get_subscription(
 async def create_subscription(
     request: Request,
     subscription_request: CreateSubscriptionRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     handler: CreateSubscriptionHandler = Depends(get_create_subscription_handler),
 ):
     """
@@ -165,7 +165,7 @@ async def update_subscription(
     request: Request,
     subscription_uuid: str,
     subscription_request: UpdateSubscriptionRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     handler: UpdateSubscriptionHandler = Depends(get_update_subscription_handler),
 ):
     command = UpdateSubscriptionCommand(
@@ -183,7 +183,7 @@ async def update_subscription(
 async def activate_subscription(
     request: Request,
     subscription_uuid: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     handler: StateSubscriptionHandler = Depends(get_state_subscription_handler),
 ):
     command = StateSubscriptionCommand(
@@ -199,7 +199,7 @@ async def activate_subscription(
 async def delete_subscription(
     request: Request,
     subscription_uuid: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     handler: DeleteSubscriptionHandler = Depends(get_delete_subscription_handler),
 ):
     command = DeleteSubscriptionCommand(

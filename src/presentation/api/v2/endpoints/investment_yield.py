@@ -5,17 +5,21 @@ from typing import List, Optional
 
 from domain.entities.user import User
 from application.investments.queries.get_investment_yields import (
-    GetInvestmentYieldsQuery, GetInvestmentYieldsHandler
+    GetInvestmentYieldsQuery,
+    GetInvestmentYieldsHandler,
 )
 from application.investments.queries.get_investment_projections import (
-    GetInvestmentProjectionsQuery, GetInvestmentProjectionsHandler
+    GetInvestmentProjectionsQuery,
+    GetInvestmentProjectionsHandler,
 )
 from presentation.schemas.responses.investment_yield import (
-    InvestmentYieldResponse, InvestmentProjectionResponse
+    InvestmentYieldResponse,
+    InvestmentProjectionResponse,
 )
-from presentation.dependencies.auth_deps import get_current_user
+from presentation.dependencies.auth_deps import get_current_active_user
 from presentation.dependencies.investment_yield_deps import (
-    get_investment_yields_handler, get_investment_projections_handler
+    get_investment_yields_handler,
+    get_investment_projections_handler,
 )
 
 router = APIRouter()
@@ -27,9 +31,11 @@ limiter = Limiter(key_func=get_remote_address)
 async def get_investment_yields(
     request: Request,
     account_id: str,
-    limit: int = Query(365, ge=1, le=1825, description="Máximo de registros (default 1 año)"),
+    limit: int = Query(
+        365, ge=1, le=1825, description="Máximo de registros (default 1 año)"
+    ),
     offset: int = Query(0, ge=0),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     handler: GetInvestmentYieldsHandler = Depends(get_investment_yields_handler),
 ):
     query = GetInvestmentYieldsQuery(
@@ -47,9 +53,16 @@ async def get_investment_yields(
 async def get_investment_projections(
     request: Request,
     account_id: str,
-    days: Optional[int] = Query(None, ge=1, le=3650, description="Días a proyectar. Si no se especifica, proyecta hasta maturity_date (o 365 días)."),
-    current_user: User = Depends(get_current_user),
-    handler: GetInvestmentProjectionsHandler = Depends(get_investment_projections_handler),
+    days: Optional[int] = Query(
+        None,
+        ge=1,
+        le=3650,
+        description="Días a proyectar. Si no se especifica, proyecta hasta maturity_date (o 365 días).",
+    ),
+    current_user: User = Depends(get_current_active_user),
+    handler: GetInvestmentProjectionsHandler = Depends(
+        get_investment_projections_handler
+    ),
 ):
     query = GetInvestmentProjectionsQuery(
         account_uuid=account_id,
