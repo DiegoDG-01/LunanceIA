@@ -30,7 +30,7 @@ class AccountRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_active_by_user(self, user_uuid: str) -> List[Account]:
+    async def get_active_by_user(self, user_id: int) -> List[Account]:
         """Get all active accounts by user uuid"""
         pass
 

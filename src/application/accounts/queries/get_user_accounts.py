@@ -37,7 +37,7 @@ class GetUserAccountsHandler:
     async def handle(self, query: GetUserAccountsQuery) -> List[AccountResponseDTO]:
         """Ejecuta la query de obtener cuentas."""
         if query.only_active:
-            accounts = await self.account_repository.get_active_by_user(query.user_uuid)
+            accounts = await self.account_repository.get_active_by_user(query.user_id)
         else:
             accounts = await self.account_repository.get_by_user_id(query.user_id)
 
