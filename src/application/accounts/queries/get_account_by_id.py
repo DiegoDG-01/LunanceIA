@@ -3,7 +3,11 @@ from typing import Optional
 
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.bank_repository import BankRepository
-from application.dto.account_dto import AccountResponseDTO, CreditCardSettingsDTO
+from application.dto.account_dto import (
+    AccountResponseDTO,
+    CreditCardSettingsDTO,
+    InvestmentCardSettingsDTO,
+)
 
 from shared.exceptions.domain import AccountNotFoundError
 
@@ -46,7 +50,7 @@ class GetAccountByIdHandler:
             )
 
         if account.investment_settings:
-            inv_settings_dto = CreditCardSettingsDTO(
+            inv_settings_dto = InvestmentCardSettingsDTO(
                 investment_type=account.investment_settings.investment_type,
                 interest_rate=account.investment_settings.interest_rate,
                 lock_period_end_date=account.investment_settings.lock_period_end_date,
