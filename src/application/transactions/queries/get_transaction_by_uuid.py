@@ -16,8 +16,10 @@ class GetTransactionByUuidHandler:
         self.transaction_repository = transaction_repository
 
     async def handle(self, query: GetTransactionByUuidQuery) -> TransactionResponseDTO:
-        transaction = self.transaction_repository.get_by_uuid_with_account_details(
-            query.uuid, query.user_id
+        transaction = (
+            await self.transaction_repository.get_by_uuid_with_account_details(
+                query.uuid, query.user_id
+            )
         )
 
         if not transaction:

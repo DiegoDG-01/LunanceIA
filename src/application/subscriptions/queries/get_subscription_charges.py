@@ -21,10 +21,10 @@ class GetSubscriptionChargesHandler:
     ):
         self.subscription_charge_repository = subscription_charge_repository
 
-    def handle(
+    async def handle(
         self, query: GetSubscriptionChargesQuery
     ) -> List[SubscriptionChargeDetailResponseDTO]:
-        charges = self.subscription_charge_repository.get_by_user_with_details(
+        charges = await self.subscription_charge_repository.get_by_user_with_details(
             user_id=query.user_id
         )
 

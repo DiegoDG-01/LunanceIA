@@ -102,7 +102,7 @@ async def get_subscription_charges(
         offset=offset,
     )
 
-    charges = handler.handle(query)
+    charges = await handler.handle(query)
     return [SubscriptionChargeDetailResponse(**charge.__dict__) for charge in charges]
 
 
@@ -206,5 +206,5 @@ async def delete_subscription(
         subscription_uuid=subscription_uuid, user_id=current_user.id
     )
 
-    handler.handle(command)
+    await handler.handle(command)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

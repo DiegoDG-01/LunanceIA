@@ -18,15 +18,15 @@ class DeleteSubscriptionHandler:
     ):
         self.subscription_repository = subscription_repository
 
-    def handle(self, command: DeleteSubscriptionCommand):
-        subscription = self.subscription_repository.get_by_uuid_and_user_id(
+    async def handle(self, command: DeleteSubscriptionCommand):
+        subscription = await self.subscription_repository.get_by_uuid_and_user_id(
             subscription_uuid=command.subscription_uuid, user_id=command.user_id
         )
 
         if not subscription:
             raise SubscriptionNotFoundError(subscription_uuid=command.subscription_uuid)
 
-        deleted = self.subscription_repository.delete(
+        deleted = await self.subscription_repository.delete(
             uuid=command.subscription_uuid, user_id=command.user_id
         )
 

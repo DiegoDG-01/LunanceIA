@@ -29,7 +29,7 @@ class GetSubscriptionsByIdHandler:
     async def handle(
         self, query: GetSubscriptionsByIdQuery
     ) -> Optional[SubscriptionResponseDTO]:
-        subscription = self.subscription_repository.get_by_uuid_and_user_id(
+        subscription = await self.subscription_repository.get_by_uuid_and_user_id(
             subscription_uuid=query.subscription_uuid, user_id=query.user_id
         )
 
