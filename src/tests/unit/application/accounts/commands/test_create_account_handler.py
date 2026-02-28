@@ -8,6 +8,7 @@ from domain.entities.bank import Bank
 from domain.objects.money import Money
 from domain.objects.enums import AccountType
 from decimal import Decimal
+from shared.exceptions.domain import UserNotFoundError, UserInactiveError
 
 
 @pytest.mark.unit
@@ -146,7 +147,7 @@ class TestCreateAccountHandler:
         )
         command = CreateAccountCommand(dto=dto)
 
-        with pytest.raises(ValueError, match="User not found"):
+        with pytest.raises(UserNotFoundError):
             await handler.handle(command)
 
     @pytest.mark.asyncio
@@ -166,5 +167,5 @@ class TestCreateAccountHandler:
         )
         command = CreateAccountCommand(dto=dto)
 
-        with pytest.raises(ValueError, match="User is inactive"):
+        with pytest.raises(UserInactiveError):
             await handler.handle(command)
