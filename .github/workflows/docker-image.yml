@@ -93,18 +93,9 @@ jobs:
           cache-from: type=registry,ref=diegodg01/lunance-api:buildcache
           cache-to: type=registry,ref=diegodg01/lunance-api:buildcache,mode=max
 
-      - name: Trigger n8n webhook for deployment
+      - name: Trigger Dokploy deployment
         if: success()
         run: |
-          # Extraer solo el primer tag (dev)
-          IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"image\": \"${IMAGE_TAG}\",
-              \"commit_sha\": \"${{ github.sha }}\",
-              \"branch\": \"${{ github.ref_name }}\",
-              \"repository\": \"${{ github.repository }}\"
-            }" \
-            ${{ secrets.N8N_WEBHOOK_URL }}
+          curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            http://192.168.1.222:3000/api/deploy/5ARMUu6CW4cVJZjlD7Gc0
