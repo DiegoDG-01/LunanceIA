@@ -1,7 +1,10 @@
+import json
+
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 
 from domain.entities.user import User
 from shared.exceptions.domain import UserInactiveError
@@ -11,7 +14,7 @@ from infrastructure.database.repositories.sqlalchemy_user_repository import (
 )
 from infrastructure.config.settings import settings
 from shared.exceptions.base import UnauthorizedError
-from shared.exceptions.application import JWTValidationError
+from shared.exceptions.application import JWTValidationError, ExternalServiceError, RepositoryError
 
 import httpx
 from cachetools import TTLCache, cached
@@ -22,15 +25,26 @@ jwks_cache = TTLCache(maxsize=1, ttl=3600)
 
 @cached(cache=jwks_cache)
 def get_auth_jwtks():
-    url = f"https://{settings.AUTH0_DOMAIN}/.well-known/jwks.json"
-    return httpx.get(url).json()
+    try:
+        url = f"https://{settings.AUTH0_DOMAIN}/.well-known/jwks.json"
+        return httpx.get(url).json()
+    except httpx.HTTPError as e:
+        raise ExternalServiceError("Auth0", "jwks", str(e))
+    except json.JSONDecodeError as e:
+        raise ExternalServiceError("Auth0", "jwks", str(e))
 
 
-def get_user_ifno(access_token: str) -> dict:
-    url = f"https://{settings.AUTH0_DOMAIN}/userinfo"
-    headers = {"Authorization": f"Bearer {access_token}"}
-    response = httpx.get(url, headers=headers)
-    return response.json()
+def get_user_info(access_token: str) -> dict:
+    try:
+        url = f"https://{settings.AUTH0_DOMAIN}/userinfo"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        response = httpx.get(url, headers=headers)
+
+        return response.json()
+    except httpx.HTTPError as e:
+        raise ExternalServiceError("Auth0", "user_info", str(e))
+    except json.JSONDecodeError as e:
+        raise ExternalServiceError("Auth0", "user_info", str(e))
 
 
 def validate_token(token: str) -> dict:
@@ -66,8 +80,6 @@ def validate_token(token: str) -> dict:
 
     except JWTError:
         raise JWTValidationError("Invalid token")
-    except Exception:
-        raise UnauthorizedError("Authentication failed")
 
 
 async def get_current_user(
@@ -88,7 +100,7 @@ async def get_current_user(
         user = await user_repo.get_by_auth0_uuid(auth0_user_uuid)
 
         if user is None:
-            user_info = get_user_ifno(token)
+            user_info = get_user_info(token)
             new_user = User(
                 auth0_id=auth0_user_uuid,
                 name=user_info.get("name"),
@@ -101,10 +113,8 @@ async def get_current_user(
 
         return user
 
-    except JWTValidationError:
-        raise JWTValidationError("Invalid token")
-    except Exception:
-        raise UnauthorizedError("Authentication failed")
+    except SQLAlchemyError as e:
+        raise RepositoryError("get_or_create", "User", str(e))
 
 
 async def get_current_active_user(
