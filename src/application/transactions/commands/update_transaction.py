@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from domain.objects.money import Money
 from domain.entities.transaction import TransactionType
-from shared.exceptions.domain import TransactionNotFoundError, AccountNotFoundError
+from shared.exceptions.domain import TransactionNotFoundError, AccountNotFoundError, InvalidTransactionTypeError
 from application.dto.transaction_dto import TransactionResponseDTO
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.transaction_repository import TransactionRepository
@@ -64,9 +64,7 @@ class UpdateTransactionCommandHandler:
             try:
                 transaction.transaction_type = TransactionType(command.transaction_type)
             except ValueError:
-                raise ValueError(
-                    f"Invalid transaction type: {command.transaction_type}"
-                )
+                raise InvalidTransactionTypeError(command.transaction_type)
 
         if command.amount is not None:
             transaction.amount = Money(amount=command.amount, currency="MXN")
@@ -88,21 +86,13 @@ class UpdateTransactionCommandHandler:
             account.current_balance = account.current_balance.add(transaction.amount)
 
         # 4. GUARDAR ambos: transacción y cuenta
-        try:
-            await self.transaction_repository.update(transaction)
-            await self.account_repository.update(account)
-        except Exception as e:
-            raise TransactionNotFoundError(f"Error updating transaction: {e}")
+        await self.transaction_repository.update(transaction)
+        await self.account_repository.update(account)
 
         # 5. OBTENER resultado para respuesta
-        try:
-            result = await self.transaction_repository.get_by_uuid_with_account_details(
-                transaction.uuid, command.user_id
-            )
-        except Exception as e:
-            raise TransactionNotFoundError(
-                f"Failed to retrieve updated transaction: {str(e)}"
-            )
+        result = await self.transaction_repository.get_by_uuid_with_account_details(
+            transaction.uuid, command.user_id
+        )
 
         if not result:
             raise TransactionNotFoundError(command.transaction_uuid)
