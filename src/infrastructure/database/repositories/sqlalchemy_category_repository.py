@@ -47,7 +47,7 @@ class SQLAlchemyCategoryRepository(CategoryRepository):
         )
 
         self.db.add(category_model)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(category_model)
 
         return self._model_to_entity(category_model)
@@ -63,7 +63,7 @@ class SQLAlchemyCategoryRepository(CategoryRepository):
         category_model.icon = category.icon
         category_model.is_active = category.is_active
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(category_model)
 
         return self._model_to_entity(category_model)
@@ -74,4 +74,4 @@ class SQLAlchemyCategoryRepository(CategoryRepository):
             raise CategoryNotFoundError(category_id)
 
         await self.db.delete(category_model)
-        await self.db.commit()
+        await self.db.flush()

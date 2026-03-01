@@ -66,7 +66,6 @@ class SubscriptionProcessor:
                     )
                     stats["failed"] += 1
 
-            await db.commit()
             logger.info(f"Processed {stats['processed']} subscriptions")
 
         except Exception as e:

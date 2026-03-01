@@ -49,10 +49,12 @@ async def process_subscriptions_job():
             )
 
             stats = await processor.process_due_subscriptions(db)
+            await db.commit()
 
             logger.info(f"Job finished at {datetime.now()} with stats: {stats}")
 
         except Exception as e:
+            await db.rollback()
             logger.error(f"Error processing subscriptions job: {e}")
 
 
@@ -74,6 +76,9 @@ async def process_investment_yield_job():
             stats = await handler.handle(
                 GenerateDailyYieldCommand(target_date=date.today())
             )
+            await db.commit()
+
             logger.info(f"Job finished at {datetime.now()} with stats: {stats}")
         except Exception as e:
+            await db.rollback()
             logger.error(f"Error processing investment yield job: {e}")

@@ -70,7 +70,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         """Crea una nueva transacción."""
         model = self._entity_to_model(transaction)
         self.db.add(model)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
@@ -291,7 +291,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         if transaction.notes is not None:
             model.notes = transaction.notes
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
@@ -308,7 +308,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
 
         if model:
             await self.db.delete(model)
-            await self.db.commit()
+            await self.db.flush()
             return True
 
         return False
@@ -434,6 +434,6 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             if field in allowed_fields and value is not None:
                 setattr(model, field, value)
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(model)
         return self._model_to_entity(model)

@@ -55,7 +55,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
     async def create(self, subscription: Subscription) -> Subscription:
         model = self._entity_to_model(subscription)
         self.db.add(model)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
@@ -82,7 +82,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
         model.description = subscription.description
         model.service_url = subscription.service_url
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
@@ -95,7 +95,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
 
         if model:
             await self.db.delete(model)
-            await self.db.commit()
+            await self.db.flush()
             return True
 
         return False

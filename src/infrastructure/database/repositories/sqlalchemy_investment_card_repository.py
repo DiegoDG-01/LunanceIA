@@ -44,7 +44,7 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
         model = self._vo_to_model(settings)
         model.account_id = account_id
         self.db.add(model)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(model)
         return self._model_to_vo(model)
 
@@ -79,7 +79,7 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
         model.early_withdrawal_penalty = settings.early_withdrawal_penalty
         model.base_principal = settings.base_principal
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(model)
         return self._model_to_vo(model)
 
@@ -92,6 +92,6 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
 
         if model:
             await self.db.delete(model)
-            await self.db.commit()
+            await self.db.flush()
             return True
         return False

@@ -47,7 +47,7 @@ class SQLAlchemyUserRepository(UserRepository):
         """Crea un nuevo usuario."""
         model = self._entity_to_model(user)
         self.db.add(model)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
@@ -96,7 +96,7 @@ class SQLAlchemyUserRepository(UserRepository):
         model.password_hash = user.password_hash
         model.is_active = user.is_active
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
@@ -110,7 +110,7 @@ class SQLAlchemyUserRepository(UserRepository):
             raise ValueError("Usuario no encontrado")
 
         model.is_active = False
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
@@ -124,7 +124,7 @@ class SQLAlchemyUserRepository(UserRepository):
             raise ValueError("Usuario no encontrado")
 
         await self.db.delete(model)
-        await self.db.commit()
+        await self.db.flush()
         return user
 
     async def exist_by_email(self, email: str) -> bool:

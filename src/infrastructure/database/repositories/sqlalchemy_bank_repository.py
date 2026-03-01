@@ -54,7 +54,7 @@ class SQLAlchemyBankRepository(BankRepository):
             is_active=bank.is_active,
         )
         self.db.add(bank_model)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(bank_model)
         return self._model_to_entity(bank_model)
 
@@ -70,7 +70,7 @@ class SQLAlchemyBankRepository(BankRepository):
         bank_model.color = bank.color
         bank_model.is_active = bank.is_active
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(bank_model)
         return self._model_to_entity(bank_model)
 
@@ -80,4 +80,4 @@ class SQLAlchemyBankRepository(BankRepository):
             raise ValueError("Bank not found")
 
         await self.db.delete(bank_model)
-        await self.db.commit()
+        await self.db.flush()

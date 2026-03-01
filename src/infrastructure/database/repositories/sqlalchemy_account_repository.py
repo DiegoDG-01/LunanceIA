@@ -61,7 +61,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
     async def create(self, account: Account) -> Account:
         model = self._entity_to_model(account)
         self.db.add(model)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
@@ -117,7 +117,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         model.currency = account.current_balance.currency
         model.is_active = account.is_active
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(model)
 
         return self._model_to_entity(model)
@@ -132,7 +132,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
             raise Exception("Account not found")
 
         await self.db.delete(model)
-        await self.db.commit()
+        await self.db.flush()
         return True
 
     async def switch_status(self, account: Account) -> Account:

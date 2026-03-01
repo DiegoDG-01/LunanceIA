@@ -47,7 +47,7 @@ class SQLAlchemyInvestmentYieldRepository(InvestmentYieldRepository):
         model = self._entity_to_model(yield_record)
 
         self.db.add(model)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(model)
 
         return self._model_to_entity(model)

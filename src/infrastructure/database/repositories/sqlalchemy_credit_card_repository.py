@@ -35,7 +35,7 @@ class SQLAlchemyCreditCardSettingsRepository(CreditCardSettingsRepository):
         model = self._vo_to_model(settings)
         model.account_id = account_id
         self.db.add(model)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(model)
         return self._model_to_vo(model)
 
@@ -64,7 +64,7 @@ class SQLAlchemyCreditCardSettingsRepository(CreditCardSettingsRepository):
         model.credit_limit = settings.credit_limit
         model.minimum_payment_percentage = settings.minimum_payment_percentage
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(model)
         return self._model_to_vo(model)
 
@@ -77,6 +77,6 @@ class SQLAlchemyCreditCardSettingsRepository(CreditCardSettingsRepository):
 
         if model:
             await self.db.delete(model)
-            await self.db.commit()
+            await self.db.flush()
             return True
         return False
