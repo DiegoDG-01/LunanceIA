@@ -61,7 +61,8 @@ class SubscriptionProcessor:
 
                 except Exception as e:
                     logger.error(
-                        f"Error processing due subscription {subscription.uuid}: {e}"
+                        f"Error processing due subscription {subscription.uuid}: {e}",
+                        exc_info=True,
                     )
                     stats["failed"] += 1
 
@@ -69,7 +70,7 @@ class SubscriptionProcessor:
             logger.info(f"Processed {stats['processed']} subscriptions")
 
         except Exception as e:
-            logger.error(f"Error processing due subscriptions: {e}")
+            logger.error(f"Error processing due subscriptions: {e}", exc_info=True)
             stats["failed"] = 1
             raise
 

@@ -112,7 +112,8 @@ class GenerateDailyYieldHandler:
             except Exception as e:
                 errors += 1
                 logger.error(
-                    f"failed to generate daily yield for account {account.id}: {e}"
+                    f"failed to generate daily yield for account {account.id}: {e}",
+                    exc_info=True,
                 )
 
         return {
