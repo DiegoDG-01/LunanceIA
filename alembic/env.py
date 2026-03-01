@@ -16,7 +16,6 @@ sys.path.insert(0, str(src_path))
 
 # --- Importaciones de tu Aplicación ---
 # Ahora las importaciones deberían funcionar sin problemas
-# from src.infrastructure.database.connection import Base
 from infrastructure.database.connection import Base
 from infrastructure.config.settings import settings
 # Importa el paquete 'models' para que se registren todos los modelos en Base.metadata
@@ -32,10 +31,18 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+def get_sync_url():
+    """Convierte la URL async de settings a síncrona para Alembic."""
+    url = settings.database_url
+    # Reemplaza aiomysql por pymysql si es necesario
+    if "aiomysql" in url:
+        url = url.replace("mysql+aiomysql", "mysql+pymysql")
+    return url
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
-    # Usa la URL de tus settings para consistencia
-    url = settings.database_url
+    url = get_sync_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -50,12 +57,12 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
     # Obtiene la sección de configuración de alembic.ini
-    configuration = config.get_section(config.config_ini_section)
+    configuration = config.get_section(config.config_ini_section) or {}
 
     # **La corrección clave:**
-    # Sobrescribe la URL del .ini con la de tus settings.
+    # Sobrescribe la URL del .ini con la de tus settings convertida a síncrona.
     # Esto asegura que Alembic y tu app SIEMPRE usen la misma DB.
-    configuration["sqlalchemy.url"] = settings.database_url
+    configuration["sqlalchemy.url"] = get_sync_url()
 
     connectable = engine_from_config(
         configuration,
@@ -65,7 +72,8 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata
         )
 
         with context.begin_transaction():

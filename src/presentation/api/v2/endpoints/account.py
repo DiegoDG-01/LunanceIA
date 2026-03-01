@@ -9,7 +9,7 @@ from presentation.schemas.requests.account import (
 )
 from presentation.schemas.responses.account import AccountResponse, AccountListResponse
 from presentation.dependencies.auth_deps import get_current_active_user
-from presentation.dependencies.service_deps import (
+from presentation.dependencies import (
     get_create_account_handler,
     get_update_account_handler,
     get_delete_account_handler,
@@ -41,7 +41,12 @@ from application.accounts.queries.get_account_by_id import (
     GetAccountByIdQuery,
     GetAccountByIdHandler,
 )
-from application.dto.account_dto import CreateAccountDTO, UpdateAccountDTO
+from application.dto.account_dto import (
+    CreateAccountDTO,
+    UpdateAccountDTO,
+    CreditCardSettingsDTO,
+    InvestmentCardSettingsDTO,
+)
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -91,18 +96,39 @@ async def create_account(
     handler: CreateAccountHandler = Depends(get_create_account_handler),
 ):
     """Crea una nueva cuenta."""
+    cc_settings_dto = None
+    if account_request.credit_card_settings:
+        cc_settings_dto = CreditCardSettingsDTO(
+            billing_cycle_day=account_request.credit_card_settings.billing_cycle_day,
+            payment_due_day=account_request.credit_card_settings.payment_due_day,
+            credit_limit=account_request.credit_card_settings.credit_limit,
+            minimum_payment_percentage=account_request.credit_card_settings.minimum_payment_percentage,
+        )
+
+    inv_settings_dto = None
+    if account_request.investment_settings:
+        inv_settings_dto = InvestmentCardSettingsDTO(
+            investment_type=account_request.investment_settings.investment_type,
+            interest_rate=account_request.investment_settings.interest_rate,
+            lock_period_end_date=account_request.investment_settings.lock_period_end_date,
+            maturity_date=account_request.investment_settings.maturity_date,
+            early_withdrawal_penalty=account_request.investment_settings.early_withdrawal_penalty,
+        )
+
     dto = CreateAccountDTO(
+        bank_id=account_request.bank_id,
         user_id=current_user.id,
         name=account_request.name,
         account_type=account_request.account_type,
-        bank=account_request.bank,
         initial_balance=account_request.initial_balance,
         currency=account_request.currency,
+        credit_card_settings=cc_settings_dto,
+        investment_settings=inv_settings_dto,
     )
 
     command = CreateAccountCommand(dto=dto)
-
     account = await handler.handle(command)
+
     return AccountResponse(**account.__dict__)
 
 
@@ -115,13 +141,33 @@ async def update_account(
     current_user: User = Depends(get_current_active_user),
     handler: UpdateAccountHandler = Depends(get_update_account_handler),
 ):
+    cc_settings_dto = None
+    if update_request.credit_card_settings:
+        cc_settings_dto = CreditCardSettingsDTO(
+            billing_cycle_day=update_request.credit_card_settings.billing_cycle_day,
+            payment_due_day=update_request.credit_card_settings.payment_due_day,
+            credit_limit=update_request.credit_card_settings.credit_limit,
+            minimum_payment_percentage=update_request.credit_card_settings.minimum_payment_percentage,
+        )
+
+    inv_settings_dto = None
+    if update_request.investment_settings:
+        inv_settings_dto = InvestmentCardSettingsDTO(
+            investment_type=update_request.investment_settings.investment_type,
+            interest_rate=update_request.investment_settings.interest_rate,
+            lock_period_end_date=update_request.investment_settings.lock_period_end_date,
+            maturity_date=update_request.investment_settings.maturity_date,
+            early_withdrawal_penalty=update_request.investment_settings.early_withdrawal_penalty,
+        )
     """Actualiza una cuenta."""
     dto = UpdateAccountDTO(
         account_uuid=account_uuid,
         user_id=current_user.id,
         name=update_request.name,
-        bank=update_request.bank,
+        bank_id=update_request.bank_id,
         current_balance=update_request.current_balance,
+        credit_card_settings=cc_settings_dto,
+        investment_settings=inv_settings_dto,
     )
 
     command = UpdateAccountCommand(dto=dto)
@@ -164,10 +210,12 @@ async def activate_account(
 
     account = await handler.handle(command)
     return AccountResponse(
+        bank_id=account.bank_id,
+        bank_name=account.bank_name,
+        bank_code=account.bank_code,
         account_uuid=account.uuid,
         name=account.name,
         account_type=account.account_type,
-        bank=account.bank,
         current_balance=account.current_balance.amount,
         currency=account.current_balance.currency,
         is_active=account.is_active,

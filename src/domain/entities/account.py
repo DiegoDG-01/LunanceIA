@@ -7,26 +7,31 @@ from domain.objects.enums import AccountType
 
 from shared.exceptions.domain import AccountInactiveError
 
+from domain.objects.credit_card_settings import CreditCardSettings
+from domain.objects.investment_settings import InvestmentCardSettings
+
 
 @dataclass
 class Account:
     id: Optional[int]
     uuid: Optional[str]
     user_id: int
+    bank_id: Optional[int]
     name: str
     account_type: AccountType
     current_balance: Money
-    bank: Optional[str]
     is_active: bool
     creation_date: datetime
+    credit_card_settings: Optional[CreditCardSettings] = None
+    investment_settings: Optional[InvestmentCardSettings] = None
 
     @classmethod
     def create_new(
         cls,
         user_id: int,
+        bank_id: Optional[int],
         name: str,
         account_type: AccountType,
-        bank: Optional[str],
         initial_balance: Money = None,
     ) -> "Account":
         if initial_balance is None:
@@ -36,10 +41,10 @@ class Account:
             id=None,
             uuid=None,
             user_id=user_id,
+            bank_id=bank_id,
             name=name,
             account_type=account_type,
             current_balance=initial_balance,
-            bank=bank,
             is_active=True,
             creation_date=datetime.now(),
         )

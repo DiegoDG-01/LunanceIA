@@ -116,7 +116,7 @@ git checkout -b docs/actualizacion-documentacion
 git commit -m "feat: add user authentication endpoint
 
 - Implement JWT token generation
-- Add login/logout functionality  
+- Add login/logout functionality
 - Include refresh token mechanism
 - Add comprehensive error handling
 
@@ -210,12 +210,12 @@ class Account:
     user_id: str
     name: str
     balance: Money
-    
+
     @classmethod
     def create_new(cls, user_id: str, name: str) -> 'Account':
         # Factory method con validaciones
         pass
-    
+
     def update_balance(self, new_balance: Money) -> None:
         # Método de dominio con reglas de negocio
         pass
@@ -311,17 +311,17 @@ pytest -v -s
 def create_account(self, command: CreateAccountCommand) -> Account:
     """
     Crea una nueva cuenta financiera para el usuario.
-    
+
     Args:
         command: Comando con datos necesarios para crear la cuenta
-        
+
     Returns:
         Account: La cuenta creada con ID asignado
-        
+
     Raises:
         ValueError: Si los datos de la cuenta son inválidos
         UserNotFoundError: Si el usuario no existe
-        
+
     Example:
         >>> command = CreateAccountCommand(
         ...     user_id="123",

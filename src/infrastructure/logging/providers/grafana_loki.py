@@ -17,15 +17,15 @@ class LokiHandler(logging.Handler):
     """
 
     def __init__(
-            self,
-            url: str,
-            username: str,
-            password: str,
-            app_name: str,
-            environment: str,
-            batch_size: int = 100,
-            flush_interval: float = 5.0,
-            level: str = logging.INFO
+        self,
+        url: str,
+        username: str,
+        password: str,
+        app_name: str,
+        environment: str,
+        batch_size: int = 100,
+        flush_interval: float = 5.0,
+        level: str = logging.INFO,
     ):
         super().__init__(level)
         self.url = f"{url.strip('/')}/loki/api/v1/push"
@@ -52,7 +52,7 @@ class LokiHandler(logging.Handler):
             "level": record.levelname,
             "module": record.module,
             "function": record.funcName,
-            "line": record.lineno
+            "line": record.lineno,
         }
 
         # Agregar extras(request_id, user_id, etc.)
@@ -70,7 +70,11 @@ class LokiHandler(logging.Handler):
             message["duration_ms"] = record.duration_ms
 
         if record.exc_info:
-            message["exception"] = self.formatter.formatException(record.exc_info) if self.formatter else str(record.exc_info)
+            message["exception"] = (
+                self.formatter.formatException(record.exc_info)
+                if self.formatter
+                else str(record.exc_info)
+            )
 
         return {
             "labels": {
@@ -79,29 +83,26 @@ class LokiHandler(logging.Handler):
                 "level": record.levelname,
                 "logger": record.name,
                 "module": record.module,
-                "function": record.funcName.lower()
+                "function": record.funcName.lower(),
             },
             "timestamp": timestamp_ns,
-            "message": json.dumps(message)
+            "message": json.dumps(message),
         }
 
     def _sender_loop(self) -> None:
-
         buffer = []
         last_flush = time.time()
 
         while not self._shutdown.is_set():
             try:
-
                 try:
                     entry = self._queue.get(timeout=1.0)
                     buffer.append(entry)
                 except queue.Empty:
                     pass
 
-                should_flush = (
-                    len(buffer) >= self.batch_size or
-                    (buffer and time.time() - last_flush >= self.flush_interval)
+                should_flush = len(buffer) >= self.batch_size or (
+                    buffer and time.time() - last_flush >= self.flush_interval
                 )
 
                 if should_flush and buffer:
@@ -110,26 +111,21 @@ class LokiHandler(logging.Handler):
                     last_flush = time.time()
             except Exception as e:
                 import sys
+
                 print(f"LokiHandler error: {e}", file=sys.stderr)
 
         if buffer:
             self._send_batch(buffer)
 
     def _send_batch(self, entries: list) -> None:
-
         streams = {}
         for entry in entries:
-            label_key = json.dumps(entry['labels'], sort_keys=True)
+            label_key = json.dumps(entry["labels"], sort_keys=True)
             if label_key not in streams:
-                streams[label_key] = {
-                    "stream": entry['labels'],
-                    "values": []
-                }
-            streams[label_key]['values'].append([entry['timestamp'], entry['message']])
+                streams[label_key] = {"stream": entry["labels"], "values": []}
+            streams[label_key]["values"].append([entry["timestamp"], entry["message"]])
 
-        payload = {
-            'streams': list(streams.values())
-        }
+        payload = {"streams": list(streams.values())}
 
         try:
             with httpx.Client(timeout=1.0) as client:
@@ -137,11 +133,12 @@ class LokiHandler(logging.Handler):
                     self.url,
                     json=payload,
                     auth=self.auth,
-                    headers={"Content-Type": "application/json"}
+                    headers={"Content-Type": "application/json"},
                 )
                 response.raise_for_status()
         except Exception as e:
             import sys
+
             print(f"Fail to send batch to Loki: {e}", file=sys.stderr)
 
     def emit(self, record: logging.LogRecord):
@@ -158,36 +155,3 @@ class LokiHandler(logging.Handler):
         self._shutdown.set()
         self._sender_thread.join(timeout=1.0)
         super().close()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

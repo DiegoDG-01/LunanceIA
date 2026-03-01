@@ -39,14 +39,17 @@ from shared.exceptions.domain import (
     InvalidImageError,
     InvalidTransactionTypeError,
     InsufficientFundsError,
-    SubscriptionNotFoundError
+    SubscriptionNotFoundError,
+    InvestmentSettingsNotFoundError,
+    CreditCardSettingsNotFoundError,
+    InvalidAccountSettingsError,
 )
 from shared.exceptions.application import (
     JWTValidationError,
     CommandValidationError,
     QueryValidationError,
     RepositoryError,
-    ExternalServiceError
+    ExternalServiceError,
 )
 from presentation.schemas.responses.error import StandardErrorResponse, ErrorDetail
 from shared.constants.validation_messages import (
@@ -65,19 +68,19 @@ EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     UnauthorizedError: ("AUTH_INVALID_CREDENTIALS", 401),
     UserInactiveError: ("AUTH_USER_INACTIVE", 401),
     JWTValidationError: ("JWT_VALIDATION_ERROR", 401),
-
     # --- Recursos No Encontrados (404) ---
     UserNotFoundError: ("NOT_FOUND_USER", 404),
     AccountNotFoundError: ("NOT_FOUND_ACCOUNT", 404),
     TransactionNotFoundError: ("NOT_FOUND_TRANSACTION", 404),
     CategoryNotFoundError: ("NOT_FOUND_CATEGORY", 404),
     SubscriptionNotFoundError: ("NOT_FOUND_SUBSCRIPTION", 404),
-
+    InvestmentSettingsNotFoundError: ("INVESTMENT_SETTINGS_NOT_FOUND", 404),
+    CreditCardSettingsNotFoundError: ("CREDIT_CARD_SETTINGS_NOT_FOUND", 404),
     # --- Conflictos de Negocio (409) ---
     EmailAlreadyExistsError: ("BUSINESS_EMAIL_EXISTS", 409),
     AccountHasBalanceError: ("BUSINESS_ACCOUNT_HAS_BALANCE", 409),
     AccountHasTransactionsError: ("BUSINESS_ACCOUNT_HAS_TRANSACTIONS", 409),
-
+    InvalidAccountSettingsError: ("INVALID_ACCOUNT_SETTINGS", 409),
     # --- Errores de Validación y Reglas de Negocio (400 / 422) ---
     InsufficientFundsError: ("INSUFFICIENT_FUNDS", 422),
     AccountInactiveError: ("BUSINESS_RULE_VIOLATION", 400),
@@ -90,13 +93,11 @@ EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     QueryValidationError: ("VALIDATION_ERROR", 400),
     LunanceValidationError: ("VALIDATION_ERROR", 400),
     BusinessRuleError: ("VALIDATION_ERROR", 400),
-
     # --- Errores de API Gemini ---
     GeminiProcessingError: ("GEMINI_PROCESSING_ERROR", 422),
     GeminiInvalidResponseError: ("GEMINI_PROCESSING_ERROR", 422),
     GeminiAPIError: ("GEMINI_API_ERROR", 503),
     InvalidImageError: ("VALIDATION_INVALID_IMAGE", 400),
-
     # --- Infraestructura y Servicios Externos (500 / 503) ---
     RepositoryError: ("INTERNAL_SERVER_ERROR", 500),
     ExternalServiceError: ("SERVICE_UNAVAILABLE", 503),
@@ -127,7 +128,7 @@ def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
 
 
 async def lunance_exception_handler(
-        request: Request, exc: LunanceException
+    request: Request, exc: LunanceException
 ) -> JSONResponse:
     """
     Handles custom Lunance exceptions and returns a standardized JSON error response.
@@ -172,7 +173,7 @@ async def lunance_exception_handler(
 
 
 async def validation_exception_handler(
-        request: Request, exc: RequestValidationError
+    request: Request, exc: RequestValidationError
 ) -> JSONResponse:
     """
     Handle FastAPI/Pydantic validation errors and return a standardized, localized error response.
@@ -224,7 +225,7 @@ async def validation_exception_handler(
 
 
 async def http_exception_handler(
-        request: Request, exc: Union[HTTPException, StarletteHTTPException]
+    request: Request, exc: Union[HTTPException, StarletteHTTPException]
 ) -> JSONResponse:
     """
     Handle standard HTTP exceptions and return a standardized JSON error response.
@@ -289,7 +290,7 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
 
 
 async def rate_limit_exceeded_handler(
-        request: Request, exc: RateLimitExceeded
+    request: Request, exc: RateLimitExceeded
 ) -> JSONResponse:
     """
     Handle rate limit exceeded errors and return a standardized JSON error response.

@@ -3,11 +3,16 @@ from typing import Optional
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 import hashlib
+import logging
+
+from sqlalchemy.exc import SQLAlchemyError
 
 from infrastructure.config.settings import settings
 from domain.repositories.auth_token_repository import AuthTokenRepository
 from domain.repositories.user_repository import UserRepository
-from shared.exceptions.application import JWTValidationError
+from shared.exceptions.application import JWTValidationError, RepositoryError
+
+logger = logging.getLogger(__name__)
 
 
 class JWTService:
@@ -86,9 +91,9 @@ class JWTService:
             return user_uuid if is_valid else None
         except JWTError as e:
             raise JWTValidationError(str(e))
-        except Exception as e:
-            print(e)
-            return None
+        except SQLAlchemyError as e:
+            logger.error(f"Database error verifying refresh token: {e}")
+            raise RepositoryError("verify", "RefreshToken", str(e))
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         return self.pwd_context.verify(plain_password, hashed_password)
@@ -111,14 +116,22 @@ class JWTService:
             return await self.auth_token_repository.revoke_token(user_uuid, token_hash)
         except JWTError:
             return False
+        except SQLAlchemyError as e:
+            logger.error(f"Database error to revoke refresh token: {e}")
+            return False
 
     async def save_refresh_token(
         self, user_uuid: str, token: str, expires_at: datetime
     ) -> bool:
         token_hash = self.hash_refresh_token(token)
-        return await self.auth_token_repository.save_token(
-            user_uuid, token_hash, expires_at
-        )
+
+        try:
+            return await self.auth_token_repository.save_token(
+                user_uuid, token_hash, expires_at
+            )
+        except SQLAlchemyError as e:
+            logger.error(f"Database error to save refresh token: {e}")
+            raise RepositoryError("save", "RefreshToken", str(e))
 
     @staticmethod
     def hash_refresh_token(token: str):

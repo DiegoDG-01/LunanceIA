@@ -1,0 +1,46 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ master, dev ]
+  pull_request:
+    branches: [ master, dev ]
+  schedule:
+    # Escaneo semanal los lunes a las 9 AM
+    - cron: '0 9 * * 1'
+  workflow_dispatch: # Permite ejecutar manualmente
+
+jobs:
+  trivy-scan:
+    name: Trivy Security Scan
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Clean up old Docker images
+        run: |
+          docker image prune -af --filter "until=24h" || true
+          docker builder prune -af --filter "until=24h" || true
+
+      - name: Build Docker image
+        run: |
+          docker build -t lunance:${{ github.sha }} .
+          docker tag lunance:${{ github.sha }} lunance:latest
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'lunance:latest'
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '1' # Falla el build si encuentra vulnerabilidades CRITICAL/HIGH/MEDIUM
+        env:
+          TRIVY_DISABLE_VEX_NOTICE: "true"
+
+      - name: Cleanup after scan
+        if: always()
+        run: |
+          docker rmi lunance:${{ github.sha }} || true
+          docker rmi lunance:latest || true

@@ -1,10 +1,17 @@
 from typing import Optional, List
-from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_, select
 
 from domain.entities.account import Account
+from domain.objects.enums import AccountType
 from domain.repositories.account_repository import AccountRepository
 from domain.objects.money import Money
+from domain.objects.credit_card_settings import CreditCardSettings
+from domain.objects.investment_settings import InvestmentCardSettings
+from infrastructure.database.models import (
+    CreditCardSettingsModel,
+    InvestmentCardSettingsModel,
+)
 from infrastructure.database.models.account import AccountModel
 
 
@@ -13,7 +20,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
     Implementation of AccountRepository using SQLAlchemy
     """
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
     @staticmethod
@@ -27,7 +34,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
             user_id=model.user_id,
             name=model.name,
             account_type=model.type,
-            bank=model.bank,
+            bank_id=model.bank_id,
             current_balance=Money(
                 amount=model.current_balance, currency=model.currency
             ),
@@ -44,7 +51,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
             user_id=entity.user_id,
             name=entity.name,
             type=entity.account_type,
-            bank=entity.bank,
+            bank_id=entity.bank_id,
             current_balance=entity.current_balance.amount,
             currency=entity.current_balance.currency,
             is_active=entity.is_active,
@@ -54,14 +61,14 @@ class SQLAlchemyAccountRepository(AccountRepository):
     async def create(self, account: Account) -> Account:
         model = self._entity_to_model(account)
         self.db.add(model)
-        self.db.commit()
-        self.db.refresh(model)
+        await self.db.flush()
+        await self.db.refresh(model)
         return self._model_to_entity(model)
 
     async def get_by_id(self, account_id: int) -> Optional[Account]:
-        model = (
-            self.db.query(AccountModel).filter(AccountModel.id == account_id).first()
-        )
+        stmt = select(AccountModel).where(AccountModel.id == account_id)
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
         if model is None:
             return None
         return self._model_to_entity(model)
@@ -69,72 +76,121 @@ class SQLAlchemyAccountRepository(AccountRepository):
     async def get_by_uuid_and_user_id(
         self, account_uuid: str, user_id: int
     ) -> Optional[Account]:
-        model = (
-            self.db.query(AccountModel)
-            .filter(
-                and_(
-                    AccountModel.uuid == account_uuid,
-                    AccountModel.user_id == user_id,
-                )
+        stmt = select(AccountModel).where(
+            and_(
+                AccountModel.uuid == account_uuid,
+                AccountModel.user_id == user_id,
             )
-            .first()
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
         if model is None:
             return None
         return self._model_to_entity(model)
 
     async def get_by_user_id(self, user_id: int) -> List[Account]:
-        models = (
-            self.db.query(AccountModel).filter(AccountModel.user_id == user_id).all()
-        )
+        stmt = select(AccountModel).where(AccountModel.user_id == user_id)
+        result = await self.db.execute(stmt)
+        models = result.scalars().all()
         return [self._model_to_entity(model) for model in models]
 
-    async def get_active_by_user(self, user_uuid: str) -> List[Account]:
-        models = (
-            self.db.query(AccountModel)
-            .filter(
-                and_(
-                    AccountModel.user_uuid == user_uuid, AccountModel.is_active is True
-                )
-            )
-            .all()
+    async def get_active_by_user(self, user_id: int) -> List[Account]:
+        stmt = select(AccountModel).where(
+            and_(AccountModel.id == user_id, AccountModel.is_active is True)
         )
+        result = await self.db.execute(stmt)
+        models = result.scalars().all()
         return [self._model_to_entity(model) for model in models]
 
     async def update(self, account: Account) -> Account:
-        model = (
-            self.db.query(AccountModel)
-            .filter(AccountModel.uuid == account.uuid)
-            .first()
-        )
+        stmt = select(AccountModel).where(AccountModel.uuid == account.uuid)
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         if not model:
             raise Exception("Account not found")
 
         model.name = account.name
         model.type = account.account_type
-        model.bank = account.bank
+        model.bank_id = account.bank_id
         model.current_balance = account.current_balance.amount
         model.currency = account.current_balance.currency
         model.is_active = account.is_active
 
-        self.db.commit()
-        self.db.refresh(model)
+        await self.db.flush()
+        await self.db.refresh(model)
 
         return self._model_to_entity(model)
 
     async def delete(self, account: Account) -> bool:
         """Elimina completamente una cuenta de la base de datos."""
-        result = (
-            self.db.query(AccountModel)
-            .filter(AccountModel.uuid == account.uuid)
-            .delete()
-        )
-        if not result:
+        stmt = select(AccountModel).where(AccountModel.uuid == account.uuid)
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
+
+        if not model:
             raise Exception("Account not found")
-        self.db.commit()
-        return result > 0
+
+        await self.db.delete(model)
+        await self.db.flush()
+        return True
 
     async def switch_status(self, account: Account) -> Account:
         account.is_active = not account.is_active
         return await self.update(account)
+
+    async def get_by_uuid_and_user_id_with_settings(
+        self, uuid: str, user_id: int
+    ) -> tuple:
+        stmt = (
+            select(AccountModel, CreditCardSettingsModel, InvestmentCardSettingsModel)
+            .outerjoin(
+                CreditCardSettingsModel,
+                AccountModel.id == CreditCardSettingsModel.account_id,
+            )
+            .outerjoin(
+                InvestmentCardSettingsModel,
+                AccountModel.id == InvestmentCardSettingsModel.account_id,
+            )
+            .where(AccountModel.uuid == uuid, AccountModel.user_id == user_id)
+        )
+        result = await self.db.execute(stmt)
+        row = result.first()
+
+        if not row:
+            return None
+
+        account_model, cc_settings_model, inv_settings_model = row
+
+        account = self._model_to_entity(account_model)
+
+        if cc_settings_model:
+            account.credit_card_settings = CreditCardSettings(
+                billing_cycle_day=cc_settings_model.billing_cycle_day,
+                payment_due_day=cc_settings_model.payment_due_day,
+                credit_limit=cc_settings_model.credit_limit,
+                minimum_payment_percentage=cc_settings_model.minimum_payment_percentage,
+            )
+
+        if inv_settings_model:
+            account.investment_card_settings = InvestmentCardSettings(
+                investment_type=inv_settings_model.investment_type,
+                interest_rate=inv_settings_model.interest_rate,
+                interest_type=inv_settings_model.interest_type,
+                lock_period_end_date=inv_settings_model.lock_period_end_date,
+                maturity_date=inv_settings_model.maturity_date,
+                early_withdrawal_penalty=inv_settings_model.early_withdrawal_penalty,
+            )
+
+        return account
+
+    async def get_active_investment_accounts(self) -> List[Account]:
+        stmt = select(AccountModel).where(
+            and_(
+                AccountModel.type == AccountType.INVESTMENT,
+                AccountModel.is_active,
+            )
+        )
+        result = await self.db.execute(stmt)
+        models = result.scalars().all()
+        return [self._model_to_entity(m) for m in models]

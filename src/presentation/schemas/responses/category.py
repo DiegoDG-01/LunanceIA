@@ -5,6 +5,7 @@ from typing import List, Optional
 class CategoryResponse(BaseModel):
     id: int
     name: str
+    type: str
     description: Optional[str]
     color: Optional[str]
     icon: Optional[str]

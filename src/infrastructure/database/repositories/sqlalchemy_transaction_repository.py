@@ -1,6 +1,6 @@
 from datetime import date
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, func, desc
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_, func, desc, select
 from typing import Optional, List, Tuple
 
 from domain.entities.transaction import Transaction
@@ -15,7 +15,7 @@ from infrastructure.database.models.category import CategoryModel
 class SQLAlchemyTransactionRepository(TransactionRepository):
     """Implementación SQLAlchemy del repositorio de transacciones."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
     def _models_to_entity_with_account(
@@ -23,6 +23,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         transaction_model: TransactionModel,
         account_model: AccountModel,
         category_model: CategoryModel,
+        bank_name: Optional[str] = None,
     ) -> tuple[Transaction, str, AccountType, Optional[str], Optional[str]]:
         transaction = self._model_to_entity(transaction_model)
         category_name = category_model.name if category_model else None
@@ -30,7 +31,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             transaction,
             account_model.name,
             account_model.type,
-            account_model.bank,
+            bank_name,
             category_name,
         )
 
@@ -65,85 +66,80 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             creation_date=entity.creation_date,
         )
 
-    def create(self, transaction: Transaction) -> Transaction:
+    async def create(self, transaction: Transaction) -> Transaction:
         """Crea una nueva transacción."""
         model = self._entity_to_model(transaction)
         self.db.add(model)
-        self.db.commit()
-        self.db.refresh(model)
+        await self.db.flush()
+        await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    def get_by_id(self, transaction_id: int) -> Optional[Transaction]:
+    async def get_by_id(self, transaction_id: int) -> Optional[Transaction]:
         """Obtiene transacción por ID."""
-        model = (
-            self.db.query(TransactionModel)
-            .filter(TransactionModel.id == transaction_id)
-            .first()
-        )
+        stmt = select(TransactionModel).where(TransactionModel.id == transaction_id)
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         return self._model_to_entity(model) if model else None
 
-    def get_by_id_and_user_uuid(
+    async def get_by_id_and_user_uuid(
         self, transaction_id: int, user_id: int
     ) -> Optional[Transaction]:
         """Obtiene transacción por ID y UUID del usuario."""
-        model = (
-            self.db.query(TransactionModel)
-            .filter(
-                and_(
-                    TransactionModel.id == transaction_id,
-                    TransactionModel.user_id == user_id,
-                )
+        stmt = select(TransactionModel).where(
+            and_(
+                TransactionModel.id == transaction_id,
+                TransactionModel.user_id == user_id,
             )
-            .first()
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         return self._model_to_entity(model) if model else None
 
-    def get_by_id_and_user(
+    async def get_by_id_and_user(
         self, transaction_id: int, user_id: int
     ) -> Optional[Transaction]:
         """Obtiene transacción que pertenezca al usuario especificado."""
-        model = (
-            self.db.query(TransactionModel)
-            .filter(
-                and_(
-                    TransactionModel.id == transaction_id,
-                    TransactionModel.user_id == user_id,
-                )
+        stmt = select(TransactionModel).where(
+            and_(
+                TransactionModel.id == transaction_id,
+                TransactionModel.user_id == user_id,
             )
-            .first()
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         return self._model_to_entity(model) if model else None
 
-    def get_by_user(
+    async def get_by_user(
         self, user_id: int, limit: int = 100, offset: int = 0
     ) -> List[Tuple[Transaction, str, AccountType, Optional[str], Optional[str]]]:
         """Obtiene todas las transacciones de un usuario con paginación."""
-        results = (
-            self.db.query(TransactionModel, AccountModel, CategoryModel)
+        stmt = (
+            select(TransactionModel, AccountModel, CategoryModel)
             .join(AccountModel, TransactionModel.account_id == AccountModel.id)
             .outerjoin(CategoryModel, TransactionModel.category_id == CategoryModel.id)
-            .filter(TransactionModel.user_id == user_id)
+            .where(TransactionModel.user_id == user_id)
             .order_by(desc(TransactionModel.creation_date))
             .limit(limit)
             .offset(offset)
-            .all()
         )
+        result = await self.db.execute(stmt)
+        results = result.all()
 
         return [
             self._models_to_entity_with_account(transaction, acc, cat)
             for transaction, acc, cat in results
         ]
 
-    def get_by_account(
+    async def get_by_account(
         self, account_id: int, user_id: int, limit: int = 100, offset: int = 0
     ) -> List[Transaction]:
         """Obtiene todas las transacciones de una cuenta específica."""
-        models = (
-            self.db.query(TransactionModel)
-            .filter(
+        stmt = (
+            select(TransactionModel)
+            .where(
                 and_(
                     TransactionModel.account_id == account_id,
                     TransactionModel.user_id == user_id,
@@ -152,12 +148,13 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             .order_by(desc(TransactionModel.creation_date))
             .limit(limit)
             .offset(offset)
-            .all()
         )
+        result = await self.db.execute(stmt)
+        models = result.scalars().all()
 
         return [self._model_to_entity(model) for model in models]
 
-    def get_by_date_range(
+    async def get_by_date_range(
         self,
         user_id: int,
         start_date: Optional[date] = None,
@@ -166,33 +163,35 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         transaction_type: Optional[TransactionType] = None,
     ) -> List[Tuple[Transaction, str, AccountType, Optional[str], Optional[str]]]:
         """Obtiene transacciones en un rango de fechas."""
-        query = (
-            self.db.query(TransactionModel, AccountModel, CategoryModel)
+        stmt = (
+            select(TransactionModel, AccountModel, CategoryModel)
             .join(AccountModel, TransactionModel.account_id == AccountModel.id)
             .outerjoin(CategoryModel, TransactionModel.category_id == CategoryModel.id)
-            .filter(TransactionModel.user_id == user_id)
+            .where(TransactionModel.user_id == user_id)
         )
 
         if start_date:
-            query = query.filter(TransactionModel.transaction_date >= start_date)
+            stmt = stmt.where(TransactionModel.transaction_date >= start_date)
 
         if end_date:
-            query = query.filter(TransactionModel.transaction_date <= end_date)
+            stmt = stmt.where(TransactionModel.transaction_date <= end_date)
 
         if account_uuid:
-            query = query.filter(AccountModel.uuid == account_uuid)
+            stmt = stmt.where(AccountModel.uuid == account_uuid)
 
         if transaction_type:
-            query = query.filter(TransactionModel.type == transaction_type)
+            stmt = stmt.where(TransactionModel.type == transaction_type)
 
-        results = query.order_by(desc(TransactionModel.transaction_date)).all()
+        stmt = stmt.order_by(desc(TransactionModel.transaction_date))
+        result = await self.db.execute(stmt)
+        results = result.all()
 
         return [
             self._models_to_entity_with_account(transaction, acc, cat)
             for transaction, acc, cat in results
         ]
 
-    def get_by_category(
+    async def get_by_category(
         self,
         user_id: int,
         category_id: int,
@@ -200,7 +199,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         end_date: Optional[date] = None,
     ) -> List[Transaction]:
         """Obtiene transacciones por categoría."""
-        query = self.db.query(TransactionModel).filter(
+        stmt = select(TransactionModel).where(
             and_(
                 TransactionModel.user_id == user_id,
                 TransactionModel.category_id == category_id,
@@ -208,37 +207,40 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         )
 
         if start_date:
-            query = query.filter(TransactionModel.transaction_date >= start_date)
+            stmt = stmt.where(TransactionModel.transaction_date >= start_date)
 
         if end_date:
-            query = query.filter(TransactionModel.transaction_date <= end_date)
+            stmt = stmt.where(TransactionModel.transaction_date <= end_date)
 
-        models = query.order_by(desc(TransactionModel.transaction_date)).all()
+        stmt = stmt.order_by(desc(TransactionModel.transaction_date))
+        result = await self.db.execute(stmt)
+        models = result.scalars().all()
 
         return [self._model_to_entity(model) for model in models]
 
-    def get_by_uuid_with_account_details(
+    async def get_by_uuid_with_account_details(
         self, uuid: str, user_id: int
     ) -> Optional[Tuple[Transaction, str, AccountType, Optional[str], Optional[str]]]:
-        result = (
-            self.db.query(TransactionModel, AccountModel, CategoryModel)
+        stmt = (
+            select(TransactionModel, AccountModel, CategoryModel)
             .join(AccountModel, TransactionModel.account_id == AccountModel.id)
             .outerjoin(CategoryModel, TransactionModel.category_id == CategoryModel.id)
-            .filter(
+            .where(
                 and_(TransactionModel.uuid == uuid, TransactionModel.user_id == user_id)
             )
-            .first()
         )
+        result = await self.db.execute(stmt)
+        row = result.first()
 
-        if not result:
+        if not row:
             return None
 
-        transaction_model, account_model, category_model = result
+        transaction_model, account_model, category_model = row
         return self._models_to_entity_with_account(
             transaction_model, account_model, category_model
         )
 
-    def get_by_type(
+    async def get_by_type(
         self,
         user_id: int,
         transaction_type: TransactionType,
@@ -246,9 +248,9 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         offset: int = 0,
     ) -> List[Transaction]:
         """Obtiene transacciones por tipo (ingreso/gasto)."""
-        models = (
-            self.db.query(TransactionModel)
-            .filter(
+        stmt = (
+            select(TransactionModel)
+            .where(
                 and_(
                     TransactionModel.user_id == user_id,
                     TransactionModel.type == transaction_type,
@@ -257,18 +259,17 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             .order_by(desc(TransactionModel.creation_date))
             .limit(limit)
             .offset(offset)
-            .all()
         )
+        result = await self.db.execute(stmt)
+        models = result.scalars().all()
 
         return [self._model_to_entity(model) for model in models]
 
-    def update(self, transaction: Transaction) -> Transaction:
+    async def update(self, transaction: Transaction) -> Transaction:
         """Actualiza una transacción."""
-        model = (
-            self.db.query(TransactionModel)
-            .filter(TransactionModel.uuid == transaction.uuid)
-            .first()
-        )
+        stmt = select(TransactionModel).where(TransactionModel.uuid == transaction.uuid)
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         if not model:
             raise ValueError("Transacción no encontrada")
@@ -290,27 +291,29 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         if transaction.notes is not None:
             model.notes = transaction.notes
 
-        self.db.commit()
-        self.db.refresh(model)
+        await self.db.flush()
+        await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    def delete_by_uuid(self, uuid: str, user_id: int) -> bool:
+    async def delete_by_uuid(self, uuid: str, user_id: int) -> bool:
         """Elimina una transacción."""
-        result = (
-            self.db.query(TransactionModel)
-            .filter(
-                and_(
-                    TransactionModel.uuid == uuid,
-                    TransactionModel.user_id == user_id,
-                )
+        stmt = select(TransactionModel).where(
+            and_(
+                TransactionModel.uuid == uuid,
+                TransactionModel.user_id == user_id,
             )
-            .delete(synchronize_session=False)
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
-        self.db.commit()
-        return result > 0
+        if model:
+            await self.db.delete(model)
+            await self.db.flush()
+            return True
 
-    def get_total_by_type(
+        return False
+
+    async def get_total_by_type(
         self,
         user_id: int,
         transaction_type: TransactionType,
@@ -319,7 +322,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         account_id: Optional[int] = None,
     ) -> float:
         """Obtiene el total de transacciones por tipo en un período."""
-        query = self.db.query(func.sum(TransactionModel.amount)).filter(
+        stmt = select(func.sum(TransactionModel.amount)).where(
             and_(
                 TransactionModel.user_id == user_id,
                 TransactionModel.type == transaction_type,
@@ -327,51 +330,52 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         )
 
         if start_date:
-            query = query.filter(TransactionModel.transaction_date >= start_date)
+            stmt = stmt.where(TransactionModel.transaction_date >= start_date)
 
         if end_date:
-            query = query.filter(TransactionModel.transaction_date <= end_date)
+            stmt = stmt.where(TransactionModel.transaction_date <= end_date)
 
         if account_id:
-            query = query.filter(TransactionModel.account_id == account_id)
+            stmt = stmt.where(TransactionModel.account_id == account_id)
 
-        result = query.scalar()
-        return float(result) if result else 0.0
+        result = await self.db.execute(stmt)
+        total = result.scalar()
+        return float(total) if total else 0.0
 
-    def get_monthly_summary(
+    async def get_monthly_summary(
         self, user_id: int, year: int, month: int, account_id: Optional[int] = None
     ) -> dict:
         """Obtiene resumen mensual de transacciones."""
-        # Filtro base
-        query_base = self.db.query(TransactionModel).filter(
-            and_(
-                TransactionModel.user_id == user_id,
-                func.extract("year", TransactionModel.transaction_date) == year,
-                func.extract("month", TransactionModel.transaction_date) == month,
-            )
+        # Base conditions
+        base_conditions = and_(
+            TransactionModel.user_id == user_id,
+            func.extract("year", TransactionModel.transaction_date) == year,
+            func.extract("month", TransactionModel.transaction_date) == month,
         )
 
         if account_id:
-            query_base = query_base.filter(TransactionModel.account_id == account_id)
+            base_conditions = and_(
+                base_conditions, TransactionModel.account_id == account_id
+            )
 
         # Total ingresos
-        total_income = (
-            query_base.filter(TransactionModel.type == TransactionType.INCOME)
-            .with_entities(func.sum(TransactionModel.amount))
-            .scalar()
-            or 0
+        stmt_income = select(func.sum(TransactionModel.amount)).where(
+            base_conditions, TransactionModel.type == TransactionType.INCOME
         )
+        result_income = await self.db.execute(stmt_income)
+        total_income = result_income.scalar() or 0
 
         # Total gastos
-        total_expenses = (
-            query_base.filter(TransactionModel.type == TransactionType.EXPENSE)
-            .with_entities(func.sum(TransactionModel.amount))
-            .scalar()
-            or 0
+        stmt_expenses = select(func.sum(TransactionModel.amount)).where(
+            base_conditions, TransactionModel.type == TransactionType.EXPENSE
         )
+        result_expenses = await self.db.execute(stmt_expenses)
+        total_expenses = result_expenses.scalar() or 0
 
         # Conteo de transacciones
-        total_transactions = query_base.count()
+        stmt_count = select(func.count(TransactionModel.id)).where(base_conditions)
+        result_count = await self.db.execute(stmt_count)
+        total_transactions = result_count.scalar()
 
         return {
             "year": year,
@@ -382,39 +386,37 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             "total_transactions": total_transactions,
         }
 
-    def count_by_user(self, user_id: int) -> int:
+    async def count_by_user(self, user_id: int) -> int:
         """Cuenta el total de transacciones de un usuario."""
-        return (
-            self.db.query(TransactionModel)
-            .filter(TransactionModel.user_id == user_id)
-            .count()
+        stmt = select(func.count(TransactionModel.id)).where(
+            TransactionModel.user_id == user_id
         )
+        result = await self.db.execute(stmt)
+        return result.scalar()
 
-    def get_by_uuid_and_user_id(self, uuid: str, user_id: int) -> Optional[Transaction]:
+    async def get_by_uuid_and_user_id(
+        self, uuid: str, user_id: int
+    ) -> Optional[Transaction]:
         """Obtiene transacción por UUID y user_id para validar ownership."""
-        model = (
-            self.db.query(TransactionModel)
-            .filter(
-                and_(TransactionModel.uuid == uuid, TransactionModel.user_id == user_id)
-            )
-            .first()
+        stmt = select(TransactionModel).where(
+            and_(TransactionModel.uuid == uuid, TransactionModel.user_id == user_id)
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
         return self._model_to_entity(model) if model else None
 
-    def update_by_uuid(
+    async def update_by_uuid(
         self, transaction_uuid: str, user_id: int, updates: dict
     ) -> Optional[Transaction]:
         """Actualiza transacción por UUID con validación de ownership."""
-        model = (
-            self.db.query(TransactionModel)
-            .filter(
-                and_(
-                    TransactionModel.uuid == transaction_uuid,
-                    TransactionModel.user_id == user_id,
-                )
+        stmt = select(TransactionModel).where(
+            and_(
+                TransactionModel.uuid == transaction_uuid,
+                TransactionModel.user_id == user_id,
             )
-            .first()
         )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
 
         if not model:
             return None
@@ -432,6 +434,6 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             if field in allowed_fields and value is not None:
                 setattr(model, field, value)
 
-        self.db.commit()
-        self.db.refresh(model)
+        await self.db.flush()
+        await self.db.refresh(model)
         return self._model_to_entity(model)

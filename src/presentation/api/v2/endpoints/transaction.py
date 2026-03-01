@@ -22,8 +22,8 @@ from domain.entities.user import User
 from application.dto.transaction_dto import CreateTransactionDTO
 from presentation.schemas.responses.transaction import TransactionResponse
 from presentation.schemas.requests.transaction import CreateTransactionRequest
-from presentation.dependencies.auth_deps import get_current_user
-from presentation.dependencies.service_deps import (
+from presentation.dependencies.auth_deps import get_current_active_user
+from presentation.dependencies import (
     get_create_transaction_handler,
     get_gemini_service,
     get_transactions_handler,
@@ -52,7 +52,7 @@ from application.transactions.commands.update_transaction import (
     UpdateTransactionCommand,
     UpdateTransactionCommandHandler,
 )
-from presentation.dependencies.service_deps import get_update_transaction_handler
+from presentation.dependencies import get_update_transaction_handler
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -73,7 +73,7 @@ async def get_transactions(
     category_id: Optional[int] = Query(None, gt=0, description="ID de categoría"),
     account_uuid: Optional[str] = Query(None, description="UUID de la cuenta"),
     # 🔐 DEPENDENCIAS: Inyección automática de FastAPI
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     handler: GetTransactionsHandler = Depends(get_transactions_handler),
 ):
     """
@@ -94,18 +94,18 @@ async def get_transactions(
     )
 
     # ⚙️ Ejecutar el caso de uso
-    transactions = handler.handle(query)
+    transactions = await handler.handle(query)
 
     # 📤 Convertir DTOs → Response schema para HTTP
     return [TransactionResponse(**transaction.__dict__) for transaction in transactions]
 
 
-@router.get("/{transaction_uuid}", response_model=TransactionResponse)
+@router.get("/{transaction_uuid}/", response_model=TransactionResponse)
 @limiter.limit("50/minute")
 async def get_transaction_by_uuid(
     request: Request,
     transaction_uuid: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     handler: GetTransactionByUuidHandler = Depends(get_transaction_by_uuid_handler),
 ):
     query = GetTransactionByUuidQuery(uuid=transaction_uuid, user_id=current_user.id)
@@ -119,7 +119,7 @@ async def get_transaction_by_uuid(
 async def create_transaction(
     request: Request,
     transaction_request: CreateTransactionRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     handler: CreateTransactionHandler = Depends(get_create_transaction_handler),
 ):
     # Convertir request → DTO
@@ -140,13 +140,13 @@ async def create_transaction(
     return TransactionResponse(**result.__dict__)
 
 
-@router.post("/image/", response_model=TransactionResponse)
+@router.post("/image", response_model=TransactionResponse)
 @limiter.limit("5/minute")  # Más restrictivo por ser procesamiento de imagen
 async def create_transaction_from_image(
     request: Request,
     file: UploadFile = File(...),
     account_uuid: str = Form(...),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     gemini_service: GeminiService = Depends(get_gemini_service),
     handler: CreateTransactionHandler = Depends(get_create_transaction_handler),
 ):
@@ -195,7 +195,7 @@ async def update_transaction(
     request: Request,
     transaction_uuid: str,
     update_request: UpdateTransactionRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     handler: UpdateTransactionCommandHandler = Depends(get_update_transaction_handler),
 ):
     command = UpdateTransactionCommand(
@@ -218,7 +218,7 @@ async def update_transaction(
 async def delete_transaction(
     request: Request,
     transaction_uuid: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
     handler: DeleteTransactionHandler = Depends(get_delete_transaction_handler),
 ):
     """

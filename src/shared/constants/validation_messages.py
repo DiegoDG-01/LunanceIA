@@ -140,10 +140,12 @@ HTTP_CODES_ERRORS = {
         "NOT_FOUND_TRANSACTION": "Transacción no encontrada",
         "NOT_FOUND_CATEGORY": "Categoría no encontrada",
         "NOT_FOUND_SUBSCRIPTION": "Suscripción no encontrada",
+        "INVESTMENT_SETTINGS_NOT_FOUND": "Configuración de cuenta no encontrada",
         # Códigos específicos de Lunance - Conflictos de negocio
         "BUSINESS_EMAIL_EXISTS": "El email ya está registrado",
         "BUSINESS_ACCOUNT_HAS_BALANCE": "La cuenta tiene saldo pendiente",
         "BUSINESS_ACCOUNT_HAS_TRANSACTIONS": "La cuenta tiene transacciones asociadas",
+        "INVALID_ACCOUNT_SETTINGS": "Los datos adicionales para configurar tu cuenta no son los correctos",
         # Códigos específicos de Lunance - Validaciones y reglas de negocio
         "VALIDATION_ERROR": "Error de validación",
         "BUSINESS_RULE_VIOLATION": "Violación de regla de negocio",
@@ -153,7 +155,7 @@ HTTP_CODES_ERRORS = {
         "GEMINI_PROCESSING_ERROR": "Error procesando imagen con Gemini",
         "GEMINI_API_ERROR": "Error de API de Gemini",
         "VALIDATION_INVALID_IMAGE": "Imagen no válida o no procesable",
-        "INSUFFICIENT_FUNDS": "Fondos insuficientes"
+        "INSUFFICIENT_FUNDS": "Fondos insuficientes",
     },
     "en": {
         # Códigos HTTP genéricos
@@ -180,10 +182,13 @@ HTTP_CODES_ERRORS = {
         "NOT_FOUND_TRANSACTION": "Transaction not found",
         "NOT_FOUND_CATEGORY": "Category not found",
         "NOT_FOUND_SUBSCRIPTION": "Subscription not found",
+        "INVESTMENT_SETTINGS_NOT_FOUND": "Account settings not found",
         # Códigos específicos de Lunance - Conflictos de negocio
+        "INVALID_CREDENTIALS": "Invalid credentials",
         "BUSINESS_EMAIL_EXISTS": "Email already registered",
         "BUSINESS_ACCOUNT_HAS_BALANCE": "Account has pending balance",
         "BUSINESS_ACCOUNT_HAS_TRANSACTIONS": "Account has associated transactions",
+        "INVALID_ACCOUNT_SETTINGS": "The additional information you provided to set up your account is incorrect",
         # Códigos específicos de Lunance - Validaciones y reglas de negocio
         "VALIDATION_ERROR": "Validation error",
         "BUSINESS_RULE_VIOLATION": "Business rule violation",
@@ -193,7 +198,7 @@ HTTP_CODES_ERRORS = {
         "GEMINI_PROCESSING_ERROR": "Error processing image with Gemini",
         "GEMINI_API_ERROR": "Gemini API error",
         "VALIDATION_INVALID_IMAGE": "Invalid or unprocessable image",
-        "INSUFFICIENT_FUNDS": "Insufficient funds"
+        "INSUFFICIENT_FUNDS": "Insufficient funds",
     },
 }
 
@@ -223,6 +228,7 @@ ERROR_DETAIL_MESSAGES = {
         "INSUFFICIENT_FUNDS": "Insufficient funds",
     },
 }
+
 
 def get_error_detail_message(code: str, language: str = "es") -> str:
     """

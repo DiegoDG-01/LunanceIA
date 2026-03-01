@@ -1,5 +1,5 @@
 # Base image with uv package manager and Python 3.13 on Alpine Linux
-FROM ghcr.io/astral-sh/uv:0.7.19-python3.13-alpine
+FROM ghcr.io/astral-sh/uv:python3.13-alpine
 
 # Environment variables for Python optimization and uv configuration
 ENV PYTHONUNBUFFERED=1 \
@@ -32,10 +32,6 @@ COPY alembic.ini ./
 RUN addgroup -S lunance && adduser -S lunance -G lunance
 RUN chown -R lunance:lunance /app
 USER lunance
-
-# Health check to monitor container status
-#HEALTHCHECK --interval=10s --timeout=10s --start-period=5s --retries=3 \
-#    CMD curl --fail http://localhost:8000/health || exit 1
 
 # Wait for database, run migrations, then start the application
 COPY entrypoint.sh ./

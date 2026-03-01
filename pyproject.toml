@@ -4,28 +4,36 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.13"
 dependencies = [
+    "aiomysql>=0.3.2",
     "alembic>=1.16.1",
-    "fastapi>=0.115.12",
+    "fastapi>=0.134.0",
+    "greenlet>=3.3.1",
     "passlib>=1.7.4",
-    "pydantic[email]>=2.11.5",
-    "pydantic-settings>=2.9.1",
+    "pydantic[email]>=2.12.5",
+    "pydantic-settings>=2.13.0",
     "pymysql>=1.1.1",
     "python-dotenv>=1.1.0",
-    "python-jose>=3.5.0",
+    "python-jose[cryptography]>=3.5.0",
     "sqlalchemy>=2.0.41",
-    "uvicorn>=0.34.3",
+    "uvicorn>=0.41.0",
     "cryptography>=45.0.4",
-    "python-multipart>=0.0.20",
+    "python-multipart>=0.0.22",
     "bcrypt>=4.3.0",
     "google-genai>=1.22.0",
     "email-validator>=2.2.0",
-    "pre-commit>=4.2.0",
     "slowapi>=0.1.9",
     "pillow>=12.0.0",
+    "apscheduler>=3.11.2",
+    "pytz>=2025.2",
+    "google-auth>=2.40.3",
+    "google-auth-oauthlib>=1.2.4",
+    "google-api-python-client>=2.190.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
+    "aiosqlite>=0.22.1",
+    "virtualenv>=20.36.1",
     "ruff>=0.14.3",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
@@ -34,5 +42,36 @@ dev = [
     "pre-commit>=4.3.0",
 ]
 
+[tool.uv]
+exclude-dependencies = [
+    "ecdsa"
+]
+
 [tool.ruff]
 exclude = ["src/tests", "alembic/", "src/run_tests.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["src/tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "src/tests/*",
+    "alembic/*",
+    "src/main.py",
+    "src/__init__.py"
+]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\b\\):",
+    "@(abc\\.)?abstractmethod"
+]

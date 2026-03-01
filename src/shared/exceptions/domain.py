@@ -48,9 +48,7 @@ class SubscriptionNotFoundError(NotFoundError):
     """Suscripción no encontrada."""
 
     def __init__(self, subscription_uuid: str):
-
-        super().__init__(
-            f"Suscripción con ID {subscription_uuid} no encontrada")
+        super().__init__(f"Suscripción con ID {subscription_uuid} no encontrada")
 
 
 class AccountInactiveError(BusinessRuleError):
@@ -64,6 +62,8 @@ class InsufficientFundsError(BusinessRuleError):
     """Fondos insuficientes."""
 
     def __init__(self, required_amount: float, available_amount: float):
+        self.required_amount = required_amount
+        self.available_amount = available_amount
         message = f"Fondos insuficientes en cuenta. Requerido: {required_amount}, Disponible: {available_amount}"
         super().__init__(message)
 
@@ -119,6 +119,23 @@ class InvalidCurrencyError(ValidationError):
 
     def __init__(self, currency: str):
         super().__init__(f"Moneda inválida: {currency}")
+
+
+class InvestmentSettingsNotFoundError(NotFoundError):
+    def __init__(self, investment_uuid: str):
+        super().__init__(f"Investment con UUID {investment_uuid} no encontrada")
+
+
+class CreditCardSettingsNotFoundError(NotFoundError):
+    def __init__(self, credit_card_uuid: str):
+        super().__init__(f"Credit Card Setting para {credit_card_uuid} no encontrada")
+
+
+class InvalidAccountSettingsError(BusinessRuleError):
+    def __init__(self, type_account: str):
+        super().__init__(
+            f"Los Settings para el tipo cuenta son invalidos ({type_account}) "
+        )
 
 
 class CurrencyMismatchError(ValidationError):

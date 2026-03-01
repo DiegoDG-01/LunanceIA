@@ -25,11 +25,10 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
             )
 
             self.db.add(new_refresh_token)
-            self.db.commit()
+            self.db.flush()
 
             return True
         except Exception:
-            self.db.rollback()
             return False
 
     async def get_refresh_token(
@@ -66,10 +65,9 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
                 .update({"is_revoked": True})
             )
 
-            self.db.commit()
+            self.db.flush()
             return result > 0
         except Exception:
-            self.db.rollback()
             return False
 
     async def revoke_all_refresh_tokens_for_user(self, user_id: int) -> bool:
@@ -80,10 +78,9 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
                 .update({"is_revoked": 1})
             )
 
-            self.db.commit()
+            self.db.flush()
             return result > 0
         except Exception:
-            self.db.rollback()
             return False
 
     async def cleanup_expired_tokens(self) -> bool:
@@ -93,10 +90,9 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
                 RefreshTokenModel.is_revoked.is_(True),
             ).delete()
 
-            self.db.commit()
+            self.db.flush()
             return True
         except Exception:
-            self.db.rollback()
             return False
 
     async def is_token_valid(self, user_id: int, refresh_hash_token: str) -> bool:

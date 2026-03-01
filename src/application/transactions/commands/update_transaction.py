@@ -4,10 +4,15 @@ from dataclasses import dataclass
 
 from domain.objects.money import Money
 from domain.entities.transaction import TransactionType
-from shared.exceptions.domain import TransactionNotFoundError
+from shared.exceptions.domain import (
+    TransactionNotFoundError,
+    AccountNotFoundError,
+    InvalidTransactionTypeError,
+)
 from application.dto.transaction_dto import TransactionResponseDTO
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 
 
 @dataclass
@@ -27,18 +32,23 @@ class UpdateTransactionCommandHandler:
         self,
         transaction_repository: TransactionRepository,
         account_repository: AccountRepository,
+        uow: AbstractUnitOfWork,
     ):
         self.transaction_repository = transaction_repository
         self.account_repository = account_repository
+        self.uow = uow
 
     async def handle(self, command: UpdateTransactionCommand) -> TransactionResponseDTO:
-        transaction = self.transaction_repository.get_by_uuid_and_user_id(
+        transaction = await self.transaction_repository.get_by_uuid_and_user_id(
             command.transaction_uuid, command.user_id
         )
         if not transaction:
             raise TransactionNotFoundError(command.transaction_uuid)
 
         account = await self.account_repository.get_by_id(transaction.account_id)
+
+        if not account:
+            raise AccountNotFoundError(command.user_id)
 
         # 1. REVERTIR el efecto de la transacción original
         if transaction.transaction_type == TransactionType.EXPENSE:
@@ -61,9 +71,7 @@ class UpdateTransactionCommandHandler:
             try:
                 transaction.transaction_type = TransactionType(command.transaction_type)
             except ValueError:
-                raise ValueError(
-                    f"Invalid transaction type: {command.transaction_type}"
-                )
+                raise InvalidTransactionTypeError(command.transaction_type)
 
         if command.amount is not None:
             transaction.amount = Money(amount=command.amount, currency="MXN")
@@ -85,21 +93,15 @@ class UpdateTransactionCommandHandler:
             account.current_balance = account.current_balance.add(transaction.amount)
 
         # 4. GUARDAR ambos: transacción y cuenta
-        try:
-            self.transaction_repository.update(transaction)
+        async with self.uow:
+            await self.transaction_repository.update(transaction)
             await self.account_repository.update(account)
-        except Exception as e:
-            raise TransactionNotFoundError(f"Error updating transaction: {e}")
+            await self.uow.commit()
 
         # 5. OBTENER resultado para respuesta
-        try:
-            result = self.transaction_repository.get_by_uuid_with_account_details(
-                transaction.uuid, command.user_id
-            )
-        except Exception as e:
-            raise TransactionNotFoundError(
-                f"Failed to retrieve updated transaction: {str(e)}"
-            )
+        result = await self.transaction_repository.get_by_uuid_with_account_details(
+            transaction.uuid, command.user_id
+        )
 
         if not result:
             raise TransactionNotFoundError(command.transaction_uuid)

@@ -215,6 +215,15 @@ DELETE /api/v2/account/{account_id}
 }
 ```
 
+#### Activar/Desactivar Cuenta
+```bash
+PATCH /api/v2/account/{account_uuid}/status/
+```
+
+Alterna el estado activo/inactivo de la cuenta.
+
+**Response:** Misma estructura que obtener cuenta por ID.
+
 ### 💰 Transacciones - `/api/v2/transaction/`
 
 #### Listar Transacciones
@@ -349,6 +358,201 @@ GET /api/v2/dashboard/
 ```
 
 Retorna un resumen del estado financiero del usuario.
+
+### 🔄 Suscripciones - `/api/v2/subscription/`
+
+#### Listar Suscripciones
+```bash
+GET /api/v2/subscription/
+```
+
+**Response:**
+```json
+[
+  {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Netflix Premium",
+    "account_name": "Cuenta Principal",
+    "account_uuid": "660e8400-e29b-41d4-a716-446655440001",
+    "category_name": "Entretenimiento",
+    "frequency": "MONTHLY",
+    "amount": 299.00,
+    "billing_day": 15,
+    "description": "Plan Premium 4K",
+    "service_url": "https://netflix.com",
+    "start_date": "2024-01-01",
+    "end_date": null,
+    "is_active": true
+  }
+]
+```
+
+#### Obtener Suscripción por UUID
+```bash
+GET /api/v2/subscription/{subscription_uuid}/
+```
+
+**Response:** Misma estructura que un elemento individual del listado.
+
+#### Crear Suscripción
+```bash
+POST /api/v2/subscription/
+```
+
+**Request:**
+```json
+{
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "category_id": 5,
+  "name": "Spotify Premium",
+  "amount": 149.00,
+  "frequency": "MONTHLY",
+  "start_date": "2024-01-01",
+  "end_date": null,
+  "billing_day": 1,
+  "description": "Plan familiar",
+  "service_url": "https://spotify.com"
+}
+```
+
+**Frecuencias disponibles:** `DAILY`, `WEEKLY`, `MONTHLY`, `QUARTERLY`, `ANNUAL`
+
+#### Actualizar Suscripción
+```bash
+PUT /api/v2/subscription/{subscription_uuid}/
+```
+
+**Request:** (todos los campos son opcionales excepto `account_uuid`)
+```json
+{
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Netflix Premium",
+  "amount": 299.00,
+  "frequency": "MONTHLY"
+}
+```
+
+#### Activar/Desactivar Suscripción
+```bash
+PATCH /api/v2/subscription/{subscription_uuid}/activate/
+```
+
+Alterna el estado activo/inactivo de la suscripción.
+
+#### Eliminar Suscripción
+```bash
+DELETE /api/v2/subscription/{subscription_uuid}/
+```
+
+**Response:** `204 No Content`
+
+#### Listar Cargos de Suscripciones
+```bash
+GET /api/v2/subscription/charges/
+```
+
+Retorna el historial de cargos generados automáticamente para las suscripciones del usuario.
+
+**Response:**
+```json
+[
+  {
+    "charge_id": "abc123",
+    "subscription_name": "Netflix Premium",
+    "charge_date": "2024-06-15",
+    "charge_amount": 299.00,
+    "charge_status": "COMPLETED",
+    "transaction_id": "def456",
+    "transaction_amount": 299.00,
+    "transaction_description": "Cargo automático - Netflix Premium",
+    "category_name": "Entretenimiento",
+    "account_name": "Cuenta Principal"
+  }
+]
+```
+
+### 📈 Inversiones - `/api/v2/investments/`
+
+#### Obtener Rendimientos de una Cuenta de Inversión
+```bash
+GET /api/v2/investments/{account_id}/yields/
+```
+
+Retorna el historial de rendimientos diarios generados automáticamente para una cuenta de inversión.
+
+**Response:**
+```json
+[
+  {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "yield_date": "2024-06-15",
+    "principal_amount": 10000.00,
+    "yield_amount": 2.74,
+    "cumulative_balance": 10002.74,
+    "annual_rate": 10.00,
+    "interest_type": "SIMPLE",
+    "created_at": "2024-06-15T12:00:00Z"
+  }
+]
+```
+
+**Tipos de interés:**
+- `SIMPLE`: Usa el `base_principal` (se actualiza con transacciones de ingreso)
+- `COMPOUND`: Usa el balance actual de la cuenta como principal
+
+#### Obtener Proyecciones de Inversión
+```bash
+GET /api/v2/investments/{account_id}/projections/
+```
+
+Retorna proyecciones de rendimiento futuro basadas en la configuración actual de la cuenta.
+
+**Response:**
+```json
+{
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "current_balance": 10000.00,
+  "annual_rate": 10.00,
+  "interest_type": "SIMPLE",
+  "maturity_date": "2025-01-01",
+  "projected_final_balance": 11000.00,
+  "daily_projections": [
+    {
+      "projection_date": "2024-06-16",
+      "principal_amount": 10000.00,
+      "yield_amount": 2.74,
+      "projected_balance": 10002.74
+    }
+  ]
+}
+```
+
+### 🏦 Bancos - `/api/v2/bank/`
+
+#### Listar Bancos
+```bash
+GET /api/v2/bank/
+```
+
+Retorna el catálogo de bancos disponibles.
+
+**Response:**
+```json
+{
+  "banks": [
+    {
+      "id": 1,
+      "name": "BBVA México",
+      "code": "BBVA",
+      "country": "MX",
+      "logo_url": "https://example.com/bbva-logo.png",
+      "color": "#004481",
+      "is_active": true
+    }
+  ],
+  "total": 1
+}
+```
 
 ## 💡 Ejemplos de Uso
 
@@ -588,6 +792,31 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 |----------|--------|
 | `GET /category/` | **50 requests/minuto** |
 
+#### Endpoints de Suscripciones
+
+| Endpoint | Límite | Nota |
+|----------|--------|------|
+| `GET /subscription/` | **50 requests/minuto** | Listado |
+| `GET /subscription/charges/` | **50 requests/minuto** | Historial de cargos |
+| `GET /subscription/{uuid}/` | **50 requests/minuto** | Detalle |
+| `POST /subscription/` | **20 requests/minuto** | Creación |
+| `PUT /subscription/{uuid}/` | **20 requests/minuto** | Actualización |
+| `PATCH /subscription/{uuid}/activate/` | **5 requests/minuto** | Activar/desactivar |
+| `DELETE /subscription/{uuid}/` | **5 requests/minuto** | Eliminación |
+
+#### Endpoints de Inversiones
+
+| Endpoint | Límite | Nota |
+|----------|--------|------|
+| `GET /investments/{id}/yields/` | **50 requests/minuto** | Rendimientos históricos |
+| `GET /investments/{id}/projections/` | **30 requests/minuto** | Proyecciones |
+
+#### Endpoints de Bancos
+
+| Endpoint | Límite |
+|----------|--------|
+| `GET /bank/` | **10 requests/minuto** |
+
 #### Endpoints de Dashboard
 
 | Endpoint | Límite |
@@ -598,7 +827,7 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 
 | Endpoint | Límite |
 |----------|--------|
-| `GET /` | **50 requests/minuto** |
+| `GET /` | **10 requests/minuto** |
 | `GET /health` | **5 requests/minuto** |
 
 ### ⚠️ Consideraciones Importantes
@@ -722,17 +951,20 @@ class LunanceClient:
     def __init__(self, base_url="http://localhost:8000", token=None):
         self.base_url = base_url
         self.token = token
-        self.client = httpx.Client()
-    
-    async def login(self, email: str, password: str):
-        response = await self.client.post(
-            f"{self.base_url}/api/v2/auth/login",
-            json={"email": email, "password": password}
+        self.client = httpx.AsyncClient()
+
+    def set_token(self, auth0_token: str):
+        """Configura el token de Auth0 obtenido desde el frontend."""
+        self.token = auth0_token
+
+    async def get_me(self):
+        headers = {"Authorization": f"Bearer {self.token}"}
+        response = await self.client.get(
+            f"{self.base_url}/api/v2/auth/me",
+            headers=headers
         )
-        data = response.json()
-        self.token = data["access_token"]
-        return data
-    
+        return response.json()
+
     async def get_accounts(self):
         headers = {"Authorization": f"Bearer {self.token}"}
         response = await self.client.get(
@@ -743,22 +975,14 @@ class LunanceClient:
 
 # Uso
 client = LunanceClient()
-await client.login("user@example.com", "password")
+client.set_token("<auth0_access_token>")
+user = await client.get_me()
 accounts = await client.get_accounts()
 ```
 
-## 📚 Documentación Interactiva
+## 📚 Documentación
 
-Una vez iniciado el servidor, accede a la documentación interactiva:
-
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
-Estas herramientas te permiten:
-- ✅ Probar todos los endpoints directamente
-- ✅ Ver esquemas de request/response
-- ✅ Generar código en múltiples lenguajes
-- ✅ Descargar especificación OpenAPI
+> **Nota**: Swagger UI y ReDoc están deshabilitados por defecto en la configuración actual. Usa esta guía y la colección de Bruno como referencia principal para la API.
 
 ---
 

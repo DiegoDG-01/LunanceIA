@@ -56,7 +56,14 @@ class SubscriptionChargeModel(Base):
         nullable=False,
         index=True,
     )
-    transaction_id = Column(Integer, ForeignKey("transactions.id"))
+    uuid = Column(
+        CHAR(36),
+        unique=True,
+        index=True,
+        default=lambda: str(uuid.uuid4()),
+        nullable=False,
+    )
+    transaction_id = Column(Integer, ForeignKey("transactions.id", ondelete="SET NULL"))
     charge_date = Column(Date, nullable=False, index=True)
     amount = Column(DECIMAL(12, 2), nullable=False)
     status = Column(

@@ -34,9 +34,9 @@ class GetTransactionsHandler:
     def __init__(self, transaction_repository: TransactionRepository):
         self.transaction_repository = transaction_repository
 
-    def handle(self, query: GetTransactionsQuery) -> list[TransactionResponseDTO]:
+    async def handle(self, query: GetTransactionsQuery) -> list[TransactionResponseDTO]:
         if query.start_date or query.end_date:
-            transactions = self.transaction_repository.get_by_date_range(
+            transactions = await self.transaction_repository.get_by_date_range(
                 user_id=query.user_id,
                 start_date=query.start_date,
                 end_date=query.end_date,
@@ -44,7 +44,7 @@ class GetTransactionsHandler:
                 transaction_type=query.transaction_type,
             )
         else:
-            transactions = self.transaction_repository.get_by_user(
+            transactions = await self.transaction_repository.get_by_user(
                 user_id=query.user_id, limit=query.limit, offset=query.skip
             )
 
