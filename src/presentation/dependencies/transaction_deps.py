@@ -18,8 +18,9 @@ from domain.repositories.transaction_repository import TransactionRepository
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_investment_card_repository import \
-    SQLAlchemyInvestmentSettingsRepository
+from infrastructure.database.repositories.sqlalchemy_investment_card_repository import (
+    SQLAlchemyInvestmentSettingsRepository,
+)
 from infrastructure.database.repositories.sqlalchemy_transaction_repository import (
     SQLAlchemyTransactionRepository,
 )
@@ -34,12 +35,15 @@ from infrastructure.database.repositories.sqlalchemy_bank_repository import (
 )
 from presentation.dependencies import get_investment_settings_repository
 
+from domain.repositories.unit_of_work import AbstractUnitOfWork
+
 from presentation.dependencies.repositories import (
     get_account_repository,
     get_user_repository,
     get_transaction_repository,
     get_category_repository,
     get_bank_repository,
+    get_unit_of_work_repository,
 )
 
 
@@ -65,10 +69,19 @@ def get_create_transaction_handler(
     ),
     category_repo: SQLAlchemyCategoryRepository = Depends(get_category_repository),
     bank_repo: SQLAlchemyBankRepository = Depends(get_bank_repository),
-    settings_repo: SQLAlchemyInvestmentSettingsRepository = Depends(get_investment_settings_repository)
+    settings_repo: SQLAlchemyInvestmentSettingsRepository = Depends(
+        get_investment_settings_repository
+    ),
+    uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> CreateTransactionHandler:
     return CreateTransactionHandler(
-        user_repo, account_repo, transaction_repo, category_repo, bank_repo, settings_repo
+        user_repo,
+        account_repo,
+        transaction_repo,
+        category_repo,
+        bank_repo,
+        settings_repo,
+        uow,
     )
 
 
