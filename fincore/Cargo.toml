@@ -1,0 +1,12 @@
+[package]
+name = "fincore"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "fincore"
+crate-type = ["cdylib"]  # Genera una librería dinámica compatible con Python
+
+[dependencies]
+pyo3 = { version = "0.28.2", features = ["extension-module"] }
+rust_decimal = { version = "1.37", features = ["maths"] }
