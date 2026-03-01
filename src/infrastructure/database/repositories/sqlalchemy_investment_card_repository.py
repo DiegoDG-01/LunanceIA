@@ -8,6 +8,7 @@ from domain.objects.investment_settings import InvestmentCardSettings
 from infrastructure.database.models.investment_account import (
     InvestmentCardSettingsModel,
 )
+from shared.exceptions.domain import InvestmentSettingsNotFoundError
 
 
 class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
@@ -68,7 +69,7 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
         model = result.scalar_one_or_none()
 
         if model is None:
-            raise ValueError("Credit card settings no encontrada")
+            raise InvestmentSettingsNotFoundError(account_id)
 
         model.investment_type = settings.investment_type
         model.investment_rate = settings.interest_rate
