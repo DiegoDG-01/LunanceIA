@@ -21,6 +21,7 @@ from shared.exceptions.domain import InvalidTransactionTypeError
 from domain.repositories.investment_card_repository import (
     InvestmentCardSettingsRepository,
 )
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 
 
 @dataclass
@@ -41,6 +42,7 @@ class CreateTransactionHandler:
         category_repository: CategoryRepository,
         bank_repository: BankRepository,
         investment_settings_repository: InvestmentCardSettingsRepository,
+        uow: AbstractUnitOfWork,
     ):
         self.user_repository = user_repository
         self.account_repository = account_repository
@@ -48,6 +50,7 @@ class CreateTransactionHandler:
         self.category_repository = category_repository
         self.bank_repository = bank_repository
         self.investment_settings_repository = investment_settings_repository
+        self.uow = uow
 
     async def handle(self, command: CreateTransactionCommand) -> TransactionResponseDTO:
         dto = command.dto
@@ -101,23 +104,26 @@ class CreateTransactionHandler:
         else:
             raise InvalidTransactionTypeError(transaction.transaction_type)
 
-        account.update_balance(new_balance)
+        async with self.uow:
+            account.update_balance(new_balance)
 
-        await self.account_repository.update(account)
+            await self.account_repository.update(account)
 
-        category = (
-            await self.category_repository.get_by_id(dto.category_id)
-            if dto.category_id
-            else None
-        )
-        category_name = category.name if category else None
+            category = (
+                await self.category_repository.get_by_id(dto.category_id)
+                if dto.category_id
+                else None
+            )
+            category_name = category.name if category else None
 
-        transaction = await self.transaction_repository.create(transaction)
+            transaction = await self.transaction_repository.create(transaction)
 
-        bank_name = None
-        if account.bank_id:
-            bank = await self.bank_repository.get_by_id(account.bank_id)
-            bank_name = bank.name if bank else None
+            bank_name = None
+            if account.bank_id:
+                bank = await self.bank_repository.get_by_id(account.bank_id)
+                bank_name = bank.name if bank else None
+
+            await self.uow.commit()
 
         return TransactionResponseDTO.from_entity(
             transaction,

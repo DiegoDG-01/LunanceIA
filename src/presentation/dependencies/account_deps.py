@@ -26,6 +26,7 @@ from infrastructure.database.repositories.sqlalchemy_investment_card_repository 
     SQLAlchemyInvestmentSettingsRepository,
 )
 
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from presentation.dependencies.repositories import (
     get_account_repository,
     get_user_repository,
@@ -33,6 +34,7 @@ from presentation.dependencies.repositories import (
     get_credit_card_settings_repository,
     get_investment_settings_repository,
     get_bank_repository,
+    get_unit_of_work_repository,
 )
 from presentation.dependencies.services import get_account_service
 
@@ -47,9 +49,15 @@ def get_create_account_handler(
         get_investment_settings_repository
     ),
     bank_repo: SQLAlchemyBankRepository = Depends(get_bank_repository),
+    uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> CreateAccountHandler:
     return CreateAccountHandler(
-        account_repo, user_repo, cc_settings_repo, investment_settings_repo, bank_repo
+        account_repo,
+        user_repo,
+        cc_settings_repo,
+        investment_settings_repo,
+        bank_repo,
+        uow,
     )
 
 
@@ -62,9 +70,10 @@ def get_update_account_handler(
     investment_card_repo: SQLAlchemyInvestmentSettingsRepository = Depends(
         get_investment_settings_repository
     ),
+    uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> UpdateAccountHandler:
     return UpdateAccountHandler(
-        account_repo, bank_repo, credit_card_repo, investment_card_repo
+        account_repo, bank_repo, credit_card_repo, investment_card_repo, uow
     )
 
 

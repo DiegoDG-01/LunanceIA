@@ -4,10 +4,15 @@ from dataclasses import dataclass
 
 from domain.objects.money import Money
 from domain.entities.transaction import TransactionType
-from shared.exceptions.domain import TransactionNotFoundError, AccountNotFoundError, InvalidTransactionTypeError
+from shared.exceptions.domain import (
+    TransactionNotFoundError,
+    AccountNotFoundError,
+    InvalidTransactionTypeError,
+)
 from application.dto.transaction_dto import TransactionResponseDTO
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 
 
 @dataclass
@@ -27,9 +32,11 @@ class UpdateTransactionCommandHandler:
         self,
         transaction_repository: TransactionRepository,
         account_repository: AccountRepository,
+        uow: AbstractUnitOfWork,
     ):
         self.transaction_repository = transaction_repository
         self.account_repository = account_repository
+        self.uow = uow
 
     async def handle(self, command: UpdateTransactionCommand) -> TransactionResponseDTO:
         transaction = await self.transaction_repository.get_by_uuid_and_user_id(
@@ -86,8 +93,10 @@ class UpdateTransactionCommandHandler:
             account.current_balance = account.current_balance.add(transaction.amount)
 
         # 4. GUARDAR ambos: transacción y cuenta
-        await self.transaction_repository.update(transaction)
-        await self.account_repository.update(account)
+        async with self.uow:
+            await self.transaction_repository.update(transaction)
+            await self.account_repository.update(account)
+            await self.uow.commit()
 
         # 5. OBTENER resultado para respuesta
         result = await self.transaction_repository.get_by_uuid_with_account_details(

@@ -13,6 +13,7 @@ from domain.repositories.bank_repository import BankRepository
 from domain.repositories.user_repository import UserRepository
 from domain.objects.money import Money
 from application.dto.account_dto import CreateAccountDTO, AccountResponseDTO
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.exceptions.domain import (
     InvalidAccountSettingsError,
     UserNotFoundError,
@@ -41,12 +42,14 @@ class CreateAccountHandler:
         credit_card_settings_repository: CreditCardSettingsRepository,
         investment_settings_repository: InvestmentCardSettingsRepository,
         bank_repository: BankRepository,
+        uow: AbstractUnitOfWork,
     ):
         self.account_repository = account_repository
         self.user_repository = user_repository
         self.credit_card_settings_repository = credit_card_settings_repository
         self.investment_settings_repository = investment_settings_repository
         self.bank_repository = bank_repository
+        self.uow = uow
 
     async def handle(self, command: CreateAccountCommand) -> AccountResponseDTO:
         """
@@ -79,40 +82,43 @@ class CreateAccountHandler:
             initial_balance=initial_balance,
         )
 
-        saved_account = await self.account_repository.create(account)
+        async with self.uow:
+            saved_account = await self.account_repository.create(account)
 
-        # Create settings if provided
-        cc_settings_dto = None
-        inv_settings_dto = None
-        bank = None
+            # Create settings if provided
+            cc_settings_dto = None
+            inv_settings_dto = None
+            bank = None
 
-        if dto.credit_card_settings:
-            cc_settings_dto = CreditCardSettings(
-                billing_cycle_day=dto.credit_card_settings.billing_cycle_day,
-                payment_due_day=dto.credit_card_settings.payment_due_day,
-                credit_limit=dto.credit_card_settings.credit_limit,
-                minimum_payment_percentage=dto.credit_card_settings.minimum_payment_percentage,
-            )
-            await self.credit_card_settings_repository.create(
-                saved_account.id, cc_settings_dto
-            )
-            cc_settings_dto = dto.credit_card_settings
+            if dto.credit_card_settings:
+                cc_settings_dto = CreditCardSettings(
+                    billing_cycle_day=dto.credit_card_settings.billing_cycle_day,
+                    payment_due_day=dto.credit_card_settings.payment_due_day,
+                    credit_limit=dto.credit_card_settings.credit_limit,
+                    minimum_payment_percentage=dto.credit_card_settings.minimum_payment_percentage,
+                )
+                await self.credit_card_settings_repository.create(
+                    saved_account.id, cc_settings_dto
+                )
+                cc_settings_dto = dto.credit_card_settings
 
-        if dto.investment_settings:
-            inv_settings_dto = InvestmentCardSettings(
-                investment_type=dto.investment_settings.investment_type,
-                interest_rate=dto.investment_settings.interest_rate,
-                lock_period_end_date=dto.investment_settings.lock_period_end_date,
-                maturity_date=dto.investment_settings.maturity_date,
-                early_withdrawal_penalty=dto.investment_settings.early_withdrawal_penalty,
-            )
-            await self.investment_settings_repository.create(
-                saved_account.id, inv_settings_dto
-            )
-            inv_settings_dto = dto.investment_settings
+            if dto.investment_settings:
+                inv_settings_dto = InvestmentCardSettings(
+                    investment_type=dto.investment_settings.investment_type,
+                    interest_rate=dto.investment_settings.interest_rate,
+                    lock_period_end_date=dto.investment_settings.lock_period_end_date,
+                    maturity_date=dto.investment_settings.maturity_date,
+                    early_withdrawal_penalty=dto.investment_settings.early_withdrawal_penalty,
+                )
+                await self.investment_settings_repository.create(
+                    saved_account.id, inv_settings_dto
+                )
+                inv_settings_dto = dto.investment_settings
 
-        if dto.bank_id:
-            bank = await self.bank_repository.get_by_id(dto.bank_id)
+            if dto.bank_id:
+                bank = await self.bank_repository.get_by_id(dto.bank_id)
+
+            await self.uow.commit()
 
         return AccountResponseDTO(
             account_uuid=saved_account.uuid,
