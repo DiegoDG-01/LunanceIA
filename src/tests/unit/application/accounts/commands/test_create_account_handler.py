@@ -34,13 +34,21 @@ class TestCreateAccountHandler:
         return MagicMock()
 
     @pytest.fixture
-    def handler(self, mock_account_repo, mock_user_repo, mock_credit_card_repo, mock_investment_repo, mock_bank_repo):
+    def mock_uow(self):
+        uow = AsyncMock()
+        uow.__aenter__ = AsyncMock(return_value=uow)
+        uow.__aexit__ = AsyncMock(return_value=False)
+        return uow
+
+    @pytest.fixture
+    def handler(self, mock_account_repo, mock_user_repo, mock_credit_card_repo, mock_investment_repo, mock_bank_repo, mock_uow):
         return CreateAccountHandler(
             mock_account_repo,
             mock_user_repo,
             mock_credit_card_repo,
             mock_investment_repo,
-            mock_bank_repo
+            mock_bank_repo,
+            mock_uow,
         )
 
     @pytest.mark.asyncio

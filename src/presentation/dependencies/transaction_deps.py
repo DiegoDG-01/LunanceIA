@@ -88,8 +88,11 @@ def get_create_transaction_handler(
 def get_update_transaction_handler(
     transaction_repository: TransactionRepository = Depends(get_transaction_repository),
     account_repository: AccountRepository = Depends(get_account_repository),
+    uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> UpdateTransactionCommandHandler:
-    return UpdateTransactionCommandHandler(transaction_repository, account_repository)
+    return UpdateTransactionCommandHandler(
+        transaction_repository, account_repository, uow
+    )
 
 
 def get_delete_transaction_handler(
@@ -97,5 +100,6 @@ def get_delete_transaction_handler(
         get_transaction_repository
     ),
     account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
+    uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> DeleteTransactionHandler:
-    return DeleteTransactionHandler(transaction_repo, account_repo)
+    return DeleteTransactionHandler(transaction_repo, account_repo, uow)

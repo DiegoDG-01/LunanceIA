@@ -116,7 +116,6 @@ class CreateTransactionHandler:
             )
             category_name = category.name if category else None
 
-            transaction = None
             transaction = await self.transaction_repository.create(transaction)
 
             bank_name = None

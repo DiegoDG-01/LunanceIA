@@ -16,13 +16,17 @@ from datetime import date, datetime
 class TestCreateTransactionHandler:
     @pytest.fixture
     def mocks(self):
+        uow = AsyncMock()
+        uow.__aenter__ = AsyncMock(return_value=uow)
+        uow.__aexit__ = AsyncMock(return_value=False)
         return {
             "user_repo": MagicMock(),
             "account_repo": MagicMock(),
             "transaction_repo": MagicMock(),
             "category_repo": MagicMock(),
             "bank_repo": MagicMock(),
-            "investment_settings_repo": MagicMock()
+            "investment_settings_repo": MagicMock(),
+            "uow": uow,
         }
 
     @pytest.fixture
@@ -33,7 +37,8 @@ class TestCreateTransactionHandler:
             mocks["transaction_repo"],
             mocks["category_repo"],
             mocks["bank_repo"],
-            mocks["investment_settings_repo"]
+            mocks["investment_settings_repo"],
+            mocks["uow"],
         )
 
     @pytest.mark.asyncio
