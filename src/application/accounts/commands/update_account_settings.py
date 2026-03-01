@@ -10,6 +10,7 @@ from domain.objects.enums import AccountType
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.credit_card_repository import CreditCardSettingsRepository
 from domain.repositories.bank_repository import BankRepository
+from domain.repositories.investment_card_repository import InvestmentCardSettingsRepository
 from shared.exceptions.domain import AccountNotFoundError, InvalidAccountSettingsError
 from domain.objects.credit_card_settings import CreditCardSettings
 from domain.objects.investment_settings import InvestmentCardSettings
@@ -28,7 +29,7 @@ class UpdateAccountSettingsHandler:
         self,
         account_repository: AccountRepository,
         credit_card_settings_repository: CreditCardSettingsRepository,
-        investment_settings_repository: CreditCardSettingsRepository,
+        investment_settings_repository: InvestmentCardSettingsRepository,
         bank_repository: BankRepository,
     ):
         self.account_repository = account_repository
