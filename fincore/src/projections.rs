@@ -63,23 +63,38 @@ pub fn calculate_projections(
     base_principal: Option<&str>,
 ) -> PyResult<Vec<ProjectionResult>> {
     let mut balance = Decimal::from_str(current_balance)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(
-            format!("Invalid current_balance: {}", e)
-        ))?;
+        .map_err(|e| {
+            let detail = FinCoreDetails {
+                field: "current_balance".to_string(),
+                message: format!("{}", e),
+                error_type: "INVALID_TYPE".to_string(),
+            };
+            FCInvalidDecimalError::new_err((detail.message.clone(), detail.field.clone(), detail.error_type.clone()))
+        })?;
 
     let rate = Decimal::from_str(annual_rate)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(
-            format!("Invalid annual_rate: {}", e)
-        ))?;
+        .map_err(|e| {
+            let detail = FinCoreDetails {
+                field: "annual_rate".to_string(),
+                message: format!("Invalid annual rate: {}", e),
+                error_type: "INVALID_TYPE".to_string(),
+            };
+            FCInvalidDecimalError::new_err((detail.message.clone(), detail.field.clone(), detail.error_type.clone()))
+        })?;
 
     let is_compound = interest_type == "COMPOUND";
 
     let original_principal = if !is_compound {
         match base_principal {
             Some(bp) => Decimal::from_str(bp)
-                .map_err(|e| pyo3::exceptions::PyValueError::new_err(
-                    format!("Invalid base_principal: {}", e)
-                ))?,
+                .map_err(|e| {
+                    let detail = FinCoreDetails {
+                        field: "base_principal".to_string(),
+                        message: format!("Invalid base_principal: {}", e),
+                        error_type: "INVALID_TYPE".to_string(),
+                    };
+                    FCInvalidDecimalError::new_err((detail.message.clone(), detail.field.clone(), detail.error_type.clone()))
+                })?,
             None => balance,
         }
     } else {
