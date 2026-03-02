@@ -4,8 +4,19 @@ use rust_decimal::MathematicalOps;
 use std::str::FromStr;
 
 use crate::common::date::{advance_date, year_day_basis};
+use crate::{FinCoreError, FCInvalidDecimalError};
 
 
+#[pyclass(frozen, skip_from_py_object)]
+#[derive(Clone)]
+pub struct FinCoreDetails {
+    #[pyo3(get)]
+    pub field: String,      // "current_balance", "annual_rate", "base_principal"
+    #[pyo3(get)]
+    pub message: String,    // "Invalid decimal: unknown character"
+    #[pyo3(get)]
+    pub error_type: String, // "INVALID_TYPE"
+}
 
 /// Resultado de la proyección de un día.
 /// Se expone como clase Python para que el handler pueda leer los campos.
