@@ -155,7 +155,7 @@ async def lunance_exception_handler(
     if hasattr(exc, "details") and exc.details:
         details_list = []
         for detail in exc.details:
-            msg = get_error_message(detail.get("type"), user_language)
+            msg = get_error_message(detail.get("type"), "unknown error")
             details_list.append(
                 ErrorDetail(
                     loc=detail.get("loc"),
