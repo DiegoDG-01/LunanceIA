@@ -5,7 +5,7 @@ from shared.constants.validation_messages import (
 
 
 def get_error_message(code: str, lang: str = "es") -> str:
-    return get_error_detail_message(lang, code)
+    return get_error_detail_message(code=code, language=lang)
 
 
 ERROR_MESSAGES = ERROR_DETAIL_MESSAGES
