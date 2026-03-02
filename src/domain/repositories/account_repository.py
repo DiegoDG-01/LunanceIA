@@ -25,7 +25,9 @@ class AccountRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_user_id(self, user_id: int) -> List[Account]:
+    async def get_by_user_id(
+        self, user_id: int, limit: int, offset: int
+    ) -> List[Account]:
         """Get all accounts by user uuid"""
         pass
 

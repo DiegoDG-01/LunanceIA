@@ -88,8 +88,15 @@ class SQLAlchemyAccountRepository(AccountRepository):
             return None
         return self._model_to_entity(model)
 
-    async def get_by_user_id(self, user_id: int) -> List[Account]:
-        stmt = select(AccountModel).where(AccountModel.user_id == user_id)
+    async def get_by_user_id(
+        self, user_id: int, limit: int, offset: int
+    ) -> List[Account]:
+        stmt = (
+            select(AccountModel)
+            .where(AccountModel.user_id == user_id)
+            .limit(limit)
+            .offset(offset)
+        )
         result = await self.db.execute(stmt)
         models = result.scalars().all()
         return [self._model_to_entity(model) for model in models]
