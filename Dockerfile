@@ -7,7 +7,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN pip install maturin[patchelf]
 
 COPY fincore/ /build/fincore/
-RUN cd /build/fincore && maturin build --release
+RUN cd /build/fincore && rm -rf target/wheels && maturin build --release
 
 # ---- Stage 2: Final production image ----
 FROM ghcr.io/astral-sh/uv:python3.13-alpine

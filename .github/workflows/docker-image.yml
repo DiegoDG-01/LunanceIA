@@ -24,6 +24,14 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen --all-groups
 
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build and install fincore
+        run: |
+          cd fincore && uvx maturin[patchelf] build --release
+          WHEEL=$(ls target/wheels/fincore-*.whl) && uv pip install "$WHEEL"
+
       - name: Run tests
         run: uv run pytest
         env:
