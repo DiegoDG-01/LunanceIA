@@ -13,15 +13,24 @@ from application.dto.investment_yield_dto import (
     InvestmentProjectionResponseDTO,
     ProjectionDayDTO,
 )
-from shared.exceptions.domain import AccountNotFoundError, FinancialEngineNotAvailableError
+from shared.exceptions.domain import (
+    AccountNotFoundError,
+    FinancialEngineNotAvailableError,
+    BusinessRuleError,
+    ValidationError
+)
 
 logger = logging.getLogger(__name__)
 
 try:
     from fincore import calculate_projections
+    from fincore import FinCoreError, FCInvalidDecimalError
 except ImportError:
+    logger.critical(
+        "The 'fincore' financial engine is not available. "
+        "The application will not be able to calculate projections."
+    )
     raise FinancialEngineNotAvailableError()
-
 
 
 @dataclass
@@ -33,16 +42,16 @@ class GetInvestmentProjectionsQuery:
 
 class GetInvestmentProjectionsHandler:
     def __init__(
-        self,
-        account_repository: AccountRepository,
-        investment_card_settings_repository: InvestmentCardSettingsRepository,
+            self,
+            account_repository: AccountRepository,
+            investment_card_settings_repository: InvestmentCardSettingsRepository,
     ):
         self.account_repository = account_repository
         self.investment_card_settings_repository = investment_card_settings_repository
 
     async def handle(
-        self,
-        query: GetInvestmentProjectionsQuery,
+            self,
+            query: GetInvestmentProjectionsQuery,
     ) -> InvestmentProjectionResponseDTO:
         account = await self.account_repository.get_by_uuid_and_user_id(
             account_uuid=query.account_uuid, user_id=query.user_id
@@ -73,16 +82,41 @@ class GetInvestmentProjectionsHandler:
         annual_rate = settings.interest_rate if settings else Decimal("0")
         interest_type = settings.interest_type if settings else InterestType.COMPOUND
 
-        rust_results = calculate_projections(
-            current_balance=str(current_balance),
-            annual_rate=str(annual_rate),
-            interest_type=interest_type.value,
-            days=days,
-            start_year=today.year,
-            start_month=today.month,
-            start_day=today.day,
-            base_principal=str(original_principal) if interest_type == InterestType.SIMPLE else None,
-        )
+        try:
+            rust_results = calculate_projections(
+                current_balance=str(current_balance),
+                annual_rate=str(annual_rate),
+                interest_type=interest_type.value,
+                days=days,
+                start_year=today.year,
+                start_month=today.month,
+                start_day=today.day,
+                base_principal=str(original_principal) if interest_type == InterestType.SIMPLE else None,
+            )
+        except FCInvalidDecimalError as e:
+            message, field, type = e.args
+            raise ValidationError(
+                message=message,
+                details=[
+                    {
+                        "loc": ["fc", field],
+                        "msg": message,
+                        "type": type,
+                    }
+                ],
+            )
+        except FinCoreError as e:
+            message, field, type = e.args
+            raise BusinessRuleError(
+                message=message,
+                details=[
+                    {
+                        "loc": ["fc", "business_rule"],
+                        "msg": message,
+                        "type": type,
+                    }
+                ]
+            )
 
         projections = [
             ProjectionDayDTO(
