@@ -123,6 +123,21 @@ pub fn calculate_projections(
             // daily_rate = (1 + annual_rate/100) ^ (1/year_basis) - 1
             // yield = balance * daily_rate
             let base = one + rate / hundred;
+
+            if base < Decimal::ZERO {
+                let detail = FinCoreDetails {
+                    field: "principal".to_string(),
+                    message: format!("Annual rate cannot be less than -100% for compound interest"),
+                    error_type: "BUSINESS_RULE_VIOLATION".to_string(),
+                };
+                return Err(FinCoreError::new_err((
+                    detail.message.clone(),
+                    detail.field.clone(),
+                    detail.error_type.clone(),
+                    )
+                ));
+            }
+
             let exponent = one / basis;
             let daily_rate = base.powd(exponent) - one;
             let yield_amount = (balance * daily_rate).round_dp(2);
