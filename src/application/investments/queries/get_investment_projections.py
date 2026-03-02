@@ -1,5 +1,6 @@
+import logging
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 from typing import Optional
 
@@ -12,8 +13,24 @@ from application.dto.investment_yield_dto import (
     InvestmentProjectionResponseDTO,
     ProjectionDayDTO,
 )
-from shared.exceptions.domain import AccountNotFoundError
-from shared.utils.date import get_year_day_basis
+from shared.exceptions.domain import (
+    AccountNotFoundError,
+    FinancialEngineNotAvailableError,
+    BusinessRuleError,
+    ValidationError
+)
+
+logger = logging.getLogger(__name__)
+
+try:
+    from fincore import calculate_projections
+    from fincore import FinCoreError, FCInvalidDecimalError
+except ImportError:
+    logger.critical(
+        "The 'fincore' financial engine is not available. "
+        "The application will not be able to calculate projections."
+    )
+    raise FinancialEngineNotAvailableError()
 
 
 @dataclass
@@ -25,16 +42,16 @@ class GetInvestmentProjectionsQuery:
 
 class GetInvestmentProjectionsHandler:
     def __init__(
-        self,
-        account_repository: AccountRepository,
-        investment_card_settings_repository: InvestmentCardSettingsRepository,
+            self,
+            account_repository: AccountRepository,
+            investment_card_settings_repository: InvestmentCardSettingsRepository,
     ):
         self.account_repository = account_repository
         self.investment_card_settings_repository = investment_card_settings_repository
 
     async def handle(
-        self,
-        query: GetInvestmentProjectionsQuery,
+            self,
+            query: GetInvestmentProjectionsQuery,
     ) -> InvestmentProjectionResponseDTO:
         account = await self.account_repository.get_by_uuid_and_user_id(
             account_uuid=query.account_uuid, user_id=query.user_id
@@ -65,33 +82,51 @@ class GetInvestmentProjectionsHandler:
         annual_rate = settings.interest_rate if settings else Decimal("0")
         interest_type = settings.interest_type if settings else InterestType.COMPOUND
 
-        projections = []
-        balance = current_balance
-
-        for i in range(1, days + 1):
-            projection_date = today + timedelta(days=i)
-            year_basis = Decimal(get_year_day_basis(projection_date))
-
-            if interest_type == InterestType.COMPOUND:
-                daily_rate = (1 + annual_rate / Decimal("100")) ** (
-                    Decimal("1") / year_basis
-                ) - Decimal("1")
-                principal = balance
-            else:
-                daily_rate = annual_rate / Decimal("100") / year_basis
-                principal = original_principal
-
-            yield_amount = (principal * daily_rate).quantize(Decimal("0.01"))
-            balance = balance + yield_amount
-
-            projections.append(
-                ProjectionDayDTO(
-                    projection_date=projection_date,
-                    principal_amount=principal,
-                    yield_amount=yield_amount,
-                    projected_balance=balance,
-                )
+        try:
+            rust_results = calculate_projections(
+                current_balance=str(current_balance),
+                annual_rate=str(annual_rate),
+                interest_type=interest_type.value,
+                days=days,
+                start_year=today.year,
+                start_month=today.month,
+                start_day=today.day,
+                base_principal=str(original_principal) if interest_type == InterestType.SIMPLE else None,
             )
+        except FCInvalidDecimalError as e:
+            message, field, type = e.args
+            raise ValidationError(
+                message=message,
+                details=[
+                    {
+                        "loc": ["fc", field],
+                        "msg": message,
+                        "type": type,
+                    }
+                ],
+            )
+        except FinCoreError as e:
+            message, field, type = e.args
+            raise BusinessRuleError(
+                message=message,
+                details=[
+                    {
+                        "loc": ["fc", "business_rule"],
+                        "msg": message,
+                        "type": type,
+                    }
+                ]
+            )
+
+        projections = [
+            ProjectionDayDTO(
+                projection_date=date(r.year, r.month, r.day),
+                principal_amount=Decimal(r.principal_amount),
+                yield_amount=Decimal(r.yield_amount),
+                projected_balance=Decimal(r.projected_balance),
+            )
+            for r in rust_results
+        ]
 
         projected_final = (
             projections[-1].projected_balance if projections else current_balance

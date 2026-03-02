@@ -199,3 +199,10 @@ class InvalidImageError(LunanceException):
             message (str): Optional custom error message describing the image validation failure.
         """
         super().__init__(message)
+
+
+class FinancialEngineNotAvailableError(Exception):
+    """Raised when the Rust financial engine (fincore) is not installed."""
+
+    def __init__(self):
+        super().__init__("Financial engine module is not installed")
