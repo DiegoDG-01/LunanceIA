@@ -41,6 +41,7 @@ dev = [
     "httpx>=0.28.1",
     "pytest-cov>=7.0.0",
     "pre-commit>=4.3.0",
+    "locust>=2.32.0",
 ]
 
 [tool.uv]
