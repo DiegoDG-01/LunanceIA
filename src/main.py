@@ -61,9 +61,12 @@ app.state.limiter = limiter
 
 # Configurar CORS
 if settings.ENVIRONMENT.upper() == "PROD":
-    origins = ["https://api.lunance.app"]  # Configurar dominio de producción
+    origins = [
+        "https://api.lunance.app",
+        "https://lunance.app",
+    ]
 elif settings.ENVIRONMENT.upper() in ["DEV", "TEST"]:
-    origins = ["*"]
+    origins = ["http://localhost:8080"]
 else:
     raise ValueError("Invalid environment")
 
@@ -92,7 +95,7 @@ app.include_router(api_router, prefix="/api/v2")
 async def root(request: Request):
     return {
         "message": "Hello World",
-        "version": "4.2.0",
+        "version": "4.3.0",
     }
 
 
@@ -105,4 +108,4 @@ async def health_check(request: Request, db: AsyncSession = Depends(get_db)):
     except Exception:
         db_status = {"status": "unhealthy"}
 
-    return {"API": "healthy", "version": "4.2.0", "services": db_status}
+    return {"API": "healthy", "version": "4.3.0", "services": db_status}

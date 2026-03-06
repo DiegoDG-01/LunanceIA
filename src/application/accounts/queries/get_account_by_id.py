@@ -18,6 +18,8 @@ class GetAccountByIdQuery:
 
     account_uuid: str
     user_id: int
+    limit: int
+    offset: int
 
 
 class GetAccountByIdHandler:
@@ -32,7 +34,10 @@ class GetAccountByIdHandler:
     async def handle(self, query: GetAccountByIdQuery) -> Optional[AccountResponseDTO]:
         """Ejecuta la query de obtener cuenta por ID."""
         account = await self.account_repository.get_by_uuid_and_user_id_with_settings(
-            uuid=query.account_uuid, user_id=query.user_id
+            uuid=query.account_uuid,
+            user_id=query.user_id,
+            limit=query.limit,
+            offset=query.offset,
         )
 
         if not account:

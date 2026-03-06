@@ -30,6 +30,12 @@ graph TD
         DomainServices[Domain Services]
     end
 
+    subgraph Core ["🦀 Motor de Cálculo (fincore/)"]
+        RustCore[Rust Financial Engine]
+        Projections[Investment Projections]
+        Math[Financial Math]
+    end
+
     subgraph Infrastructure ["🔧 Capa de Infraestructura (src/infrastructure/)"]
         DB[SQLAlchemy Models]
         SQLRepo[SQLAlchemy Repositories]
@@ -41,8 +47,52 @@ graph TD
     Presentation --> Application
     Application --> Domain
     Infrastructure --> Domain
+    Application --> Core
+    Domain -.-> Core
     Presentation -.-> Infrastructure
 ```
+
+## 🦀 Arquitectura Híbrida (Python + Rust)
+
+### Visión General
+
+Lunance IA utiliza un enfoque híbrido para maximizar tanto la velocidad de desarrollo como el rendimiento computacional. Mientras que **Python** actúa como el orquestador principal (manejando la API, la lógica de negocio y la persistencia), **Rust** se encarga de los cálculos financieros pesados a través del módulo `fincore`.
+
+> ⚠️ **Estado Beta**: La implementación de Rust está actualmente en fase beta. El objetivo a largo plazo es migrar todos los cálculos matemáticos y financieros críticos al motor de Rust para garantizar máxima precisión y velocidad.
+
+### Flujo de Interacción
+
+```mermaid
+sequenceDiagram
+    participant PyApp as Python (Application Layer)
+    participant PyBridge as PyO3 Bridge
+    participant RustCore as Rust (fincore Engine)
+
+    PyApp->>PyBridge: Llamada a función (ej. calculate_projections)
+    Note over PyBridge: Conversión de tipos Python <-> Rust
+    PyBridge->>RustCore: Ejecución de lógica compilada
+    Note over RustCore: Cálculos matemáticos de alta velocidad
+    RustCore-->>PyBridge: Retorno de resultados (objetos nativos)
+    PyBridge-->>PyApp: Respuesta (Pydantic models / DTOs)
+```
+
+### 🎯 Responsabilidades por Lenguaje
+
+| Característica | 🐍 Python (Orquestador) | 🦀 Rust (Motor Core) |
+| :--- | :--- | :--- |
+| **API & Routing** | FastAPI (Rápido desarrollo) | - |
+| **Persistencia** | SQLAlchemy (Async MySQL) | - |
+| **Lógica de Negocio** | CQRS, Reglas de Dominio | - |
+| **Cálculos Financieros** | Orquestación | **Rendimientos, Proyecciones** |
+| **Simulaciones** | - | **Monte Carlo, Escenarios** |
+| **Validación Tipos** | Pydantic | **Tipado fuerte y memoria segura** |
+
+### 🛠️ Integración Técnica
+
+El módulo `fincore` se integra en el ecosistema Python utilizando:
+- **PyO3**: Para crear bindings nativos de Rust para Python.
+- **Maturin**: Como sistema de construcción y publicación del paquete Rust.
+- **uv**: Maneja la instalación del módulo compilado de forma transparente.
 
 ## 📁 Estructura Detallada del Proyecto
 
@@ -148,15 +198,15 @@ sequenceDiagram
     U->>P: POST /api/v2/account/
     P->>P: Validar Schema (Pydantic)
     P->>A: CreateAccountCommand
-    
+
     A->>D: Account.create_new()
     Note over D: Aplica Reglas de Negocio
     D-->>A: Entity Instance
-    
+
     A->>I: repository.save(entity)
     I->>I: Convertir a Model SQLAlchemy
     I-->>A: Saved Entity
-    
+
     A-->>P: AccountDTO
     P-->>U: 201 Created + Response JSON
 ```
@@ -482,7 +532,7 @@ flowchart LR
             C2[UpdateAccount]
             CH[Command Handlers]
         end
-        
+
         subgraph Lectura [Queries]
             Q1[GetDashboardSummary]
             Q2[GetUserAccounts]

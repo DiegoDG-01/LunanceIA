@@ -28,6 +28,7 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 
 ### Core Technologies
 - **Framework**: FastAPI 0.115+
+- **Performance Engine**: Rust (fincore) con PyO3
 - **Base de Datos**: MySQL con SQLAlchemy 2.0+ ORM
 - **Migraciones**: Alembic 1.16+
 - **Autenticación**: Auth0 + JWT (python-jose 3.5+)
@@ -35,6 +36,11 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 - **Seguridad**: bcrypt 4.3+ + Rate Limiting (slowapi)
 - **IA**: Google Gemini API (google-genai 1.22+)
 - **Procesamiento de Imágenes**: Pillow 12.0+
+
+### 🦀 Motor de Cálculo Rust (Beta)
+Lunance IA integra un motor de cálculo de alto rendimiento escrito en **Rust** para operaciones financieras críticas como proyecciones de inversión y simulaciones complejas. Este motor se comunica de forma transparente con Python, proporcionando lo mejor de ambos mundos: la agilidad de FastAPI y la potencia de Rust.
+
+> 🧪 **Estado del Proyecto**: La implementación completa del motor de Rust está en proceso (Beta).
 
 ### Development Tools
 - **Package Manager**: uv (gestor moderno de paquetes Python)

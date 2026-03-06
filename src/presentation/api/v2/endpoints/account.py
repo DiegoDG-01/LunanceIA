@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -57,11 +57,18 @@ limiter = Limiter(key_func=get_remote_address)
 async def get_user_accounts(
     request: Request,
     only_active: bool = False,
+    limit: int = Query(50, ge=1, le=150),
+    offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_active_user),
     handler: GetUserAccountsHandler = Depends(get_user_accounts_handler),
 ):
     """Obtiene todas las cuentas del usuario."""
-    query = GetUserAccountsQuery(user_id=current_user.id, only_active=only_active)
+    query = GetUserAccountsQuery(
+        user_id=current_user.id,
+        only_active=only_active,
+        limit=limit,
+        offset=offset,
+    )
 
     accounts = await handler.handle(query)
 
