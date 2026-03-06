@@ -61,9 +61,12 @@ app.state.limiter = limiter
 
 # Configurar CORS
 if settings.ENVIRONMENT.upper() == "PROD":
-    origins = ["https://api.lunance.app"]  # Configurar dominio de producción
+    origins = [
+        "https://api.lunance.app",
+        "https://lunance.app",
+    ]
 elif settings.ENVIRONMENT.upper() in ["DEV", "TEST"]:
-    origins = ["*"]
+    origins = ["http://localhost:8080"]
 else:
     raise ValueError("Invalid environment")
 
