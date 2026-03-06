@@ -11,6 +11,7 @@ from domain.repositories.investment_card_repository import (
 )
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.investment_yield_repository import InvestmentYieldRepository
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.utils.date import get_year_day_basis
 
 
@@ -31,10 +32,12 @@ class GenerateDailyYieldHandler:
         account_repository: AccountRepository,
         investment_yield_repository: InvestmentYieldRepository,
         investment_settings_repository: InvestmentCardSettingsRepository,
+        uow: AbstractUnitOfWork,
     ):
         self.account_repository = account_repository
         self.investment_yield_repository = investment_yield_repository
         self.investment_settings_repository = investment_settings_repository
+        self.uow = uow
 
     async def handle(self, command: GenerateDailyYieldCommand) -> dict:
         today = command.target_date
@@ -97,14 +100,17 @@ class GenerateDailyYieldHandler:
                     annual_rate=annual_rate,
                     interest_type=settings.interest_type,
                 )
-                await self.investment_yield_repository.create(yield_record)
 
-                new_balance = Money(
-                    amount=cumulative_balance,
-                    currency=account.current_balance.currency,
-                )
-                account.update_balance(new_balance)
-                await self.account_repository.update(account)
+                async with self.uow:
+                    await self.investment_yield_repository.create(yield_record)
+
+                    new_balance = Money(
+                        amount=cumulative_balance,
+                        currency=account.current_balance.currency,
+                    )
+                    account.update_balance(new_balance)
+                    await self.account_repository.update(account)
+                    await self.uow.commit()
 
                 processed += 1
                 logger.info(f"generated daily yield for account {account.id}")

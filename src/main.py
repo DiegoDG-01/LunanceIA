@@ -95,7 +95,7 @@ app.include_router(api_router, prefix="/api/v2")
 async def root(request: Request):
     return {
         "message": "Hello World",
-        "version": "4.3.0",
+        "version": "4.3.1",
     }
 
 
@@ -108,4 +108,4 @@ async def health_check(request: Request, db: AsyncSession = Depends(get_db)):
     except Exception:
         db_status = {"status": "unhealthy"}
 
-    return {"API": "healthy", "version": "4.3.0", "services": db_status}
+    return {"API": "healthy", "version": "4.3.1", "services": db_status}

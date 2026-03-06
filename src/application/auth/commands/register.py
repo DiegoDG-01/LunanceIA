@@ -4,6 +4,7 @@ from pydantic import EmailStr
 
 from domain.entities.user import User
 from domain.repositories.user_repository import UserRepository
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.security.jwt_service import JWTService
 from shared.exceptions.domain import EmailAlreadyExistsError
 from shared.exceptions.application import CommandValidationError
@@ -32,9 +33,15 @@ class RegisterResponse:
 class RegisterHandler:
     """Handler para registro de usuario."""
 
-    def __init__(self, user_repository: UserRepository, jwt_service: JWTService):
+    def __init__(
+        self,
+        user_repository: UserRepository,
+        jwt_service: JWTService,
+        uow: AbstractUnitOfWork,
+    ):
         self.user_repository = user_repository
         self.jwt_service = jwt_service
+        self.uow = uow
 
     async def handle(self, command: RegisterCommand) -> RegisterResponse:
         """Ejecuta el comando de registro."""
@@ -59,7 +66,9 @@ class RegisterHandler:
         )
 
         # Guardar usuario
-        saved_user = await self.user_repository.create(user)
+        async with self.uow:
+            saved_user = await self.user_repository.create(user)
+            await self.uow.commit()
 
         return RegisterResponse(
             user_uuid=saved_user.uuid,

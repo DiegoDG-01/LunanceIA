@@ -4,6 +4,7 @@ from domain.objects.money import Money
 from domain.repositories.subscription_repository import SubscriptionRepository
 from domain.repositories.category_repository import CategoryRepository
 from domain.repositories.account_repository import AccountRepository
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from application.dto.subscription_dto import (
     UpdateSubscriptionDTO,
     SubscriptionResponseDTO,
@@ -28,10 +29,12 @@ class UpdateSubscriptionHandler:
         subscription_repository: SubscriptionRepository,
         category_repository: CategoryRepository,
         account_repository: AccountRepository,
+        uow: AbstractUnitOfWork,
     ):
         self.subscription_repository = subscription_repository
         self.category_repository = category_repository
         self.account_repository = account_repository
+        self.uow = uow
 
     async def handle(
         self, command: UpdateSubscriptionCommand
@@ -70,7 +73,11 @@ class UpdateSubscriptionHandler:
                 else:
                     setattr(subscription, key, value)
 
-        updated_subscription = await self.subscription_repository.update(subscription)
+        async with self.uow:
+            updated_subscription = await self.subscription_repository.update(
+                subscription
+            )
+            await self.uow.commit()
 
         account = await self.account_repository.get_by_id(subscription.account_id)
         account_uuid = account.uuid if account else None

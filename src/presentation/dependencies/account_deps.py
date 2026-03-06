@@ -83,16 +83,18 @@ def get_delete_account_handler(
         get_transaction_repository
     ),
     account_service: AccountService = Depends(get_account_service),
+    uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> DeleteAccountHandler:
-    return DeleteAccountHandler(account_repo, transaction_repo, account_service)
+    return DeleteAccountHandler(account_repo, transaction_repo, account_service, uow)
 
 
 def get_state_account_handler(
     account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
     account_service: AccountService = Depends(get_account_service),
     bank_repository: SQLAlchemyBankRepository = Depends(get_bank_repository),
+    uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> StateAccountHandler:
-    return StateAccountHandler(account_repo, account_service, bank_repository)
+    return StateAccountHandler(account_repo, account_service, bank_repository, uow)
 
 
 def get_user_accounts_handler(

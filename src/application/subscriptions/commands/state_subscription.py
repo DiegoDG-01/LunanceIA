@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.category_repository import CategoryRepository
 from domain.repositories.subscription_repository import SubscriptionRepository
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from application.dto.subscription_dto import SubscriptionResponseDTO
 
 from shared.exceptions.domain import SubscriptionNotFoundError
@@ -20,10 +21,12 @@ class StateSubscriptionHandler:
         subscription_repository: SubscriptionRepository,
         category_repository: CategoryRepository,
         account_repository: AccountRepository,
+        uow: AbstractUnitOfWork,
     ):
         self.subscription_repository = subscription_repository
         self.category_repository = category_repository
         self.account_repository = account_repository
+        self.uow = uow
 
     async def handle(self, command: StateSubscriptionCommand) -> bool:
         subscription = await self.subscription_repository.get_by_uuid_and_user_id(
@@ -43,11 +46,12 @@ class StateSubscriptionHandler:
         )
         category_name = category.name if category else None
 
-        subscription_update = await self.subscription_repository.switch_status(
-            subscription
-        )
+        async with self.uow:
+            subscription_update = await self.subscription_repository.switch_status(
+                subscription
+            )
+            await self.uow.commit()
 
         return SubscriptionResponseDTO.from_entity(
             subscription_update, account_uuid, account_name, category_name
         )
-        # return await self.subscription_repository.switch_status(subscription)
