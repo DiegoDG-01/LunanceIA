@@ -70,9 +70,11 @@ class AccountSummaryResponse(BaseModel):
         None, description="Fecha de última transacción"
     )
 
+
 class AccountRecentActivityResponse(BaseModel):
     """Schema de respuesta para resumen de cuenta."""
+
     name: str = Field(..., description="Nombre de la cuenta")
-    category_name: str = Field(..., description="Nombre de la cuenta")
+    category_name: str = Field(None, description="Nombre de la categoria")
     amount: Decimal = Field(..., description="Amount")
-    date: datetime = Field(..., description="Fecha de la cuenta")
+    date: date = Field(..., description="Fecha de la cuenta")

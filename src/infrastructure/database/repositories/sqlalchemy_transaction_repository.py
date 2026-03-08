@@ -438,7 +438,9 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    async def get_activity_by_account_id(self, account_id: int, limit: int = 5) -> List[Transaction, Optional[str]]:
+    async def get_activity_by_account_id(
+        self, account_id: int, limit: int = 5
+    ) -> List[Tuple[Transaction, Optional[str]]]:
         stmt = (
             select(TransactionModel, CategoryModel)
             .outerjoin(CategoryModel, TransactionModel.category_id == CategoryModel.id)
@@ -450,7 +452,9 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         results = result.all()
 
         return [
-            (self._model_to_entity(transaction_model), category_model.name if category_model else None)
+            (
+                self._model_to_entity(transaction_model),
+                category_model.name if category_model else None,
+            )
             for transaction_model, category_model in results
         ]
-
