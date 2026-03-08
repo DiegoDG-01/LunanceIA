@@ -47,7 +47,7 @@ class GetAccountActivitiesHandler:
                     name=transaction.description,
                     amount=transaction.amount.amount,
                     category_name=category_name,
-                    date=transaction.transaction_date,
+                    transaction_date=transaction.transaction_date,
                 )
             )
 

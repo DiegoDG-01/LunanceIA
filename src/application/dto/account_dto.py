@@ -73,4 +73,4 @@ class AccountActivityResponseDTO:
     name: str
     category_name: Optional[str]
     amount: Decimal
-    date: date
+    transaction_date: date

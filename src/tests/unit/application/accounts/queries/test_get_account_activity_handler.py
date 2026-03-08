@@ -90,12 +90,12 @@ class TestGetAccountActivitiesHandler:
         assert result[0].name == "Supermercado"
         assert result[0].amount == Decimal("350.00")
         assert result[0].category_name == "Alimentos"
-        assert result[0].date == date(2026, 3, 1)
+        assert result[0].transaction_date == date(2026, 3, 1)
 
         assert result[1].name == "Nómina"
         assert result[1].amount == Decimal("15000.00")
         assert result[1].category_name == "Salario"
-        assert result[1].date == date(2026, 3, 5)
+        assert result[1].transaction_date == date(2026, 3, 5)
 
     @pytest.mark.asyncio
     async def test_raises_when_account_not_found(self, handler, mocks):

@@ -77,4 +77,4 @@ class AccountRecentActivityResponse(BaseModel):
     name: str = Field(..., description="Nombre de la cuenta")
     category_name: str = Field(None, description="Nombre de la categoria")
     amount: Decimal = Field(..., description="Amount")
-    date: date = Field(..., description="Fecha de la cuenta")
+    transaction_date: date = Field(..., description="Fecha de la cuenta")
