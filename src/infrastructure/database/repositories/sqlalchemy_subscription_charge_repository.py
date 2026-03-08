@@ -3,6 +3,7 @@ from sqlalchemy import and_, asc, extract, desc, select
 from typing import Optional, List
 from datetime import date
 
+from domain.entities import subscription_charge
 from domain.entities.subscription_charge import SubscriptionCharge
 from domain.repositories.subscription_charge_repository import (
     SubscriptionChargeRepository,
@@ -190,3 +191,20 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
             category_model.name if category_model else None,
             account_model.name,
         )
+
+    async def get_last_charges_by_subscription_id(self, subscription_id: int) -> List[SubscriptionCharge, Optional[str]]:
+        stmt = (
+            select(SubscriptionChargeModel, SubscriptionModel, AccountModel)
+            .join(SubscriptionModel, SubscriptionChargeModel.subscription_id == SubscriptionModel.id)
+            .join(AccountModel, SubscriptionModel.account_id == AccountModel.id)
+            .where(SubscriptionChargeModel.subscription_id == subscription_id)
+            .order_by(asc(SubscriptionChargeModel.charge_date))
+            .limit(5)
+        )
+        result = await self.db.execute(stmt)
+        results = result.all()
+
+        return [
+            (self._model_to_entity(subscription_charge), subscription.name, account.name)
+            for subscription_charge, subscription, account in results
+        ]
