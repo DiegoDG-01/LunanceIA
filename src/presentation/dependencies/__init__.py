@@ -28,6 +28,7 @@ from presentation.dependencies.account_deps import (
     get_state_account_handler,
     get_user_accounts_handler,
     get_account_by_id_handler,
+    get_activity_account_handler,
 )
 
 # Transaction handlers
@@ -95,6 +96,7 @@ __all__ = [
     "get_state_account_handler",
     "get_user_accounts_handler",
     "get_account_by_id_handler",
+    "get_activity_account_handler",
     # Transaction
     "get_transactions_handler",
     "get_transaction_by_uuid_handler",

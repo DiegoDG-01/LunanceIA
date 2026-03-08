@@ -91,6 +91,11 @@ class TransactionNotFoundError(NotFoundError):
     def __init__(self, transaction_uuid: str):
         super().__init__(f"Transacción con UUID {transaction_uuid} no encontrada")
 
+class TransactionNotActivityError(BusinessRuleError):
+    """No se encontro actividad en la cuenta."""
+
+    def __init__(self):
+        super().__init__("No se encontró actividad en la cuenta (Ingresos/Egresos)")
 
 class InvalidTransactionAmountError(ValidationError):
     """Monto de transacción inválido."""
