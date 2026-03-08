@@ -11,7 +11,7 @@ from domain.entities.account import Account
 from domain.entities.transaction import Transaction
 from domain.objects.enums import AccountType, TransactionType
 from domain.objects.money import Money
-from shared.exceptions.domain import AccountNotFoundError, TransactionNotActivityError
+from shared.exceptions.domain import AccountNotFoundError
 
 
 @pytest.mark.unit
@@ -107,16 +107,16 @@ class TestGetAccountActivitiesHandler:
         mocks["transaction_repo"].get_activity_by_account_id.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_raises_when_no_transactions_found(self, handler, mocks):
+    async def test_returns_empty_list_when_no_transactions_found(self, handler, mocks):
         account = self._make_account()
 
         mocks["account_repo"].get_by_uuid_and_user_id = AsyncMock(return_value=account)
         mocks["transaction_repo"].get_activity_by_account_id = AsyncMock(return_value=[])
 
         query = GetAccountActivityQuery(user_id=1, account_uuid="acc-uuid-1")
+        result = await handler.handle(query)
 
-        with pytest.raises(TransactionNotActivityError):
-            await handler.handle(query)
+        assert result == []
 
     @pytest.mark.asyncio
     async def test_uses_correct_account_id_for_transaction_query(self, handler, mocks):
@@ -132,7 +132,7 @@ class TestGetAccountActivitiesHandler:
         await handler.handle(query)
 
         mocks["transaction_repo"].get_activity_by_account_id.assert_called_once_with(
-            account_id=99
+            account_id=99, limit=5
         )
 
     @pytest.mark.asyncio

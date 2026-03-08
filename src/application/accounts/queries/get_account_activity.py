@@ -33,11 +33,11 @@ class GetAccountActivitiesHandler:
             raise AccountNotFoundError(account_uuid=query.account_uuid)
 
         transactions = await self.transaction_repository.get_activity_by_account_id(
-            account_id=account.id
+            account_id=account.id, limit=5
         )
 
         if not transactions:
-            raise TransactionNotActivityError()
+            return []
 
         account_recent_activities = []
 
