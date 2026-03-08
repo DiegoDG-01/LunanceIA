@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 from decimal import Decimal
-from datetime import date, datetime
+from datetime import date
 from domain.objects.enums import Frequency, TransactionStatus
 
 
@@ -37,8 +37,9 @@ class SubscriptionChargeDetailResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class SubscriptionLastChargeResponse(BaseModel):
-    name: str = Field(..., description="Nombre de la cuenta")
+    name: str = Field(..., description="Nombre de la suscripción")
     account_name: str = Field(..., description="Nombre de la cuenta")
-    amount: Decimal = Field(..., description="Amount")
-    charge_date: date = Field(..., description="Fecha de la cuenta")
+    amount: Decimal = Field(..., description="Cargo")
+    charge_date: date = Field(..., description="Fecha del cargo")

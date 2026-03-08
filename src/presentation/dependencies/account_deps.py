@@ -6,7 +6,9 @@ from application.accounts.commands.delete_account import DeleteAccountHandler
 from application.accounts.commands.state_account import StateAccountHandler
 from application.accounts.queries.get_user_accounts import GetUserAccountsHandler
 from application.accounts.queries.get_account_by_id import GetAccountByIdHandler
-from application.accounts.queries.get_account_activity import GetAccountActivitiesHandler
+from application.accounts.queries.get_account_activity import (
+    GetAccountActivitiesHandler,
+)
 from domain.services.account_service import AccountService
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
@@ -14,7 +16,6 @@ from infrastructure.database.repositories.sqlalchemy_account_repository import (
 from infrastructure.database.repositories.sqlalchemy_bank_repository import (
     SQLAlchemyBankRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_category_repository import SQLAlchemyCategoryRepository
 from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
@@ -123,9 +124,12 @@ def get_account_by_id_handler(
 ) -> GetAccountByIdHandler:
     return GetAccountByIdHandler(account_repo, bank_repo)
 
+
 def get_activity_account_handler(
     account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
     bank_repo: SQLAlchemyBankRepository = Depends(get_bank_repository),
-    transaction_repo: SQLAlchemyTransactionRepository = Depends(get_transaction_repository),
+    transaction_repo: SQLAlchemyTransactionRepository = Depends(
+        get_transaction_repository
+    ),
 ) -> GetAccountActivitiesHandler:
     return GetAccountActivitiesHandler(account_repo, bank_repo, transaction_repo)

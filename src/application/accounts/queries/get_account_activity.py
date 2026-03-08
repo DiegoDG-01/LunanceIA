@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from typing import List
 
 from domain.repositories.account_repository import AccountRepository
-from domain.repositories.bank_repository import BankRepository
 from domain.repositories.transaction_repository import TransactionRepository
 from application.dto.account_dto import AccountActivityResponseDTO
 from shared.exceptions.domain import AccountNotFoundError, TransactionNotActivityError
@@ -15,19 +14,17 @@ class GetAccountActivityQuery:
 
 
 class GetAccountActivitiesHandler:
-
     def __init__(
         self,
         account_repository: AccountRepository,
-        bank_repository: BankRepository,
         transaction_repository: TransactionRepository,
     ):
         self.account_repository = account_repository
-        self.bank_repository = bank_repository
         self.transaction_repository = transaction_repository
 
-
-    async def handle(self, query: GetAccountActivityQuery) -> List[AccountActivityResponseDTO]:
+    async def handle(
+        self, query: GetAccountActivityQuery
+    ) -> List[AccountActivityResponseDTO]:
         account = await self.account_repository.get_by_uuid_and_user_id(
             account_uuid=query.account_uuid, user_id=query.user_id
         )
@@ -35,7 +32,9 @@ class GetAccountActivitiesHandler:
         if not account:
             raise AccountNotFoundError(account_uuid=query.account_uuid)
 
-        transactions = await self.transaction_repository.get_activity_by_account_id(account_id=account.id)
+        transactions = await self.transaction_repository.get_activity_by_account_id(
+            account_id=account.id
+        )
 
         if not transactions:
             raise TransactionNotActivityError()
@@ -48,7 +47,7 @@ class GetAccountActivitiesHandler:
                     name=transaction.description,
                     amount=transaction.amount.amount,
                     category_name=category_name,
-                    date=transaction.transaction_date
+                    date=transaction.transaction_date,
                 )
             )
 

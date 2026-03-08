@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from datetime import date
 
 from domain.entities.subscription_charge import SubscriptionCharge
@@ -42,5 +42,7 @@ class SubscriptionChargeRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_last_charges_by_subscription_id(self, subscription_id: int) -> List[SubscriptionCharge]:
+    async def get_last_charges_by_subscription_id(
+        self, subscription_id: int
+    ) -> List[Tuple[SubscriptionCharge, str, str]]:
         pass

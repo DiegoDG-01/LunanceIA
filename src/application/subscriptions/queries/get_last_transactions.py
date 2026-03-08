@@ -1,14 +1,15 @@
 from dataclasses import dataclass
 from typing import List
 
-from dns.name import empty
-
 from application.dto.subscription_dto import SubscriptionLastTransactionsResponseDTO
-from domain.repositories.subscription_charge_repository import SubscriptionChargeRepository
+from domain.repositories.subscription_charge_repository import (
+    SubscriptionChargeRepository,
+)
 from domain.repositories.subscription_repository import SubscriptionRepository
-from domain.repositories.transaction_repository import TransactionRepository
-from domain.repositories.account_repository import AccountRepository
-from shared.exceptions.domain import SubscriptionNotFoundError, TransactionNotActivityError
+from shared.exceptions.domain import (
+    SubscriptionNotFoundError,
+    TransactionNotActivityError,
+)
 
 
 @dataclass
@@ -18,32 +19,29 @@ class GetLastTransactionsQuery:
 
 
 class GetLastTransactionsHandler:
-
     def __init__(
         self,
-        account_repository: AccountRepository,
         subscription_repository: SubscriptionRepository,
-        transaction_repository: TransactionRepository,
         subscription_charge_repository: SubscriptionChargeRepository,
     ):
-        self.account_repository = account_repository
         self.subscription_repository = subscription_repository
-        self.transaction_repository = transaction_repository
         self.subscription_charge_repository = subscription_charge_repository
 
-    async def handle(self, query: GetLastTransactionsQuery) -> List[SubscriptionLastTransactionsResponseDTO]:
-    # async def handle(self, query: GetLastTransactionsQuery) -> bool:
+    async def handle(
+        self, query: GetLastTransactionsQuery
+    ) -> List[SubscriptionLastTransactionsResponseDTO]:
+        # async def handle(self, query: GetLastTransactionsQuery) -> bool:
         subscription = await self.subscription_repository.get_by_uuid_and_user_id(
             query.subscription_uuid, query.user_id
         )
 
         if subscription is None:
-            raise  SubscriptionNotFoundError(subscription_uuid=query.subscription_uuid)
+            raise SubscriptionNotFoundError(subscription_uuid=query.subscription_uuid)
 
         last_transactions = await self.subscription_charge_repository.get_last_charges_by_subscription_id(
             subscription_id=subscription.id,
         )
-        if last_transactions is empty:
+        if not last_transactions:
             # TODO: Change to subscriptionNotActivityError
             raise TransactionNotActivityError()
 
