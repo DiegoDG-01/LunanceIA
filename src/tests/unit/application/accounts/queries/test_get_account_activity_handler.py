@@ -20,7 +20,6 @@ class TestGetAccountActivitiesHandler:
     def mocks(self):
         return {
             "account_repo": MagicMock(),
-            "bank_repo": MagicMock(),
             "transaction_repo": MagicMock(),
         }
 
@@ -28,7 +27,6 @@ class TestGetAccountActivitiesHandler:
     def handler(self, mocks):
         return GetAccountActivitiesHandler(
             account_repository=mocks["account_repo"],
-            bank_repository=mocks["bank_repo"],
             transaction_repository=mocks["transaction_repo"],
         )
 
