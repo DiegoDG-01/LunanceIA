@@ -16,6 +16,7 @@ from application.subscriptions.queries.get_subscriptions import GetSubscriptions
 from application.subscriptions.queries.get_subscriptions_by_id import (
     GetSubscriptionsByIdHandler,
 )
+from application.subscriptions.queries.get_last_transactions import GetLastTransactionsHandler
 from application.subscriptions.queries.get_subscription_charges import (
     GetSubscriptionChargesHandler,
 )
@@ -32,6 +33,7 @@ from infrastructure.database.repositories.sqlalchemy_subscription_repository imp
 from infrastructure.database.repositories.sqlalchemy_subscription_charge_repository import (
     SQLAlchemySubscriptionChargeRepository,
 )
+from infrastructure.database.repositories.sqlalchemy_transaction_repository import SQLAlchemyTransactionRepository
 from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
@@ -43,6 +45,7 @@ from presentation.dependencies.repositories import (
     get_subscription_repository,
     get_subscription_charge_repository,
     get_unit_of_work_repository,
+    get_transaction_repository,
 )
 
 
@@ -119,3 +122,11 @@ def get_delete_subscription_handler(
     uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> DeleteSubscriptionHandler:
     return DeleteSubscriptionHandler(subscription_repo, uow)
+
+def get_last_transactions_handler(
+    account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
+    subscription_repo: SQLAlchemySubscriptionRepository = Depends(get_subscription_repository),
+    transaction_repo: SQLAlchemyTransactionRepository = Depends(get_transaction_repository),
+    subscription_charge_respo: SQLAlchemySubscriptionChargeRepository = Depends(get_subscription_charge_repository),
+) -> GetLastTransactionsHandler:
+    return GetLastTransactionsHandler(account_repo, subscription_repo, transaction_repo, subscription_charge_respo)
