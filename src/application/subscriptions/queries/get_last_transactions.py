@@ -41,11 +41,9 @@ class GetLastTransactionsHandler:
         last_transactions = await self.subscription_charge_repository.get_last_charges_by_subscription_id(
             subscription_id=subscription.id,
         )
-        if not last_transactions:
-            # TODO: Change to subscriptionNotActivityError
-            raise TransactionNotActivityError()
-
         transactions = []
+        if not last_transactions:
+            return transactions
 
         for subs_charge, subs_name, account_name in last_transactions:
             transactions.append(

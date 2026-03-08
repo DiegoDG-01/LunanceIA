@@ -19,18 +19,14 @@ class TestGetLastTransactionsHandler:
     @pytest.fixture
     def mocks(self):
         return {
-            "account_repo": MagicMock(),
             "subscription_repo": MagicMock(),
-            "transaction_repo": MagicMock(),
             "subscription_charge_repo": MagicMock(),
         }
 
     @pytest.fixture
     def handler(self, mocks):
         return GetLastTransactionsHandler(
-            account_repository=mocks["account_repo"],
             subscription_repository=mocks["subscription_repo"],
-            transaction_repository=mocks["transaction_repo"],
             subscription_charge_repository=mocks["subscription_charge_repo"],
         )
 
