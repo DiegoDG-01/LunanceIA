@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status, Response, Request, Query
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from typing import Optional
+from typing import Optional, List
 
 from domain.entities.user import User
 from application.dto.subscription_dto import CreateSubscriptionDTO
@@ -33,6 +33,10 @@ from application.subscriptions.commands.state_subscription import (
     StateSubscriptionCommand,
     StateSubscriptionHandler,
 )
+from application.subscriptions.queries.get_last_transactions import (
+    GetLastTransactionsQuery,
+    GetLastTransactionsHandler
+)
 from presentation.schemas.responses.subscription import (
     SubscriptionResponse,
     SubscriptionChargeDetailResponse,
@@ -50,7 +54,9 @@ from presentation.dependencies import (
     get_subscription_charges_handler,
     get_subscription_by_id_handler,
     get_state_subscription_handler,
+    get_last_transactions_handler
 )
+from presentation.schemas.responses.subscription import SubscriptionLastChargeResponse
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -208,3 +214,17 @@ async def delete_subscription(
 
     await handler.handle(command)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/{subscription_uuid}/transactions/", response_model=List[SubscriptionLastChargeResponse])
+@limiter.limit("20/minute")
+async def get_subscription_last_charge(
+    request: Request,
+    subscription_uuid: str,
+    current_user: User = Depends(get_current_active_user),
+    handler: GetLastTransactionsHandler = Depends(get_last_transactions_handler)
+):
+    query = GetLastTransactionsQuery(subscription_uuid=subscription_uuid, user_id=current_user.id)
+    result = await handler.handle(query)
+
+    return [SubscriptionLastChargeResponse(**item.__dict__) for item in result]
