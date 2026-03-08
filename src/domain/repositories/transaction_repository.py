@@ -134,3 +134,10 @@ class TransactionRepository(ABC):
     async def count_by_user(self, user_uuid: str) -> int:
         """Count transactions by user uuid"""
         pass
+
+    @abstractmethod
+    async def get_activity_by_account_id(self, account_id: int, limit: int) -> List[Transaction, Optional[str]]:
+        """Get transactions by account id and user uuid
+        The limit is a default value of 5
+        """
+        pass
