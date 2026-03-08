@@ -16,6 +16,9 @@ from application.subscriptions.queries.get_subscriptions import GetSubscriptions
 from application.subscriptions.queries.get_subscriptions_by_id import (
     GetSubscriptionsByIdHandler,
 )
+from application.subscriptions.queries.get_last_transactions import (
+    GetLastTransactionsHandler,
+)
 from application.subscriptions.queries.get_subscription_charges import (
     GetSubscriptionChargesHandler,
 )
@@ -119,3 +122,14 @@ def get_delete_subscription_handler(
     uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> DeleteSubscriptionHandler:
     return DeleteSubscriptionHandler(subscription_repo, uow)
+
+
+def get_last_transactions_handler(
+    subscription_repo: SQLAlchemySubscriptionRepository = Depends(
+        get_subscription_repository
+    ),
+    subscription_charge_repo: SQLAlchemySubscriptionChargeRepository = Depends(
+        get_subscription_charge_repository
+    ),
+) -> GetLastTransactionsHandler:
+    return GetLastTransactionsHandler(subscription_repo, subscription_charge_repo)

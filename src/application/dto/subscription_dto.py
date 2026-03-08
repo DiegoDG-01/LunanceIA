@@ -122,3 +122,10 @@ class SubscriptionChargeDetailResponseDTO:
             category_name=category_name,
             account_name=account_name,
         )
+
+@dataclass
+class SubscriptionLastTransactionsResponseDTO:
+    name: str
+    account_name: Optional[str]
+    amount: Decimal
+    charge_date: date

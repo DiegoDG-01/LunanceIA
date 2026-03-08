@@ -190,3 +190,29 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
             category_model.name if category_model else None,
             account_model.name,
         )
+
+    async def get_last_charges_by_subscription_id(
+        self, subscription_id: int
+    ) -> List[SubscriptionCharge, Optional[str]]:
+        stmt = (
+            select(SubscriptionChargeModel, SubscriptionModel, AccountModel)
+            .join(
+                SubscriptionModel,
+                SubscriptionChargeModel.subscription_id == SubscriptionModel.id,
+            )
+            .join(AccountModel, SubscriptionModel.account_id == AccountModel.id)
+            .where(SubscriptionChargeModel.subscription_id == subscription_id)
+            .order_by(desc(SubscriptionChargeModel.charge_date))
+            .limit(5)
+        )
+        result = await self.db.execute(stmt)
+        results = result.all()
+
+        return [
+            (
+                self._model_to_entity(subscription_charge),
+                subscription.name,
+                account.name,
+            )
+            for subscription_charge, subscription, account in results
+        ]

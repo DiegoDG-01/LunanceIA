@@ -49,6 +49,7 @@ from presentation.dependencies.subscription_deps import (
     get_subscription_by_id_handler,
     get_subscription_charges_handler,
     get_delete_subscription_handler,
+    get_last_transactions_handler,
 )
 
 # Category handlers
@@ -111,6 +112,7 @@ __all__ = [
     "get_subscription_by_id_handler",
     "get_subscription_charges_handler",
     "get_delete_subscription_handler",
+    "get_last_transactions_handler",
     # Category
     "get_categories_handler",
     # Dashboard
