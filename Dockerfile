@@ -39,7 +39,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-project
 
 COPY --chown=lunance:lunance --from=rust-builder /build/fincore/dist/*.whl /tmp/
-RUN uv pip install /tmp/*.whl && rm /tmp/*.whl
+RUN uv pip install /tmp/*.whl && rm /tmp/*.whl && \
+    chown -R lunance:lunance /app/.venv
 
 COPY --chown=lunance:lunance src/ ./src/
 COPY --chown=lunance:lunance alembic/ ./alembic/

@@ -8,11 +8,10 @@ services:
     ports:
       - "8000:8000"            # Map host port 8000 to container port 8000
     depends_on:
-      - db                     # Wait for database service to start
+      db:
+        condition: service_healthy  # Wait until MySQL is ready to accept connections
     env_file:
       - .env                   # Load environment variables from .env file
-    volumes:
-      - api_data:/app                 # Mount current directory for development
     networks:
       - lunance-net           # Connect to custom network
 
@@ -31,13 +30,18 @@ services:
       - MYSQL_USER=luna              # Create application user
       - MYSQL_PASSWORD=luna_root      # Set password for application user
       - MYSQL_ROOT_PASSWORD=root     # Set root password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "luna", "-pluna_root"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks:
       - lunance-net                 # Connect to custom network
 
 # Named volumes for data persistence
 volumes:
   mysql_data:             # Persistent storage for MySQL data
-  api_data:               # Persistent storage for application data
 
 # Custom networks for service communication
 networks:

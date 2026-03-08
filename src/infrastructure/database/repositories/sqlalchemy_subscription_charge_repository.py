@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, asc, extract, desc, select
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from datetime import date
 
 from domain.entities.subscription_charge import SubscriptionCharge
@@ -193,7 +193,7 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
 
     async def get_last_charges_by_subscription_id(
         self, subscription_id: int
-    ) -> List[SubscriptionCharge, Optional[str]]:
+    ) -> List[Tuple[SubscriptionCharge, Optional[str]]]:
         stmt = (
             select(SubscriptionChargeModel, SubscriptionModel, AccountModel)
             .join(
