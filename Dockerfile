@@ -1,53 +1,56 @@
 # ---- Stage 1: Compile Rust financial core ----
 FROM python:3.13-alpine AS rust-builder
 
-RUN apk add --no-cache curl gcc musl-dev
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
-RUN pip install maturin[patchelf]
+RUN apk add --no-cache curl gcc musl-dev patchelf libgcc
 
-COPY fincore/ /build/fincore/
-RUN cd /build/fincore && rm -rf target/wheels && maturin build --release
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+WORKDIR /build/fincore
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir maturin[patchelf]
+
+COPY fincore/ .
+
+RUN --mount=type=cache,target=/build/fincore/target,id=lunance-cargo-cache \
+    maturin build --release --strip --interpreter python3.13 && \
+    mkdir -p /build/fincore/dist && \
+    cp /build/fincore/target/wheels/*.whl /build/fincore/dist/
+
 
 # ---- Stage 2: Final production image ----
 FROM ghcr.io/astral-sh/uv:python3.13-alpine
 
-# Environment variables for Python optimization and uv configuration
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/opt/uv/bin:$PATH" \
-    PYTHONPATH="/app/src"
+    PYTHONPATH="/app/src" \
+    UV_COMPILE_BYTECODE=1
 
-# Set working directory inside the container
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache netcat-openbsd libgcc && \
+    pip install --no-cache-dir --upgrade pip && \
+    addgroup -S lunance && adduser -S lunance -G lunance
+
 WORKDIR /app
 
-# Expose port 8000 for FastAPI application
-EXPOSE 8000
+COPY --chown=lunance:lunance pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
 
-# Install netcat for database connection testing
-RUN apk add --no-cache netcat-openbsd
+COPY --chown=lunance:lunance --from=rust-builder /build/fincore/dist/*.whl /tmp/
+RUN uv pip install /tmp/*.whl && rm /tmp/*.whl && \
+    chown -R lunance:lunance /app/.venv
 
-# Copy dependency files for layer caching optimization
-COPY pyproject.toml ./
-COPY uv.lock ./
+COPY --chown=lunance:lunance src/ ./src/
+COPY --chown=lunance:lunance alembic/ ./alembic/
+COPY --chown=lunance:lunance alembic.ini ./
 
-# Install Python dependencies (production only)
-RUN uv sync --no-dev
+COPY --chown=lunance:lunance entrypoint.sh ./
+RUN chmod +x entrypoint.sh
 
-# Install pre-compiled fincore wheel from builder stage
-COPY --from=rust-builder /build/fincore/target/wheels/*.whl /tmp/
-RUN uv pip install /tmp/*.whl && rm /tmp/*.whl
-
-# Copy application source code and database migration files
-COPY src/ ./src/
-COPY alembic/ ./alembic/
-COPY alembic.ini ./
-
-# Create non-root user for security
-RUN addgroup -S lunance && adduser -S lunance -G lunance
-RUN chown -R lunance:lunance /app
 USER lunance
 
-# Wait for database, run migrations, then start the application
-COPY entrypoint.sh ./
+EXPOSE 8000
+
 ENTRYPOINT ["./entrypoint.sh"]

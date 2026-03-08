@@ -43,6 +43,7 @@ from shared.exceptions.domain import (
     InvestmentSettingsNotFoundError,
     CreditCardSettingsNotFoundError,
     InvalidAccountSettingsError,
+    TransactionNotActivityError,
 )
 from shared.exceptions.application import (
     JWTValidationError,
@@ -76,6 +77,7 @@ EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     SubscriptionNotFoundError: ("NOT_FOUND_SUBSCRIPTION", 404),
     InvestmentSettingsNotFoundError: ("INVESTMENT_SETTINGS_NOT_FOUND", 404),
     CreditCardSettingsNotFoundError: ("CREDIT_CARD_SETTINGS_NOT_FOUND", 404),
+    TransactionNotActivityError: ("NOT_FOUND_ACTIVITY", 404),
     # --- Conflictos de Negocio (409) ---
     EmailAlreadyExistsError: ("BUSINESS_EMAIL_EXISTS", 409),
     AccountHasBalanceError: ("BUSINESS_ACCOUNT_HAS_BALANCE", 409),

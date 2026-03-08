@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 from domain.repositories.user_repository import UserRepository
 from domain.repositories.auth_token_repository import AuthTokenRepository
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.config.settings import settings
 from infrastructure.security.jwt_service import JWTService
 from shared.exceptions.application import CommandValidationError
@@ -33,10 +34,12 @@ class LoginHandler:
         user_repo: UserRepository,
         auth_token_repo: AuthTokenRepository,
         jwt_service: JWTService,
+        uow: AbstractUnitOfWork,
     ):
         self.user_repository = user_repo
         self.auth_token_repository = auth_token_repo
         self.jwt_service = jwt_service
+        self.uow = uow
 
     async def handle(self, command: LoginCommand) -> LoginResponse:
         if not command.email or not command.password:
@@ -66,11 +69,13 @@ class LoginHandler:
             days=settings.REFRESH_TOKEN_EXPIRE_DAYS
         )
 
-        await self.auth_token_repository.save_refresh_token(
-            user_id=user.id,
-            refresh_hash_token=refresh_token_hash,
-            expires_at=refresh_expires_at,
-        )
+        async with self.uow:
+            await self.auth_token_repository.save_refresh_token(
+                user_id=user.id,
+                refresh_hash_token=refresh_token_hash,
+                expires_at=refresh_expires_at,
+            )
+            await self.uow.commit()
 
         return LoginResponse(
             access_token=access_token,

@@ -140,6 +140,7 @@ HTTP_CODES_ERRORS = {
         "NOT_FOUND_TRANSACTION": "Transacción no encontrada",
         "NOT_FOUND_CATEGORY": "Categoría no encontrada",
         "NOT_FOUND_SUBSCRIPTION": "Suscripción no encontrada",
+        "NOT_FOUND_ACTIVITY": "No se encontró ningún movimiento",
         "INVESTMENT_SETTINGS_NOT_FOUND": "Configuración de cuenta no encontrada",
         # Códigos específicos de Lunance - Conflictos de negocio
         "BUSINESS_EMAIL_EXISTS": "El email ya está registrado",
@@ -183,6 +184,7 @@ HTTP_CODES_ERRORS = {
         "NOT_FOUND_CATEGORY": "Category not found",
         "NOT_FOUND_SUBSCRIPTION": "Subscription not found",
         "INVESTMENT_SETTINGS_NOT_FOUND": "Account settings not found",
+        "NOT_FOUND_ACTIVITY": "No movement was found",
         # Códigos específicos de Lunance - Conflictos de negocio
         "INVALID_CREDENTIALS": "Invalid credentials",
         "BUSINESS_EMAIL_EXISTS": "Email already registered",

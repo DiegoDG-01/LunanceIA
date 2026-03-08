@@ -28,6 +28,7 @@ from presentation.dependencies.account_deps import (
     get_state_account_handler,
     get_user_accounts_handler,
     get_account_by_id_handler,
+    get_activity_account_handler,
 )
 
 # Transaction handlers
@@ -48,6 +49,7 @@ from presentation.dependencies.subscription_deps import (
     get_subscription_by_id_handler,
     get_subscription_charges_handler,
     get_delete_subscription_handler,
+    get_last_transactions_handler,
 )
 
 # Category handlers
@@ -95,6 +97,7 @@ __all__ = [
     "get_state_account_handler",
     "get_user_accounts_handler",
     "get_account_by_id_handler",
+    "get_activity_account_handler",
     # Transaction
     "get_transactions_handler",
     "get_transaction_by_uuid_handler",
@@ -109,6 +112,7 @@ __all__ = [
     "get_subscription_by_id_handler",
     "get_subscription_charges_handler",
     "get_delete_subscription_handler",
+    "get_last_transactions_handler",
     # Category
     "get_categories_handler",
     # Dashboard

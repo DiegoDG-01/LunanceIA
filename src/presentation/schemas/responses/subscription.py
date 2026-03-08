@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 from decimal import Decimal
 from datetime import date
@@ -36,3 +36,10 @@ class SubscriptionChargeDetailResponse(BaseModel):
     account_name: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SubscriptionLastChargeResponse(BaseModel):
+    name: str = Field(..., description="Nombre de la suscripción")
+    account_name: str = Field(..., description="Nombre de la cuenta")
+    amount: Decimal = Field(..., description="Cargo")
+    charge_date: date = Field(..., description="Fecha del cargo")

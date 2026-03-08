@@ -6,6 +6,9 @@ from application.accounts.commands.delete_account import DeleteAccountHandler
 from application.accounts.commands.state_account import StateAccountHandler
 from application.accounts.queries.get_user_accounts import GetUserAccountsHandler
 from application.accounts.queries.get_account_by_id import GetAccountByIdHandler
+from application.accounts.queries.get_account_activity import (
+    GetAccountActivitiesHandler,
+)
 from domain.services.account_service import AccountService
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
@@ -83,16 +86,18 @@ def get_delete_account_handler(
         get_transaction_repository
     ),
     account_service: AccountService = Depends(get_account_service),
+    uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> DeleteAccountHandler:
-    return DeleteAccountHandler(account_repo, transaction_repo, account_service)
+    return DeleteAccountHandler(account_repo, transaction_repo, account_service, uow)
 
 
 def get_state_account_handler(
     account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
     account_service: AccountService = Depends(get_account_service),
     bank_repository: SQLAlchemyBankRepository = Depends(get_bank_repository),
+    uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> StateAccountHandler:
-    return StateAccountHandler(account_repo, account_service, bank_repository)
+    return StateAccountHandler(account_repo, account_service, bank_repository, uow)
 
 
 def get_user_accounts_handler(
@@ -118,3 +123,12 @@ def get_account_by_id_handler(
     bank_repo: SQLAlchemyBankRepository = Depends(get_bank_repository),
 ) -> GetAccountByIdHandler:
     return GetAccountByIdHandler(account_repo, bank_repo)
+
+
+def get_activity_account_handler(
+    account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
+    transaction_repo: SQLAlchemyTransactionRepository = Depends(
+        get_transaction_repository
+    ),
+) -> GetAccountActivitiesHandler:
+    return GetAccountActivitiesHandler(account_repo, transaction_repo)

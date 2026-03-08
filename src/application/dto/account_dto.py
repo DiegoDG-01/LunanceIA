@@ -67,3 +67,10 @@ class AccountResponseDTO:
     bank_code: Optional[str]
     credit_card_settings: Optional[CreditCardSettingsDTO] = None
     investment_settings: Optional[InvestmentCardSettingsDTO] = None
+
+@dataclass
+class AccountActivityResponseDTO:
+    name: str
+    category_name: Optional[str]
+    amount: Decimal
+    transaction_date: date

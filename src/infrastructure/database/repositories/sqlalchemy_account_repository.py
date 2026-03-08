@@ -101,9 +101,19 @@ class SQLAlchemyAccountRepository(AccountRepository):
         models = result.scalars().all()
         return [self._model_to_entity(model) for model in models]
 
-    async def get_active_by_user(self, user_id: int) -> List[Account]:
-        stmt = select(AccountModel).where(
-            and_(AccountModel.id == user_id, AccountModel.is_active is True)
+    async def get_active_by_user(
+        self, user_id: int, limit: int, offset: int
+    ) -> List[Account]:
+        stmt = (
+            select(AccountModel)
+            .where(
+                and_(
+                    AccountModel.user_id == user_id,
+                    AccountModel.is_active is True,
+                )
+            )
+            .limit(limit)
+            .offset(offset)
         )
         result = await self.db.execute(stmt)
         models = result.scalars().all()

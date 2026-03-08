@@ -10,7 +10,10 @@ from domain.objects.enums import AccountType
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.credit_card_repository import CreditCardSettingsRepository
 from domain.repositories.bank_repository import BankRepository
-from domain.repositories.investment_card_repository import InvestmentCardSettingsRepository
+from domain.repositories.investment_card_repository import (
+    InvestmentCardSettingsRepository,
+)
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.exceptions.domain import AccountNotFoundError, InvalidAccountSettingsError
 from domain.objects.credit_card_settings import CreditCardSettings
 from domain.objects.investment_settings import InvestmentCardSettings
@@ -31,11 +34,13 @@ class UpdateAccountSettingsHandler:
         credit_card_settings_repository: CreditCardSettingsRepository,
         investment_settings_repository: InvestmentCardSettingsRepository,
         bank_repository: BankRepository,
+        uow: AbstractUnitOfWork,
     ):
         self.account_repository = account_repository
         self.credit_card_settings_repository = credit_card_settings_repository
         self.investment_settings_repository = investment_settings_repository
         self.bank_repository = bank_repository
+        self.uow = uow
 
     async def handle(self, command: UpdateAccountSettingsCommand) -> AccountResponseDTO:
         account = await self.account_repository.get_by_uuid_and_user_id(
@@ -45,52 +50,55 @@ class UpdateAccountSettingsHandler:
         if not account:
             raise AccountNotFoundError(command.account_uuid)
 
-        if command.credit_card_settings:
-            if account.account_type != AccountType.CREDIT_CARD:
-                raise InvalidAccountSettingsError(command.account_uuid)
+        async with self.uow:
+            if command.credit_card_settings:
+                if account.account_type != AccountType.CREDIT_CARD:
+                    raise InvalidAccountSettingsError(command.account_uuid)
 
-            cc_settings = CreditCardSettings(
-                billing_cycle_day=command.credit_card_settings.billing_cycle_day,
-                payment_due_day=command.credit_card_settings.payment_due_day,
-                credit_limit=command.credit_card_settings.credit_limit,
-                minimum_payment_percentage=command.credit_card_settings.minimum_payment_percentage,
-            )
-
-            existing = await self.credit_card_settings_repository.get_by_account_id(
-                account.id
-            )
-            if existing:
-                await self.credit_card_settings_repository.update(
-                    account.id, cc_settings
-                )
-            else:
-                await self.credit_card_settings_repository.create(
-                    account.id, cc_settings
+                cc_settings = CreditCardSettings(
+                    billing_cycle_day=command.credit_card_settings.billing_cycle_day,
+                    payment_due_day=command.credit_card_settings.payment_due_day,
+                    credit_limit=command.credit_card_settings.credit_limit,
+                    minimum_payment_percentage=command.credit_card_settings.minimum_payment_percentage,
                 )
 
-        if command.investment_settings:
-            if account.account_type != AccountType.INVESTMENT:
-                raise InvalidAccountSettingsError(command.account_uuid)
-
-            inv_settings = InvestmentCardSettings(
-                investment_type=command.investment_settings.investment_type,
-                interest_rate=command.investment_settings.interest_rate,
-                lock_period_end_date=command.investment_settings.lock_period_end_date,
-                maturity_date=command.investment_settings.maturity_date,
-                early_withdrawal_penalty=command.investment_settings.early_withdrawal_penalty,
-            )
-
-            existing = await self.investment_settings_repository.get_by_account_id(
-                account.id
-            )
-            if existing:
-                await self.investment_settings_repository.update(
-                    account.id, inv_settings
+                existing = await self.credit_card_settings_repository.get_by_account_id(
+                    account.id
                 )
-            else:
-                await self.investment_settings_repository.create(
-                    account.id, inv_settings
+                if existing:
+                    await self.credit_card_settings_repository.update(
+                        account.id, cc_settings
+                    )
+                else:
+                    await self.credit_card_settings_repository.create(
+                        account.id, cc_settings
+                    )
+
+            if command.investment_settings:
+                if account.account_type != AccountType.INVESTMENT:
+                    raise InvalidAccountSettingsError(command.account_uuid)
+
+                inv_settings = InvestmentCardSettings(
+                    investment_type=command.investment_settings.investment_type,
+                    interest_rate=command.investment_settings.interest_rate,
+                    lock_period_end_date=command.investment_settings.lock_period_end_date,
+                    maturity_date=command.investment_settings.maturity_date,
+                    early_withdrawal_penalty=command.investment_settings.early_withdrawal_penalty,
                 )
+
+                existing = await self.investment_settings_repository.get_by_account_id(
+                    account.id
+                )
+                if existing:
+                    await self.investment_settings_repository.update(
+                        account.id, inv_settings
+                    )
+                else:
+                    await self.investment_settings_repository.create(
+                        account.id, inv_settings
+                    )
+
+            await self.uow.commit()
 
         bank_name = None
         bank_code = None

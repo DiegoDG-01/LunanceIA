@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.services.account_service import AccountService
 
 
@@ -21,10 +22,12 @@ class DeleteAccountHandler:
         account_repository: AccountRepository,
         transaction_repository: TransactionRepository,
         account_service: AccountService,
+        uow: AbstractUnitOfWork,
     ):
         self.account_repository = account_repository
         self.transaction_repository = transaction_repository
         self.account_service = account_service
+        self.uow = uow
 
     async def handle(self, command: DeleteAccountCommand) -> bool:
         """Ejecuta el comando de eliminar cuenta."""
@@ -47,4 +50,8 @@ class DeleteAccountHandler:
             raise ValueError("No se puede eliminar cuenta con transacciones existentes")
 
         # Eliminar cuenta
-        return await self.account_repository.delete(account)
+        async with self.uow:
+            result = await self.account_repository.delete(account)
+            await self.uow.commit()
+
+        return result

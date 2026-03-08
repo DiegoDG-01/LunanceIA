@@ -5,6 +5,7 @@ from domain.repositories.subscription_repository import SubscriptionRepository
 from domain.repositories.user_repository import UserRepository
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.category_repository import CategoryRepository
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.objects.money import Money
 from application.dto.subscription_dto import (
     CreateSubscriptionDTO,
@@ -25,11 +26,13 @@ class CreateSubscriptionHandler:
         user_repository: UserRepository,
         account_repository: AccountRepository,
         category_repository: CategoryRepository,
+        uow: AbstractUnitOfWork,
     ):
         self.subscription_repository = subscription_repository
         self.user_repository = user_repository
         self.account_repository = account_repository
         self.category_repository = category_repository
+        self.uow = uow
 
     async def handle(
         self, command: CreateSubscriptionCommand
@@ -71,7 +74,9 @@ class CreateSubscriptionHandler:
             service_url=dto.service_url,
         )
 
-        saved_subscription = await self.subscription_repository.create(subscription)
+        async with self.uow:
+            saved_subscription = await self.subscription_repository.create(subscription)
+            await self.uow.commit()
 
         return SubscriptionResponseDTO.from_entity(
             saved_subscription,

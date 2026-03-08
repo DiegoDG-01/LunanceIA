@@ -24,6 +24,9 @@ from infrastructure.database.repositories.sqlalchemy_investment_yield_repository
 from infrastructure.database.repositories.sqlalchemy_investment_card_repository import (
     SQLAlchemyInvestmentSettingsRepository,
 )
+from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
+    SQLAlchemyUnitOfWork,
+)
 from application.investments.commands.generate_daily_yields import (
     GenerateDailyYieldCommand,
     GenerateDailyYieldHandler,
@@ -67,16 +70,17 @@ async def process_investment_yield_job():
             yield_repo = SQLAlchemyInvestmentYieldRepository(db)
             settings_repo = SQLAlchemyInvestmentSettingsRepository(db)
 
+            uow = SQLAlchemyUnitOfWork(db)
             handler = GenerateDailyYieldHandler(
                 account_repository=account_repo,
                 investment_yield_repository=yield_repo,
                 investment_settings_repository=settings_repo,
+                uow=uow,
             )
 
             stats = await handler.handle(
                 GenerateDailyYieldCommand(target_date=date.today())
             )
-            await db.commit()
 
             logger.info(f"Job finished at {datetime.now()} with stats: {stats}")
         except Exception as e:

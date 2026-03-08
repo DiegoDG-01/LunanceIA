@@ -18,10 +18,16 @@ from domain.objects.money import Money
 class TestGenerateDailyYieldHandler:
     @pytest.fixture
     def mocks(self):
+        uow = MagicMock()
+        uow.__aenter__ = AsyncMock(return_value=uow)
+        uow.__aexit__ = AsyncMock(return_value=False)
+        uow.commit = AsyncMock()
+        uow.rollback = AsyncMock()
         return {
             "account_repo": MagicMock(),
             "investment_yield_repo": MagicMock(),
             "investment_settings_repo": MagicMock(),
+            "uow": uow,
         }
 
     @pytest.fixture
@@ -30,6 +36,7 @@ class TestGenerateDailyYieldHandler:
             mocks["account_repo"],
             mocks["investment_yield_repo"],
             mocks["investment_settings_repo"],
+            mocks["uow"],
         )
 
     def _make_account(
