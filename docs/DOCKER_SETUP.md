@@ -15,8 +15,6 @@ Esta guía te ayudará a configurar y gestionar los servicios de Docker para el 
 
 Docker Compose levanta toda la infraestructura necesaria:
 
-> **📝 Nota para Desarrollo Local**: Si necesitas usar el contenedor localmente, añade `COPY .env ./` en el Dockerfile después de la línea 30 para incluir tu archivo `.env` local en el contenedor. Esto permite que tanto el Dockerfile como Docker Compose funcionen correctamente.
-
 ```bash
 # Clonar el repositorio
 git clone <repository-url>
@@ -41,7 +39,6 @@ DB_PASSWORD=luna_root
 # Auth0 Configuration
 AUTH0_DOMAIN=tu_dominio.auth0.com
 AUTH0_AUDIENCE=tu_api_audience
-AUTH0_CLIENT_ID=tu_client_id
 
 # GEMINI Configuration (para procesamiento de imágenes)
 GEMINI_MODEL_ID=gemini-2.5-flash
