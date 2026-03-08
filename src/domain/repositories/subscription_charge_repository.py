@@ -40,3 +40,7 @@ class SubscriptionChargeRepository(ABC):
     async def get_pending_charges(self) -> List[SubscriptionCharge]:
         """Get all charges with PENDIENTE status"""
         pass
+
+    @abstractmethod
+    async def get_last_charges_by_subscription_id(self, subscription_id: int) -> List[SubscriptionCharge]:
+        pass
