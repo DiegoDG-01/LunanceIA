@@ -7,7 +7,11 @@ from presentation.schemas.requests.account import (
     CreateAccountRequest,
     UpdateAccountRequest,
 )
-from presentation.schemas.responses.account import AccountResponse, AccountListResponse
+from presentation.schemas.responses.account import (
+    AccountResponse,
+    AccountListResponse,
+    AccountRecentActivityResponse
+)
 from presentation.dependencies.auth_deps import get_current_active_user
 from presentation.dependencies import (
     get_create_account_handler,
@@ -16,6 +20,7 @@ from presentation.dependencies import (
     get_user_accounts_handler,
     get_account_by_id_handler,
     get_state_account_handler,
+    get_activity_account_handler
 )
 from application.accounts.commands.create_account import (
     CreateAccountCommand,
@@ -41,12 +46,17 @@ from application.accounts.queries.get_account_by_id import (
     GetAccountByIdQuery,
     GetAccountByIdHandler,
 )
+from application.accounts.queries.get_account_activity import (
+    GetAccountActivityQuery,
+    GetAccountActivitiesHandler
+)
 from application.dto.account_dto import (
     CreateAccountDTO,
     UpdateAccountDTO,
     CreditCardSettingsDTO,
     InvestmentCardSettingsDTO,
 )
+from typing import List
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -227,3 +237,17 @@ async def activate_account(
         currency=account.current_balance.currency,
         is_active=account.is_active,
     )
+
+
+@router.get("/{account_uuid}/activity", response_model=List[AccountRecentActivityResponse])
+@limiter.limit("50/minute")
+async def get_account_activity(
+    request: Request,
+    account_uuid: str,
+    current_user: User = Depends(get_current_active_user),
+    handler: GetAccountActivitiesHandler = Depends(get_activity_account_handler),
+):
+    query = GetAccountActivityQuery(user_id=current_user.id, account_uuid=account_uuid)
+    activity = await handler.handle(query)
+
+    return [AccountRecentActivityResponse(**item.__dict__) for item in activity]
