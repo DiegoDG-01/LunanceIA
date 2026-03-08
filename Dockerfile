@@ -12,6 +12,9 @@ RUN cd /build/fincore && rm -rf target/wheels && maturin build --release
 # ---- Stage 2: Final production image ----
 FROM ghcr.io/astral-sh/uv:python3.13-alpine
 
+RUN apk update && apk upgrade --no-cache && \
+    pip install --no-cache-dir --upgrade pip
+
 # Environment variables for Python optimization and uv configuration
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
