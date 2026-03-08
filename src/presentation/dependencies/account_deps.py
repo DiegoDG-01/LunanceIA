@@ -127,9 +127,8 @@ def get_account_by_id_handler(
 
 def get_activity_account_handler(
     account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
-    bank_repo: SQLAlchemyBankRepository = Depends(get_bank_repository),
     transaction_repo: SQLAlchemyTransactionRepository = Depends(
         get_transaction_repository
     ),
 ) -> GetAccountActivitiesHandler:
-    return GetAccountActivitiesHandler(account_repo, bank_repo, transaction_repo)
+    return GetAccountActivitiesHandler(account_repo, transaction_repo)
