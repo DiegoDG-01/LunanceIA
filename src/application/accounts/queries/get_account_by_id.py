@@ -24,10 +24,9 @@ class GetAccountByIdHandler:
     """Handler para obtener cuenta por ID."""
 
     def __init__(
-        self, account_repository: AccountRepository, bank_repository: BankRepository
+        self, account_repository: AccountRepository
     ):
         self.account_repository = account_repository
-        self.bank_repository = bank_repository
 
     async def handle(self, query: GetAccountByIdQuery) -> Optional[AccountResponseDTO]:
         """Ejecuta la query de obtener cuenta por ID."""
@@ -59,21 +58,13 @@ class GetAccountByIdHandler:
                 early_withdrawal_penalty=account.investment_settings.early_withdrawal_penalty,
             )
 
-        bank_name = None
-        bank_code = None
-        if account.bank_id:
-            bank = await self.bank_repository.get_by_id(account.bank_id)
-            if bank:
-                bank_name = bank.name
-                bank_code = bank.code
-
         return AccountResponseDTO(
             account_uuid=account.uuid,
             name=account.name,
             account_type=account.account_type,
             bank_id=account.bank_id,
-            bank_name=bank_name,
-            bank_code=bank_code,
+            bank_name=account.bank_name,
+            bank_code=account.bank_code,
             current_balance=account.current_balance.amount,
             currency=account.current_balance.currency,
             is_active=account.is_active,
