@@ -10,7 +10,7 @@ from domain.objects.credit_card_settings import CreditCardSettings
 from domain.objects.investment_settings import InvestmentCardSettings
 from infrastructure.database.models import (
     CreditCardSettingsModel,
-    InvestmentCardSettingsModel,
+    InvestmentCardSettingsModel, BankModel,
 )
 from infrastructure.database.models.account import AccountModel
 
@@ -158,9 +158,9 @@ class SQLAlchemyAccountRepository(AccountRepository):
 
     async def get_by_uuid_and_user_id_with_settings(
         self, uuid: str, user_id: int
-    ) -> tuple:
+    ) -> Account:
         stmt = (
-            select(AccountModel, CreditCardSettingsModel, InvestmentCardSettingsModel)
+            select(AccountModel, CreditCardSettingsModel, InvestmentCardSettingsModel, BankModel)
             .outerjoin(
                 CreditCardSettingsModel,
                 AccountModel.id == CreditCardSettingsModel.account_id,
@@ -168,6 +168,10 @@ class SQLAlchemyAccountRepository(AccountRepository):
             .outerjoin(
                 InvestmentCardSettingsModel,
                 AccountModel.id == InvestmentCardSettingsModel.account_id,
+            )
+            .outerjoin(
+                BankModel,
+                AccountModel.bank_id == BankModel.id,
             )
             .where(AccountModel.uuid == uuid, AccountModel.user_id == user_id)
         )
@@ -177,7 +181,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         if not row:
             return None
 
-        account_model, cc_settings_model, inv_settings_model = row
+        account_model, cc_settings_model, inv_settings_model, bank_model = row
 
         account = self._model_to_entity(account_model)
 
@@ -192,12 +196,15 @@ class SQLAlchemyAccountRepository(AccountRepository):
         if inv_settings_model:
             account.investment_card_settings = InvestmentCardSettings(
                 investment_type=inv_settings_model.investment_type,
-                interest_rate=inv_settings_model.interest_rate,
-                interest_type=inv_settings_model.interest_type,
+                investment_rate=inv_settings_model.investment_rate,
                 lock_period_end_date=inv_settings_model.lock_period_end_date,
                 maturity_date=inv_settings_model.maturity_date,
                 early_withdrawal_penalty=inv_settings_model.early_withdrawal_penalty,
+                base_principal=inv_settings_model.base_principal,
             )
+
+        account.bank_name = bank_model.name
+        account.bank_code = bank_model.code
 
         return account
 
