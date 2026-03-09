@@ -19,8 +19,7 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
     def _model_to_vo(model: InvestmentCardSettingsModel) -> InvestmentCardSettings:
         return InvestmentCardSettings(
             investment_type=model.investment_type,
-            interest_rate=model.investment_rate,
-            interest_type=model.interest_type,
+            investment_rate=model.investment_rate,
             lock_period_end_date=model.lock_period_end_date,
             maturity_date=model.maturity_date,
             early_withdrawal_penalty=model.early_withdrawal_penalty,
