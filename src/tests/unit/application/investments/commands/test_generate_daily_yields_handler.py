@@ -124,7 +124,7 @@ class TestGenerateDailyYieldHandler:
         assert created_yield.interest_type == InterestType.SIMPLE
 
     @pytest.mark.asyncio
-    async def test_skips_account_without_settings(self, handler, mocks):
+    async def test_errors_account_without_settings(self, handler, mocks):
         account = self._make_account()
         account.investment_settings = None
 
@@ -136,7 +136,7 @@ class TestGenerateDailyYieldHandler:
         result = await handler.handle(command)
 
         assert result["processed"] == 0
-        assert result["skipped"] == 1
+        assert result["errors"] == 1
         mocks["investment_yield_repo"].create.assert_not_called()
 
     @pytest.mark.asyncio
