@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
 from datetime import date
@@ -10,6 +10,7 @@ from domain.objects.enums import InterestType
 class InvestmentCardSettings:
     investment_type: str
     investment_rate: Decimal
+    interest_type: InterestType = InterestType.COMPOUND
     lock_period_end_date: Optional[date] = None
     maturity_date: Optional[date] = None
     early_withdrawal_penalty: Optional[Decimal] = None
