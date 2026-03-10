@@ -15,7 +15,7 @@ class TestAccountStatusToggle:
         account_data = {
             "name": "Test Account",
             "account_type": "SAVINGS",
-            "bank_id": None,
+            "bank_id": 1,
             "initial_balance": 1000.00,
             "currency": "MXN"
         }
@@ -109,7 +109,7 @@ class TestAccountStatusConsistency:
         account_data = {
             "name": "Toggle Test Account",
             "account_type": "CHECKING",
-            "bank_id": None,
+            "bank_id": 1,
             "initial_balance": 500.00,
             "currency": "MXN"
         }
@@ -156,7 +156,7 @@ class TestAccountStatusValidation:
         account_data = {
             "name": "Preservation Test Account",
             "account_type": "SAVINGS",
-            "bank_id": None,
+            "bank_id": 1,
             "initial_balance": 1234.56,
             "currency": "MXN"
         }

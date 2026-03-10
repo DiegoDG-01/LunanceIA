@@ -29,6 +29,7 @@ class TestSecurityBoundaries:
         other_account = AccountModel(
             uuid="stolen-account-uuid",
             user_id=other_user.id,
+            bank_id=1,
             name="Private Account",
             type=AccountType.CHECKING,
             current_balance=5000.0,
@@ -86,7 +87,7 @@ class TestBusinessLogicEdges:
         acc_res = await http_client.post("/account", json={
             "name": "Small Account",
             "account_type": "CASH",
-            "bank": "Wallet",
+            "bank_id": 1,
             "initial_balance": 10.00,
             "currency": "MXN"
         }, headers=auth_tokens.get_auth_headers())

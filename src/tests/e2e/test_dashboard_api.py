@@ -16,7 +16,7 @@ class TestDashboardAPI:
         account_data = {
             "name": "Dashboard Test Account",
             "account_type": "CHECKING",
-            "bank": "Test Bank",
+            "bank_id": 1,
             "initial_balance": 1000.00,
             "currency": "MXN"
         }
