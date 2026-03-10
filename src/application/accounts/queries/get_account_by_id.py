@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from typing import Optional
 
 from domain.repositories.account_repository import AccountRepository
-from domain.repositories.bank_repository import BankRepository
 from application.dto.account_dto import (
     AccountResponseDTO,
     CreditCardSettingsDTO,

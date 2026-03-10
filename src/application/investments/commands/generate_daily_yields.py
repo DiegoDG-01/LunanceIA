@@ -6,9 +6,6 @@ from decimal import Decimal
 from domain.objects.enums import InterestType
 from domain.objects.money import Money
 from domain.entities.investment_yield import InvestmentYield
-from domain.repositories.investment_card_repository import (
-    InvestmentCardSettingsRepository,
-)
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.investment_yield_repository import InvestmentYieldRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
@@ -31,12 +28,10 @@ class GenerateDailyYieldHandler:
         self,
         account_repository: AccountRepository,
         investment_yield_repository: InvestmentYieldRepository,
-        investment_settings_repository: InvestmentCardSettingsRepository,
         uow: AbstractUnitOfWork,
     ):
         self.account_repository = account_repository
         self.investment_yield_repository = investment_yield_repository
-        self.investment_settings_repository = investment_settings_repository
         self.uow = uow
 
     async def handle(self, command: GenerateDailyYieldCommand) -> dict:
@@ -50,18 +45,11 @@ class GenerateDailyYieldHandler:
         async with self.uow:
             for account in accounts:
                 try:
-                    settings = await self.investment_settings_repository.get_by_account_id(
-                        account_id=account.id
-                    )
-                    if not settings:
+                    if account.investment_settings.investment_type in EXCLUDED_INVESTMENT_TYPES:
                         skipped += 1
                         continue
 
-                    if settings.investment_type in EXCLUDED_INVESTMENT_TYPES:
-                        skipped += 1
-                        continue
-
-                    if settings.maturity_date and today > settings.maturity_date:
+                    if account.investment_settings.maturity_date and today > account.investment_settings.maturity_date:
                         skipped += 1
                         continue
 
@@ -75,17 +63,17 @@ class GenerateDailyYieldHandler:
                         skipped += 1
                         continue
 
-                    annual_rate = settings.investment_rate
+                    annual_rate = account.investment_settings.investment_rate
                     year_basis = Decimal(get_year_day_basis(today))
 
-                    if settings.interest_type == InterestType.COMPOUND:
+                    if account.investment_settings.interest_type == InterestType.COMPOUND:
                         principal = account.current_balance.amount
                         daily_rate = (1 + annual_rate / Decimal(100)) ** (
                             Decimal(1) / year_basis
                         ) - Decimal(1)
                     else:
                         principal = (
-                            settings.base_principal or account.current_balance.amount
+                            account.investment_settings.base_principal or account.current_balance.amount
                         )
                         daily_rate = annual_rate / Decimal(100) / year_basis
 
@@ -99,7 +87,7 @@ class GenerateDailyYieldHandler:
                         yield_amount=yield_amount,
                         cumulative_balance=cumulative_balance,
                         annual_rate=annual_rate,
-                        interest_type=settings.interest_type,
+                        interest_type=account.investment_settings.interest_type,
                     )
 
                     await self.investment_yield_repository.create(yield_record)

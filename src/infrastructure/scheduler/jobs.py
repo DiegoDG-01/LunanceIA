@@ -21,9 +21,6 @@ from infrastructure.database.repositories.sqlalchemy_account_repository import (
 from infrastructure.database.repositories.sqlalchemy_investment_yield_repository import (
     SQLAlchemyInvestmentYieldRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_investment_card_repository import (
-    SQLAlchemyInvestmentSettingsRepository,
-)
 from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
     SQLAlchemyUnitOfWork,
 )
@@ -68,13 +65,11 @@ async def process_investment_yield_job():
         try:
             account_repo = SQLAlchemyAccountRepository(db)
             yield_repo = SQLAlchemyInvestmentYieldRepository(db)
-            settings_repo = SQLAlchemyInvestmentSettingsRepository(db)
 
             uow = SQLAlchemyUnitOfWork(db)
             handler = GenerateDailyYieldHandler(
                 account_repository=account_repo,
                 investment_yield_repository=yield_repo,
-                investment_settings_repository=settings_repo,
                 uow=uow,
             )
 
