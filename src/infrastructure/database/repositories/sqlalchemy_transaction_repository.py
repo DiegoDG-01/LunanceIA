@@ -1,6 +1,6 @@
 from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, func, desc, select
+from sqlalchemy import and_, func, desc, select, case
 from typing import Optional, List, Tuple
 
 from domain.entities.transaction import Transaction
@@ -342,6 +342,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         total = result.scalar()
         return float(total) if total else 0.0
 
+    # TODO: Implement endpoint to obtain monthly summary
     async def get_monthly_summary(
         self, user_id: int, year: int, month: int, account_id: Optional[int] = None
     ) -> dict:
@@ -358,32 +359,30 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
                 base_conditions, TransactionModel.account_id == account_id
             )
 
-        # Total ingresos
-        stmt_income = select(func.sum(TransactionModel.amount)).where(
-            base_conditions, TransactionModel.type == TransactionType.INCOME
-        )
-        result_income = await self.db.execute(stmt_income)
-        total_income = result_income.scalar() or 0
+        stmt = select(
+            func.coalesce(
+                func.sum(
+                    case((TransactionModel.type == TransactionType.INCOME, TransactionModel.amount), else_=0)
+                ), 0
+            ).label("total_income"),
+            func.coalesce(
+                func.sum(
+                    case((TransactionModel.type == TransactionType.EXPENSE, TransactionModel.amount), else_=0)
+                ), 0
+            ).label("total_expenses"),
+            func.count(TransactionModel.id).label("total_transactions"),
+        ).where(base_conditions)
 
-        # Total gastos
-        stmt_expenses = select(func.sum(TransactionModel.amount)).where(
-            base_conditions, TransactionModel.type == TransactionType.EXPENSE
-        )
-        result_expenses = await self.db.execute(stmt_expenses)
-        total_expenses = result_expenses.scalar() or 0
-
-        # Conteo de transacciones
-        stmt_count = select(func.count(TransactionModel.id)).where(base_conditions)
-        result_count = await self.db.execute(stmt_count)
-        total_transactions = result_count.scalar()
+        result = await self.db.execute(stmt)
+        row = result.first()
 
         return {
             "year": year,
             "month": month,
-            "total_income": float(total_income),
-            "total_expenses": float(total_expenses),
-            "net_balance": float(total_income) - float(total_expenses),
-            "total_transactions": total_transactions,
+            "total_income": float(row.total_income),
+            "total_expenses": float(row.total_expenses),
+            "net_balance": float(row.total_income) - float(row.total_expenses),
+            "total_transactions": row.total_transactions,
         }
 
     async def count_by_user(self, user_id: int) -> int:
