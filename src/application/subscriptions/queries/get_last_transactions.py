@@ -8,7 +8,6 @@ from domain.repositories.subscription_charge_repository import (
 from domain.repositories.subscription_repository import SubscriptionRepository
 from shared.exceptions.domain import (
     SubscriptionNotFoundError,
-    TransactionNotActivityError,
 )
 
 

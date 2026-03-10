@@ -4,7 +4,7 @@ from typing import List
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.transaction_repository import TransactionRepository
 from application.dto.account_dto import AccountActivityResponseDTO
-from shared.exceptions.domain import AccountNotFoundError, TransactionNotActivityError
+from shared.exceptions.domain import AccountNotFoundError
 
 
 @dataclass
