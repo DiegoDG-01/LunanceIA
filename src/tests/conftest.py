@@ -122,8 +122,9 @@ def setup_test_db(event_loop):
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-        # Insert initial data (categories)
+        # Insert initial data (categories and bank)
         from infrastructure.database.models.category import CategoryModel
+        from infrastructure.database.models.bank import BankModel
         from sqlalchemy import select
         async with AsyncTestingSessionLocal() as session:
             stmt = select(CategoryModel)
@@ -135,6 +136,13 @@ def setup_test_db(event_loop):
                     CategoryModel(id=3, name="Transporte", type="EXPENSE", icon="car", color="#0000FF"),
                 ]
                 session.add_all(categories)
+                await session.commit()
+
+            stmt = select(BankModel).where(BankModel.id == 1)
+            result = await session.execute(stmt)
+            if not result.scalar_one_or_none():
+                bank = BankModel(id=1, name="Test Bank", code="TST", country="MX", is_active=True)
+                session.add(bank)
                 await session.commit()
 
     async def teardown():
