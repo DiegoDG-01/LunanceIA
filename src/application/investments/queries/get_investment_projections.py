@@ -79,7 +79,7 @@ class GetInvestmentProjectionsHandler:
         if settings and settings.interest_type == InterestType.SIMPLE:
             original_principal = settings.base_principal or current_balance
 
-        annual_rate = settings.interest_rate if settings else Decimal("0")
+        annual_rate = settings.investment_rate if settings else Decimal("0")
         interest_type = settings.interest_type if settings else InterestType.COMPOUND
 
         try:

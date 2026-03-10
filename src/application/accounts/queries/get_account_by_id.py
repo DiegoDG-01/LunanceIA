@@ -52,7 +52,7 @@ class GetAccountByIdHandler:
         if account.investment_settings:
             inv_settings_dto = InvestmentCardSettingsDTO(
                 investment_type=account.investment_settings.investment_type,
-                interest_rate=account.investment_settings.interest_rate,
+                interest_rate=account.investment_settings.investment_rate,
                 lock_period_end_date=account.investment_settings.lock_period_end_date,
                 maturity_date=account.investment_settings.maturity_date,
                 early_withdrawal_penalty=account.investment_settings.early_withdrawal_penalty,

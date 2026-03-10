@@ -75,7 +75,7 @@ class GenerateDailyYieldHandler:
                         skipped += 1
                         continue
 
-                    annual_rate = settings.interest_rate
+                    annual_rate = settings.investment_rate
                     year_basis = Decimal(get_year_day_basis(today))
 
                     if settings.interest_type == InterestType.COMPOUND:
