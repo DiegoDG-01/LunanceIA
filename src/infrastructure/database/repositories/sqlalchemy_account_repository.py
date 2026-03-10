@@ -197,6 +197,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
             account.investment_card_settings = InvestmentCardSettings(
                 investment_type=inv_settings_model.investment_type,
                 investment_rate=inv_settings_model.investment_rate,
+                interest_type=inv_settings_model.interest_type,
                 lock_period_end_date=inv_settings_model.lock_period_end_date,
                 maturity_date=inv_settings_model.maturity_date,
                 early_withdrawal_penalty=inv_settings_model.early_withdrawal_penalty,
