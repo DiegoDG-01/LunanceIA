@@ -3,7 +3,7 @@ from decimal import Decimal
 from datetime import datetime, date
 from typing import Optional
 
-from domain.objects.enums import AccountType
+from domain.objects.enums import AccountType, InterestType
 
 
 class CreditCardSettingsResponse(BaseModel):
@@ -21,10 +21,11 @@ class CreditCardSettingsResponse(BaseModel):
 
 class InvestmentSettingsResponse(BaseModel):
     investment_type: str
-    interest_rate: Decimal
+    investment_rate: Decimal
     lock_period_end_date: Optional[date]
     maturity_date: Optional[date]
     early_withdrawal_penalty: Optional[Decimal]
+    interest_type: InterestType = InterestType.COMPOUND
 
     class Config:
         from_attributes = True
