@@ -83,7 +83,7 @@ class UpdateAccountHandler:
             if dto.investment_settings:
                 inv_settings_dto = InvestmentCardSettings(
                     investment_type=dto.investment_settings.investment_type,
-                    investment_rate=dto.investment_settings.interest_rate,
+                    investment_rate=dto.investment_settings.investment_rate,
                     lock_period_end_date=dto.investment_settings.lock_period_end_date,
                     maturity_date=dto.investment_settings.maturity_date,
                     early_withdrawal_penalty=dto.investment_settings.early_withdrawal_penalty,

@@ -80,7 +80,7 @@ class UpdateAccountSettingsHandler:
 
                 inv_settings = InvestmentCardSettings(
                     investment_type=command.investment_settings.investment_type,
-                    investment_rate=command.investment_settings.interest_rate,
+                    investment_rate=command.investment_settings.investment_rate,
                     lock_period_end_date=command.investment_settings.lock_period_end_date,
                     maturity_date=command.investment_settings.maturity_date,
                     early_withdrawal_penalty=command.investment_settings.early_withdrawal_penalty,

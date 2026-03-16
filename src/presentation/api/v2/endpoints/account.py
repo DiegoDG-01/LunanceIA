@@ -10,7 +10,7 @@ from presentation.schemas.requests.account import (
 from presentation.schemas.responses.account import (
     AccountResponse,
     AccountListResponse,
-    AccountRecentActivityResponse
+    AccountRecentActivityResponse,
 )
 from presentation.dependencies.auth_deps import get_current_active_user
 from presentation.dependencies import (
@@ -20,7 +20,7 @@ from presentation.dependencies import (
     get_user_accounts_handler,
     get_account_by_id_handler,
     get_state_account_handler,
-    get_activity_account_handler
+    get_activity_account_handler,
 )
 from application.accounts.commands.create_account import (
     CreateAccountCommand,
@@ -48,7 +48,7 @@ from application.accounts.queries.get_account_by_id import (
 )
 from application.accounts.queries.get_account_activity import (
     GetAccountActivityQuery,
-    GetAccountActivitiesHandler
+    GetAccountActivitiesHandler,
 )
 from application.dto.account_dto import (
     CreateAccountDTO,
@@ -126,7 +126,7 @@ async def create_account(
     if account_request.investment_settings:
         inv_settings_dto = InvestmentCardSettingsDTO(
             investment_type=account_request.investment_settings.investment_type,
-            interest_rate=account_request.investment_settings.interest_rate,
+            investment_rate=account_request.investment_settings.interest_rate,
             lock_period_end_date=account_request.investment_settings.lock_period_end_date,
             maturity_date=account_request.investment_settings.maturity_date,
             early_withdrawal_penalty=account_request.investment_settings.early_withdrawal_penalty,
@@ -171,7 +171,7 @@ async def update_account(
     if update_request.investment_settings:
         inv_settings_dto = InvestmentCardSettingsDTO(
             investment_type=update_request.investment_settings.investment_type,
-            interest_rate=update_request.investment_settings.interest_rate,
+            investment_rate=update_request.investment_settings.interest_rate,
             lock_period_end_date=update_request.investment_settings.lock_period_end_date,
             maturity_date=update_request.investment_settings.maturity_date,
             early_withdrawal_penalty=update_request.investment_settings.early_withdrawal_penalty,
@@ -239,7 +239,9 @@ async def activate_account(
     )
 
 
-@router.get("/{account_uuid}/activity", response_model=List[AccountRecentActivityResponse])
+@router.get(
+    "/{account_uuid}/activity", response_model=List[AccountRecentActivityResponse]
+)
 @limiter.limit("50/minute")
 async def get_account_activity(
     request: Request,
