@@ -10,7 +10,8 @@ from domain.objects.credit_card_settings import CreditCardSettings
 from domain.objects.investment_settings import InvestmentCardSettings
 from infrastructure.database.models import (
     CreditCardSettingsModel,
-    InvestmentCardSettingsModel, BankModel,
+    InvestmentCardSettingsModel,
+    BankModel,
 )
 from infrastructure.database.models.account import AccountModel
 
@@ -92,10 +93,21 @@ class SQLAlchemyAccountRepository(AccountRepository):
         self, user_id: int, limit: int, offset: int
     ) -> List[Account]:
         stmt = (
-            select(AccountModel, BankModel, CreditCardSettingsModel, InvestmentCardSettingsModel)
+            select(
+                AccountModel,
+                BankModel,
+                CreditCardSettingsModel,
+                InvestmentCardSettingsModel,
+            )
             .outerjoin(BankModel, AccountModel.bank_id == BankModel.id)
-            .outerjoin(CreditCardSettingsModel, AccountModel.id == CreditCardSettingsModel.account_id)
-            .outerjoin(InvestmentCardSettingsModel, AccountModel.id == InvestmentCardSettingsModel.account_id)
+            .outerjoin(
+                CreditCardSettingsModel,
+                AccountModel.id == CreditCardSettingsModel.account_id,
+            )
+            .outerjoin(
+                InvestmentCardSettingsModel,
+                AccountModel.id == InvestmentCardSettingsModel.account_id,
+            )
             .where(AccountModel.user_id == user_id)
             .limit(limit)
             .offset(offset)
@@ -120,12 +132,12 @@ class SQLAlchemyAccountRepository(AccountRepository):
 
             if inv_model:
                 account.investment_settings = InvestmentCardSettings(
-                investment_type=inv_model.investment_type,
-                investment_rate=inv_model.investment_rate,
-                interest_type=inv_model.interest_type,
-                lock_period_end_date=inv_model.lock_period_end_date,
-                maturity_date=inv_model.maturity_date,
-                early_withdrawal_penalty=inv_model.early_withdrawal_penalty,
+                    investment_type=inv_model.investment_type,
+                    investment_rate=inv_model.investment_rate,
+                    interest_type=inv_model.interest_type,
+                    lock_period_end_date=inv_model.lock_period_end_date,
+                    maturity_date=inv_model.maturity_date,
+                    early_withdrawal_penalty=inv_model.early_withdrawal_penalty,
                 )
 
             accounts.append(account)
@@ -135,10 +147,21 @@ class SQLAlchemyAccountRepository(AccountRepository):
         self, user_id: int, limit: int, offset: int
     ) -> List[Account]:
         stmt = (
-            select(AccountModel, BankModel, CreditCardSettingsModel, InvestmentCardSettingsModel)
+            select(
+                AccountModel,
+                BankModel,
+                CreditCardSettingsModel,
+                InvestmentCardSettingsModel,
+            )
             .outerjoin(BankModel, AccountModel.bank_id == BankModel.id)
-            .outerjoin(CreditCardSettingsModel, AccountModel.id == CreditCardSettingsModel.account_id)
-            .outerjoin(InvestmentCardSettingsModel, AccountModel.id == InvestmentCardSettingsModel.account_id)
+            .outerjoin(
+                CreditCardSettingsModel,
+                AccountModel.id == CreditCardSettingsModel.account_id,
+            )
+            .outerjoin(
+                InvestmentCardSettingsModel,
+                AccountModel.id == InvestmentCardSettingsModel.account_id,
+            )
             .where(
                 and_(
                     AccountModel.user_id == user_id,
@@ -175,6 +198,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
                     lock_period_end_date=inv_model.lock_period_end_date,
                     maturity_date=inv_model.maturity_date,
                     early_withdrawal_penalty=inv_model.early_withdrawal_penalty,
+                    base_principal=inv_model.base_principal,
                 )
 
             accounts.append(account)
@@ -221,7 +245,12 @@ class SQLAlchemyAccountRepository(AccountRepository):
         self, uuid: str, user_id: int
     ) -> Account:
         stmt = (
-            select(AccountModel, CreditCardSettingsModel, InvestmentCardSettingsModel, BankModel)
+            select(
+                AccountModel,
+                CreditCardSettingsModel,
+                InvestmentCardSettingsModel,
+                BankModel,
+            )
             .outerjoin(
                 CreditCardSettingsModel,
                 AccountModel.id == CreditCardSettingsModel.account_id,
@@ -275,7 +304,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
             select(AccountModel, InvestmentCardSettingsModel)
             .outerjoin(
                 InvestmentCardSettingsModel,
-                AccountModel.id == InvestmentCardSettingsModel.account_id
+                AccountModel.id == InvestmentCardSettingsModel.account_id,
             )
             .where(
                 and_(
