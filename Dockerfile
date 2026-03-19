@@ -29,11 +29,9 @@ ENV PYTHONUNBUFFERED=1 \
 
 RUN apk update && apk upgrade --no-cache && \
     apk add --no-cache netcat-openbsd libgcc curl && \
-    curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    curl -LsSf https://astral.sh/uv/install.sh | UV_INSTALL_DIR=/usr/local/bin sh && \
     pip install --no-cache-dir --upgrade pip && \
     addgroup -S lunance && adduser -S lunance -G lunance
-
-ENV PATH="/root/.local/bin:${PATH}"
 
 WORKDIR /app
 
