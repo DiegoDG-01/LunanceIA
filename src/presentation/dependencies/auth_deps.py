@@ -3,7 +3,7 @@ import json
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 
 from domain.entities.user import User
@@ -82,13 +82,25 @@ def validate_token(token: str) -> dict:
         raise JWTValidationError("Invalid token")
 
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
-) -> User:
-    try:
-        token = credentials.credentials
+async def validate_local_user(token: str, db: AsyncSession) -> User:
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    user_uuid = payload.get("sub")
 
+    if not user_uuid:
+        raise UnauthorizedError("Invalid token: missing user")
+
+    user_repo = SQLAlchemyUserRepository(db)
+    user = await user_repo.get_by_uuid(user_uuid)
+    if not user:
+        raise UnauthorizedError("User not found")
+
+    if not user.is_active:
+        raise UserInactiveError()
+
+    return user
+
+async def validate_auth0_user(token: str, db: AsyncSession) -> User:
+    try:
         payload = validate_token(token)
 
         auth0_user_uuid = payload.get("sub")
@@ -115,6 +127,22 @@ async def get_current_user(
 
     except SQLAlchemyError as e:
         raise RepositoryError("get_or_create", "User", str(e))
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
+):
+    token = credentials.credentials
+    header = jwt.get_unverified_header(token)
+    alg = header["alg"]
+
+    if alg == settings.ALGORITHM:
+        return await validate_local_user(token, db)
+    elif alg == "RS256":
+        return await validate_auth0_user(token, db)
+    else:
+        raise UnauthorizedError("Invalid token")
 
 
 async def get_current_active_user(
