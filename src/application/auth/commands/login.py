@@ -1,4 +1,3 @@
-from pydantic import EmailStr
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
@@ -16,7 +15,7 @@ from shared.exceptions.domain import (
 
 @dataclass
 class LoginCommand:
-    email: EmailStr
+    username: str
     password: str
 
 
@@ -42,20 +41,20 @@ class LoginHandler:
         self.uow = uow
 
     async def handle(self, command: LoginCommand) -> LoginResponse:
-        if not command.email or not command.password:
+        if not command.username or not command.password:
             raise CommandValidationError(
-                "LoginCommand", ["Email y contraseña son requeridos"]
+                "LoginCommand", ["Nombre de usuario y contraseña son requeridos"]
             )
 
-        user = await self.user_repository.get_by_email(command.email)
+        user = await self.user_repository.get_by_username(command.username)
         if not user:
-            raise InvalidCredentialsError("51")
+            raise InvalidCredentialsError("username")
 
         if not user.is_active:
             raise UserInactiveError()
 
-        if not self.jwt_service.check_password(command.password, user.password_hash):
-            raise InvalidCredentialsError("57")
+        if not self.jwt_service.check_password(command.password, user.password):
+            raise InvalidCredentialsError("password")
 
         access_token = self.jwt_service.create_access_token(
             user_uuid=user.uuid, expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES

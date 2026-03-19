@@ -32,24 +32,22 @@ router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 
-# @router.post("/register", response_model=RegisterResponse)
-# @limiter.limit("5/hour")  # 5 registros por hora por IP
+@router.post("/register", response_model=RegisterResponse)
+@limiter.limit("5/hour")  # 5 registros por hora por IP
 async def register(
     request: Request,
     register_request: RegisterRequest,
     handler: RegisterHandler = Depends(get_register_handler),
 ):
     command = RegisterCommand(
-        name=register_request.name,
-        email=register_request.email,
+        username=register_request.username,
         password=register_request.password,
     )
 
     result = await handler.handle(command)
     return RegisterResponse(
         user_uuid=result.user_uuid,
-        name=result.name,
-        email=result.email,
+        username=result.username,
         message=result.message,
     )
 
@@ -59,20 +57,19 @@ async def register(
 async def me(request: Request, current_user: User = Depends(get_current_active_user)):
     return UserInfoResponse(
         user_uuid=current_user.uuid,
-        name=current_user.name,
-        email=current_user.email,
+        username=current_user.name,
         is_active=current_user.is_active,
     )
 
 
-# @router.post("/login", response_model=TokenResponse)
-# @limiter.limit("10/minute")
+@router.post("/login", response_model=TokenResponse)
+@limiter.limit("10/minute")
 async def login(
     request: Request,
     login_request: LoginRequest,
     handler: LoginHandler = Depends(get_login_handler),
 ):
-    command = LoginCommand(email=login_request.email, password=login_request.password)
+    command = LoginCommand(username=login_request.username, password=login_request.password)
 
     result = await handler.handle(command)
     return TokenResponse(
@@ -82,8 +79,8 @@ async def login(
     )
 
 
-# @router.post("/refresh", response_model=TokenResponse)
-# @limiter.limit("20/minute")
+@router.post("/refresh", response_model=TokenResponse)
+@limiter.limit("20/minute")
 async def refresh_token(
     request: Request,
     refresh_request: RefreshTokenRequest,

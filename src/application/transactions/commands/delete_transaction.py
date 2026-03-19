@@ -4,7 +4,11 @@ from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 
-from shared.exceptions.domain import TransactionNotFoundError, AccountNotFoundError
+from shared.exceptions.domain import (
+    TransactionNotFoundError,
+    AccountNotFoundError,
+    InvalidTransactionTypeError,
+)
 
 
 @dataclass
@@ -35,14 +39,14 @@ class DeleteTransactionHandler:
         account = await self.account_repository.get_by_id(transaction.account_id)
 
         if not account:
-            raise AccountNotFoundError(command.user_id)
+            raise AccountNotFoundError(str(transaction.account_id))
 
         if transaction.is_expense():
             new_balance = account.current_balance.add(transaction.amount)
         elif transaction.is_income():
             new_balance = account.current_balance.subtract(transaction.amount)
         else:
-            raise ValueError("Transaction type not supported")
+            raise InvalidTransactionTypeError(transaction.transaction_type.value)
 
         account.update_balance(new_balance)
 
@@ -54,9 +58,7 @@ class DeleteTransactionHandler:
             )
 
             if not deleted:
-                raise ValueError(
-                    f"Transaction {command.uuid} not found or access denied"
-                )
+                raise TransactionNotFoundError(command.uuid)
 
             await self.uow.commit()
 

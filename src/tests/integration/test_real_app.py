@@ -98,15 +98,14 @@ class TestSchemaImports:
             from presentation.schemas.requests.auth import LoginRequest, RegisterRequest
 
             # Test schema creation
-            login_req = LoginRequest(email="test@example.com", password="password")
-            assert login_req.email == "test@example.com"
+            login_req = LoginRequest(username="testuser", password="Password123!")
+            assert login_req.username == "testuser"
 
             register_req = RegisterRequest(
-                name="Test User",
-                email="test@example.com",
+                username="Test User",
                 password="Password123!"
             )
-            assert register_req.name == "Test User"
+            assert register_req.username == "Test User"
 
         except ImportError:
             pytest.skip("Cannot import schemas")

@@ -1,11 +1,12 @@
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional
 
 from domain.objects.money import Money
 from domain.objects.enums import AccountType
 
-from shared.exceptions.domain import AccountInactiveError
+from shared.exceptions.domain import AccountInactiveError, InvalidBalanceUpdateError
 
 from domain.objects.credit_card_settings import CreditCardSettings
 from domain.objects.investment_settings import InvestmentCardSettings
@@ -35,7 +36,7 @@ class Account:
         initial_balance: Money = None,
     ) -> "Account":
         if initial_balance is None:
-            initial_balance = Money(0, "MXN")
+            initial_balance = Money(Decimal(0), "MXN")
 
         return cls(
             id=None,
@@ -57,13 +58,13 @@ class Account:
 
     def update_balance(self, new_balance: Money) -> None:
         if new_balance.currency != self.current_balance.currency:
-            raise ValueError("Currencies must be the same to update balance")
+            raise InvalidBalanceUpdateError(
+                "Currencies must be the same to update balance"
+            )
         if not self.is_active:
             raise AccountInactiveError(self.id)
         if new_balance.amount < 0 and self.account_type != AccountType.CREDIT_CARD:
-            raise ValueError(
-                "Balance cannot be less than current balance for non-credit accounts"
-            )
+            raise InvalidBalanceUpdateError(self.account_type)
         self.current_balance = new_balance
 
     def can_withdraw(self, amount: Money) -> bool:

@@ -1,21 +1,26 @@
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field
 
 
 class LoginRequest(BaseModel):
     """Schema para login."""
 
-    email: EmailStr = Field(..., description="Email del usuario")
-    password: str = Field(..., min_length=1, description="Contraseña")
+    username: str = Field(
+        ..., min_length=1, max_length=100, description="Nombre de usuario"
+    )
+    password: str = Field(
+        ..., min_length=8, description="Contraseña"
+    )
 
 
 class RegisterRequest(BaseModel):
     """Schema para registro."""
 
-    name: str = Field(
-        ..., min_length=1, max_length=100, description="Nombre del usuario"
+    username: str = Field(
+        ..., min_length=1, max_length=100, description="Nombre de usuario"
     )
-    email: EmailStr = Field(..., description="Email del usuario")
-    password: str = Field(..., min_length=8, description="Contraseña")
+    password: str = Field(
+        ..., min_length=8, description="Contraseña"
+    )
 
 
 class RefreshTokenRequest(BaseModel):

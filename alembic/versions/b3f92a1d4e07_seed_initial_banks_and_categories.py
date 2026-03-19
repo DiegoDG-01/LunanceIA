@@ -59,7 +59,7 @@ BANKS = [
     {"name": "Finsus",          "code": "FIN", "country": "MX", "logo_url": "https://pub-359f496be1f4482bb564fd2b4c5e16d8.r2.dev/finsus.png",          "color": "#00C389", "is_active": True},
     {"name": "Klar",            "code": "KLR", "country": "MX", "logo_url": "https://pub-359f496be1f4482bb564fd2b4c5e16d8.r2.dev/klar.png",            "color": "#00C389", "is_active": True},
     {"name": "GBM",             "code": "GBM", "country": "MX", "logo_url": "https://pub-359f496be1f4482bb564fd2b4c5e16d8.r2.dev/gbm.webp",            "color": "#00C389", "is_active": True},
-    {"name": "American Expres", "code": "AMX", "country": "MX", "logo_url": "https://pub-359f496be1f4482bb564fd2b4c5e16d8.r2.dev/amex.webp",           "color": "#00C389", "is_active": True},
+    {"name": "American Express", "code": "AMX", "country": "MX", "logo_url": "https://pub-359f496be1f4482bb564fd2b4c5e16d8.r2.dev/amex.webp",           "color": "#00C389", "is_active": True},
 ]
 
 CATEGORIES = [
