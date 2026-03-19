@@ -211,3 +211,7 @@ class FinancialEngineNotAvailableError(Exception):
 
     def __init__(self):
         super().__init__("Financial engine module is not installed")
+
+class UsernameAlreadyExistsError(ValidationError):
+    def __init__(self):
+        super().__init__("Username already exists")
