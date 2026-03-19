@@ -1,14 +1,16 @@
 from typing import Optional
 from datetime import datetime
-from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update, and_, delete
+from sqlalchemy.exc import SQLAlchemyError
 
 from domain.repositories.auth_token_repository import AuthTokenRepository
+from domain.entities.refresh_token import RefreshToken
 from infrastructure.database.models.refresh_token import RefreshTokenModel
 
 
 class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
     async def save_refresh_token(
@@ -25,99 +27,78 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
             )
 
             self.db.add(new_refresh_token)
-            self.db.flush()
+            await self.db.flush()
 
             return True
-        except Exception:
+        except SQLAlchemyError:
             return False
 
     async def get_refresh_token(
         self, user_id: int, refresh_hash_token: str
-    ) -> Optional[RefreshTokenModel]:
+    ) -> Optional[RefreshToken]:
         try:
-            token = (
-                self.db.query(RefreshTokenModel)
-                .filter(
-                    and_(
-                        RefreshTokenModel.user_id == user_id,
-                        RefreshTokenModel.token_hash == refresh_hash_token,
-                        RefreshTokenModel.is_revoked.is_(False),
-                        RefreshTokenModel.expired_at > datetime.now(),
-                    )
+            stmt = select(RefreshTokenModel).where(
+                and_(
+                    RefreshTokenModel.user_id == user_id,
+                    RefreshTokenModel.token_hash == refresh_hash_token,
+                    RefreshTokenModel.is_revoked.is_(False),
+                    RefreshTokenModel.expired_at > datetime.now(),
                 )
-                .first()
             )
+            result = await self.db.execute(stmt)
+            token = result.scalars().first()
 
-            return token if token is not None else None
-        except Exception:
+            if token is None:
+                return None
+            return RefreshToken(
+                id=token.id,
+                user_id=token.user_id,
+                token_hash=token.token_hash,
+                is_revoked=token.is_revoked,
+                expired_at=token.expired_at,
+                created_at=token.created_at,
+            )
+        except SQLAlchemyError:
             return None
 
     async def revoke_refresh_token(self, user_id: int, refresh_hash_token: str) -> bool:
         try:
-            result = (
-                self.db.query(RefreshTokenModel)
-                .filter(
-                    and_(
-                        RefreshTokenModel.user_id == user_id,
-                        RefreshTokenModel.token_hash == refresh_hash_token,
-                    )
+            stmt = update(RefreshTokenModel).where(
+                and_(
+                    RefreshTokenModel.user_id == user_id,
+                    RefreshTokenModel.token_hash == refresh_hash_token,
                 )
-                .update({"is_revoked": True})
-            )
+            ).values(is_revoked=True)
 
-            self.db.flush()
-            return result > 0
-        except Exception:
+            result = await self.db.execute(stmt)
+
+            await self.db.flush()
+            return result.rowcount > 0
+        except SQLAlchemyError:
             return False
 
     async def revoke_all_refresh_tokens_for_user(self, user_id: int) -> bool:
         try:
-            result = (
-                self.db.query(RefreshTokenModel)
-                .filter(RefreshTokenModel.user_id == user_id)
-                .update({"is_revoked": 1})
-            )
+            stmt = update(RefreshTokenModel).where(
+                and_(
+                    RefreshTokenModel.user_id == user_id,
+                )
+            ).values(is_revoked=True)
 
-            self.db.flush()
-            return result > 0
-        except Exception:
+            result = await self.db.execute(stmt)
+
+            await self.db.flush()
+            return result.rowcount > 0
+        except SQLAlchemyError:
             return False
 
     async def cleanup_expired_tokens(self) -> bool:
         try:
-            self.db.query(RefreshTokenModel).filter(
+            stmt = delete(RefreshTokenModel).where(
                 RefreshTokenModel.expired_at < datetime.now(),
                 RefreshTokenModel.is_revoked.is_(True),
-            ).delete()
-
-            self.db.flush()
-            return True
-        except Exception:
-            return False
-
-    async def is_token_valid(self, user_id: int, refresh_hash_token: str) -> bool:
-        try:
-            token = (
-                self.db.query(RefreshTokenModel)
-                .filter(
-                    and_(
-                        RefreshTokenModel.user_id == user_id,
-                        RefreshTokenModel.token_hash == refresh_hash_token,
-                        RefreshTokenModel.is_revoked.is_(False),
-                        RefreshTokenModel.expired_at > datetime.now(),
-                    )
-                )
-                .first()
             )
-
-            return token is not None
-        except Exception:
+            await self.db.execute(stmt)
+            return True
+        except SQLAlchemyError:
             return False
-
-    async def revoke_token(self, user_id: int, refresh_hash_token: str) -> bool:
-        return await self.revoke_refresh_token(user_id, refresh_hash_token)
-
-    async def save_token(
-        self, user_id: int, refresh_hash_token: str, expires_at: datetime
-    ) -> bool:
-        return await self.save_refresh_token(user_id, refresh_hash_token, expires_at)
