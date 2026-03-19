@@ -43,7 +43,6 @@ dev = [
     "pytest-cov>=7.0.0",
     "pre-commit>=4.3.0",
     "locust>=2.32.0",
-    "pyrefly>=0.57.1",
 ]
 
 [tool.uv]
@@ -78,18 +77,4 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "class .*\\bProtocol\\b\\):",
     "@(abc\\.)?abstractmethod"
-]
-
-[tool.pyrefly]
-project-includes = [
-    "**/*.py*",
-    "**/*.ipynb",
-]
-project-excludes = [
-    "alembic/**",
-    "terraform/**",
-    "htmlcov/**",
-    "http/**",
-    "sql/**",
-    "docs/**",
 ]
