@@ -44,6 +44,15 @@ from shared.exceptions.domain import (
     CreditCardSettingsNotFoundError,
     InvalidAccountSettingsError,
     TransactionNotActivityError,
+    InvalidInvestmentRateError,
+    InvalidPenaltyPercentageError,
+    InvalidInvestmentTypeError,
+    InvalidBillingCycleDayError,
+    InvalidPaymentDueDayError,
+    InvalidCreditLimitError,
+    InvalidMinimumPaymentError,
+    InvalidEmailError,
+    InvalidBalanceUpdateError,
 )
 from shared.exceptions.application import (
     JWTValidationError,
@@ -103,6 +112,15 @@ EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     # --- Infraestructura y Servicios Externos (500 / 503) ---
     RepositoryError: ("INTERNAL_SERVER_ERROR", 500),
     ExternalServiceError: ("SERVICE_UNAVAILABLE", 503),
+    InvalidInvestmentRateError: ("VALIDATION_INVALID_INVESTMENT_RATE", 400),
+    InvalidPenaltyPercentageError: ("VALIDATION_INVALID_PENALTY_PERCENTAGE", 400),
+    InvalidInvestmentTypeError: ("VALIDATION_INVALID_INVESTMENT_TYPE", 400),
+    InvalidBillingCycleDayError: ("VALIDATION_INVALID_BILLING_CYCLE_DAY", 400),
+    InvalidPaymentDueDayError: ("VALIDATION_INVALID_PAYMENT_DUE_DAY", 400),
+    InvalidCreditLimitError: ("VALIDATION_INVALID_CREDIT_LIMIT", 400),
+    InvalidMinimumPaymentError: ("VALIDATION_INVALID_MINIMUM_PAYMENT", 400),
+    InvalidEmailError: ("VALIDATION_INVALID_EMAIL", 400),
+    InvalidBalanceUpdateError: ("VALIDATION_INVALID_BALANCE_UPDATE", 400),
 }
 
 

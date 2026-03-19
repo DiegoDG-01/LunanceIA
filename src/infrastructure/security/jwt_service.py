@@ -55,18 +55,6 @@ class JWTService:
         )
         return encoded_jwt
 
-    def verify_access_token(self, token: str):
-        try:
-            payload = jwt.decode(
-                token, settings.SECRET_KEY, algorithms=settings.ALGORITHM
-            )
-            user_uuid = payload.get("sub")
-            if user_uuid is None:
-                return None
-            return user_uuid
-        except JWTError:
-            return None
-
     async def verify_refresh_token(self, token: str):
         try:
             payload = jwt.decode(
@@ -100,29 +88,6 @@ class JWTService:
 
     def get_password_hash(self, password: str) -> str:
         return self.pwd_context.hash(password)
-
-    async def revoke_refresh_token(self, token: str) -> bool:
-        try:
-            payload = jwt.decode(
-                token, settings.SECRET_KEY_REFRESH, algorithms=settings.ALGORITHM
-            )
-            user_uuid = payload.get("sub")
-            token_type = payload.get("type")
-
-            if user_uuid is None or token_type != "refresh":
-                return False
-
-            user = await self.user_repository.get_by_uuid(user_uuid)
-            if user is None:
-                return False
-            
-            token_hash = self.hash_refresh_token(token)
-            return await self.auth_token_repository.revoke_refresh_token(user.id, token_hash)
-        except JWTError:
-            return False
-        except SQLAlchemyError as e:
-            logger.error(f"Database error to revoke refresh token: {e}")
-            return False
 
     async def save_refresh_token(
         self, user_id: int, token: str, expires_at: datetime

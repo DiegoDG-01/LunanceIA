@@ -5,6 +5,8 @@ from datetime import datetime
 from email_validator import validate_email, EmailNotValidError
 import uuid as uuid_lib
 
+from shared.exceptions.domain import InvalidEmailError
+
 
 @dataclass
 class User:
@@ -60,5 +62,5 @@ class User:
         try:
             validate_email(str(new_email))
         except EmailNotValidError:
-            raise ValueError("Email is not valid")
+            raise InvalidEmailError(new_email)
         self.email = new_email

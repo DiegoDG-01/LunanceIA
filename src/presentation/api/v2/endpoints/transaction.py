@@ -4,7 +4,6 @@ from fastapi import (
     File,
     Form,
     UploadFile,
-    HTTPException,
     status,
     Response,
     Request,
@@ -53,6 +52,7 @@ from application.transactions.commands.update_transaction import (
     UpdateTransactionCommandHandler,
 )
 from presentation.dependencies import get_update_transaction_handler
+from shared.exceptions.domain import InvalidImageError, TransactionNotFoundError
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -151,7 +151,7 @@ async def create_transaction_from_image(
     handler: CreateTransactionHandler = Depends(get_create_transaction_handler),
 ):
     if not file:
-        raise HTTPException(status_code=400, detail="No file provided")
+        raise InvalidImageError("No file provided")
 
     # 1. Leer imagen
     image_data = await file.read()
@@ -162,9 +162,9 @@ async def create_transaction_from_image(
         # Verificar que realmente se puede cargar la imagen
         image.verify()
     except UnidentifiedImageError:
-        raise HTTPException(status_code=400, detail="Invalid image format")
+        raise InvalidImageError("Invalid image format")
     except Exception:
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise InvalidImageError("Error processing image")
 
     # 2. Procesar con Gemini
 
@@ -233,9 +233,7 @@ async def delete_transaction(
     deleted = await handler.handle(command)
 
     if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found"
-        )
+        raise TransactionNotFoundError(command.uuid)
 
     # 204 No Content - successful deletion
     return Response(status_code=status.HTTP_204_NO_CONTENT)

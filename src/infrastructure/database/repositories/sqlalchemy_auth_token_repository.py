@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +8,9 @@ from sqlalchemy.exc import SQLAlchemyError
 from domain.repositories.auth_token_repository import AuthTokenRepository
 from domain.entities.refresh_token import RefreshToken
 from infrastructure.database.models.refresh_token import RefreshTokenModel
+from shared.exceptions.application import RepositoryError
+
+logger = logging.getLogger(__name__)
 
 
 class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
@@ -30,8 +34,13 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
             await self.db.flush()
 
             return True
-        except SQLAlchemyError:
-            return False
+        except SQLAlchemyError as e:
+            logger.error(e)
+            raise RepositoryError(
+                operation="save",
+                entity="RefreshToken",
+                details=str(e),
+            ) from e
 
     async def get_refresh_token(
         self, user_id: int, refresh_hash_token: str
@@ -58,39 +67,62 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
                 expired_at=token.expired_at,
                 created_at=token.created_at,
             )
-        except SQLAlchemyError:
-            return None
+        except SQLAlchemyError as e:
+            logger.error(e)
+            raise RepositoryError(
+                operation="get",
+                entity="RefreshToken",
+                details=str(e),
+            ) from e
 
     async def revoke_refresh_token(self, user_id: int, refresh_hash_token: str) -> bool:
         try:
-            stmt = update(RefreshTokenModel).where(
-                and_(
-                    RefreshTokenModel.user_id == user_id,
-                    RefreshTokenModel.token_hash == refresh_hash_token,
+            stmt = (
+                update(RefreshTokenModel)
+                .where(
+                    and_(
+                        RefreshTokenModel.user_id == user_id,
+                        RefreshTokenModel.token_hash == refresh_hash_token,
+                    )
                 )
-            ).values(is_revoked=True)
+                .values(is_revoked=True)
+            )
 
             result = await self.db.execute(stmt)
 
             await self.db.flush()
             return result.rowcount > 0
-        except SQLAlchemyError:
-            return False
+        except SQLAlchemyError as e:
+            logger.error(e)
+            raise RepositoryError(
+                operation="revoke",
+                entity="RefreshToken",
+                details=str(e),
+            ) from e
 
     async def revoke_all_refresh_tokens_for_user(self, user_id: int) -> bool:
         try:
-            stmt = update(RefreshTokenModel).where(
-                and_(
-                    RefreshTokenModel.user_id == user_id,
+            stmt = (
+                update(RefreshTokenModel)
+                .where(
+                    and_(
+                        RefreshTokenModel.user_id == user_id,
+                    )
                 )
-            ).values(is_revoked=True)
+                .values(is_revoked=True)
+            )
 
             result = await self.db.execute(stmt)
 
             await self.db.flush()
             return result.rowcount > 0
-        except SQLAlchemyError:
-            return False
+        except SQLAlchemyError as e:
+            logger.error(e)
+            raise RepositoryError(
+                operation="revoke_all",
+                entity="RefreshToken",
+                details=str(e),
+            ) from e
 
     async def cleanup_expired_tokens(self) -> bool:
         try:
@@ -100,5 +132,10 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
             )
             await self.db.execute(stmt)
             return True
-        except SQLAlchemyError:
-            return False
+        except SQLAlchemyError as e:
+            logger.error(e)
+            raise RepositoryError(
+                operation="cleanup",
+                entity="RefreshToken",
+                details=str(e),
+            ) from e

@@ -91,11 +91,13 @@ class TransactionNotFoundError(NotFoundError):
     def __init__(self, transaction_uuid: str):
         super().__init__(f"Transacción con UUID {transaction_uuid} no encontrada")
 
+
 class TransactionNotActivityError(BusinessRuleError):
     """No se encontro actividad en la cuenta."""
 
     def __init__(self):
         super().__init__("No se encontró actividad en la cuenta (Ingresos/Egresos)")
+
 
 class InvalidTransactionAmountError(ValidationError):
     """Monto de transacción inválido."""
@@ -206,12 +208,63 @@ class InvalidImageError(LunanceException):
         super().__init__(message)
 
 
-class FinancialEngineNotAvailableError(Exception):
+class FinancialEngineNotAvailableError(LunanceException):
     """Raised when the Rust financial engine (fincore) is not installed."""
 
     def __init__(self):
         super().__init__("Financial engine module is not installed")
 
+
 class UsernameAlreadyExistsError(ValidationError):
     def __init__(self):
         super().__init__("Username already exists")
+
+
+class InvalidInvestmentRateError(ValidationError):
+    def __init__(self, investment_rate: str):
+        super().__init__(f"Investment Rate invalido: {investment_rate}")
+
+
+class InvalidPenaltyPercentageError(ValidationError):
+    def __init__(self, penalty_percentage: str):
+        super().__init__(f"Penalty percentage invalido: {penalty_percentage}")
+
+
+class InvalidInvestmentTypeError(ValidationError):
+    def __init__(self, investment_type: str):
+        super().__init__(f"Investment type invalido: {investment_type}")
+
+
+class InvalidBillingCycleDayError(ValidationError):
+    def __init__(self, billing_type: str):
+        super().__init__(f"Billing type invalido: {billing_type}")
+
+
+class InvalidPaymentDueDayError(ValidationError):
+    def __init__(self, billing_type: str):
+        super().__init__(f"Billing type invalido: {billing_type}")
+
+
+class InvalidPaymentTypeError(ValidationError):
+    def __init__(self, payment_type: str):
+        super().__init__(f"Payment type invalido: {payment_type}")
+
+
+class InvalidCreditLimitError(ValidationError):
+    def __init__(self, credit_limit: str):
+        super().__init__(f"Credit limit invalido: {credit_limit}")
+
+
+class InvalidMinimumPaymentError(ValidationError):
+    def __init__(self, minimum_payment: str):
+        super().__init__(f"Minimum payment invalido: {minimum_payment}")
+
+
+class InvalidEmailError(ValidationError):
+    def __init__(self, email: str):
+        super().__init__(f"Email invalido: {email}")
+
+
+class InvalidBalanceUpdateError(BusinessRuleError):
+    def __init__(self, valance_update: str):
+        super().__init__(f"Valance update invalido: {valance_update}")
