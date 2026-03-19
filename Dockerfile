@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/build/fincore/target,id=lunance-cargo-cache \
 
 
 # ---- Stage 2: Final production image ----
-FROM ghcr.io/astral-sh/uv:python3.13-alpine
+FROM python:3.13-alpine
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -28,9 +28,12 @@ ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1
 
 RUN apk update && apk upgrade --no-cache && \
-    apk add --no-cache netcat-openbsd libgcc && \
+    apk add --no-cache netcat-openbsd libgcc curl && \
+    curl -LsSf https://astral.sh/uv/install.sh | sh && \
     pip install --no-cache-dir --upgrade pip && \
     addgroup -S lunance && adduser -S lunance -G lunance
+
+ENV PATH="/root/.local/bin:${PATH}"
 
 WORKDIR /app
 
