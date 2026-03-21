@@ -1,8 +1,9 @@
 import json
+import asyncio
 
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
+from jose import JWTError, ExpiredSignatureError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -14,7 +15,11 @@ from infrastructure.database.repositories.sqlalchemy_user_repository import (
 )
 from infrastructure.config.settings import settings
 from shared.exceptions.base import UnauthorizedError
-from shared.exceptions.application import JWTValidationError, ExternalServiceError, RepositoryError
+from shared.exceptions.application import (
+    JWTValidationError,
+    ExternalServiceError,
+    RepositoryError,
+)
 
 import httpx
 from cachetools import TTLCache, cached
@@ -47,9 +52,9 @@ def get_user_info(access_token: str) -> dict:
         raise ExternalServiceError("Auth0", "user_info", str(e))
 
 
-def validate_token(token: str) -> dict:
+async def validate_token(token: str) -> dict:
     try:
-        jwks = get_auth_jwtks()
+        jwks = await asyncio.to_thread(get_auth_jwtks)
 
         unverified_header = jwt.get_unverified_header(token)
 
@@ -83,7 +88,13 @@ def validate_token(token: str) -> dict:
 
 
 async def validate_local_user(token: str, db: AsyncSession) -> User:
-    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+    except JWTError as e:
+        raise JWTValidationError(str(e))
+
     user_uuid = payload.get("sub")
 
     if not user_uuid:
@@ -99,9 +110,10 @@ async def validate_local_user(token: str, db: AsyncSession) -> User:
 
     return user
 
+
 async def validate_auth0_user(token: str, db: AsyncSession) -> User:
     try:
-        payload = validate_token(token)
+        payload = await validate_token(token)
 
         auth0_user_uuid = payload.get("sub")
 
@@ -112,7 +124,7 @@ async def validate_auth0_user(token: str, db: AsyncSession) -> User:
         user = await user_repo.get_by_auth0_uuid(auth0_user_uuid)
 
         if user is None:
-            user_info = get_user_info(token)
+            user_info = await asyncio.to_thread(get_user_info, token)
             new_user = User(
                 auth0_id=auth0_user_uuid,
                 name=user_info.get("name"),
@@ -134,15 +146,19 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
 ):
     token = credentials.credentials
-    header = jwt.get_unverified_header(token)
-    alg = header["alg"]
 
-    if alg == settings.ALGORITHM:
-        return await validate_local_user(token, db)
-    elif alg == "RS256":
-        return await validate_auth0_user(token, db)
-    else:
-        raise UnauthorizedError("Invalid token")
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        if payload.get("iss") == "lunance":
+            return await validate_local_user(token, db)
+    except ExpiredSignatureError:
+        raise JWTValidationError("Token expired")
+    except JWTError:
+        pass
+
+    return await validate_auth0_user(token, db)
 
 
 async def get_current_active_user(

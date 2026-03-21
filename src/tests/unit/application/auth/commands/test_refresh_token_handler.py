@@ -17,7 +17,9 @@ class TestRefreshTokenHandler:
 
     @pytest.fixture
     def mock_auth_token_repo(self):
-        return MagicMock()
+        repo = MagicMock()
+        repo.save_refresh_token = AsyncMock(return_value=True)
+        return repo
 
     @pytest.fixture
     def mock_jwt_service(self):
@@ -25,14 +27,24 @@ class TestRefreshTokenHandler:
         service.verify_refresh_token = AsyncMock(return_value="user-uuid-123")
         service.hash_refresh_token = MagicMock(return_value="hashed-refresh-token")
         service.create_access_token = MagicMock(return_value="new-access-token")
+        service.create_refresh_token = MagicMock(return_value="new-refresh-token")
         return service
 
     @pytest.fixture
-    def handler(self, mock_user_repo, mock_auth_token_repo, mock_jwt_service):
+    def mock_uow(self):
+        uow = MagicMock()
+        uow.__aenter__ = AsyncMock(return_value=uow)
+        uow.__aexit__ = AsyncMock(return_value=False)
+        uow.commit = AsyncMock()
+        return uow
+
+    @pytest.fixture
+    def handler(self, mock_user_repo, mock_auth_token_repo, mock_jwt_service, mock_uow):
         return RefreshTokenHandler(
             user_repository=mock_user_repo,
             auth_token_repository=mock_auth_token_repo,
             jwt_service=mock_jwt_service,
+            uow=mock_uow,
         )
 
     @pytest.fixture
@@ -63,7 +75,7 @@ class TestRefreshTokenHandler:
 
         assert isinstance(result, LoginResponse)
         assert result.access_token == "new-access-token"
-        assert result.refresh_token == "valid-refresh-token"
+        assert result.refresh_token == "new-refresh-token"
 
     @pytest.mark.asyncio
     async def test_refresh_token_empty_raises(self, handler):

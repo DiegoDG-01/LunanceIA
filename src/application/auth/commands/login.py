@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from domain.repositories.user_repository import UserRepository
 from domain.repositories.auth_token_repository import AuthTokenRepository
@@ -64,7 +64,7 @@ class LoginHandler:
         )
 
         refresh_token_hash = self.jwt_service.hash_refresh_token(refresh_token)
-        refresh_expires_at = datetime.now() + timedelta(
+        refresh_expires_at = datetime.now(timezone.utc) + timedelta(
             days=settings.REFRESH_TOKEN_EXPIRE_DAYS
         )
 
@@ -79,5 +79,5 @@ class LoginHandler:
         return LoginResponse(
             access_token=access_token,
             refresh_token=refresh_token,
-            expires_in=timedelta(hours=1),
+            expires_in=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
         )

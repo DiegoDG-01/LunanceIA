@@ -34,7 +34,12 @@ class JWTService:
             expire = now + timedelta(minutes=expires_in)
         else:
             expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        to_encode = {"exp": expire, "iat": int(now.timestamp()), "sub": user_uuid}
+        to_encode = {
+            "exp": expire,
+            "iat": int(now.timestamp()),
+            "sub": user_uuid,
+            "iss": "lunance",
+        }
 
         encoded_jwt = jwt.encode(
             to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
@@ -58,7 +63,7 @@ class JWTService:
     async def verify_refresh_token(self, token: str):
         try:
             payload = jwt.decode(
-                token, settings.SECRET_KEY_REFRESH, algorithms=settings.ALGORITHM
+                token, settings.SECRET_KEY_REFRESH, algorithms=[settings.ALGORITHM]
             )
             user_uuid = payload.get("sub")
             token_type = payload.get("type")
@@ -82,9 +87,6 @@ class JWTService:
         except SQLAlchemyError as e:
             logger.error(f"Database error verifying refresh token: {e}")
             raise RepositoryError("verify", "RefreshToken", str(e))
-
-    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        return self.pwd_context.verify(plain_password, hashed_password)
 
     def get_password_hash(self, password: str) -> str:
         return self.pwd_context.hash(password)
