@@ -17,7 +17,7 @@ from shared.exceptions.domain import (
     AccountNotFoundError,
     FinancialEngineNotAvailableError,
     BusinessRuleError,
-    ValidationError
+    ValidationError,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,21 +37,22 @@ except ImportError:
 class GetInvestmentProjectionsQuery:
     account_uuid: str
     user_id: int
+
     project_days: Optional[int] = None
 
 
 class GetInvestmentProjectionsHandler:
     def __init__(
-            self,
-            account_repository: AccountRepository,
-            investment_card_settings_repository: InvestmentCardSettingsRepository,
+        self,
+        account_repository: AccountRepository,
+        investment_card_settings_repository: InvestmentCardSettingsRepository,
     ):
         self.account_repository = account_repository
         self.investment_card_settings_repository = investment_card_settings_repository
 
     async def handle(
-            self,
-            query: GetInvestmentProjectionsQuery,
+        self,
+        query: GetInvestmentProjectionsQuery,
     ) -> InvestmentProjectionResponseDTO:
         account = await self.account_repository.get_by_uuid_and_user_id(
             account_uuid=query.account_uuid, user_id=query.user_id
@@ -91,7 +92,9 @@ class GetInvestmentProjectionsHandler:
                 start_year=today.year,
                 start_month=today.month,
                 start_day=today.day,
-                base_principal=str(original_principal) if interest_type == InterestType.SIMPLE else None,
+                base_principal=str(original_principal)
+                if interest_type == InterestType.SIMPLE
+                else None,
             )
         except FCInvalidDecimalError as e:
             message, field, type = e.args
@@ -115,7 +118,7 @@ class GetInvestmentProjectionsHandler:
                         "msg": message,
                         "type": type,
                     }
-                ]
+                ],
             )
 
         projections = [
