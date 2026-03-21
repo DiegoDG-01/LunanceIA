@@ -62,6 +62,7 @@ app.state.limiter = limiter
 # Configurar CORS
 if settings.ENVIRONMENT.upper() == "PROD":
     origins = [
+        "https://preview.lunance.app",
         "https://api.lunance.app",
         "https://lunance.app",
     ]
