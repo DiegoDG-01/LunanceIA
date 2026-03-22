@@ -1,5 +1,6 @@
 from fastapi import Depends
 
+from application.expense.expense_advisor import GetExpenseAdvisorHandler
 from application.transactions.commands.create_transaction import (
     CreateTransactionHandler,
 )
@@ -103,3 +104,11 @@ def get_delete_transaction_handler(
     uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> DeleteTransactionHandler:
     return DeleteTransactionHandler(transaction_repo, account_repo, uow)
+
+
+def get_expense_advisor_handler(
+    transaction_repo: SQLAlchemyTransactionRepository = Depends(
+        get_transaction_repository
+    ),
+) -> GetExpenseAdvisorHandler:
+    return GetExpenseAdvisorHandler(transaction_repo)

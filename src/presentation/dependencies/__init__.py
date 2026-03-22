@@ -52,6 +52,9 @@ from presentation.dependencies.subscription_deps import (
     get_last_transactions_handler,
 )
 
+# Expense handlers
+from presentation.dependencies.expense_deps import get_expense_advisor_handler
+
 # Category handlers
 from presentation.dependencies.category_deps import get_categories_handler
 
@@ -128,4 +131,5 @@ __all__ = [
     "validate_token",
     # Bank
     "get_banks_handler",
+    "get_expense_advisor_handler",
 ]

@@ -9,6 +9,7 @@ from presentation.api.v2.endpoints import (
     subscription,
     bank,
     investment_yield,
+    expense_advisor,
 )
 
 api_router = APIRouter()
@@ -24,4 +25,9 @@ api_router.include_router(
     subscription.router, prefix="/subscription", tags=["subscription"]
 )
 api_router.include_router(bank.router, prefix="/bank", tags=["bank"])
-api_router.include_router(investment_yield.router, prefix="/investments", tags=["Investment Yield"])
+api_router.include_router(
+    investment_yield.router, prefix="/investments", tags=["Investment Yield"]
+)
+api_router.include_router(
+    expense_advisor.router, prefix="/expense-advisor", tags=["Expense Advisor"]
+)
