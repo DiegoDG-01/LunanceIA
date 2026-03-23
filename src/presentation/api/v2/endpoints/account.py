@@ -126,7 +126,7 @@ async def create_account(
     if account_request.investment_settings:
         inv_settings_dto = InvestmentCardSettingsDTO(
             investment_type=account_request.investment_settings.investment_type,
-            investment_rate=account_request.investment_settings.interest_rate,
+            investment_rate=account_request.investment_settings.investment_rate,
             lock_period_end_date=account_request.investment_settings.lock_period_end_date,
             maturity_date=account_request.investment_settings.maturity_date,
             early_withdrawal_penalty=account_request.investment_settings.early_withdrawal_penalty,
@@ -171,7 +171,7 @@ async def update_account(
     if update_request.investment_settings:
         inv_settings_dto = InvestmentCardSettingsDTO(
             investment_type=update_request.investment_settings.investment_type,
-            investment_rate=update_request.investment_settings.interest_rate,
+            investment_rate=update_request.investment_settings.investment_rate,
             lock_period_end_date=update_request.investment_settings.lock_period_end_date,
             maturity_date=update_request.investment_settings.maturity_date,
             early_withdrawal_penalty=update_request.investment_settings.early_withdrawal_penalty,

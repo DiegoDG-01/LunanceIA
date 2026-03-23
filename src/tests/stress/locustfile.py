@@ -122,7 +122,7 @@ class LunanceUser(HttpUser):
             "is_active": True,
             "investment_settings": {
                 "investment_type": random.choice(["fixed_term", "stocks", "bonds", "mutual_fund", "etf", "other"]),
-                "interest_rate": float(Decimal(random.uniform(4, 15)).quantize(Decimal("0.01"))),
+                "investment_rate": float(Decimal(random.uniform(4, 15)).quantize(Decimal("0.01"))),
                 "lock_period_end_date": lock_end.isoformat(),
                 "maturity_date": maturity.isoformat(),
                 "early_withdrawal_penalty": float(Decimal(random.uniform(0, 5)).quantize(Decimal("0.01"))),
