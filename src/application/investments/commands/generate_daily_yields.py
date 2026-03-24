@@ -14,9 +14,6 @@ from shared.utils.date import get_year_day_basis
 
 logger = logging.getLogger(__name__)
 
-# Investment excluded because it is non-deterministic
-EXCLUDED_INVESTMENT_TYPES = {"stocks", "etf", "mutual_fund"}
-
 
 @dataclass
 class GenerateDailyYieldCommand:
@@ -45,11 +42,10 @@ class GenerateDailyYieldHandler:
         async with self.uow:
             for account in accounts:
                 try:
-                    if account.investment_settings.investment_type in EXCLUDED_INVESTMENT_TYPES:
-                        skipped += 1
-                        continue
-
-                    if account.investment_settings.maturity_date and today > account.investment_settings.maturity_date:
+                    if (
+                        account.investment_settings.maturity_date
+                        and today > account.investment_settings.maturity_date
+                    ):
                         skipped += 1
                         continue
 
@@ -66,14 +62,18 @@ class GenerateDailyYieldHandler:
                     annual_rate = account.investment_settings.investment_rate
                     year_basis = Decimal(get_year_day_basis(today))
 
-                    if account.investment_settings.interest_type == InterestType.COMPOUND:
+                    if (
+                        account.investment_settings.interest_type
+                        == InterestType.COMPOUND
+                    ):
                         principal = account.current_balance.amount
                         daily_rate = (1 + annual_rate / Decimal(100)) ** (
                             Decimal(1) / year_basis
                         ) - Decimal(1)
                     else:
                         principal = (
-                            account.investment_settings.base_principal or account.current_balance.amount
+                            account.investment_settings.base_principal
+                            or account.current_balance.amount
                         )
                         daily_rate = annual_rate / Decimal(100) / year_basis
 

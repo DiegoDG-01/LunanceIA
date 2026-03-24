@@ -49,15 +49,11 @@ class RegisterHandler:
         # Verificar que el username no exista
         existing_user = await self.user_repository.get_by_username(command.username)
         if existing_user:
-            # TODO: Create and change Error
             raise UsernameAlreadyExistsError()
 
         # Crear usuario
         password_hash = self.jwt_service.get_password_hash(command.password)
-        user = User.create_local_user(
-            name=command.username,
-            password=password_hash
-        )
+        user = User.create_local_user(name=command.username, password=password_hash)
 
         # Guardar usuario
         async with self.uow:

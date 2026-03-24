@@ -310,6 +310,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
                 and_(
                     AccountModel.type == AccountType.INVESTMENT,
                     AccountModel.is_active,
+                    InvestmentCardSettingsModel.investment_type == "fixed_term",
                 )
             )
         )
@@ -330,5 +331,6 @@ class SQLAlchemyAccountRepository(AccountRepository):
                     early_withdrawal_penalty=inv_model.early_withdrawal_penalty,
                     base_principal=inv_model.base_principal,
                 )
-            accounts.append(account)
+                accounts.append(account)
+
         return accounts
