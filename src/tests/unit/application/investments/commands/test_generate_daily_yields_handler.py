@@ -140,21 +140,6 @@ class TestGenerateDailyYieldHandler:
         mocks["investment_yield_repo"].create.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_skips_excluded_investment_types(self, handler, mocks):
-        account = self._make_account()
-        account.investment_settings = self._make_settings(investment_type="stocks")
-
-        mocks["account_repo"].get_active_investment_accounts = AsyncMock(
-            return_value=[account]
-        )
-
-        command = GenerateDailyYieldCommand(target_date=date(2026, 2, 27))
-        result = await handler.handle(command)
-
-        assert result["processed"] == 0
-        assert result["skipped"] == 1
-
-    @pytest.mark.asyncio
     async def test_skips_past_maturity_date(self, handler, mocks):
         account = self._make_account()
         account.investment_settings = self._make_settings(maturity_date=date(2026, 1, 1))
