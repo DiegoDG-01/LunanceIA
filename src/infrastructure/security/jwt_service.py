@@ -34,7 +34,12 @@ class JWTService:
             expire = now + timedelta(minutes=expires_in)
         else:
             expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        to_encode = {"exp": expire, "iat": int(now.timestamp()), "sub": user_uuid}
+        to_encode = {
+            "exp": expire,
+            "iat": int(now.timestamp()),
+            "sub": user_uuid,
+            "iss": "lunance",
+        }
 
         encoded_jwt = jwt.encode(
             to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
@@ -55,22 +60,10 @@ class JWTService:
         )
         return encoded_jwt
 
-    def verify_access_token(self, token: str):
-        try:
-            payload = jwt.decode(
-                token, settings.SECRET_KEY, algorithms=settings.ALGORITHM
-            )
-            user_uuid = payload.get("sub")
-            if user_uuid is None:
-                return None
-            return user_uuid
-        except JWTError:
-            return None
-
     async def verify_refresh_token(self, token: str):
         try:
             payload = jwt.decode(
-                token, settings.SECRET_KEY_REFRESH, algorithms=settings.ALGORITHM
+                token, settings.SECRET_KEY_REFRESH, algorithms=[settings.ALGORITHM]
             )
             user_uuid = payload.get("sub")
             token_type = payload.get("type")
@@ -84,50 +77,28 @@ class JWTService:
 
             # Validate token against database using repository
             token_hash = self.hash_refresh_token(token)
-            is_valid = await self.auth_token_repository.is_token_valid(
+            is_valid = await self.auth_token_repository.get_refresh_token(
                 user_id=user.id, refresh_hash_token=token_hash
             )
 
-            return user_uuid if is_valid else None
+            return user_uuid if is_valid is not None else None
         except JWTError as e:
             raise JWTValidationError(str(e))
         except SQLAlchemyError as e:
             logger.error(f"Database error verifying refresh token: {e}")
             raise RepositoryError("verify", "RefreshToken", str(e))
 
-    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        return self.pwd_context.verify(plain_password, hashed_password)
-
     def get_password_hash(self, password: str) -> str:
         return self.pwd_context.hash(password)
 
-    async def revoke_refresh_token(self, token: str) -> bool:
-        try:
-            payload = jwt.decode(
-                token, settings.SECRET_KEY_REFRESH, algorithms=settings.ALGORITHM
-            )
-            user_uuid = payload.get("sub")
-            token_type = payload.get("type")
-
-            if user_uuid is None or token_type != "refresh":
-                return False
-
-            token_hash = self.hash_refresh_token(token)
-            return await self.auth_token_repository.revoke_token(user_uuid, token_hash)
-        except JWTError:
-            return False
-        except SQLAlchemyError as e:
-            logger.error(f"Database error to revoke refresh token: {e}")
-            return False
-
     async def save_refresh_token(
-        self, user_uuid: str, token: str, expires_at: datetime
+        self, user_id: int, token: str, expires_at: datetime
     ) -> bool:
         token_hash = self.hash_refresh_token(token)
 
         try:
-            return await self.auth_token_repository.save_token(
-                user_uuid, token_hash, expires_at
+            return await self.auth_token_repository.save_refresh_token(
+                user_id, token_hash, expires_at
             )
         except SQLAlchemyError as e:
             logger.error(f"Database error to save refresh token: {e}")

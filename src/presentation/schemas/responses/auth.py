@@ -13,8 +13,7 @@ class RegisterResponse(BaseModel):
     """Schema de respuesta para registro."""
 
     user_uuid: str = Field(..., description="UUID del usuario")
-    name: str = Field(..., description="Nombre del usuario")
-    email: str = Field(..., description="Email del usuario")
+    username: str = Field(..., description="Nombre del usuario")
     message: str = Field(..., description="Mensaje de confirmación")
 
 
@@ -22,6 +21,5 @@ class UserInfoResponse(BaseModel):
     """Schema de respuesta para información del usuario."""
 
     user_uuid: str = Field(..., description="UUID del usuario")
-    name: str = Field(..., description="Nombre del usuario")
-    email: str = Field(..., description="Email del usuario")
+    username: str = Field(..., description="Nombre del usuario")
     is_active: bool = Field(..., description="Estado del usuario")

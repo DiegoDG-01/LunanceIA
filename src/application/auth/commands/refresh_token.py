@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 
 from domain.repositories.user_repository import UserRepository
 from domain.repositories.auth_token_repository import AuthTokenRepository
@@ -8,6 +8,7 @@ from infrastructure.security.jwt_service import JWTService
 from shared.exceptions.application import CommandValidationError
 from shared.exceptions.application import JWTValidationError
 from application.auth.commands.login import LoginResponse
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 
 
 @dataclass
@@ -22,10 +23,12 @@ class RefreshTokenHandler:
         user_repository: UserRepository,
         auth_token_repository: AuthTokenRepository,
         jwt_service: JWTService,
+        uow: AbstractUnitOfWork,
     ):
         self.user_repository = user_repository
         self.auth_token_repository = auth_token_repository
         self.jwt_service = jwt_service
+        self.uow = uow
 
     async def handle(self, command: RefreshTokenCommand) -> LoginResponse:
         if not command.refresh_token:
@@ -60,8 +63,22 @@ class RefreshTokenHandler:
             user_uuid=user_uuid, expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
 
+        new_refresh_token = self.jwt_service.create_refresh_token(user_uuid=user_uuid)
+        new_refresh_token_hash = self.jwt_service.hash_refresh_token(new_refresh_token)
+        new_expires_at = datetime.now(tz=timezone.utc) + timedelta(
+            days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+        )
+
+        async with self.uow:
+            await self.auth_token_repository.save_refresh_token(
+                user_id=user.id,
+                refresh_hash_token=new_refresh_token_hash,
+                expires_at=new_expires_at,
+            )
+            await self.uow.commit()
+
         return LoginResponse(
             access_token=access_token,
-            refresh_token=command.refresh_token,
+            refresh_token=new_refresh_token,
             expires_in=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
         )

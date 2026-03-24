@@ -26,7 +26,6 @@ class TestGenerateDailyYieldHandler:
         return {
             "account_repo": MagicMock(),
             "investment_yield_repo": MagicMock(),
-            "investment_settings_repo": MagicMock(),
             "uow": uow,
         }
 
@@ -35,7 +34,6 @@ class TestGenerateDailyYieldHandler:
         return GenerateDailyYieldHandler(
             mocks["account_repo"],
             mocks["investment_yield_repo"],
-            mocks["investment_settings_repo"],
             mocks["uow"],
         )
 
@@ -64,7 +62,7 @@ class TestGenerateDailyYieldHandler:
     ) -> InvestmentCardSettings:
         return InvestmentCardSettings(
             investment_type=investment_type,
-            interest_rate=Decimal(rate),
+            investment_rate=Decimal(rate),
             interest_type=interest_type,
             maturity_date=maturity_date,
             base_principal=Decimal(base_principal) if base_principal else None,
@@ -73,14 +71,11 @@ class TestGenerateDailyYieldHandler:
     @pytest.mark.asyncio
     async def test_processes_compound_interest_account(self, handler, mocks):
         account = self._make_account(balance="10000.00")
-        settings = self._make_settings("10.00", InterestType.COMPOUND)
+        account.investment_settings = self._make_settings("10.00", InterestType.COMPOUND)
         target_date = date(2026, 2, 27)
 
         mocks["account_repo"].get_active_investment_accounts = AsyncMock(
             return_value=[account]
-        )
-        mocks["investment_settings_repo"].get_by_account_id = AsyncMock(
-            return_value=settings
         )
         mocks["investment_yield_repo"].get_by_account_and_date = AsyncMock(
             return_value=None
@@ -105,16 +100,13 @@ class TestGenerateDailyYieldHandler:
     @pytest.mark.asyncio
     async def test_processes_simple_interest_with_base_principal(self, handler, mocks):
         account = self._make_account(balance="10500.00")
-        settings = self._make_settings(
+        account.investment_settings = self._make_settings(
             "10.00", InterestType.SIMPLE, base_principal="10000.00"
         )
         target_date = date(2026, 2, 27)
 
         mocks["account_repo"].get_active_investment_accounts = AsyncMock(
             return_value=[account]
-        )
-        mocks["investment_settings_repo"].get_by_account_id = AsyncMock(
-            return_value=settings
         )
         mocks["investment_yield_repo"].get_by_account_and_date = AsyncMock(
             return_value=None
@@ -132,51 +124,28 @@ class TestGenerateDailyYieldHandler:
         assert created_yield.interest_type == InterestType.SIMPLE
 
     @pytest.mark.asyncio
-    async def test_skips_account_without_settings(self, handler, mocks):
+    async def test_errors_account_without_settings(self, handler, mocks):
         account = self._make_account()
+        account.investment_settings = None
 
         mocks["account_repo"].get_active_investment_accounts = AsyncMock(
             return_value=[account]
-        )
-        mocks["investment_settings_repo"].get_by_account_id = AsyncMock(
-            return_value=None
         )
 
         command = GenerateDailyYieldCommand(target_date=date(2026, 2, 27))
         result = await handler.handle(command)
 
         assert result["processed"] == 0
-        assert result["skipped"] == 1
+        assert result["errors"] == 1
         mocks["investment_yield_repo"].create.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_skips_excluded_investment_types(self, handler, mocks):
-        account = self._make_account()
-        settings = self._make_settings(investment_type="stocks")
-
-        mocks["account_repo"].get_active_investment_accounts = AsyncMock(
-            return_value=[account]
-        )
-        mocks["investment_settings_repo"].get_by_account_id = AsyncMock(
-            return_value=settings
-        )
-
-        command = GenerateDailyYieldCommand(target_date=date(2026, 2, 27))
-        result = await handler.handle(command)
-
-        assert result["processed"] == 0
-        assert result["skipped"] == 1
 
     @pytest.mark.asyncio
     async def test_skips_past_maturity_date(self, handler, mocks):
         account = self._make_account()
-        settings = self._make_settings(maturity_date=date(2026, 1, 1))
+        account.investment_settings = self._make_settings(maturity_date=date(2026, 1, 1))
 
         mocks["account_repo"].get_active_investment_accounts = AsyncMock(
             return_value=[account]
-        )
-        mocks["investment_settings_repo"].get_by_account_id = AsyncMock(
-            return_value=settings
         )
 
         command = GenerateDailyYieldCommand(target_date=date(2026, 2, 27))
@@ -188,7 +157,7 @@ class TestGenerateDailyYieldHandler:
     @pytest.mark.asyncio
     async def test_idempotency_skips_existing_yield(self, handler, mocks):
         account = self._make_account()
-        settings = self._make_settings()
+        account.investment_settings = self._make_settings()
         existing_yield = InvestmentYield(
             id=1,
             uuid="y-1",
@@ -203,9 +172,6 @@ class TestGenerateDailyYieldHandler:
 
         mocks["account_repo"].get_active_investment_accounts = AsyncMock(
             return_value=[account]
-        )
-        mocks["investment_settings_repo"].get_by_account_id = AsyncMock(
-            return_value=settings
         )
         mocks["investment_yield_repo"].get_by_account_and_date = AsyncMock(
             return_value=existing_yield
@@ -232,17 +198,16 @@ class TestGenerateDailyYieldHandler:
     @pytest.mark.asyncio
     async def test_error_in_one_account_continues_processing(self, handler, mocks):
         account_ok = self._make_account(id=10, balance="10000.00")
+        account_ok.investment_settings = self._make_settings()
         account_bad = self._make_account(id=20, balance="5000.00")
-        settings = self._make_settings()
+        account_bad.investment_settings = self._make_settings()
 
         mocks["account_repo"].get_active_investment_accounts = AsyncMock(
             return_value=[account_bad, account_ok]
         )
-        mocks["investment_settings_repo"].get_by_account_id = AsyncMock(
-            side_effect=[Exception("DB error"), settings]
-        )
+        # account_bad (id=20) triggers a DB error, account_ok (id=10) returns None
         mocks["investment_yield_repo"].get_by_account_and_date = AsyncMock(
-            return_value=None
+            side_effect=[Exception("DB error"), None]
         )
         mocks["investment_yield_repo"].create = AsyncMock()
         mocks["account_repo"].update = AsyncMock()
@@ -256,13 +221,10 @@ class TestGenerateDailyYieldHandler:
     @pytest.mark.asyncio
     async def test_balance_updated_after_yield(self, handler, mocks):
         account = self._make_account(balance="10000.00")
-        settings = self._make_settings("10.00", InterestType.COMPOUND)
+        account.investment_settings = self._make_settings("10.00", InterestType.COMPOUND)
 
         mocks["account_repo"].get_active_investment_accounts = AsyncMock(
             return_value=[account]
-        )
-        mocks["investment_settings_repo"].get_by_account_id = AsyncMock(
-            return_value=settings
         )
         mocks["investment_yield_repo"].get_by_account_and_date = AsyncMock(
             return_value=None

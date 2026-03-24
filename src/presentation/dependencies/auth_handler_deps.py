@@ -40,8 +40,9 @@ def get_refresh_token_handler(
     user_repo: SQLAlchemyUserRepository = Depends(get_user_repository),
     auth_token_repository: AuthTokenRepository = Depends(get_auth_token_repository),
     jwt_service: JWTService = Depends(get_jwt_service),
+    uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> RefreshTokenHandler:
-    return RefreshTokenHandler(user_repo, auth_token_repository, jwt_service)
+    return RefreshTokenHandler(user_repo, auth_token_repository, jwt_service, uow)
 
 
 def get_logout_handler(

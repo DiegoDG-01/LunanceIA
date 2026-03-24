@@ -1,9 +1,10 @@
 import json
+import asyncio
 
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
-from sqlalchemy.orm import Session
+from jose import JWTError, ExpiredSignatureError, jwt
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 
 from domain.entities.user import User
@@ -14,7 +15,11 @@ from infrastructure.database.repositories.sqlalchemy_user_repository import (
 )
 from infrastructure.config.settings import settings
 from shared.exceptions.base import UnauthorizedError
-from shared.exceptions.application import JWTValidationError, ExternalServiceError, RepositoryError
+from shared.exceptions.application import (
+    JWTValidationError,
+    ExternalServiceError,
+    RepositoryError,
+)
 
 import httpx
 from cachetools import TTLCache, cached
@@ -47,9 +52,9 @@ def get_user_info(access_token: str) -> dict:
         raise ExternalServiceError("Auth0", "user_info", str(e))
 
 
-def validate_token(token: str) -> dict:
+async def validate_token(token: str) -> dict:
     try:
-        jwks = get_auth_jwtks()
+        jwks = await asyncio.to_thread(get_auth_jwtks)
 
         unverified_header = jwt.get_unverified_header(token)
 
@@ -82,14 +87,33 @@ def validate_token(token: str) -> dict:
         raise JWTValidationError("Invalid token")
 
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
-) -> User:
+async def validate_local_user(token: str, db: AsyncSession) -> User:
     try:
-        token = credentials.credentials
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+    except JWTError as e:
+        raise JWTValidationError(str(e))
 
-        payload = validate_token(token)
+    user_uuid = payload.get("sub")
+
+    if not user_uuid:
+        raise UnauthorizedError("Invalid token: missing user")
+
+    user_repo = SQLAlchemyUserRepository(db)
+    user = await user_repo.get_by_uuid(user_uuid)
+    if not user:
+        raise UnauthorizedError("User not found")
+
+    if not user.is_active:
+        raise UserInactiveError()
+
+    return user
+
+
+async def validate_auth0_user(token: str, db: AsyncSession) -> User:
+    try:
+        payload = await validate_token(token)
 
         auth0_user_uuid = payload.get("sub")
 
@@ -100,7 +124,7 @@ async def get_current_user(
         user = await user_repo.get_by_auth0_uuid(auth0_user_uuid)
 
         if user is None:
-            user_info = get_user_info(token)
+            user_info = await asyncio.to_thread(get_user_info, token)
             new_user = User(
                 auth0_id=auth0_user_uuid,
                 name=user_info.get("name"),
@@ -115,6 +139,26 @@ async def get_current_user(
 
     except SQLAlchemyError as e:
         raise RepositoryError("get_or_create", "User", str(e))
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
+):
+    token = credentials.credentials
+
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        if payload.get("iss") == "lunance":
+            return await validate_local_user(token, db)
+    except ExpiredSignatureError:
+        raise JWTValidationError("Token expired")
+    except JWTError:
+        pass
+
+    return await validate_auth0_user(token, db)
 
 
 async def get_current_active_user(

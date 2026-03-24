@@ -22,7 +22,7 @@ class AccountModel(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     bank_id = Column(
-        Integer, ForeignKey("banks.id", ondelete="SET NULL"), nullable=True
+        Integer, ForeignKey("banks.id", ondelete="RESTRICT"), nullable=False
     )
     uuid = Column(
         CHAR(36),

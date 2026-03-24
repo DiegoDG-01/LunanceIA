@@ -137,7 +137,7 @@ class TransactionRepository(ABC):
 
     @abstractmethod
     async def get_activity_by_account_id(
-        self, account_id: int, limit: int
+        self, account_id: int, limit: int = 5
     ) -> List[Tuple[Transaction, Optional[str]]]:
         """Get transactions by account id and user uuid
         The limit is a default value of 5

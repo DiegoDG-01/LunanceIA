@@ -49,3 +49,8 @@ class UserRepository(ABC):
     async def exist_by_email(self, email: EmailStr) -> bool:
         """Check if user exists by email"""
         pass
+
+    @abstractmethod
+    async def get_by_username(self, name: str) -> Optional[User]:
+        """Get user by username"""
+        pass

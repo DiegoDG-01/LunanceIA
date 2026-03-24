@@ -157,6 +157,15 @@ HTTP_CODES_ERRORS = {
         "GEMINI_API_ERROR": "Error de API de Gemini",
         "VALIDATION_INVALID_IMAGE": "Imagen no válida o no procesable",
         "INSUFFICIENT_FUNDS": "Fondos insuficientes",
+        "VALIDATION_INVALID_INVESTMENT_RATE": "La tasa de inversión debe ser no negativa",
+        "VALIDATION_INVALID_PENALTY_PERCENTAGE": "El porcentaje de penalización debe estar entre 0 y 100",
+        "VALIDATION_INVALID_INVESTMENT_TYPE": "Tipo de inversión inválido",
+        "VALIDATION_INVALID_BILLING_CYCLE_DAY": "El día de ciclo de facturación debe estar entre 1 y 31",
+        "VALIDATION_INVALID_PAYMENT_DUE_DAY": "El día de vencimiento de pago debe estar entre 1 y  31",
+        "VALIDATION_INVALID_CREDIT_LIMIT": "El límite de crédito debe ser positivo",
+        "VALIDATION_INVALID_MINIMUM_PAYMENT": "El porcentaje de pago mínimo debe estar entre 0 y 100",
+        "VALIDATION_INVALID_EMAIL": "Formato de email inválido",
+        "VALIDATION_INVALID_BALANCE_UPDATE": "No se puede actualizar el balance de la cuenta",
     },
     "en": {
         # Códigos HTTP genéricos
@@ -201,6 +210,15 @@ HTTP_CODES_ERRORS = {
         "GEMINI_API_ERROR": "Gemini API error",
         "VALIDATION_INVALID_IMAGE": "Invalid or unprocessable image",
         "INSUFFICIENT_FUNDS": "Insufficient funds",
+        "VALIDATION_INVALID_INVESTMENT_RATE": "Interest rate must be non negative",
+        "VALIDATION_INVALID_PENALTY_PERCENTAGE": "Early withdrawal penalty must be between 0 and 100",
+        "VALIDATION_INVALID_INVESTMENT_TYPE": "Invalid investment type",
+        "VALIDATION_INVALID_BILLING_CYCLE_DAY": "Billing cycle day must be between 1 and 31",
+        "VALIDATION_INVALID_PAYMENT_DUE_DAY": "Payment due day must be between 1 and 31",
+        "VALIDATION_INVALID_CREDIT_LIMIT": "Credit limit must be positive",
+        "VALIDATION_INVALID_MINIMUM_PAYMENT": "Minimum payment percentage must be between 0 and 100",
+        "VALIDATION_INVALID_EMAIL": "Invalid email format",
+        "VALIDATION_INVALID_BALANCE_UPDATE": "Cannot update account balance",
     },
 }
 
@@ -218,6 +236,7 @@ ERROR_DETAIL_MESSAGES = {
         "INSUFFICIENT_FUNDS": "Fondos insuficientes",
         "INVALID_TYPE": "Tipo de valor invalido",
         "BUSINESS_RULE_VIOLATION": "La operación no pudo completarse debido a una restricción",
+        "COMMAND_VALIDATION_ERROR": "Error de validación en el comando",
     },
     "en": {
         "EMAIL_REQUIRED": "Email is required",
@@ -231,7 +250,8 @@ ERROR_DETAIL_MESSAGES = {
         "REFRESH_TOKEN_INVALID": "Refresh token is invalid",
         "INSUFFICIENT_FUNDS": "Insufficient funds",
         "INVALID_TYPE": "Invalid typo of value",
-        "BUSINESS_RULE_VIOLATION" : "The operation could not be completed due to a restriction",
+        "BUSINESS_RULE_VIOLATION": "The operation could not be completed due to a restriction",
+        "COMMAND_VALIDATION_ERROR": "Command validation error",
     },
 }
 

@@ -11,6 +11,7 @@ from domain.objects.investment_settings import InvestmentCardSettings
 from infrastructure.database.models import (
     CreditCardSettingsModel,
     InvestmentCardSettingsModel,
+    BankModel,
 )
 from infrastructure.database.models.account import AccountModel
 
@@ -92,32 +93,116 @@ class SQLAlchemyAccountRepository(AccountRepository):
         self, user_id: int, limit: int, offset: int
     ) -> List[Account]:
         stmt = (
-            select(AccountModel)
+            select(
+                AccountModel,
+                BankModel,
+                CreditCardSettingsModel,
+                InvestmentCardSettingsModel,
+            )
+            .outerjoin(BankModel, AccountModel.bank_id == BankModel.id)
+            .outerjoin(
+                CreditCardSettingsModel,
+                AccountModel.id == CreditCardSettingsModel.account_id,
+            )
+            .outerjoin(
+                InvestmentCardSettingsModel,
+                AccountModel.id == InvestmentCardSettingsModel.account_id,
+            )
             .where(AccountModel.user_id == user_id)
             .limit(limit)
             .offset(offset)
         )
         result = await self.db.execute(stmt)
-        models = result.scalars().all()
-        return [self._model_to_entity(model) for model in models]
+        rows = result.all()
+
+        accounts = []
+        for account_model, bank_model, cc_model, inv_model in rows:
+            account = self._model_to_entity(account_model)
+            if bank_model:
+                account.bank_code = bank_model.code
+                account.bank_name = bank_model.name
+
+            if cc_model:
+                account.credit_card_settings = CreditCardSettings(
+                    billing_cycle_day=cc_model.billing_cycle_day,
+                    payment_due_day=cc_model.payment_due_day,
+                    credit_limit=cc_model.credit_limit,
+                    minimum_payment_percentage=cc_model.minimum_payment_percentage,
+                )
+
+            if inv_model:
+                account.investment_settings = InvestmentCardSettings(
+                    investment_type=inv_model.investment_type,
+                    investment_rate=inv_model.investment_rate,
+                    interest_type=inv_model.interest_type,
+                    lock_period_end_date=inv_model.lock_period_end_date,
+                    maturity_date=inv_model.maturity_date,
+                    early_withdrawal_penalty=inv_model.early_withdrawal_penalty,
+                )
+
+            accounts.append(account)
+        return accounts
 
     async def get_active_by_user(
         self, user_id: int, limit: int, offset: int
     ) -> List[Account]:
         stmt = (
-            select(AccountModel)
+            select(
+                AccountModel,
+                BankModel,
+                CreditCardSettingsModel,
+                InvestmentCardSettingsModel,
+            )
+            .outerjoin(BankModel, AccountModel.bank_id == BankModel.id)
+            .outerjoin(
+                CreditCardSettingsModel,
+                AccountModel.id == CreditCardSettingsModel.account_id,
+            )
+            .outerjoin(
+                InvestmentCardSettingsModel,
+                AccountModel.id == InvestmentCardSettingsModel.account_id,
+            )
             .where(
                 and_(
                     AccountModel.user_id == user_id,
-                    AccountModel.is_active is True,
+                    AccountModel.is_active,
                 )
             )
             .limit(limit)
             .offset(offset)
         )
         result = await self.db.execute(stmt)
-        models = result.scalars().all()
-        return [self._model_to_entity(model) for model in models]
+        rows = result.all()
+
+        accounts = []
+        for account_model, bank_model, cc_model, inv_model in rows:
+            account = self._model_to_entity(account_model)
+
+            if bank_model:
+                account.bank_code = bank_model.code
+                account.bank_name = bank_model.name
+
+            if cc_model:
+                account.credit_card_settings = CreditCardSettings(
+                    billing_cycle_day=cc_model.billing_cycle_day,
+                    payment_due_day=cc_model.payment_due_day,
+                    credit_limit=cc_model.credit_limit,
+                    minimum_payment_percentage=cc_model.minimum_payment_percentage,
+                )
+
+            if inv_model:
+                account.investment_settings = InvestmentCardSettings(
+                    investment_type=inv_model.investment_type,
+                    investment_rate=inv_model.investment_rate,
+                    interest_type=inv_model.interest_type,
+                    lock_period_end_date=inv_model.lock_period_end_date,
+                    maturity_date=inv_model.maturity_date,
+                    early_withdrawal_penalty=inv_model.early_withdrawal_penalty,
+                    base_principal=inv_model.base_principal,
+                )
+
+            accounts.append(account)
+        return accounts
 
     async def update(self, account: Account) -> Account:
         stmt = select(AccountModel).where(AccountModel.uuid == account.uuid)
@@ -158,9 +243,14 @@ class SQLAlchemyAccountRepository(AccountRepository):
 
     async def get_by_uuid_and_user_id_with_settings(
         self, uuid: str, user_id: int
-    ) -> tuple:
+    ) -> Account:
         stmt = (
-            select(AccountModel, CreditCardSettingsModel, InvestmentCardSettingsModel)
+            select(
+                AccountModel,
+                CreditCardSettingsModel,
+                InvestmentCardSettingsModel,
+                BankModel,
+            )
             .outerjoin(
                 CreditCardSettingsModel,
                 AccountModel.id == CreditCardSettingsModel.account_id,
@@ -168,6 +258,10 @@ class SQLAlchemyAccountRepository(AccountRepository):
             .outerjoin(
                 InvestmentCardSettingsModel,
                 AccountModel.id == InvestmentCardSettingsModel.account_id,
+            )
+            .outerjoin(
+                BankModel,
+                AccountModel.bank_id == BankModel.id,
             )
             .where(AccountModel.uuid == uuid, AccountModel.user_id == user_id)
         )
@@ -177,7 +271,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         if not row:
             return None
 
-        account_model, cc_settings_model, inv_settings_model = row
+        account_model, cc_settings_model, inv_settings_model, bank_model = row
 
         account = self._model_to_entity(account_model)
 
@@ -192,22 +286,51 @@ class SQLAlchemyAccountRepository(AccountRepository):
         if inv_settings_model:
             account.investment_card_settings = InvestmentCardSettings(
                 investment_type=inv_settings_model.investment_type,
-                interest_rate=inv_settings_model.interest_rate,
+                investment_rate=inv_settings_model.investment_rate,
                 interest_type=inv_settings_model.interest_type,
                 lock_period_end_date=inv_settings_model.lock_period_end_date,
                 maturity_date=inv_settings_model.maturity_date,
                 early_withdrawal_penalty=inv_settings_model.early_withdrawal_penalty,
+                base_principal=inv_settings_model.base_principal,
             )
+
+        account.bank_name = bank_model.name
+        account.bank_code = bank_model.code
 
         return account
 
     async def get_active_investment_accounts(self) -> List[Account]:
-        stmt = select(AccountModel).where(
-            and_(
-                AccountModel.type == AccountType.INVESTMENT,
-                AccountModel.is_active,
+        stmt = (
+            select(AccountModel, InvestmentCardSettingsModel)
+            .outerjoin(
+                InvestmentCardSettingsModel,
+                AccountModel.id == InvestmentCardSettingsModel.account_id,
+            )
+            .where(
+                and_(
+                    AccountModel.type == AccountType.INVESTMENT,
+                    AccountModel.is_active,
+                    InvestmentCardSettingsModel.investment_type == "fixed_term",
+                )
             )
         )
         result = await self.db.execute(stmt)
-        models = result.scalars().all()
-        return [self._model_to_entity(m) for m in models]
+        rows = result.all()
+
+        accounts = []
+        for account_model, inv_model in rows:
+            account = self._model_to_entity(account_model)
+
+            if inv_model:
+                account.investment_settings = InvestmentCardSettings(
+                    investment_type=inv_model.investment_type,
+                    investment_rate=inv_model.investment_rate,
+                    interest_type=inv_model.interest_type,
+                    lock_period_end_date=inv_model.lock_period_end_date,
+                    maturity_date=inv_model.maturity_date,
+                    early_withdrawal_penalty=inv_model.early_withdrawal_penalty,
+                    base_principal=inv_model.base_principal,
+                )
+                accounts.append(account)
+
+        return accounts

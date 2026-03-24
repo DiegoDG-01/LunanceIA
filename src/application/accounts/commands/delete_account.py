@@ -5,6 +5,8 @@ from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.services.account_service import AccountService
 
+from shared.exceptions.domain import AccountNotFoundError
+
 
 @dataclass
 class DeleteAccountCommand:
@@ -36,7 +38,8 @@ class DeleteAccountHandler:
             command.account_uuid, command.user_id
         )
         if not account:
-            raise ValueError("Cuenta no encontrada")
+            # raise ValueError("Cuenta no encontrada")
+            raise AccountNotFoundError(command.account_uuid)
 
         # Validar que se puede eliminar
         if not self.account_service.validate_account_for_deletion(account):

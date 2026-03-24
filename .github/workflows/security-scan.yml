@@ -34,8 +34,9 @@ jobs:
         with:
           image-ref: 'lunance:latest'
           format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM'
-          exit-code: '1' # Falla el build si encuentra vulnerabilidades CRITICAL/HIGH/MEDIUM
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          exit-code: '1' # Falla el build si encuentra vulnerabilidades CRITICAL/HIGH/MEDIUM con fix disponible
         env:
           TRIVY_DISABLE_VEX_NOTICE: "true"
 

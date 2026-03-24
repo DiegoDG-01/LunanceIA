@@ -65,7 +65,7 @@ class TestGetInvestmentProjectionsHandler:
     ) -> InvestmentCardSettings:
         return InvestmentCardSettings(
             investment_type="fixed_term",
-            interest_rate=Decimal(rate),
+            investment_rate=Decimal(rate),
             interest_type=interest_type,
             maturity_date=maturity_date,
             base_principal=Decimal(base_principal) if base_principal else None,

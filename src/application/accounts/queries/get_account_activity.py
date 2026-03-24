@@ -4,7 +4,7 @@ from typing import List
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.transaction_repository import TransactionRepository
 from application.dto.account_dto import AccountActivityResponseDTO
-from shared.exceptions.domain import AccountNotFoundError, TransactionNotActivityError
+from shared.exceptions.domain import AccountNotFoundError
 
 
 @dataclass
@@ -33,11 +33,11 @@ class GetAccountActivitiesHandler:
             raise AccountNotFoundError(account_uuid=query.account_uuid)
 
         transactions = await self.transaction_repository.get_activity_by_account_id(
-            account_id=account.id
+            account_id=account.id, limit=5
         )
 
         if not transactions:
-            raise TransactionNotActivityError()
+            return []
 
         account_recent_activities = []
 

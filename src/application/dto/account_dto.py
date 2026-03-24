@@ -17,7 +17,7 @@ class CreditCardSettingsDTO:
 @dataclass
 class InvestmentCardSettingsDTO:
     investment_type: str
-    interest_rate: Decimal
+    investment_rate: Decimal
     lock_period_end_date: Optional[date] = None
     maturity_date: Optional[date] = None
     early_withdrawal_penalty: Optional[Decimal] = None
@@ -67,6 +67,7 @@ class AccountResponseDTO:
     bank_code: Optional[str]
     credit_card_settings: Optional[CreditCardSettingsDTO] = None
     investment_settings: Optional[InvestmentCardSettingsDTO] = None
+
 
 @dataclass
 class AccountActivityResponseDTO:

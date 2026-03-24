@@ -21,6 +21,7 @@ class SQLAlchemyUserRepository(UserRepository):
             auth0_id=model.auth0_id,
             name=model.name,
             email=model.email,
+            password=model.password,
             picture=model.picture,
             email_verified=model.email_verified,
             last_login=model.last_login,
@@ -36,6 +37,7 @@ class SQLAlchemyUserRepository(UserRepository):
             auth0_id=entity.auth0_id,
             name=entity.name,
             email=entity.email,
+            password=entity.password,
             picture=entity.picture,
             email_verified=entity.email_verified,
             last_login=entity.last_login,
@@ -63,7 +65,7 @@ class SQLAlchemyUserRepository(UserRepository):
         stmt = select(UserModel).where(UserModel.auth0_id == id)
         result = await self.db.execute(stmt)
         user_model = result.scalar_one_or_none()
-        return user_model if user_model else None
+        return self._model_to_entity(user_model) if user_model else None
 
     async def get_by_email(self, email: str) -> Optional[User]:
         """Obtiene usuario por email."""
@@ -92,8 +94,7 @@ class SQLAlchemyUserRepository(UserRepository):
 
         # Actualizar campos
         model.name = user.name
-        model.email = user.email
-        model.password_hash = user.password_hash
+        model.password = user.password
         model.is_active = user.is_active
 
         await self.db.flush()
@@ -136,3 +137,10 @@ class SQLAlchemyUserRepository(UserRepository):
     async def exists_by_email(self, email: str) -> bool:
         """Verifica si existe un usuario con el email dado (alias)."""
         return await self.exist_by_email(email)
+
+
+    async def get_by_username(self, name: str) -> Optional[User]:
+        stmt = select(UserModel).where(UserModel.name == name)
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
+        return self._model_to_entity(model) if model else None

@@ -19,7 +19,7 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
     def _model_to_vo(model: InvestmentCardSettingsModel) -> InvestmentCardSettings:
         return InvestmentCardSettings(
             investment_type=model.investment_type,
-            interest_rate=model.investment_rate,
+            investment_rate=model.investment_rate,
             interest_type=model.interest_type,
             lock_period_end_date=model.lock_period_end_date,
             maturity_date=model.maturity_date,
@@ -31,7 +31,7 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
     def _vo_to_model(vo: InvestmentCardSettings) -> InvestmentCardSettingsModel:
         return InvestmentCardSettingsModel(
             investment_type=vo.investment_type,
-            investment_rate=vo.interest_rate,
+            investment_rate=vo.investment_rate,
             interest_type=vo.interest_type,
             maturity_date=vo.maturity_date,
             lock_period_end_date=vo.lock_period_end_date,
@@ -72,7 +72,7 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
             raise InvestmentSettingsNotFoundError(account_id)
 
         model.investment_type = settings.investment_type
-        model.investment_rate = settings.interest_rate
+        model.investment_rate = settings.investment_rate
         model.interest_type = settings.interest_type
         model.lock_period_end_date = settings.lock_period_end_date
         model.maturity_date = settings.maturity_date

@@ -17,9 +17,9 @@ class CommandValidationError(ValidationError):
         message = f"Error de validación en comando {command_name}: {', '.join(validation_errors)}"
         detail = [
             {
-                "loc": ["body", "refresh_token"],
-                "msg": "",
-                "type": "REFRESH_TOKEN_INVALID",
+                "loc": ["body", command_name],
+                "msg": ", ".join(validation_errors),
+                "type": "COMMAND_VALIDATION_ERROR",
             }
         ]
         super().__init__(message, detail)

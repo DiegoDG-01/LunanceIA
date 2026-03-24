@@ -15,7 +15,7 @@ class TestSubscriptionCRUD:
         account_data = {
             "name": "Subscription Test Account",
             "account_type": "CHECKING",
-            "bank": "Test Bank",
+            "bank_id": 1,
             "initial_balance": 5000.00,
             "currency": "MXN"
         }

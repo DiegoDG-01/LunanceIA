@@ -193,7 +193,7 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
 
     async def get_last_charges_by_subscription_id(
         self, subscription_id: int
-    ) -> List[Tuple[SubscriptionCharge, Optional[str]]]:
+    ) -> List[Tuple[SubscriptionCharge, str, str]]:
         stmt = (
             select(SubscriptionChargeModel, SubscriptionModel, AccountModel)
             .join(

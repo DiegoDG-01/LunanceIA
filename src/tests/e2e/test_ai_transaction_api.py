@@ -17,7 +17,7 @@ class TestAITransactionAPI:
         account_data = {
             "name": "AI Test Account",
             "account_type": "CHECKING",
-            "bank": "AI Bank",
+            "bank_id": 1,
             "initial_balance": 1000.00,
             "currency": "MXN"
         }

@@ -18,7 +18,7 @@ class CreditCardSettingsRequest(BaseModel):
 
 class InvestmentCardSettingsRequest(BaseModel):
     investment_type: str = Field(..., max_length=50)
-    interest_rate: Decimal = Field(..., ge=0, description="Tasa de interes")
+    investment_rate: Decimal = Field(..., ge=0, description="Tasa de interes")
     lock_period_end_date: Optional[date] = Field(None, description="Fecha de bloqueo")
     maturity_date: Optional[date] = Field(None, description="Fecha de vencimiento")
     early_withdrawal_penalty: Optional[Decimal] = Field(
