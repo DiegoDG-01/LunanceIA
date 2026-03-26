@@ -1,19 +1,19 @@
 from fastapi import (
     APIRouter,
     Depends,
-    File,
-    Form,
-    UploadFile,
+    # File,
+    # Form,
+    # UploadFile,
     status,
     Response,
     Request,
 )
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from PIL import Image, UnidentifiedImageError
-import io
-
-from infrastructure.external_services.gemini import GeminiService
+# from PIL import Image, UnidentifiedImageError
+# import io
+#
+# from infrastructure.external_services.gemini import GeminiService
 
 from application.transactions.queries.get_transactions import GetTransactionsQuery
 from application.transactions.queries.get_transactions import GetTransactionsHandler
@@ -24,7 +24,7 @@ from presentation.schemas.requests.transaction import CreateTransactionRequest
 from presentation.dependencies.auth_deps import get_current_active_user
 from presentation.dependencies import (
     get_create_transaction_handler,
-    get_gemini_service,
+    # get_gemini_service,
     get_transactions_handler,
     get_delete_transaction_handler,
     get_transaction_by_uuid_handler,
@@ -140,53 +140,53 @@ async def create_transaction(
     return TransactionResponse(**result.__dict__)
 
 
-@router.post("/image", response_model=TransactionResponse)
-@limiter.limit("5/minute")  # Más restrictivo por ser procesamiento de imagen
-async def create_transaction_from_image(
-    request: Request,
-    file: UploadFile = File(...),
-    account_uuid: str = Form(...),
-    current_user: User = Depends(get_current_active_user),
-    gemini_service: GeminiService = Depends(get_gemini_service),
-    handler: CreateTransactionHandler = Depends(get_create_transaction_handler),
-):
-    if not file:
-        raise InvalidImageError("No file provided")
-
-    # 1. Leer imagen
-    image_data = await file.read()
-
-    try:
-        # Intentar abrir la imagen con PIL
-        image = Image.open(io.BytesIO(image_data))
-        # Verificar que realmente se puede cargar la imagen
-        image.verify()
-    except UnidentifiedImageError:
-        raise InvalidImageError("Invalid image format")
-    except Exception:
-        raise InvalidImageError("Error processing image")
-
-    # 2. Procesar con Gemini
-
-    gemini_result = await gemini_service.extract_transaction_data(image_data)
-
-    # 3. Create DTO combining Gemini + request
-    dto = CreateTransactionDTO(
-        user_id=current_user.id,
-        account_uuid=account_uuid,
-        category_id=gemini_result.category_id,
-        transaction_type=gemini_result.transaction_type,
-        amount=gemini_result.amount,
-        description=gemini_result.description,
-        notes=gemini_result.notes,
-        transaction_date=gemini_result.transaction_date,
-    )
-
-    # 4. Ejecutar mismo comando
-    command = CreateTransactionCommand(dto=dto)
-    result = await handler.handle(command)
-
-    return TransactionResponse(**result.__dict__)
+# @router.post("/image", response_model=TransactionResponse)
+# @limiter.limit("5/minute")  # Más restrictivo por ser procesamiento de imagen
+# async def create_transaction_from_image(
+#     request: Request,
+#     file: UploadFile = File(...),
+#     account_uuid: str = Form(...),
+#     current_user: User = Depends(get_current_active_user),
+#     gemini_service: GeminiService = Depends(get_gemini_service),
+#     handler: CreateTransactionHandler = Depends(get_create_transaction_handler),
+# ):
+#     if not file:
+#         raise InvalidImageError("No file provided")
+#
+#     # 1. Leer imagen
+#     image_data = await file.read()
+#
+#     try:
+#         # Intentar abrir la imagen con PIL
+#         image = Image.open(io.BytesIO(image_data))
+#         # Verificar que realmente se puede cargar la imagen
+#         image.verify()
+#     except UnidentifiedImageError:
+#         raise InvalidImageError("Invalid image format")
+#     except Exception:
+#         raise InvalidImageError("Error processing image")
+#
+#     # 2. Procesar con Gemini
+#
+#     gemini_result = await gemini_service.extract_transaction_data(image_data)
+#
+#     # 3. Create DTO combining Gemini + request
+#     dto = CreateTransactionDTO(
+#         user_id=current_user.id,
+#         account_uuid=account_uuid,
+#         category_id=gemini_result.category_id,
+#         transaction_type=gemini_result.transaction_type,
+#         amount=gemini_result.amount,
+#         description=gemini_result.description,
+#         notes=gemini_result.notes,
+#         transaction_date=gemini_result.transaction_date,
+#     )
+#
+#     # 4. Ejecutar mismo comando
+#     command = CreateTransactionCommand(dto=dto)
+#     result = await handler.handle(command)
+#
+#     return TransactionResponse(**result.__dict__)
 
 
 @router.put("/{transaction_uuid}/", response_model=TransactionResponse)

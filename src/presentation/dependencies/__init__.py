@@ -16,7 +16,6 @@ from presentation.dependencies.repositories import (
 # Services
 from presentation.dependencies.services import (
     get_account_service,
-    get_gemini_service,
     get_jwt_service,
 )
 
@@ -94,7 +93,6 @@ __all__ = [
     "get_dashboard_repository",
     # Services
     "get_account_service",
-    "get_gemini_service",
     "get_jwt_service",
     # Account
     "get_create_account_handler",
