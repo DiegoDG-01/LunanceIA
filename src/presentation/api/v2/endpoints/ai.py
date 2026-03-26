@@ -24,7 +24,7 @@ limiter = Limiter(key_func=get_remote_address)
 async def analyze_image(
     request: Request,
     file: UploadFile = File(...),
-    # current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_user),
     handler: AnalyzeImageHandler = Depends(get_analyze_image_handler),
 ):
     image_data = await file.read()
