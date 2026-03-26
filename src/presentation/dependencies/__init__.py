@@ -75,7 +75,10 @@ from presentation.dependencies.auth_deps import (
     get_current_active_user,
     validate_token,
 )
+# Bank Handlers
 from .bank_deps import get_banks_handler
+# AI Handlers
+from .ai_deps import get_analyze_image_handler
 
 __all__ = [
     # Repositories
@@ -132,4 +135,6 @@ __all__ = [
     # Bank
     "get_banks_handler",
     "get_expense_advisor_handler",
+    # AI
+    "get_analyze_image_handler"
 ]

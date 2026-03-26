@@ -1,5 +1,5 @@
 from fastapi import Depends
-from application.expense.expense_advisor import GetExpenseAdvisorHandler
+from application.ai.queries.expense_advisor import GetExpenseAdvisorHandler
 from infrastructure.database.repositories.sqlalchemy_transaction_repository import (
     SQLAlchemyTransactionRepository,
 )

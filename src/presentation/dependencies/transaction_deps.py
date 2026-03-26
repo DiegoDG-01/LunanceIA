@@ -1,6 +1,6 @@
 from fastapi import Depends
 
-from application.expense.expense_advisor import GetExpenseAdvisorHandler
+from application.ai.queries.expense_advisor import GetExpenseAdvisorHandler
 from application.transactions.commands.create_transaction import (
     CreateTransactionHandler,
 )
