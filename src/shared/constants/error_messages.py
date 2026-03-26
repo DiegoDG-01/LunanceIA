@@ -46,7 +46,7 @@ NOT_FOUND_CATEGORY = "Categoría no encontrada"
 
 # Errores de servicios externos
 EXTERNAL_SERVICE_UNAVAILABLE = "Servicio externo no disponible"
-EXTERNAL_GEMINI_ERROR = "Error en el servicio de IA"
+EXTERNAL_AI_ERROR = "Error en el servicio de IA"
 EXTERNAL_EMAIL_ERROR = "Error enviando email"
 
 # Mensajes de éxito

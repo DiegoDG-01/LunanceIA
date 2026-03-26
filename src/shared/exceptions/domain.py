@@ -159,39 +159,26 @@ class NegativeAmountError(ValidationError):
         super().__init__(f"Cantidad negativa no permitida: {amount}")
 
 
-class GeminiProcessingError(LunanceException):
-    """Error al procesar imagen con Gemini"""
+class AIProcessingError(LunanceException):
+    """Error al procesar datos con el servicio de IA"""
 
-    def __init__(self, message: str = "Error procesando imagen con Gemini"):
-        """
-        Initialize a GeminiProcessingError with an optional custom error message.
-        """
+    def __init__(self, message: str = "Error procesando datos con el servicio de IA"):
         super().__init__(message)
 
 
-class GeminiInvalidResponseError(LunanceException):
-    """Respuesta inválida de Gemini"""
+class AIInvalidResponseError(LunanceException):
+    """Respuesta inválida del servicio de IA"""
 
-    def __init__(self, message: str = "Gemini devolvió una respuesta inválida"):
-        """
-        Initialize a GeminiInvalidResponseError with an optional custom message.
-
-        Parameters:
-            message (str): Custom error message describing the invalid response from Gemini. Defaults to "Gemini devolvió una respuesta inválida".
-        """
+    def __init__(
+        self, message: str = "El servicio de IA devolvió una respuesta inválida"
+    ):
         super().__init__(message)
 
 
-class GeminiAPIError(LunanceException):
-    """Error de comunicación con Gemini API"""
+class AIServiceError(LunanceException):
+    """Error de comunicación con el servicio de IA"""
 
-    def __init__(self, message: str = "Error comunicándose con Gemini API"):
-        """
-        Initialize a GeminiAPIError with an optional custom error message.
-
-        Parameters:
-            message (str): Custom error message describing the API communication error. Defaults to "Error comunicándose con Gemini API".
-        """
+    def __init__(self, message: str = "Error comunicándose con el servicio de IA"):
         super().__init__(message)
 
 

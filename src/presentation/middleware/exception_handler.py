@@ -33,9 +33,9 @@ from shared.exceptions.domain import (
     InvalidCurrencyError,
     CurrencyMismatchError,
     NegativeAmountError,
-    GeminiAPIError,
-    GeminiProcessingError,
-    GeminiInvalidResponseError,
+    AIServiceError,
+    AIProcessingError,
+    AIInvalidResponseError,
     InvalidImageError,
     InvalidTransactionTypeError,
     InsufficientFundsError,
@@ -104,10 +104,10 @@ EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     QueryValidationError: ("VALIDATION_ERROR", 400),
     LunanceValidationError: ("VALIDATION_ERROR", 400),
     BusinessRuleError: ("VALIDATION_ERROR", 400),
-    # --- Errores de API Gemini ---
-    GeminiProcessingError: ("GEMINI_PROCESSING_ERROR", 422),
-    GeminiInvalidResponseError: ("GEMINI_PROCESSING_ERROR", 422),
-    GeminiAPIError: ("GEMINI_API_ERROR", 503),
+    # --- Errores de servicios de IA ---
+    AIProcessingError: ("AI_PROCESSING_ERROR", 422),
+    AIInvalidResponseError: ("AI_PROCESSING_ERROR", 422),
+    AIServiceError: ("AI_SERVICE_ERROR", 503),
     InvalidImageError: ("VALIDATION_INVALID_IMAGE", 400),
     # --- Infraestructura y Servicios Externos (500 / 503) ---
     RepositoryError: ("INTERNAL_SERVER_ERROR", 500),
