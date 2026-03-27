@@ -1,7 +1,7 @@
 import os
 
 from pydantic_ai import Agent
-from domain.entities.image_analysis import ImageAnalysis
+from application.ai.schemas.image_analysis import ImageAnalysis
 from infrastructure.config.settings import settings
 from shared.utils.prompts import IMAGE_ANALYZE_PROMPT
 

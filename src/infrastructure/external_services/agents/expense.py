@@ -1,7 +1,7 @@
 import os
 
 from pydantic_ai import Agent
-from domain.entities.expense_suggestion import ExpenseAnalysis
+from application.ai.schemas.expense_analysis import ExpenseAnalysis
 from infrastructure.config.settings import settings
 from shared.utils.prompts import EXPENSE_ADVISOR_PROMPT
 

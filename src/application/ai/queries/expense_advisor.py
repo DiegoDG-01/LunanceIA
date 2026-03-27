@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import date
-from domain.entities.expense_suggestion import ExpenseAnalysis
+from application.ai.schemas.expense_analysis import ExpenseAnalysis
 from domain.repositories.transaction_repository import TransactionRepository
 from shared.exceptions.domain import TransactionNotActivityError
 from infrastructure.external_services.agents.expense import expense_agent as agent

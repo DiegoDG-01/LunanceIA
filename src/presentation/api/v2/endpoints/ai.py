@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, Request, UploadFile, File
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from domain.entities.image_analysis import ImageAnalysis
 from domain.entities.user import User
-from domain.entities.expense_suggestion import ExpenseAnalysis
+from application.ai.schemas.image_analysis import ImageAnalysis
+from application.ai.schemas.expense_analysis import ExpenseAnalysis
 
 from presentation.dependencies.ai_deps import get_analyze_image_handler
 from application.ai.queries.analyze_image import AnalyzeImageQuery, AnalyzeImageHandler

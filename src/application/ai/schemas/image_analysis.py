@@ -5,6 +5,7 @@ from typing import Optional
 from domain.objects.enums import TransactionType, Frequency
 from domain.objects.enums import CategoryName
 
+
 # This class is generic to use in Subscription or Transaction
 class ImageAnalysis(BaseModel):
     is_subscription: bool
