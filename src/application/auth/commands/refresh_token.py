@@ -3,8 +3,7 @@ from datetime import timedelta, datetime, timezone
 
 from domain.repositories.user_repository import UserRepository
 from domain.repositories.auth_token_repository import AuthTokenRepository
-from infrastructure.config.settings import settings
-from infrastructure.security.jwt_service import JWTService
+from application.interfaces.auth_service import AuthTokenServiceInterface, AuthConfig
 from shared.exceptions.application import CommandValidationError
 from shared.exceptions.application import JWTValidationError
 from application.auth.commands.login import LoginResponse
@@ -22,13 +21,15 @@ class RefreshTokenHandler:
         self,
         user_repository: UserRepository,
         auth_token_repository: AuthTokenRepository,
-        jwt_service: JWTService,
+        jwt_service: AuthTokenServiceInterface,
         uow: AbstractUnitOfWork,
+        auth_config: AuthConfig,
     ):
         self.user_repository = user_repository
         self.auth_token_repository = auth_token_repository
         self.jwt_service = jwt_service
         self.uow = uow
+        self.auth_config = auth_config
 
     async def handle(self, command: RefreshTokenCommand) -> LoginResponse:
         if not command.refresh_token:
@@ -60,13 +61,13 @@ class RefreshTokenHandler:
             )
 
         access_token = self.jwt_service.create_access_token(
-            user_uuid=user_uuid, expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+            user_uuid=user_uuid, expires_in=self.auth_config.access_token_expire_minutes
         )
 
         new_refresh_token = self.jwt_service.create_refresh_token(user_uuid=user_uuid)
         new_refresh_token_hash = self.jwt_service.hash_refresh_token(new_refresh_token)
         new_expires_at = datetime.now(tz=timezone.utc) + timedelta(
-            days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+            days=self.auth_config.refresh_token_expire_days
         )
 
         async with self.uow:
@@ -80,5 +81,5 @@ class RefreshTokenHandler:
         return LoginResponse(
             access_token=access_token,
             refresh_token=new_refresh_token,
-            expires_in=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+            expires_in=timedelta(minutes=self.auth_config.access_token_expire_minutes),
         )

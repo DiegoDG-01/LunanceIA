@@ -7,6 +7,7 @@ import logging
 
 from sqlalchemy.exc import SQLAlchemyError
 
+from application.interfaces.auth_service import AuthTokenServiceInterface
 from infrastructure.config.settings import settings
 from domain.repositories.auth_token_repository import AuthTokenRepository
 from domain.repositories.user_repository import UserRepository
@@ -15,7 +16,7 @@ from shared.exceptions.application import JWTValidationError, RepositoryError
 logger = logging.getLogger(__name__)
 
 
-class JWTService:
+class JWTService(AuthTokenServiceInterface):
     def __init__(
         self,
         user_repository: UserRepository,
