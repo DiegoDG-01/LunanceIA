@@ -1,6 +1,5 @@
 from datetime import date
 import logging
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.entities.subscription import Subscription
 from domain.entities.transaction import Transaction
@@ -26,7 +25,7 @@ class SubscriptionProcessor:
         self.subscription_charge_repository = subscription_charge_repository
         self.transaction_repository = transaction_repository
 
-    async def process_due_subscriptions(self, db: AsyncSession) -> dict:
+    async def process_due_subscriptions(self) -> dict:
         logger.info("Processing due subscriptions")
 
         stats = {
@@ -45,10 +44,8 @@ class SubscriptionProcessor:
                 stats["processed"] += 1
 
                 try:
-                    if await self._should_generate_transaction(subscription, db):
-                        await self._create_transaction_from_subscription(
-                            subscription, db
-                        )
+                    if await self._should_generate_transaction(subscription):
+                        await self._create_transaction_from_subscription(subscription)
                         stats["created"] += 1
                         logger.debug(
                             f"Transaction created for subscription {subscription.uuid}"
@@ -75,9 +72,7 @@ class SubscriptionProcessor:
 
         return stats
 
-    async def _should_generate_transaction(
-        self, subscription: Subscription, db: AsyncSession
-    ) -> bool:
+    async def _should_generate_transaction(self, subscription: Subscription) -> bool:
         today = date.today()
 
         if subscription.end_date and subscription.end_date < today:
@@ -102,7 +97,7 @@ class SubscriptionProcessor:
         return True
 
     async def _create_transaction_from_subscription(
-        self, subscription: Subscription, db: AsyncSession
+        self, subscription: Subscription
     ) -> Transaction:
         today = date.today()
 

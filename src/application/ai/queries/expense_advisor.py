@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from datetime import date
 from application.ai.schemas.expense_analysis import ExpenseAnalysis
+from application.interfaces.ai_agent import AIAgentInterface
 from domain.repositories.transaction_repository import TransactionRepository
 from shared.exceptions.domain import TransactionNotActivityError
-from infrastructure.external_services.agents.expense import expense_agent as agent
 
 
 @dataclass
@@ -15,8 +15,10 @@ class GetExpenseAdvisorHandler:
     def __init__(
         self,
         transaction_repository: TransactionRepository,
+        agent: AIAgentInterface,
     ):
         self.transaction_repository = transaction_repository
+        self.agent = agent
 
     async def handle(self, query: GetExpenseAdvisorQuery) -> ExpenseAnalysis:
         transactions = await self.transaction_repository.get_by_date_range(
@@ -39,6 +41,6 @@ class GetExpenseAdvisorHandler:
         ]
 
         prompt = f"Analiza estos gastos del mes: {expense_summary}"
-        result = await agent.run(prompt)
+        result = await self.agent.run(prompt)
 
         return result.data

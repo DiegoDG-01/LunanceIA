@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from pydantic_ai import BinaryContent
 from application.ai.schemas.image_analysis import ImageAnalysis
+from application.interfaces.ai_agent import AIAgentInterface
 from domain.repositories.category_repository import CategoryRepository
-from infrastructure.external_services.agents.image import image_agent as agent
 
 
 @dataclass
@@ -15,11 +15,13 @@ class AnalyzeImageHandler:
     def __init__(
         self,
         category_repository: CategoryRepository,
+        agent: AIAgentInterface,
     ):
         self.category_repository = category_repository
+        self.agent = agent
 
     async def handle(self, query: AnalyzeImageQuery) -> ImageAnalysis:
-        result = await agent.run(
+        result = await self.agent.run(
             [BinaryContent(data=query.image_data, media_type=query.mime_type)],
         )
 
