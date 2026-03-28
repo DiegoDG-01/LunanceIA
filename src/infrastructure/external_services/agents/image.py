@@ -9,6 +9,6 @@ os.environ["GOOGLE_API_KEY"] = settings.GOOGLE_API_KEY
 
 image_agent = Agent(
     model=f"google-gla:{settings.GEMINI_MODEL_ID}",
-    result_type=ImageAnalysis,
+    output_type=ImageAnalysis,
     system_prompt=IMAGE_ANALYZE_PROMPT,
 )

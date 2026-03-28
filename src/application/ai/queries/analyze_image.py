@@ -25,7 +25,7 @@ class AnalyzeImageHandler:
             [BinaryContent(data=query.image_data, media_type=query.mime_type)],
         )
 
-        analysis = result.data
+        analysis = result.output
 
         if analysis.category:
             category = await self.category_repository.get_by_name(
