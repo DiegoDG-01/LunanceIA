@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +15,9 @@ class SQLAlchemyDashboardRepository(DashboardRepository):
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_dashboard_summary(self, uuid: str, user_id: int) -> DashboardSummary:
+    async def get_dashboard_summary(
+        self, uuid: str, user_id: int
+    ) -> Optional[DashboardSummary]:
         # Check if we are running on SQLite (for tests)
         try:
             is_sqlite = self.db.bind and self.db.bind.dialect.name == "sqlite"
@@ -236,9 +239,9 @@ SELECT
         top_acc = result_top_acc.first()
 
         return DashboardSummary(
-            total_spent=float(totals.total_spent or 0),
-            total_income=float(totals.total_income or 0),
-            total_purchases=int(totals.total_purchases or 0),
+            total_spent=float(totals.total_spent or 0) if totals else 0.0,
+            total_income=float(totals.total_income or 0) if totals else 0.0,
+            total_purchases=int(totals.total_purchases or 0) if totals else 0,
             top_category=top_cat[0] if top_cat else "N/A",
             top_account=top_acc[0] if top_acc else "N/A",
             today_transactions=[],  # Simplified for tests

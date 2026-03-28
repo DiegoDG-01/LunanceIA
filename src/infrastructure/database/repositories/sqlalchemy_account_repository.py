@@ -243,7 +243,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
 
     async def get_by_uuid_and_user_id_with_settings(
         self, uuid: str, user_id: int
-    ) -> Account:
+    ) -> Optional[Account]:
         stmt = (
             select(
                 AccountModel,
@@ -284,7 +284,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
             )
 
         if inv_settings_model:
-            account.investment_card_settings = InvestmentCardSettings(
+            account.investment_settings = InvestmentCardSettings(
                 investment_type=inv_settings_model.investment_type,
                 investment_rate=inv_settings_model.investment_rate,
                 interest_type=inv_settings_model.interest_type,

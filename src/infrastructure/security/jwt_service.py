@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, cast
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 import hashlib
@@ -79,7 +79,7 @@ class JWTService(AuthTokenServiceInterface):
             # Validate token against database using repository
             token_hash = self.hash_refresh_token(token)
             is_valid = await self.auth_token_repository.get_refresh_token(
-                user_id=user.id, refresh_hash_token=token_hash
+                user_id=cast(int, user.id), refresh_hash_token=token_hash
             )
 
             return user_uuid if is_valid is not None else None

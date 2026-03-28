@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 import json
 import time
 import threading
@@ -25,7 +26,7 @@ class LokiHandler(logging.Handler):
         environment: str,
         batch_size: int = 100,
         flush_interval: float = 5.0,
-        level: str = logging.INFO,
+        level: int = logging.INFO,
     ):
         super().__init__(level)
         self.url = f"{url.strip('/')}/loki/api/v1/push"
@@ -129,12 +130,13 @@ class LokiHandler(logging.Handler):
 
         try:
             with httpx.Client(timeout=1.0) as client:
-                response = client.post(
-                    self.url,
-                    json=payload,
-                    auth=self.auth,
-                    headers={"Content-Type": "application/json"},
-                )
+                kwargs: dict[str, Any] = {
+                    "json": payload,
+                    "headers": {"Content-Type": "application/json"},
+                }
+                if self.auth:
+                    kwargs["auth"] = self.auth
+                response = client.post(self.url, **kwargs)
                 response.raise_for_status()
         except Exception as e:
             import sys

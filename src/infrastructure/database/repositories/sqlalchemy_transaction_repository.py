@@ -362,13 +362,27 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         stmt = select(
             func.coalesce(
                 func.sum(
-                    case((TransactionModel.type == TransactionType.INCOME, TransactionModel.amount), else_=0)
-                ), 0
+                    case(
+                        (
+                            TransactionModel.type == TransactionType.INCOME,
+                            TransactionModel.amount,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
             ).label("total_income"),
             func.coalesce(
                 func.sum(
-                    case((TransactionModel.type == TransactionType.EXPENSE, TransactionModel.amount), else_=0)
-                ), 0
+                    case(
+                        (
+                            TransactionModel.type == TransactionType.EXPENSE,
+                            TransactionModel.amount,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
             ).label("total_expenses"),
             func.count(TransactionModel.id).label("total_transactions"),
         ).where(base_conditions)
@@ -376,13 +390,15 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         result = await self.db.execute(stmt)
         row = result.first()
 
+        total_income = float(row.total_income) if row else 0.0
+        total_expenses = float(row.total_expenses) if row else 0.0
         return {
             "year": year,
             "month": month,
-            "total_income": float(row.total_income),
-            "total_expenses": float(row.total_expenses),
-            "net_balance": float(row.total_income) - float(row.total_expenses),
-            "total_transactions": row.total_transactions,
+            "total_income": total_income,
+            "total_expenses": total_expenses,
+            "net_balance": total_income - total_expenses,
+            "total_transactions": row.total_transactions if row else 0,
         }
 
     async def count_by_user(self, user_id: int) -> int:
@@ -391,7 +407,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             TransactionModel.user_id == user_id
         )
         result = await self.db.execute(stmt)
-        return result.scalar()
+        return result.scalar() or 0
 
     async def get_by_uuid_and_user_id(
         self, uuid: str, user_id: int

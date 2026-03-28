@@ -69,7 +69,7 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
         model = result.scalar_one_or_none()
 
         if model is None:
-            raise InvestmentSettingsNotFoundError(account_id)
+            raise InvestmentSettingsNotFoundError(str(account_id))
 
         model.investment_type = settings.investment_type
         model.investment_rate = settings.investment_rate
@@ -83,7 +83,7 @@ class SQLAlchemyInvestmentSettingsRepository(InvestmentCardSettingsRepository):
         await self.db.refresh(model)
         return self._model_to_vo(model)
 
-    async def delete(self, account_id: int) -> None:
+    async def delete(self, account_id: int) -> bool:
         stmt = select(InvestmentCardSettingsModel).where(
             InvestmentCardSettingsModel.account_id == account_id
         )
