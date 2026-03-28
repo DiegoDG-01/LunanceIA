@@ -10,9 +10,9 @@ class AbstractUnitOfWork(ABC):
             await self.rollback()
 
     @abstractmethod
-    async def commit(self):
-        raise NotImplementedError
+    async def commit(self) -> None:
+        pass
 
     @abstractmethod
-    async def rollback(self):
-        raise NotImplementedError
+    async def rollback(self) -> None:
+        pass

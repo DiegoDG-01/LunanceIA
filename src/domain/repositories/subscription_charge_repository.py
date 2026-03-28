@@ -7,7 +7,7 @@ from domain.entities.subscription_charge import SubscriptionCharge
 
 class SubscriptionChargeRepository(ABC):
     @abstractmethod
-    async def create(self, charge: SubscriptionCharge) -> SubscriptionCharge:
+    async def create(self, subscription: SubscriptionCharge) -> SubscriptionCharge:
         pass
 
     @abstractmethod
@@ -45,4 +45,8 @@ class SubscriptionChargeRepository(ABC):
     async def get_last_charges_by_subscription_id(
         self, subscription_id: int
     ) -> List[Tuple[SubscriptionCharge, str, str]]:
+        pass
+
+    @abstractmethod
+    async def get_by_user_with_details(self, user_id: int) -> List[tuple]:
         pass

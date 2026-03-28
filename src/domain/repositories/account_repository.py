@@ -13,7 +13,7 @@ class AccountRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_id(self, id: int) -> Optional[Account]:
+    async def get_by_id(self, account_id: int) -> Optional[Account]:
         """Get account by id"""
         pass
 
@@ -56,7 +56,7 @@ class AccountRepository(ABC):
     @abstractmethod
     async def get_by_uuid_and_user_id_with_settings(
         self, uuid: str, user_id: int
-    ) -> tuple:
+    ) -> Optional[Account]:
         pass
 
     @abstractmethod

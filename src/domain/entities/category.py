@@ -6,7 +6,7 @@ from typing import Optional
 class Category:
     id: int
     name: str
-    type: str = None
+    type: Optional[str] = None
     is_active: bool = True
     description: Optional[str] = None
     icon: Optional[str] = None
@@ -20,7 +20,7 @@ class Category:
         icon: Optional[str] = None,
         color: Optional[str] = None,
         is_active: bool = True,
-        type: str = None,
+        type: Optional[str] = None,
     ) -> "Category":
         if not name.strip():
             raise ValueError("Category name cannot be empty")
