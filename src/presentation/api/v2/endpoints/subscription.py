@@ -187,12 +187,8 @@ async def update_subscription(
         billing_day=subscription_request.billing_day,
         is_active=subscription_request.is_active,
         description=subscription_request.description,
-        service_url=subscription_request.service_url
-        if hasattr(subscription_request, "service_url")
-        else None,
-        category_id=subscription_request.category_id
-        if hasattr(subscription_request, "category_id")
-        else None,
+        service_url=subscription_request.service_url,
+        category_id=subscription_request.category_id,
     )
     command = UpdateSubscriptionCommand(
         subscription_uuid=subscription_uuid,
