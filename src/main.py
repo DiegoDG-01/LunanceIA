@@ -51,6 +51,8 @@ app = FastAPI(
     title="Lunance IA - Your Personal Intelligence Assistant",
     description="Manage your finances efficiently with our API",
     version="5.0.0",
+    docs_url="/docs" if settings.ENVIRONMENT.upper() != "PROD" else None,
+    redoc_url="/redoc" if settings.ENVIRONMENT.upper() != "PROD" else None,
     lifespan=lifespan,
 )
 
