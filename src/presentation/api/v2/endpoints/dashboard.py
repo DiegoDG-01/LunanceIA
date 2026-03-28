@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Request
+from typing import cast
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -24,7 +25,7 @@ async def get_general_data(
     handler: GetDashboardSummaryHandler = Depends(get_dashboard_summary_handler),
 ):
     query = GetDashboardSummaryQuery(
-        user_uuid=current_user.uuid, user_id=current_user.id
+        user_uuid=cast(str, current_user.uuid), user_id=cast(int, current_user.id)
     )
     summary = await handler.handle(query)
 

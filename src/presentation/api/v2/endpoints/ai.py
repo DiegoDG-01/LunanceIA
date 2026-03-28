@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Request, UploadFile, File
+from typing import cast
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -28,7 +29,9 @@ async def analyze_image(
     handler: AnalyzeImageHandler = Depends(get_analyze_image_handler),
 ):
     image_data = await file.read()
-    query = AnalyzeImageQuery(image_data=image_data, mime_type=file.content_type)
+    query = AnalyzeImageQuery(
+        image_data=image_data, mime_type=cast(str, file.content_type)
+    )
     return await handler.handle(query)
 
 
@@ -39,5 +42,5 @@ async def analyze(
     current_user: User = Depends(get_current_active_user),
     handler: GetExpenseAdvisorHandler = Depends(get_expense_advisor_handler),
 ):
-    query = GetExpenseAdvisorQuery(user_id=current_user.id)
+    query = GetExpenseAdvisorQuery(user_id=cast(int, current_user.id))
     return await handler.handle(query)

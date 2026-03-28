@@ -51,8 +51,6 @@ app = FastAPI(
     title="Lunance IA - Your Personal Intelligence Assistant",
     description="Manage your finances efficiently with our API",
     version="4.3.4",
-    docs_url=False,
-    redoc_url=False,
     lifespan=lifespan,
 )
 
@@ -81,10 +79,10 @@ app.add_middleware(
 app.add_middleware(RequestLoggingMiddleware)
 
 # Registrar manejadores de excepciones
-app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
-app.add_exception_handler(LunanceException, lunance_exception_handler)
-app.add_exception_handler(RequestValidationError, validation_exception_handler)
-app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)  # type: ignore[arg-type]
+app.add_exception_handler(LunanceException, lunance_exception_handler)  # type: ignore[arg-type]
+app.add_exception_handler(RequestValidationError, validation_exception_handler)  # type: ignore[arg-type]
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)  # type: ignore[arg-type]
 app.add_exception_handler(Exception, generic_exception_handler)
 
 # Incluir rutas de la nueva arquitectura

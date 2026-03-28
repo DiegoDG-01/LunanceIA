@@ -318,7 +318,8 @@ async def rate_limit_exceeded_handler(
     Provides detailed information about the rate limit violation including the limit,
     remaining requests, and retry-after time in the user's preferred language.
     """
-    logger.warning(f"Rate limit exceeded for {request.client.host}: {exc.detail}")
+    client_ip = request.client.host if request.client else "unknown"
+    logger.warning(f"Rate limit exceeded for {client_ip}: {exc.detail}")
 
     # Detectar idioma del usuario
     user_language = get_user_language(request)

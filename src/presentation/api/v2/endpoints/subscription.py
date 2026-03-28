@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, status, Response, Request, Query
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from typing import Optional, List
+from typing import Optional, List, cast
 
 from domain.entities.user import User
-from application.dto.subscription_dto import CreateSubscriptionDTO
+from application.dto.subscription_dto import (
+    CreateSubscriptionDTO,
+    UpdateSubscriptionDTO,
+)
 from application.subscriptions.queries.get_subscriptions_by_id import (
     GetSubscriptionsByIdQuery,
     GetSubscriptionsByIdHandler,
@@ -35,7 +38,7 @@ from application.subscriptions.commands.state_subscription import (
 )
 from application.subscriptions.queries.get_last_transactions import (
     GetLastTransactionsQuery,
-    GetLastTransactionsHandler
+    GetLastTransactionsHandler,
 )
 from presentation.schemas.responses.subscription import (
     SubscriptionResponse,
@@ -54,7 +57,7 @@ from presentation.dependencies import (
     get_subscription_charges_handler,
     get_subscription_by_id_handler,
     get_state_subscription_handler,
-    get_last_transactions_handler
+    get_last_transactions_handler,
 )
 from presentation.schemas.responses.subscription import SubscriptionLastChargeResponse
 
@@ -75,7 +78,7 @@ async def get_subscriptions(
     handler: GetSubscriptionsHandler = Depends(get_subscriptions_handler),
 ):
     query = GetSubscriptionsQuery(
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
         account_uuid=account_uuid,
         category_id=category_id,
         active_only=active_only,
@@ -103,7 +106,7 @@ async def get_subscription_charges(
     categorías y cuentas.
     """
     query = GetSubscriptionChargesQuery(
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
         limit=limit,
         offset=offset,
     )
@@ -120,7 +123,7 @@ async def get_subscription(
     handler: GetSubscriptionsByIdHandler = Depends(get_subscription_by_id_handler),
 ):
     query = GetSubscriptionsByIdQuery(
-        user_id=current_user.id, subscription_uuid=subscription_uuid
+        user_id=cast(int, current_user.id), subscription_uuid=subscription_uuid
     )
 
     subscription = await handler.handle(query)
@@ -142,7 +145,7 @@ async def create_subscription(
     """
     # Convertir request → DTO
     dto = CreateSubscriptionDTO(
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
         account_uuid=subscription_request.account_uuid,
         category_id=subscription_request.category_id,
         name=subscription_request.name,
@@ -174,10 +177,27 @@ async def update_subscription(
     current_user: User = Depends(get_current_active_user),
     handler: UpdateSubscriptionHandler = Depends(get_update_subscription_handler),
 ):
+    dto = UpdateSubscriptionDTO(
+        account_uuid=subscription_request.account_uuid,
+        name=subscription_request.name,
+        amount=subscription_request.amount,
+        frequency=subscription_request.frequency,
+        start_date=subscription_request.start_date,
+        end_date=subscription_request.end_date,
+        billing_day=subscription_request.billing_day,
+        is_active=subscription_request.is_active,
+        description=subscription_request.description,
+        service_url=subscription_request.service_url
+        if hasattr(subscription_request, "service_url")
+        else None,
+        category_id=subscription_request.category_id
+        if hasattr(subscription_request, "category_id")
+        else None,
+    )
     command = UpdateSubscriptionCommand(
         subscription_uuid=subscription_uuid,
-        user_id=current_user.id,
-        dto=subscription_request,
+        user_id=cast(int, current_user.id),
+        dto=dto,
     )
 
     update_subscription = await handler.handle(command)
@@ -193,7 +213,7 @@ async def activate_subscription(
     handler: StateSubscriptionHandler = Depends(get_state_subscription_handler),
 ):
     command = StateSubscriptionCommand(
-        subscription_uuid=subscription_uuid, user_id=current_user.id
+        subscription_uuid=subscription_uuid, user_id=cast(int, current_user.id)
     )
 
     subscription = await handler.handle(command)
@@ -209,22 +229,27 @@ async def delete_subscription(
     handler: DeleteSubscriptionHandler = Depends(get_delete_subscription_handler),
 ):
     command = DeleteSubscriptionCommand(
-        subscription_uuid=subscription_uuid, user_id=current_user.id
+        subscription_uuid=subscription_uuid, user_id=cast(int, current_user.id)
     )
 
     await handler.handle(command)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/{subscription_uuid}/transactions/", response_model=List[SubscriptionLastChargeResponse])
+@router.get(
+    "/{subscription_uuid}/transactions/",
+    response_model=List[SubscriptionLastChargeResponse],
+)
 @limiter.limit("20/minute")
 async def get_subscription_last_charge(
     request: Request,
     subscription_uuid: str,
     current_user: User = Depends(get_current_active_user),
-    handler: GetLastTransactionsHandler = Depends(get_last_transactions_handler)
+    handler: GetLastTransactionsHandler = Depends(get_last_transactions_handler),
 ):
-    query = GetLastTransactionsQuery(subscription_uuid=subscription_uuid, user_id=current_user.id)
+    query = GetLastTransactionsQuery(
+        subscription_uuid=subscription_uuid, user_id=cast(int, current_user.id)
+    )
     result = await handler.handle(query)
 
     return [SubscriptionLastChargeResponse(**item.__dict__) for item in result]
