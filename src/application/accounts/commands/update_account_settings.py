@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, cast
 
 from application.dto.account_dto import (
     CreditCardSettingsDTO,
@@ -62,16 +62,17 @@ class UpdateAccountSettingsHandler:
                     minimum_payment_percentage=command.credit_card_settings.minimum_payment_percentage,
                 )
 
+                account_id = cast(int, account.id)
                 existing = await self.credit_card_settings_repository.get_by_account_id(
-                    account.id
+                    account_id
                 )
                 if existing:
                     await self.credit_card_settings_repository.update(
-                        account.id, cc_settings
+                        account_id, cc_settings
                     )
                 else:
                     await self.credit_card_settings_repository.create(
-                        account.id, cc_settings
+                        account_id, cc_settings
                     )
 
             if command.investment_settings:
@@ -86,16 +87,17 @@ class UpdateAccountSettingsHandler:
                     early_withdrawal_penalty=command.investment_settings.early_withdrawal_penalty,
                 )
 
+                account_id = cast(int, account.id)
                 existing = await self.investment_settings_repository.get_by_account_id(
-                    account.id
+                    account_id
                 )
                 if existing:
                     await self.investment_settings_repository.update(
-                        account.id, inv_settings
+                        account_id, inv_settings
                     )
                 else:
                     await self.investment_settings_repository.create(
-                        account.id, inv_settings
+                        account_id, inv_settings
                     )
 
             await self.uow.commit()
@@ -109,7 +111,7 @@ class UpdateAccountSettingsHandler:
                 bank_code = bank.code
 
         return AccountResponseDTO(
-            account_uuid=account.uuid,
+            account_uuid=cast(str, account.uuid),
             name=account.name,
             account_type=account.account_type,
             bank_id=account.bank_id,

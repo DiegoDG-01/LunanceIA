@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, asc, extract, desc, select
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, cast
 from datetime import date
 
 from domain.entities.subscription_charge import SubscriptionCharge
@@ -49,8 +49,8 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
             processing_date=entity.processing_date,
         )
 
-    async def create(self, subscription: SubscriptionCharge) -> SubscriptionCharge:
-        model = self._entity_to_model(subscription)
+    async def create(self, charge: SubscriptionCharge) -> SubscriptionCharge:
+        model = self._entity_to_model(charge)
         self.db.add(model)
         await self.db.flush()
         await self.db.refresh(model)
@@ -64,7 +64,7 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
         model = result.scalar_one_or_none()
 
         if not model:
-            raise SubscriptionNotFoundError(charge.uuid)
+            raise SubscriptionNotFoundError(cast(str, charge.uuid))
 
         model.subscription_id = charge.subscription_id
         model.charge_date = charge.charge_date

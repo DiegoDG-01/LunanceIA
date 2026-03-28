@@ -1,6 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from domain.entities.user import User
 from presentation.schemas.requests.account import (
@@ -56,14 +54,17 @@ from application.dto.account_dto import (
     CreditCardSettingsDTO,
     InvestmentCardSettingsDTO,
 )
-from typing import List
+from typing import List, cast
+
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_50_per_minute,
+)
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/", response_model=AccountListResponse)
-@limiter.limit("50/minute")
 async def get_user_accounts(
     request: Request,
     only_active: bool = False,
@@ -73,8 +74,9 @@ async def get_user_accounts(
     handler: GetUserAccountsHandler = Depends(get_user_accounts_handler),
 ):
     """Obtiene todas las cuentas del usuario."""
+    enforce_rate_limit(limiter_50_per_minute, request)
     query = GetUserAccountsQuery(
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
         only_active=only_active,
         limit=limit,
         offset=offset,
@@ -89,7 +91,6 @@ async def get_user_accounts(
 
 
 @router.get("/{account_uuid}", response_model=AccountResponse)
-@limiter.limit("50/minute")
 async def get_account(
     request: Request,
     account_uuid: str,
@@ -97,7 +98,10 @@ async def get_account(
     handler: GetAccountByIdHandler = Depends(get_account_by_id_handler),
 ):
     """Obtiene una cuenta específica."""
-    query = GetAccountByIdQuery(account_uuid=account_uuid, user_id=current_user.id)
+    enforce_rate_limit(limiter_50_per_minute, request)
+    query = GetAccountByIdQuery(
+        account_uuid=account_uuid, user_id=cast(int, current_user.id)
+    )
 
     account = await handler.handle(query)
 
@@ -105,7 +109,6 @@ async def get_account(
 
 
 @router.post("/", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)
-@limiter.limit("50/minute")
 async def create_account(
     request: Request,
     account_request: CreateAccountRequest,
@@ -113,6 +116,7 @@ async def create_account(
     handler: CreateAccountHandler = Depends(get_create_account_handler),
 ):
     """Crea una nueva cuenta."""
+    enforce_rate_limit(limiter_50_per_minute, request)
     cc_settings_dto = None
     if account_request.credit_card_settings:
         cc_settings_dto = CreditCardSettingsDTO(
@@ -134,7 +138,7 @@ async def create_account(
 
     dto = CreateAccountDTO(
         bank_id=account_request.bank_id,
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
         name=account_request.name,
         account_type=account_request.account_type,
         initial_balance=account_request.initial_balance,
@@ -150,7 +154,6 @@ async def create_account(
 
 
 @router.patch("/{account_uuid}/", response_model=AccountResponse)
-@limiter.limit("50/minute")
 async def update_account(
     request: Request,
     account_uuid: str,
@@ -158,6 +161,7 @@ async def update_account(
     current_user: User = Depends(get_current_active_user),
     handler: UpdateAccountHandler = Depends(get_update_account_handler),
 ):
+    enforce_rate_limit(limiter_50_per_minute, request)
     cc_settings_dto = None
     if update_request.credit_card_settings:
         cc_settings_dto = CreditCardSettingsDTO(
@@ -179,7 +183,7 @@ async def update_account(
     """Actualiza una cuenta."""
     dto = UpdateAccountDTO(
         account_uuid=account_uuid,
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
         name=update_request.name,
         bank_id=update_request.bank_id,
         current_balance=update_request.current_balance,
@@ -194,7 +198,6 @@ async def update_account(
 
 
 @router.delete("/{account_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
-@limiter.limit("50/minute")
 async def delete_account(
     request: Request,
     account_uuid: str,
@@ -202,7 +205,10 @@ async def delete_account(
     handler: DeleteAccountHandler = Depends(get_delete_account_handler),
 ):
     """Elimina una cuenta."""
-    command = DeleteAccountCommand(account_uuid=account_uuid, user_id=current_user.id)
+    enforce_rate_limit(limiter_50_per_minute, request)
+    command = DeleteAccountCommand(
+        account_uuid=account_uuid, user_id=cast(int, current_user.id)
+    )
 
     success = await handler.handle(command)
     if not success:
@@ -212,7 +218,6 @@ async def delete_account(
 
 
 @router.patch("/{account_uuid}/status/", response_model=AccountResponse)
-@limiter.limit("50/minute")
 async def activate_account(
     request: Request,
     account_uuid: str,
@@ -220,9 +225,10 @@ async def activate_account(
     handler: StateAccountHandler = Depends(get_state_account_handler),
 ):
     """Activa/desactiva una cuenta."""
+    enforce_rate_limit(limiter_50_per_minute, request)
     command = StateAccountCommand(
         account_uuid=account_uuid,
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
     )
 
     account = await handler.handle(command)
@@ -230,7 +236,7 @@ async def activate_account(
         bank_id=account.bank_id,
         bank_name=account.bank_name,
         bank_code=account.bank_code,
-        account_uuid=account.uuid,
+        account_uuid=cast(str, account.uuid),
         name=account.name,
         account_type=account.account_type,
         current_balance=account.current_balance.amount,
@@ -242,14 +248,16 @@ async def activate_account(
 @router.get(
     "/{account_uuid}/activity", response_model=List[AccountRecentActivityResponse]
 )
-@limiter.limit("50/minute")
 async def get_account_activity(
     request: Request,
     account_uuid: str,
     current_user: User = Depends(get_current_active_user),
     handler: GetAccountActivitiesHandler = Depends(get_activity_account_handler),
 ):
-    query = GetAccountActivityQuery(user_id=current_user.id, account_uuid=account_uuid)
+    enforce_rate_limit(limiter_50_per_minute, request)
+    query = GetAccountActivityQuery(
+        user_id=cast(int, current_user.id), account_uuid=account_uuid
+    )
     activity = await handler.handle(query)
 
     return [AccountRecentActivityResponse(**item.__dict__) for item in activity]

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import cast
 
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.transaction_repository import TransactionRepository
@@ -47,7 +48,7 @@ class DeleteAccountHandler:
 
         # Verificar que no hay transacciones pendientes
         transactions = await self.transaction_repository.get_by_account(
-            command.account_uuid, command.user_id
+            cast(int, account.id), command.user_id
         )
         if transactions:
             raise ValueError("No se puede eliminar cuenta con transacciones existentes")

@@ -1,5 +1,7 @@
 """Mensajes de validación multiidioma."""
 
+from typing import Optional
+
 # Mapeo de mensajes de validación de Pydantic por idioma
 PYDANTIC_ERROR_MESSAGES = {
     "es": {
@@ -153,8 +155,8 @@ HTTP_CODES_ERRORS = {
         "VALIDATION_INVALID_AMOUNT": "Monto inválido",
         "INVALID_TRANSACTION_TYPE": "Tipo de transacción inválido",
         "VALIDATION_INVALID_CURRENCY": "Moneda inválida",
-        "GEMINI_PROCESSING_ERROR": "Error procesando imagen con Gemini",
-        "GEMINI_API_ERROR": "Error de API de Gemini",
+        "AI_PROCESSING_ERROR": "Error procesando datos con el servicio de IA",
+        "AI_SERVICE_ERROR": "Error de servicio de IA",
         "VALIDATION_INVALID_IMAGE": "Imagen no válida o no procesable",
         "INSUFFICIENT_FUNDS": "Fondos insuficientes",
         "VALIDATION_INVALID_INVESTMENT_RATE": "La tasa de inversión debe ser no negativa",
@@ -206,8 +208,8 @@ HTTP_CODES_ERRORS = {
         "VALIDATION_INVALID_AMOUNT": "Invalid amount",
         "INVALID_TRANSACTION_TYPE": "Invalid transaction type",
         "VALIDATION_INVALID_CURRENCY": "Invalid currency",
-        "GEMINI_PROCESSING_ERROR": "Error processing image with Gemini",
-        "GEMINI_API_ERROR": "Gemini API error",
+        "AI_PROCESSING_ERROR": "Error processing data with AI service",
+        "AI_SERVICE_ERROR": "AI service error",
         "VALIDATION_INVALID_IMAGE": "Invalid or unprocessable image",
         "INSUFFICIENT_FUNDS": "Insufficient funds",
         "VALIDATION_INVALID_INVESTMENT_RATE": "Interest rate must be non negative",
@@ -274,7 +276,7 @@ def get_error_detail_message(code: str, language: str = "es") -> str:
 
 
 def translate_validation_message(
-    error_type: str, field_name: str = None, language: str = "es", **context
+    error_type: str, field_name: Optional[str] = None, language: str = "es", **context
 ) -> str:
     """
     Translates a Pydantic validation error message into the specified language, formatting it with provided context.

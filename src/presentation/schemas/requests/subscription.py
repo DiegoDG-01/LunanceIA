@@ -12,7 +12,7 @@ class CreateSubscriptionRequest(BaseModel):
     name: str = Field(
         ..., min_length=1, max_length=100, description="Nombre de la subscripción"
     )
-    amount: Decimal = Field(..., gt=0, description="Monto de la suscripción")
+    amount: Decimal = Field(..., gt=Decimal("0"), description="Monto de la suscripción")
     frequency: Frequency = Field(..., description="Frecuencia de pago")
     start_date: date = Field(..., description="Fecha de inicio")
     end_date: Optional[date] = Field(None, description="Fecha de fin (opcional)")
@@ -32,7 +32,7 @@ class UpdateSubscriptionRequest(BaseModel):
     name: Optional[str] = Field(
         None, min_length=1, max_length=100, description="Nombre de la suscripción"
     )
-    amount: Optional[Decimal] = Field(None, gt=0, description="Monto")
+    amount: Optional[Decimal] = Field(None, gt=Decimal("0"), description="Monto")
     frequency: Optional[Frequency] = Field(None, description="Frecuencia de pago")
     start_date: Optional[date] = Field(None, description="Fecha de inicio")
     end_date: Optional[date] = Field(None, description="Fecha de fin")

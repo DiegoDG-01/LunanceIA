@@ -1,9 +1,10 @@
 from dataclasses import dataclass
+from typing import cast
 
 from domain.repositories.user_repository import UserRepository
 from domain.repositories.auth_token_repository import AuthTokenRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from infrastructure.security.jwt_service import JWTService
+from application.interfaces.auth_service import AuthTokenServiceInterface
 from shared.exceptions.application import CommandValidationError
 
 
@@ -22,7 +23,7 @@ class LogoutHandler:
         self,
         user_repository: UserRepository,
         auth_token_repository: AuthTokenRepository,
-        jwt_service: JWTService,
+        jwt_service: AuthTokenServiceInterface,
         uow: AbstractUnitOfWork,
     ):
         self.user_repository = user_repository
@@ -48,7 +49,7 @@ class LogoutHandler:
         refresh_token_hash = self.jwt_service.hash_refresh_token(command.refresh_token)
         async with self.uow:
             await self.auth_token_repository.revoke_refresh_token(
-                user.id, refresh_token_hash
+                cast(int, user.id), refresh_token_hash
             )
             await self.uow.commit()
 

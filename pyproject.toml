@@ -21,7 +21,6 @@ dependencies = [
     "bcrypt>=4.3.0",
     "google-genai>=1.22.0",
     "email-validator>=2.2.0",
-    "slowapi>=0.1.9",
     "pillow>=12.0.0",
     "apscheduler>=3.11.2",
     "pytz>=2025.2",
@@ -29,6 +28,9 @@ dependencies = [
     "google-auth-oauthlib>=1.2.4",
     "google-api-python-client>=2.190.0",
     "cachetools>=7.0.5",
+    "pydantic-ai-slim>=1.72.0",
+    "fastapi-advanced-rate-limiter>=2.1.0",
+    "redis>=7.4.0",
 ]
 
 [dependency-groups]
@@ -43,11 +45,12 @@ dev = [
     "pytest-cov>=7.0.0",
     "pre-commit>=4.3.0",
     "locust>=2.32.0",
+    "pyrefly>=0.57.1",
 ]
 
 [tool.uv]
 exclude-dependencies = [
-    "ecdsa"
+    "ecdsa",
 ]
 
 [tool.ruff]
@@ -77,4 +80,18 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "class .*\\bProtocol\\b\\):",
     "@(abc\\.)?abstractmethod"
+]
+
+[tool.pyrefly]
+project-includes = [
+    "**/*.py*",
+    "**/*.ipynb",
+]
+project-excludes = [
+    "alembic/**",
+    "terraform/**",
+    "htmlcov/**",
+    "http/**",
+    "sql/**",
+    "docs/**",
 ]

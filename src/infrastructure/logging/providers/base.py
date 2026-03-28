@@ -11,11 +11,11 @@ class BaseLogHandler(logging.Handler, ABC):
         pass
 
     @abstractmethod
-    def flush(self, record: logging.LogRecord) -> None:
-        # Force the log record
+    def flush(self) -> None:
+        # Force flush buffered records
         pass
 
     @abstractmethod
-    def close(self, record: logging.LogRecord) -> None:
+    def close(self) -> None:
         # Close the handler and free resources
         pass

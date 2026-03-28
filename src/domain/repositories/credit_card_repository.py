@@ -5,7 +5,9 @@ from domain.objects.credit_card_settings import CreditCardSettings
 
 class CreditCardSettingsRepository(ABC):
     @abstractmethod
-    async def create(self, account_id: int, settings: CreditCardSettings):
+    async def create(
+        self, account_id: int, settings: CreditCardSettings
+    ) -> CreditCardSettings:
         pass
 
     @abstractmethod
@@ -19,5 +21,5 @@ class CreditCardSettingsRepository(ABC):
         pass
 
     @abstractmethod
-    async def delete(self, account_id: int) -> None:
+    async def delete(self, account_id: int) -> bool:
         pass

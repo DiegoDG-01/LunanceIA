@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from datetime import date, datetime
+from typing import Optional
 from decimal import Decimal
 
 from application.subscriptions.queries.get_last_transactions import (
@@ -54,7 +55,7 @@ class TestGetLastTransactionsHandler:
         charge_id: int = 1,
         sub_id: int = 1,
         amount: str = "199.00",
-        processing_date: datetime = None,
+        processing_date: Optional[datetime] = None,
     ) -> SubscriptionCharge:
         charge = SubscriptionCharge(
             id=charge_id,

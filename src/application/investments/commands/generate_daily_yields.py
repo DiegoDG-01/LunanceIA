@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+from typing import cast
 
 from domain.objects.enums import InterestType
 from domain.objects.money import Money
@@ -42,6 +43,10 @@ class GenerateDailyYieldHandler:
         async with self.uow:
             for account in accounts:
                 try:
+                    if not account.investment_settings:
+                        errors += 1
+                        continue
+
                     if (
                         account.investment_settings.maturity_date
                         and today > account.investment_settings.maturity_date
@@ -52,7 +57,7 @@ class GenerateDailyYieldHandler:
                     # Idempotency: Does today's performance already exist?
                     existing = (
                         await self.investment_yield_repository.get_by_account_and_date(
-                            account_id=account.id, yield_date=today
+                            account_id=cast(int, account.id), yield_date=today
                         )
                     )
                     if existing:
@@ -81,7 +86,7 @@ class GenerateDailyYieldHandler:
                     cumulative_balance = account.current_balance.amount + yield_amount
 
                     yield_record = InvestmentYield.create_new(
-                        account_id=account.id,
+                        account_id=cast(int, account.id),
                         yield_date=today,
                         principal_amount=principal,
                         yield_amount=yield_amount,

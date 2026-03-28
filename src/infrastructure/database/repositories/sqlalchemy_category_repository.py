@@ -31,10 +31,10 @@ class SQLAlchemyCategoryRepository(CategoryRepository):
         return [self._model_to_entity(model) for model in category_models]
 
     async def get_by_id(self, category_id: int) -> Optional[Category]:
-        category_model = await self.db.get(CategoryModel, category_id)
-        if category_model:
-            return self._model_to_entity(category_model)
-        return None
+        stmt = select(CategoryModel).where(CategoryModel.id == category_id)
+        result = await self.db.execute(stmt)
+        category_model = result.scalar_one_or_none()
+        return self._model_to_entity(category_model) if category_model else None
 
     async def create(self, category: Category) -> Category:
         category_model = CategoryModel(
@@ -53,7 +53,9 @@ class SQLAlchemyCategoryRepository(CategoryRepository):
         return self._model_to_entity(category_model)
 
     async def update(self, category: Category) -> Category:
-        category_model = await self.db.get(CategoryModel, category.id)
+        stmt = select(CategoryModel).where(CategoryModel.id == category.id)
+        result = await self.db.execute(stmt)
+        category_model = result.scalar_one_or_none()
         if not category_model:
             raise CategoryNotFoundError(category.id)
 
@@ -69,9 +71,17 @@ class SQLAlchemyCategoryRepository(CategoryRepository):
         return self._model_to_entity(category_model)
 
     async def delete(self, category_id: int) -> None:
-        category_model = await self.db.get(CategoryModel, category_id)
+        stmt = select(CategoryModel).where(CategoryModel.id == category_id)
+        result = await self.db.execute(stmt)
+        category_model = result.scalar_one_or_none()
         if not category_model:
             raise CategoryNotFoundError(category_id)
 
         await self.db.delete(category_model)
         await self.db.flush()
+
+    async def get_by_name(self, category_name: str) -> Optional[Category]:
+        stmt = select(CategoryModel).where(CategoryModel.name == category_name)
+        result = await self.db.execute(stmt)
+        category = result.scalar_one_or_none()
+        return self._model_to_entity(category) if category else None

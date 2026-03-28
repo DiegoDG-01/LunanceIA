@@ -1,5 +1,6 @@
 import json
 import asyncio
+from datetime import datetime
 
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -127,11 +128,11 @@ async def validate_auth0_user(token: str, db: AsyncSession) -> User:
             user_info = await asyncio.to_thread(get_user_info, token)
             new_user = User(
                 auth0_id=auth0_user_uuid,
-                name=user_info.get("name"),
+                name=user_info.get("name") or "",
                 email=user_info.get("email"),
                 picture=user_info.get("picture"),
-                email_verified=user_info.get("email_verified"),
-                last_login=user_info.get("last_login"),
+                email_verified=bool(user_info.get("email_verified", False)),
+                last_login=user_info.get("last_login") or datetime.now(),
             )
             user = await user_repo.create(new_user)
 

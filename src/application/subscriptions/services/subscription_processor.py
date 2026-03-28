@@ -1,6 +1,6 @@
 from datetime import date
 import logging
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import cast
 
 from domain.entities.subscription import Subscription
 from domain.entities.transaction import Transaction
@@ -26,7 +26,7 @@ class SubscriptionProcessor:
         self.subscription_charge_repository = subscription_charge_repository
         self.transaction_repository = transaction_repository
 
-    async def process_due_subscriptions(self, db: AsyncSession) -> dict:
+    async def process_due_subscriptions(self) -> dict:
         logger.info("Processing due subscriptions")
 
         stats = {
@@ -45,10 +45,8 @@ class SubscriptionProcessor:
                 stats["processed"] += 1
 
                 try:
-                    if await self._should_generate_transaction(subscription, db):
-                        await self._create_transaction_from_subscription(
-                            subscription, db
-                        )
+                    if await self._should_generate_transaction(subscription):
+                        await self._create_transaction_from_subscription(subscription)
                         stats["created"] += 1
                         logger.debug(
                             f"Transaction created for subscription {subscription.uuid}"
@@ -75,9 +73,7 @@ class SubscriptionProcessor:
 
         return stats
 
-    async def _should_generate_transaction(
-        self, subscription: Subscription, db: AsyncSession
-    ) -> bool:
+    async def _should_generate_transaction(self, subscription: Subscription) -> bool:
         today = date.today()
 
         if subscription.end_date and subscription.end_date < today:
@@ -88,7 +84,7 @@ class SubscriptionProcessor:
 
         existing_charge = (
             await self.subscription_charge_repository.get_by_subscription_and_month(
-                subscription_id=subscription.id,
+                subscription_id=cast(int, subscription.id),
                 year=today.year,
                 month=today.month,
             )
@@ -102,12 +98,12 @@ class SubscriptionProcessor:
         return True
 
     async def _create_transaction_from_subscription(
-        self, subscription: Subscription, db: AsyncSession
+        self, subscription: Subscription
     ) -> Transaction:
         today = date.today()
 
         charge = SubscriptionCharge.create_pending(
-            subscription_id=subscription.id,
+            subscription_id=cast(int, subscription.id),
             charge_date=today,
             amount=subscription.amount,
         )
@@ -115,8 +111,8 @@ class SubscriptionProcessor:
         save_charge = await self.subscription_charge_repository.create(charge)
 
         transaction = Transaction.create_new(
-            user_id=subscription.user_id,
-            account_id=subscription.account_id,
+            user_id=cast(int, subscription.user_id),
+            account_id=cast(int, subscription.account_id),
             category_id=subscription.category_id,
             amount=subscription.amount,
             transaction_type=TransactionType.EXPENSE,
@@ -126,7 +122,7 @@ class SubscriptionProcessor:
 
         created_transaction = await self.transaction_repository.create(transaction)
 
-        save_charge.mark_as_paid(created_transaction.id)
+        save_charge.mark_as_paid(cast(int, created_transaction.id))
         await self.subscription_charge_repository.update(save_charge)
 
         return created_transaction

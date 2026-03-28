@@ -1,6 +1,9 @@
-from sqlalchemy import Column, Integer, DateTime, ForeignKey, Boolean
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.dialects.mysql import VARCHAR
 from sqlalchemy.sql import func
+from sqlalchemy.orm import Mapped, mapped_column
 
 from infrastructure.database.connection import Base
 
@@ -8,11 +11,9 @@ from infrastructure.database.connection import Base
 class RefreshTokenModel(Base):
     __tablename__ = "refresh_tokens"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_id = Column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
-    token_hash = Column(VARCHAR(255), nullable=False)
-    is_revoked = Column(Boolean, default=False)
-    expired_at = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    token_hash: Mapped[str] = mapped_column(VARCHAR(255))
+    is_revoked: Mapped[bool] = mapped_column(default=False)
+    expired_at: Mapped[datetime] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

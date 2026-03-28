@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, cast
 
 from domain.objects.money import Money
 from domain.objects.enums import AccountType
@@ -17,7 +17,7 @@ class Account:
     id: Optional[int]
     uuid: Optional[str]
     user_id: int
-    bank_id: Optional[int]
+    bank_id: int
     name: str
     account_type: AccountType
     current_balance: Money
@@ -25,15 +25,17 @@ class Account:
     creation_date: datetime
     credit_card_settings: Optional[CreditCardSettings] = None
     investment_settings: Optional[InvestmentCardSettings] = None
+    bank_name: Optional[str] = None
+    bank_code: Optional[str] = None
 
     @classmethod
     def create_new(
         cls,
         user_id: int,
-        bank_id: Optional[int],
+        bank_id: int,
         name: str,
         account_type: AccountType,
-        initial_balance: Money = None,
+        initial_balance: Optional[Money] = None,
     ) -> "Account":
         if initial_balance is None:
             initial_balance = Money(Decimal(0), "MXN")
@@ -62,7 +64,7 @@ class Account:
                 "Currencies must be the same to update balance"
             )
         if not self.is_active:
-            raise AccountInactiveError(self.id)
+            raise AccountInactiveError(cast(int, self.id))
         if new_balance.amount < 0 and self.account_type != AccountType.CREDIT_CARD:
             raise InvalidBalanceUpdateError(self.account_type)
         self.current_balance = new_balance
