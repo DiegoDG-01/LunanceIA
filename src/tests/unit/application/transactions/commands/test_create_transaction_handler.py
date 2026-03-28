@@ -19,12 +19,14 @@ class TestCreateTransactionHandler:
         uow = AsyncMock()
         uow.__aenter__ = AsyncMock(return_value=uow)
         uow.__aexit__ = AsyncMock(return_value=False)
+        bank_repo = MagicMock()
+        bank_repo.get_by_id = AsyncMock(return_value=None)
         return {
             "user_repo": MagicMock(),
             "account_repo": MagicMock(),
             "transaction_repo": MagicMock(),
             "category_repo": MagicMock(),
-            "bank_repo": MagicMock(),
+            "bank_repo": bank_repo,
             "investment_settings_repo": MagicMock(),
             "uow": uow,
         }

@@ -44,7 +44,7 @@ class GenerateDailyYieldHandler:
             for account in accounts:
                 try:
                     if not account.investment_settings:
-                        skipped += 1
+                        errors += 1
                         continue
 
                     if (
