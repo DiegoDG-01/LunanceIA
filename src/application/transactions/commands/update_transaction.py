@@ -49,7 +49,7 @@ class UpdateTransactionCommandHandler:
         account = await self.account_repository.get_by_id(transaction.account_id)
 
         if not account:
-            raise AccountNotFoundError(str(command.user_id))
+            raise AccountNotFoundError(str(transaction.account_id))
 
         # 1. REVERTIR el efecto de la transacción original
         if transaction.transaction_type == TransactionType.EXPENSE:
