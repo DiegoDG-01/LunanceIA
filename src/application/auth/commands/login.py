@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from typing import cast
 
 from domain.repositories.user_repository import UserRepository
 from domain.repositories.auth_token_repository import AuthTokenRepository
@@ -54,14 +55,18 @@ class LoginHandler:
         if not user.is_active:
             raise UserInactiveError()
 
-        if not self.jwt_service.check_password(command.password, user.password):
+        if not self.jwt_service.check_password(
+            command.password, cast(str, user.password)
+        ):
             raise InvalidCredentialsError("password")
 
         access_token = self.jwt_service.create_access_token(
-            user_uuid=user.uuid, expires_in=self.auth_config.access_token_expire_minutes
+            user_uuid=cast(str, user.uuid),
+            expires_in=self.auth_config.access_token_expire_minutes,
         )
         refresh_token = self.jwt_service.create_refresh_token(
-            user_uuid=user.uuid, expires_in=self.auth_config.refresh_token_expire_days
+            user_uuid=cast(str, user.uuid),
+            expires_in=self.auth_config.refresh_token_expire_days,
         )
 
         refresh_token_hash = self.jwt_service.hash_refresh_token(refresh_token)
@@ -71,7 +76,7 @@ class LoginHandler:
 
         async with self.uow:
             await self.auth_token_repository.save_refresh_token(
-                user_id=user.id,
+                user_id=cast(int, user.id),
                 refresh_hash_token=refresh_token_hash,
                 expires_at=refresh_expires_at,
             )

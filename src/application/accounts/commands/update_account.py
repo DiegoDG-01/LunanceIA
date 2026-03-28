@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import cast
 
 from domain.repositories.account_repository import AccountRepository
 from domain.objects.money import Money
@@ -76,7 +77,7 @@ class UpdateAccountHandler:
                     minimum_payment_percentage=dto.credit_card_settings.minimum_payment_percentage,
                 )
                 await self.credit_card_settings_repository.update(
-                    updated_account.id, cc_settings_dto
+                    cast(int, updated_account.id), cc_settings_dto
                 )
                 cc_settings_dto = dto.credit_card_settings
 
@@ -89,7 +90,7 @@ class UpdateAccountHandler:
                     early_withdrawal_penalty=dto.investment_settings.early_withdrawal_penalty,
                 )
                 await self.investment_settings_repository.update(
-                    updated_account.id, inv_settings_dto
+                    cast(int, updated_account.id), inv_settings_dto
                 )
                 inv_settings_dto = dto.investment_settings
 
@@ -100,7 +101,7 @@ class UpdateAccountHandler:
 
         # Retornar DTO de respuesta
         return AccountResponseDTO(
-            account_uuid=updated_account.uuid,
+            account_uuid=cast(str, updated_account.uuid),
             name=updated_account.name,
             account_type=updated_account.account_type,
             bank_id=updated_account.bank_id,

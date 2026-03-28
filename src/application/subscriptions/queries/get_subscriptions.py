@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional, List, cast
 
 from domain.repositories.subscription_repository import SubscriptionRepository
 from domain.repositories.account_repository import AccountRepository
@@ -51,12 +51,16 @@ class GetSubscriptionsHandler:
 
         response_dtos = []
         for subscription in subscriptions:
-            account = await self.account_repository.get_by_id(subscription.account_id)
+            account = await self.account_repository.get_by_id(
+                cast(int, subscription.account_id)
+            )
             account_uuid = account.uuid if account else None
             account_name = account.name if account else None
 
             category = (
-                await self.category_repository.get_by_id(subscription.category_id)
+                await self.category_repository.get_by_id(
+                    cast(int, subscription.category_id)
+                )
                 if subscription.category_id
                 else None
             )

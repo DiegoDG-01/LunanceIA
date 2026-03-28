@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, cast
 
 from domain.repositories.account_repository import AccountRepository
 from application.dto.account_dto import (
@@ -56,7 +56,7 @@ class GetAccountByIdHandler:
             )
 
         return AccountResponseDTO(
-            account_uuid=account.uuid,
+            account_uuid=cast(str, account.uuid),
             name=account.name,
             account_type=account.account_type,
             bank_id=account.bank_id,

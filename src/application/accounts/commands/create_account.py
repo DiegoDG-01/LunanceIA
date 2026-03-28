@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import cast
 
 from domain.entities.account import Account
 from domain.objects.credit_card_settings import CreditCardSettings
@@ -98,7 +99,7 @@ class CreateAccountHandler:
                     minimum_payment_percentage=dto.credit_card_settings.minimum_payment_percentage,
                 )
                 await self.credit_card_settings_repository.create(
-                    saved_account.id, cc_settings_dto
+                    cast(int, saved_account.id), cc_settings_dto
                 )
                 cc_settings_dto = dto.credit_card_settings
 
@@ -111,7 +112,7 @@ class CreateAccountHandler:
                     early_withdrawal_penalty=dto.investment_settings.early_withdrawal_penalty,
                 )
                 await self.investment_settings_repository.create(
-                    saved_account.id, inv_settings_dto
+                    cast(int, saved_account.id), inv_settings_dto
                 )
                 inv_settings_dto = dto.investment_settings
 
@@ -121,7 +122,7 @@ class CreateAccountHandler:
             await self.uow.commit()
 
         return AccountResponseDTO(
-            account_uuid=saved_account.uuid,
+            account_uuid=cast(str, saved_account.uuid),
             name=saved_account.name,
             account_type=saved_account.account_type,
             current_balance=saved_account.current_balance.amount,

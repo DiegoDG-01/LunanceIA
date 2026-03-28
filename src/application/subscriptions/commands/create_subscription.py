@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import cast
 
 from domain.entities.subscription import Subscription
 from domain.repositories.subscription_repository import SubscriptionRepository
@@ -62,7 +63,7 @@ class CreateSubscriptionHandler:
 
         subscription = Subscription.create_new(
             user_id=dto.user_id,
-            account_id=account.id,
+            account_id=cast(int, account.id),
             category_id=dto.category_id,
             name=dto.name,
             amount=amount,

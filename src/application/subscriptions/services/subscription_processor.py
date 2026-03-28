@@ -1,5 +1,6 @@
 from datetime import date
 import logging
+from typing import cast
 
 from domain.entities.subscription import Subscription
 from domain.entities.transaction import Transaction
@@ -83,7 +84,7 @@ class SubscriptionProcessor:
 
         existing_charge = (
             await self.subscription_charge_repository.get_by_subscription_and_month(
-                subscription_id=subscription.id,
+                subscription_id=cast(int, subscription.id),
                 year=today.year,
                 month=today.month,
             )
@@ -102,7 +103,7 @@ class SubscriptionProcessor:
         today = date.today()
 
         charge = SubscriptionCharge.create_pending(
-            subscription_id=subscription.id,
+            subscription_id=cast(int, subscription.id),
             charge_date=today,
             amount=subscription.amount,
         )
@@ -110,8 +111,8 @@ class SubscriptionProcessor:
         save_charge = await self.subscription_charge_repository.create(charge)
 
         transaction = Transaction.create_new(
-            user_id=subscription.user_id,
-            account_id=subscription.account_id,
+            user_id=cast(int, subscription.user_id),
+            account_id=cast(int, subscription.account_id),
             category_id=subscription.category_id,
             amount=subscription.amount,
             transaction_type=TransactionType.EXPENSE,
@@ -121,7 +122,7 @@ class SubscriptionProcessor:
 
         created_transaction = await self.transaction_repository.create(transaction)
 
-        save_charge.mark_as_paid(created_transaction.id)
+        save_charge.mark_as_paid(cast(int, created_transaction.id))
         await self.subscription_charge_repository.update(save_charge)
 
         return created_transaction
