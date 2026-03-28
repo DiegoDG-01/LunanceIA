@@ -19,12 +19,14 @@ class TestCreateTransactionHandler:
         uow = AsyncMock()
         uow.__aenter__ = AsyncMock(return_value=uow)
         uow.__aexit__ = AsyncMock(return_value=False)
+        bank_repo = MagicMock()
+        bank_repo.get_by_id = AsyncMock(return_value=None)
         return {
             "user_repo": MagicMock(),
             "account_repo": MagicMock(),
             "transaction_repo": MagicMock(),
             "category_repo": MagicMock(),
-            "bank_repo": MagicMock(),
+            "bank_repo": bank_repo,
             "investment_settings_repo": MagicMock(),
             "uow": uow,
         }
@@ -54,7 +56,7 @@ class TestCreateTransactionHandler:
             name="Bank",
             account_type=AccountType.CHECKING,
             current_balance=Money(Decimal("1000.00")),
-            bank_id=None,
+            bank_id=1,
             is_active=True,
             creation_date=datetime.now()
         )
@@ -115,7 +117,7 @@ class TestCreateTransactionHandler:
             name="Bank",
             account_type=AccountType.CHECKING,
             current_balance=Money(Decimal("1000.00")),
-            bank_id=None,
+            bank_id=1,
             is_active=True,
             creation_date=datetime.now()
         )
@@ -163,7 +165,7 @@ class TestCreateTransactionHandler:
         mock_account = Account(
             id=10, uuid="acc", user_id=user_id, name="B", account_type=AccountType.CASH,
             current_balance=Money(Decimal("50.00")),
-            bank_id=None, is_active=True, creation_date=datetime.now()
+            bank_id=1, is_active=True, creation_date=datetime.now()
         )
 
         mocks["user_repo"].get_by_id = AsyncMock(return_value=mock_user)
@@ -185,7 +187,7 @@ class TestCreateTransactionHandler:
     @pytest.mark.asyncio
     async def test_user_not_found_fails(self, handler, mocks):
         mocks["user_repo"].get_by_id = AsyncMock(return_value=None)
-        dto = CreateTransactionDTO(user_id=99, account_uuid="any", category_id=1, amount=10, transaction_type=TransactionType.EXPENSE)
+        dto = CreateTransactionDTO(user_id=99, account_uuid="any", category_id=1, amount=Decimal("10"), transaction_type=TransactionType.EXPENSE)
 
         with pytest.raises(UserNotFoundError):
             await handler.handle(CreateTransactionCommand(dto=dto))
@@ -196,7 +198,7 @@ class TestCreateTransactionHandler:
         mocks["user_repo"].get_by_id = AsyncMock(return_value=mock_user)
         mocks["account_repo"].get_by_uuid_and_user_id = AsyncMock(return_value=None)
 
-        dto = CreateTransactionDTO(user_id=1, account_uuid="fake", category_id=1, amount=10, transaction_type=TransactionType.EXPENSE)
+        dto = CreateTransactionDTO(user_id=1, account_uuid="fake", category_id=1, amount=Decimal("10"), transaction_type=TransactionType.EXPENSE)
 
         with pytest.raises(AccountNotFoundError):
             await handler.handle(CreateTransactionCommand(dto=dto))

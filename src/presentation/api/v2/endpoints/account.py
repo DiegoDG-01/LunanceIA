@@ -56,7 +56,7 @@ from application.dto.account_dto import (
     CreditCardSettingsDTO,
     InvestmentCardSettingsDTO,
 )
-from typing import List
+from typing import List, cast
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -74,7 +74,7 @@ async def get_user_accounts(
 ):
     """Obtiene todas las cuentas del usuario."""
     query = GetUserAccountsQuery(
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
         only_active=only_active,
         limit=limit,
         offset=offset,
@@ -97,7 +97,9 @@ async def get_account(
     handler: GetAccountByIdHandler = Depends(get_account_by_id_handler),
 ):
     """Obtiene una cuenta específica."""
-    query = GetAccountByIdQuery(account_uuid=account_uuid, user_id=current_user.id)
+    query = GetAccountByIdQuery(
+        account_uuid=account_uuid, user_id=cast(int, current_user.id)
+    )
 
     account = await handler.handle(query)
 
@@ -134,7 +136,7 @@ async def create_account(
 
     dto = CreateAccountDTO(
         bank_id=account_request.bank_id,
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
         name=account_request.name,
         account_type=account_request.account_type,
         initial_balance=account_request.initial_balance,
@@ -179,7 +181,7 @@ async def update_account(
     """Actualiza una cuenta."""
     dto = UpdateAccountDTO(
         account_uuid=account_uuid,
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
         name=update_request.name,
         bank_id=update_request.bank_id,
         current_balance=update_request.current_balance,
@@ -202,7 +204,9 @@ async def delete_account(
     handler: DeleteAccountHandler = Depends(get_delete_account_handler),
 ):
     """Elimina una cuenta."""
-    command = DeleteAccountCommand(account_uuid=account_uuid, user_id=current_user.id)
+    command = DeleteAccountCommand(
+        account_uuid=account_uuid, user_id=cast(int, current_user.id)
+    )
 
     success = await handler.handle(command)
     if not success:
@@ -222,7 +226,7 @@ async def activate_account(
     """Activa/desactiva una cuenta."""
     command = StateAccountCommand(
         account_uuid=account_uuid,
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
     )
 
     account = await handler.handle(command)
@@ -230,7 +234,7 @@ async def activate_account(
         bank_id=account.bank_id,
         bank_name=account.bank_name,
         bank_code=account.bank_code,
-        account_uuid=account.uuid,
+        account_uuid=cast(str, account.uuid),
         name=account.name,
         account_type=account.account_type,
         current_balance=account.current_balance.amount,
@@ -249,7 +253,9 @@ async def get_account_activity(
     current_user: User = Depends(get_current_active_user),
     handler: GetAccountActivitiesHandler = Depends(get_activity_account_handler),
 ):
-    query = GetAccountActivityQuery(user_id=current_user.id, account_uuid=account_uuid)
+    query = GetAccountActivityQuery(
+        user_id=cast(int, current_user.id), account_uuid=account_uuid
+    )
     activity = await handler.handle(query)
 
     return [AccountRecentActivityResponse(**item.__dict__) for item in activity]

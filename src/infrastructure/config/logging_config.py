@@ -1,7 +1,7 @@
 import logging
 import logging.config
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 from pydantic_settings import BaseSettings
 
 
@@ -54,7 +54,7 @@ def get_logging_config(settings: LoggingSettings) -> dict:
         },
     }
 
-    handlers = {}
+    handlers: dict[str, Any] = {}
     root_handlers = []
 
     handlers["console"] = {

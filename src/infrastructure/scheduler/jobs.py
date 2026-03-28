@@ -48,7 +48,7 @@ async def process_subscriptions_job():
                 transaction_repository=transaction_repo,
             )
 
-            stats = await processor.process_due_subscriptions(db)
+            stats = await processor.process_due_subscriptions()
             await db.commit()
 
             logger.info(f"Job finished at {datetime.now()} with stats: {stats}")

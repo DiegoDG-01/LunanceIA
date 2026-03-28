@@ -23,5 +23,5 @@ class InvestmentCardSettingsRepository(ABC):
         pass
 
     @abstractmethod
-    async def delete(self, account_id: int) -> None:
+    async def delete(self, account_id: int) -> bool:
         pass

@@ -46,4 +46,4 @@ class TestAuthSchemas:
 
     def test_refresh_token_request_missing(self):
         with pytest.raises(ValidationError):
-            RefreshTokenRequest()
+            RefreshTokenRequest()  # type: ignore[call-arg]

@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import datetime
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,7 +25,7 @@ class SQLAlchemyUserRepository(UserRepository):
             password=model.password,
             picture=model.picture,
             email_verified=model.email_verified,
-            last_login=model.last_login,
+            last_login=model.last_login or datetime.now(),
             registration_date=model.registration_date,
             is_active=model.is_active,
         )
@@ -132,12 +133,11 @@ class SQLAlchemyUserRepository(UserRepository):
         """Verifica si existe un usuario con el email dado."""
         stmt = select(exists().where(UserModel.email == email))
         result = await self.db.execute(stmt)
-        return result.scalar()
+        return bool(result.scalar())
 
     async def exists_by_email(self, email: str) -> bool:
         """Verifica si existe un usuario con el email dado (alias)."""
         return await self.exist_by_email(email)
-
 
     async def get_by_username(self, name: str) -> Optional[User]:
         stmt = select(UserModel).where(UserModel.name == name)

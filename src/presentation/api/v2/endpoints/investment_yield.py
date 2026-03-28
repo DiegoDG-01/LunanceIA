@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from typing import List, Optional
+from typing import List, Optional, cast
 
 from domain.entities.user import User
 from application.investments.queries.get_investment_yields import (
@@ -40,7 +40,7 @@ async def get_investment_yields(
 ):
     query = GetInvestmentYieldsQuery(
         account_uuid=account_id,
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
         limit=limit,
         offset=offset,
     )
@@ -66,7 +66,7 @@ async def get_investment_projections(
 ):
     query = GetInvestmentProjectionsQuery(
         account_uuid=account_id,
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
         project_days=days,
     )
 

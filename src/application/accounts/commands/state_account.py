@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from domain.entities.account import Account
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.services.account_service import AccountService
@@ -27,7 +28,7 @@ class StateAccountHandler:
         self.bank_repository = bank_repository
         self.uow = uow
 
-    async def handle(self, command: StateAccountCommand) -> bool:
+    async def handle(self, command: StateAccountCommand) -> Account:
         account = await self.account_repository.get_by_uuid_and_user_id(
             command.account_uuid, command.user_id
         )

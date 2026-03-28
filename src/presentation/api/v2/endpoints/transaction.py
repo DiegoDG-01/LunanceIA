@@ -33,7 +33,7 @@ from application.transactions.queries.get_transaction_by_uuid import (
     GetTransactionByUuidQuery,
     GetTransactionByUuidHandler,
 )
-from typing import Optional
+from typing import Optional, cast
 from datetime import date
 from fastapi import Query
 from domain.objects.enums import TransactionType
@@ -75,7 +75,7 @@ async def get_transactions(
 
     # 📦 Crear el query object con todos los filtros
     query = GetTransactionsQuery(
-        user_id=current_user.id,  # 🔒 Del token JWT
+        user_id=cast(int, current_user.id),  # 🔒 Del token JWT
         skip=skip,
         limit=limit,
         start_date=start_date,
@@ -100,7 +100,9 @@ async def get_transaction_by_uuid(
     current_user: User = Depends(get_current_active_user),
     handler: GetTransactionByUuidHandler = Depends(get_transaction_by_uuid_handler),
 ):
-    query = GetTransactionByUuidQuery(uuid=transaction_uuid, user_id=current_user.id)
+    query = GetTransactionByUuidQuery(
+        uuid=transaction_uuid, user_id=cast(int, current_user.id)
+    )
 
     transaction = await handler.handle(query)
     return TransactionResponse(**transaction.__dict__)
@@ -117,7 +119,7 @@ async def create_transaction(
     # Convertir request → DTO
     dto = CreateTransactionDTO(
         account_uuid=transaction_request.account_uuid,
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
         category_id=transaction_request.category_id,
         transaction_type=transaction_request.transaction_type,
         amount=transaction_request.amount,
@@ -143,7 +145,7 @@ async def update_transaction(
 ):
     command = UpdateTransactionCommand(
         transaction_uuid=transaction_uuid,
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
         description=update_request.description,
         notes=update_request.notes,
         category_id=update_request.category_id,
@@ -171,7 +173,9 @@ async def delete_transaction(
     - Requiere ownership: solo el dueño puede eliminar
     - Retorna 204 si exitoso, 404 si no encontrado
     """
-    command = DeleteTransactionCommand(uuid=transaction_uuid, user_id=current_user.id)
+    command = DeleteTransactionCommand(
+        uuid=transaction_uuid, user_id=cast(int, current_user.id)
+    )
 
     deleted = await handler.handle(command)
 

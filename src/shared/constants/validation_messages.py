@@ -1,5 +1,7 @@
 """Mensajes de validación multiidioma."""
 
+from typing import Optional
+
 # Mapeo de mensajes de validación de Pydantic por idioma
 PYDANTIC_ERROR_MESSAGES = {
     "es": {
@@ -274,7 +276,7 @@ def get_error_detail_message(code: str, language: str = "es") -> str:
 
 
 def translate_validation_message(
-    error_type: str, field_name: str = None, language: str = "es", **context
+    error_type: str, field_name: Optional[str] = None, language: str = "es", **context
 ) -> str:
     """
     Translates a Pydantic validation error message into the specified language, formatting it with provided context.

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, cast
 
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.transaction_repository import TransactionRepository
@@ -33,7 +33,7 @@ class GetAccountActivitiesHandler:
             raise AccountNotFoundError(account_uuid=query.account_uuid)
 
         transactions = await self.transaction_repository.get_activity_by_account_id(
-            account_id=account.id, limit=5
+            account_id=cast(int, account.id), limit=5
         )
 
         if not transactions:
@@ -44,7 +44,7 @@ class GetAccountActivitiesHandler:
         for transaction, category_name in transactions:
             account_recent_activities.append(
                 AccountActivityResponseDTO(
-                    name=transaction.description,
+                    name=transaction.description or "",
                     amount=transaction.amount.amount,
                     category_name=category_name,
                     transaction_date=transaction.transaction_date,

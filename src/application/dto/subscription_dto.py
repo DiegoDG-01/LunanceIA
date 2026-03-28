@@ -24,7 +24,7 @@ class CreateSubscriptionDTO:
 
 @dataclass
 class UpdateSubscriptionDTO:
-    account_uuid: str = None
+    account_uuid: Optional[str] = None
     name: Optional[str] = None
     amount: Optional[Decimal] = None
     frequency: Optional[Frequency] = None
@@ -40,8 +40,8 @@ class UpdateSubscriptionDTO:
 @dataclass
 class SubscriptionResponseDTO:
     uuid: str
-    account_uuid: str
-    account_name: str
+    account_uuid: Optional[str]
+    account_name: Optional[str]
     category_name: Optional[str]
     name: str
     amount: Decimal
@@ -59,8 +59,8 @@ class SubscriptionResponseDTO:
     def from_entity(
         cls,
         subscription,
-        account_uuid: str,
-        account_name: str,
+        account_uuid: Optional[str],
+        account_name: Optional[str],
         category_name: Optional[str],
     ):
         return cls(
@@ -122,6 +122,7 @@ class SubscriptionChargeDetailResponseDTO:
             category_name=category_name,
             account_name=account_name,
         )
+
 
 @dataclass
 class SubscriptionLastTransactionsResponseDTO:

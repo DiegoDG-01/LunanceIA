@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, cast
 
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.investment_yield_repository import InvestmentYieldRepository
@@ -20,11 +20,13 @@ class GetInvestmentYieldsHandler:
         self,
         account_repository: AccountRepository,
         investment_yield_repository: InvestmentYieldRepository,
-    ) :
+    ):
         self.account_repository = account_repository
         self.investment_yield_repository = investment_yield_repository
 
-    async def handle(self, query: GetInvestmentYieldsQuery) -> List[InvestmentYieldResponseDTO]:
+    async def handle(
+        self, query: GetInvestmentYieldsQuery
+    ) -> List[InvestmentYieldResponseDTO]:
         account = await self.account_repository.get_by_uuid_and_user_id(
             account_uuid=query.account_uuid, user_id=query.user_id
         )
@@ -32,7 +34,7 @@ class GetInvestmentYieldsHandler:
             raise AccountNotFoundError(account_uuid=query.account_uuid)
 
         yields = await self.investment_yield_repository.get_by_account_id(
-            account_id=account.id, limit=query.limit, offset=query.offset
+            account_id=cast(int, account.id), limit=query.limit, offset=query.offset
         )
 
         return [InvestmentYieldResponseDTO.from_entity(y) for y in yields]

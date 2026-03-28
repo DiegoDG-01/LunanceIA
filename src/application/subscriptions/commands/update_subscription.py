@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
+from typing import cast
 
 from domain.objects.money import Money
 from domain.repositories.subscription_repository import SubscriptionRepository
@@ -60,9 +61,9 @@ class UpdateSubscriptionHandler:
             if not account:
                 raise AccountNotFoundError(dto.account_uuid)
 
-            subscription.account_id = account.id
+            subscription.account_id = cast(int, account.id)
 
-        for key, value in dto.dict().items():
+        for key, value in asdict(dto).items():
             if value is not None:
                 if key == "amount":
                     setattr(
@@ -79,7 +80,9 @@ class UpdateSubscriptionHandler:
             )
             await self.uow.commit()
 
-        account = await self.account_repository.get_by_id(subscription.account_id)
+        account = await self.account_repository.get_by_id(
+            cast(int, subscription.account_id)
+        )
         account_uuid = account.uuid if account else None
         account_name = account.name if account else None
 

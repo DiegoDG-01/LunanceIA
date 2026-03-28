@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import timedelta, datetime, timezone
+from typing import cast
 
 from domain.repositories.user_repository import UserRepository
 from domain.repositories.auth_token_repository import AuthTokenRepository
@@ -46,13 +47,13 @@ class RefreshTokenHandler:
                 "RefreshTokenCommand", ["Refresh token inválido"]
             )
 
-        user = await self.user_repository.get_by_uuid(user_uuid)
+        user = await self.user_repository.get_by_uuid(cast(str, user_uuid))
         if not user or not user.is_active:
             raise CommandValidationError("RefreshTokenCommand", ["User inválido"])
 
         refresh_token_hash = self.jwt_service.hash_refresh_token(command.refresh_token)
         stored_token = await self.auth_token_repository.get_refresh_token(
-            user.id, refresh_token_hash
+            cast(int, user.id), refresh_token_hash
         )
 
         if not stored_token:
@@ -61,10 +62,13 @@ class RefreshTokenHandler:
             )
 
         access_token = self.jwt_service.create_access_token(
-            user_uuid=user_uuid, expires_in=self.auth_config.access_token_expire_minutes
+            user_uuid=cast(str, user_uuid),
+            expires_in=self.auth_config.access_token_expire_minutes,
         )
 
-        new_refresh_token = self.jwt_service.create_refresh_token(user_uuid=user_uuid)
+        new_refresh_token = self.jwt_service.create_refresh_token(
+            user_uuid=cast(str, user_uuid)
+        )
         new_refresh_token_hash = self.jwt_service.hash_refresh_token(new_refresh_token)
         new_expires_at = datetime.now(tz=timezone.utc) + timedelta(
             days=self.auth_config.refresh_token_expire_days
@@ -72,7 +76,7 @@ class RefreshTokenHandler:
 
         async with self.uow:
             await self.auth_token_repository.save_refresh_token(
-                user_id=user.id,
+                user_id=cast(int, user.id),
                 refresh_hash_token=new_refresh_token_hash,
                 expires_at=new_expires_at,
             )

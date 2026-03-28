@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from datetime import date, datetime
+from typing import Optional
 from decimal import Decimal
 
 from application.accounts.queries.get_account_activity import (
@@ -35,7 +36,7 @@ class TestGetAccountActivitiesHandler:
             id=account_id,
             uuid=uuid,
             user_id=1,
-            bank_id=None,
+            bank_id=1,
             name="BBVA Débito",
             account_type=AccountType.SAVINGS,
             current_balance=Money(Decimal("5000.00")),
@@ -50,7 +51,7 @@ class TestGetAccountActivitiesHandler:
         amount: str = "500.00",
         tx_type: TransactionType = TransactionType.EXPENSE,
         description: str = "Supermercado",
-        tx_date: date = None,
+        tx_date: Optional[date] = None,
     ) -> Transaction:
         return Transaction(
             id=tx_id,

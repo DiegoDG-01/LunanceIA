@@ -17,7 +17,7 @@ class TransactionRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_id(self, id: int) -> Optional[Transaction]:
+    async def get_by_id(self, transaction_id: int) -> Optional[Transaction]:
         """Get transaction by id"""
         pass
 
@@ -34,14 +34,14 @@ class TransactionRepository(ABC):
 
     @abstractmethod
     async def get_by_id_and_user_uuid(
-        self, id: int, user_id: int
+        self, transaction_id: int, user_id: int
     ) -> Optional[Transaction]:
         """Get transaction by id and user uuid"""
         pass
 
     @abstractmethod
     async def get_by_account(
-        self, account_uuid: str, user_id: int, limit: int = 100, offset: int = 0
+        self, account_id: int, user_id: int, limit: int = 100, offset: int = 0
     ) -> List[Transaction]:
         """Get transactions by account id and user uuid"""
         pass
@@ -54,31 +54,31 @@ class TransactionRepository(ABC):
         end_date: Optional[date] = None,
         account_uuid: Optional[str] = None,
         transaction_type: Optional[TransactionType] = None,
-    ) -> List[Tuple[Transaction, str, AccountType, Optional[str]]]:
+    ) -> List[Tuple[Transaction, str, AccountType, Optional[str], Optional[str]]]:
         """Get transactions by date range and user uuid"""
         pass
 
     @abstractmethod
     async def get_by_uuid_with_account_details(
         self, uuid: str, user_id: int
-    ) -> Optional[Tuple[Transaction, str, AccountType, Optional[str]]]:
+    ) -> Optional[Tuple[Transaction, str, AccountType, Optional[str], Optional[str]]]:
         """Get transaction by uuid and user id with account details (name, type, bank)"""
         pass
 
     @abstractmethod
     async def get_by_user(
         self, user_id: int, limit: int = 100, offset: int = 0
-    ) -> List[Tuple[Transaction, str, AccountType, Optional[str]]]:
+    ) -> List[Tuple[Transaction, str, AccountType, Optional[str], Optional[str]]]:
         """Get transactions by user uuid"""
         pass
 
     @abstractmethod
     async def get_by_category(
         self,
-        user_uuid: str,
+        user_id: int,
         category_id: int,
-        start_date: date,
-        end_date: date,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
     ) -> List[Transaction]:
         """Get transactions by category id and user uuid"""
         pass
@@ -86,7 +86,7 @@ class TransactionRepository(ABC):
     @abstractmethod
     async def get_by_type(
         self,
-        user_uuid: str,
+        user_id: int,
         transaction_type: TransactionType,
         limit: int = 100,
         offset: int = 0,
@@ -114,10 +114,10 @@ class TransactionRepository(ABC):
     @abstractmethod
     async def get_total_by_type(
         self,
-        user_uuid: str,
+        user_id: int,
         transaction_type: TransactionType,
-        start_date: date,
-        end_date: date,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
         account_id: Optional[int] = None,
     ) -> float:
         """Get total amount by transaction type and user uuid"""
@@ -125,13 +125,13 @@ class TransactionRepository(ABC):
 
     @abstractmethod
     async def get_monthly_summary(
-        self, user_uuid: str, year: int, month: int, account_id: Optional[int] = None
-    ) -> List[dict]:
+        self, user_id: int, year: int, month: int, account_id: Optional[int] = None
+    ) -> dict:
         """Get monthly summary by user uuid"""
         pass
 
     @abstractmethod
-    async def count_by_user(self, user_uuid: str) -> int:
+    async def count_by_user(self, user_id: int) -> int:
         """Count transactions by user uuid"""
         pass
 

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import cast
 
 from domain.repositories.user_repository import UserRepository
 from domain.repositories.auth_token_repository import AuthTokenRepository
@@ -48,7 +49,7 @@ class LogoutHandler:
         refresh_token_hash = self.jwt_service.hash_refresh_token(command.refresh_token)
         async with self.uow:
             await self.auth_token_repository.revoke_refresh_token(
-                user.id, refresh_token_hash
+                cast(int, user.id), refresh_token_hash
             )
             await self.uow.commit()
 

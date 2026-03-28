@@ -126,7 +126,7 @@ class TestUtilityFunctions:
     def test_import_validators(self):
         """Test importing validators."""
         try:
-            from shared.validators.business import validate_password_strength
+            from shared.utils.validations import validate_password_strength
             # Test password validation logic
             assert callable(validate_password_strength)
         except ImportError:

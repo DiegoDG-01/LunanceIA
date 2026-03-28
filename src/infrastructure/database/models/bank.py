@@ -1,14 +1,18 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from typing import Optional
+
+from sqlalchemy import String
+from sqlalchemy.orm import Mapped, mapped_column
+
 from infrastructure.database.connection import Base
 
 
 class BankModel(Base):
     __tablename__ = "banks"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String(100), nullable=False)
-    code = Column(String(3), nullable=False, unique=True, index=True)
-    country = Column(String(2), nullable=False, default="MX")
-    logo_url = Column(String(500), nullable=True)
-    color = Column(String(7), nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100))
+    code: Mapped[str] = mapped_column(String(3), unique=True, index=True)
+    country: Mapped[str] = mapped_column(String(2), default="MX")
+    logo_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
+    is_active: Mapped[bool] = mapped_column(default=True)
