@@ -1,6 +1,4 @@
 from fastapi import APIRouter, Depends, Query, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from typing import List, Optional, cast
 
 from domain.entities.user import User
@@ -22,12 +20,16 @@ from presentation.dependencies.investment_yield_deps import (
     get_investment_projections_handler,
 )
 
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_50_per_minute,
+    limiter_30_per_minute,
+)
+
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/{account_id}/yields/", response_model=List[InvestmentYieldResponse])
-@limiter.limit("50/minute")
 async def get_investment_yields(
     request: Request,
     account_id: str,
@@ -38,6 +40,7 @@ async def get_investment_yields(
     current_user: User = Depends(get_current_active_user),
     handler: GetInvestmentYieldsHandler = Depends(get_investment_yields_handler),
 ):
+    enforce_rate_limit(limiter_50_per_minute, request)
     query = GetInvestmentYieldsQuery(
         account_uuid=account_id,
         user_id=cast(int, current_user.id),
@@ -49,7 +52,6 @@ async def get_investment_yields(
 
 
 @router.get("/{account_id}/projections/", response_model=InvestmentProjectionResponse)
-@limiter.limit("30/minute")
 async def get_investment_projections(
     request: Request,
     account_id: str,
@@ -64,6 +66,7 @@ async def get_investment_projections(
         get_investment_projections_handler
     ),
 ):
+    enforce_rate_limit(limiter_30_per_minute, request)
     query = GetInvestmentProjectionsQuery(
         account_uuid=account_id,
         user_id=cast(int, current_user.id),

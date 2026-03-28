@@ -1,6 +1,4 @@
 from fastapi import APIRouter, Request, Depends
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from domain.entities.user import User
 from presentation.dependencies.auth_deps import get_current_active_user
@@ -15,18 +13,22 @@ from application.categories.queries.get_categories import (
 )
 
 
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_50_per_minute,
+)
+
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/", response_model=CategoryListResponse)
-@limiter.limit("50/minute")
 async def get_categories(
     request: Request,
     only_active: bool = True,
     current_user: User = Depends(get_current_active_user),
     handler: GetCategoriesHandler = Depends(get_categories_handler),
 ):
+    enforce_rate_limit(limiter_50_per_minute, request)
     query = GetCategoriesQuery(only_active=only_active)
 
     categories = await handler.handle(query)

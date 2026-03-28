@@ -1,6 +1,4 @@
 from fastapi import APIRouter, Depends, status, Response, Request, Query
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from typing import Optional, List, cast
 
 from domain.entities.user import User
@@ -61,12 +59,17 @@ from presentation.dependencies import (
 )
 from presentation.schemas.responses.subscription import SubscriptionLastChargeResponse
 
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_50_per_minute,
+    limiter_20_per_minute,
+    limiter_5_per_minute,
+)
+
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/", response_model=list[SubscriptionResponse])
-@limiter.limit("50/minute")
 async def get_subscriptions(
     request: Request,
     account_uuid: Optional[str] = Query(None, description="UUID de la cuenta"),
@@ -77,6 +80,7 @@ async def get_subscriptions(
     current_user: User = Depends(get_current_active_user),
     handler: GetSubscriptionsHandler = Depends(get_subscriptions_handler),
 ):
+    enforce_rate_limit(limiter_50_per_minute, request)
     query = GetSubscriptionsQuery(
         user_id=cast(int, current_user.id),
         account_uuid=account_uuid,
@@ -93,7 +97,6 @@ async def get_subscriptions(
 
 
 @router.get("/charges/", response_model=list[SubscriptionChargeDetailResponse])
-@limiter.limit("50/minute")
 async def get_subscription_charges(
     request: Request,
     limit: int = Query(100, ge=1, le=1000),
@@ -105,6 +108,7 @@ async def get_subscription_charges(
     Obtiene todos los cargos de suscripciones del usuario con detalles de transacciones,
     categorías y cuentas.
     """
+    enforce_rate_limit(limiter_50_per_minute, request)
     query = GetSubscriptionChargesQuery(
         user_id=cast(int, current_user.id),
         limit=limit,
@@ -133,7 +137,6 @@ async def get_subscription(
 @router.post(
     "/", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED
 )
-@limiter.limit("20/minute")
 async def create_subscription(
     request: Request,
     subscription_request: CreateSubscriptionRequest,
@@ -143,6 +146,7 @@ async def create_subscription(
     """
     Crear una nueva suscripción.
     """
+    enforce_rate_limit(limiter_20_per_minute, request)
     # Convertir request → DTO
     dto = CreateSubscriptionDTO(
         user_id=cast(int, current_user.id),
@@ -169,7 +173,6 @@ async def create_subscription(
     response_model=SubscriptionResponse,
     status_code=status.HTTP_200_OK,
 )
-@limiter.limit("20/minute")
 async def update_subscription(
     request: Request,
     subscription_uuid: str,
@@ -177,6 +180,7 @@ async def update_subscription(
     current_user: User = Depends(get_current_active_user),
     handler: UpdateSubscriptionHandler = Depends(get_update_subscription_handler),
 ):
+    enforce_rate_limit(limiter_20_per_minute, request)
     dto = UpdateSubscriptionDTO(
         account_uuid=subscription_request.account_uuid,
         name=subscription_request.name,
@@ -201,13 +205,13 @@ async def update_subscription(
 
 
 @router.patch("/{subscription_uuid}/activate/", response_model=SubscriptionResponse)
-@limiter.limit("5/minute")
 async def activate_subscription(
     request: Request,
     subscription_uuid: str,
     current_user: User = Depends(get_current_active_user),
     handler: StateSubscriptionHandler = Depends(get_state_subscription_handler),
 ):
+    enforce_rate_limit(limiter_5_per_minute, request)
     command = StateSubscriptionCommand(
         subscription_uuid=subscription_uuid, user_id=cast(int, current_user.id)
     )
@@ -217,13 +221,13 @@ async def activate_subscription(
 
 
 @router.delete("/{subscription_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
-@limiter.limit("5/minute")
 async def delete_subscription(
     request: Request,
     subscription_uuid: str,
     current_user: User = Depends(get_current_active_user),
     handler: DeleteSubscriptionHandler = Depends(get_delete_subscription_handler),
 ):
+    enforce_rate_limit(limiter_5_per_minute, request)
     command = DeleteSubscriptionCommand(
         subscription_uuid=subscription_uuid, user_id=cast(int, current_user.id)
     )
@@ -236,13 +240,13 @@ async def delete_subscription(
     "/{subscription_uuid}/transactions/",
     response_model=List[SubscriptionLastChargeResponse],
 )
-@limiter.limit("20/minute")
 async def get_subscription_last_charge(
     request: Request,
     subscription_uuid: str,
     current_user: User = Depends(get_current_active_user),
     handler: GetLastTransactionsHandler = Depends(get_last_transactions_handler),
 ):
+    enforce_rate_limit(limiter_20_per_minute, request)
     query = GetLastTransactionsQuery(
         subscription_uuid=subscription_uuid, user_id=cast(int, current_user.id)
     )

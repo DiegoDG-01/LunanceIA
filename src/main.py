@@ -5,11 +5,13 @@ from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_10_per_minute,
+    limiter_5_per_minute,
+)
 
 from infrastructure.config.logging_config import setup_logging
 from infrastructure.config.settings import settings
@@ -21,18 +23,12 @@ from presentation.middleware.exception_handler import (
     validation_exception_handler,
     http_exception_handler,
     generic_exception_handler,
-    rate_limit_exceeded_handler,
 )
 from presentation.middleware.request_logging import RequestLoggingMiddleware
 from shared.exceptions.base import LunanceException
 
 # Configurar logging
 setup_logging()
-
-# Configurar rate limiter
-limiter = Limiter(
-    key_func=get_remote_address, enabled=settings.ENVIRONMENT.upper() != "TEST"
-)
 
 
 @asynccontextmanager
@@ -56,9 +52,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Agregar el limiter al estado de la app
-app.state.limiter = limiter
-
 # Configurar CORS
 if settings.ENVIRONMENT.upper() == "PROD":
     origins = [
@@ -81,7 +74,6 @@ app.add_middleware(
 app.add_middleware(RequestLoggingMiddleware)
 
 # Registrar manejadores de excepciones
-app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)  # type: ignore[arg-type]
 app.add_exception_handler(LunanceException, lunance_exception_handler)  # type: ignore[arg-type]
 app.add_exception_handler(RequestValidationError, validation_exception_handler)  # type: ignore[arg-type]
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)  # type: ignore[arg-type]
@@ -92,8 +84,8 @@ app.include_router(api_router, prefix="/api/v2")
 
 
 @app.get("/")
-@limiter.limit("10/minute")
 async def root(request: Request):
+    enforce_rate_limit(limiter_10_per_minute, request)
     return {
         "message": "Hello World",
         "version": "5.0.0",
@@ -101,8 +93,8 @@ async def root(request: Request):
 
 
 @app.get("/health")
-@limiter.limit("5/minute")
 async def health_check(request: Request, db: AsyncSession = Depends(get_db)):
+    enforce_rate_limit(limiter_5_per_minute, request)
     try:
         await db.execute(text("SELECT 1"))
         db_status = {"status": "healthy"}

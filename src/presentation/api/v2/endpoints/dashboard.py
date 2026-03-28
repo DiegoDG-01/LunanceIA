@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Depends, Request
 from typing import cast
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from application.dashboard.queries.get_dashboard_summary import (
     GetDashboardSummaryHandler,
@@ -13,17 +11,21 @@ from domain.entities.user import User
 from presentation.dependencies.auth_deps import get_current_active_user
 
 
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_10_per_minute,
+)
+
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/")
-@limiter.limit("10/minute")
 async def get_general_data(
     request: Request,
     current_user: User = Depends(get_current_active_user),
     handler: GetDashboardSummaryHandler = Depends(get_dashboard_summary_handler),
 ):
+    enforce_rate_limit(limiter_10_per_minute, request)
     query = GetDashboardSummaryQuery(
         user_uuid=cast(str, current_user.uuid), user_id=cast(int, current_user.id)
     )

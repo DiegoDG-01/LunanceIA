@@ -7,7 +7,6 @@ from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from slowapi.errors import RateLimitExceeded
 from shared.i18n.messages import get_error_message
 
 from infrastructure.config.settings import settings
@@ -278,9 +277,12 @@ async def http_exception_handler(
         error_code=error_code, message=main_message, details=None
     )
 
-    return JSONResponse(
+    response = JSONResponse(
         status_code=exc.status_code, content=error_response.model_dump()
     )
+    if hasattr(exc, "headers") and exc.headers:
+        response.headers.update(exc.headers)
+    return response
 
 
 async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
@@ -307,76 +309,3 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
     )
 
     return JSONResponse(status_code=500, content=error_response.model_dump())
-
-
-async def rate_limit_exceeded_handler(
-    request: Request, exc: RateLimitExceeded
-) -> JSONResponse:
-    """
-    Handle rate limit exceeded errors and return a standardized JSON error response.
-
-    Provides detailed information about the rate limit violation including the limit,
-    remaining requests, and retry-after time in the user's preferred language.
-    """
-    client_ip = request.client.host if request.client else "unknown"
-    logger.warning(f"Rate limit exceeded for {client_ip}: {exc.detail}")
-
-    # Detectar idioma del usuario
-    user_language = get_user_language(request)
-
-    # Traducir mensaje principal
-    main_message = get_http_code_error_message(
-        code="RATE_LIMIT_EXCEEDED", language=user_language
-    )
-
-    # Crear detalles específicos del rate limit
-    details = []
-    if hasattr(exc, "detail") and exc.detail:
-        # Extraer información del rate limit del mensaje de error
-        detail_msg = str(exc.detail)
-
-        details.append(
-            ErrorDetail(
-                loc=["rate_limit"],
-                msg=detail_msg,
-                type="rate_limit_exceeded",
-                input=None,
-            )
-        )
-
-    error_response = StandardErrorResponse(
-        error_code="RATE_LIMIT_EXCEEDED",
-        message=main_message,
-        details=details if details else None,
-    )
-
-    # Crear respuesta con headers de rate limiting
-    response = JSONResponse(status_code=429, content=error_response.model_dump())
-
-    # Agregar headers informativos si están disponibles en la excepción
-    if hasattr(exc, "retry_after") and exc.retry_after:
-        response.headers["Retry-After"] = str(exc.retry_after)
-
-    # Headers estándar de rate limiting (versión corregida y segura)
-    response.headers["X-RateLimit-Remaining"] = "0"
-
-    # Intentar extraer límite del mensaje de error de manera segura
-    try:
-        detail_str = str(exc.detail) if hasattr(exc, "detail") and exc.detail else ""
-
-        # slowapi suele tener mensajes como "Rate limit exceeded: 5 per 1 minute"
-        if ":" in detail_str and "per" in detail_str:
-            parts = detail_str.split(":")
-            if len(parts) > 1:
-                limit_part = parts[1].strip().split(" ")[0]
-                response.headers["X-RateLimit-Limit"] = limit_part
-            else:
-                response.headers["X-RateLimit-Limit"] = "Unknown"
-        else:
-            response.headers["X-RateLimit-Limit"] = "Unknown"
-
-    except Exception:
-        # Sí hay cualquier error extrayendo la información, usar valor por defecto
-        response.headers["X-RateLimit-Limit"] = "Unknown"
-
-    return response

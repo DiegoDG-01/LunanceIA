@@ -5,8 +5,6 @@ from fastapi import (
     Response,
     Request,
 )
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from application.transactions.queries.get_transactions import GetTransactionsQuery
 from application.transactions.queries.get_transactions import GetTransactionsHandler
@@ -46,12 +44,18 @@ from application.transactions.commands.update_transaction import (
 from presentation.dependencies import get_update_transaction_handler
 from shared.exceptions.domain import TransactionNotFoundError
 
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_50_per_minute,
+    limiter_20_per_minute,
+    limiter_15_per_minute,
+    limiter_10_per_minute,
+)
+
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/", response_model=list[TransactionResponse])
-@limiter.limit("50/minute")
 async def get_transactions(
     request: Request,
     # 📥 QUERY PARAMETERS: Recibe filtros del HTTP request
@@ -72,7 +76,7 @@ async def get_transactions(
     🌐 ENDPOINT HTTP: Punto de entrada para obtener transacciones
     ✨ Función: Valida input → crea query → ejecuta caso de uso → formatea response
     """
-
+    enforce_rate_limit(limiter_50_per_minute, request)
     # 📦 Crear el query object con todos los filtros
     query = GetTransactionsQuery(
         user_id=cast(int, current_user.id),  # 🔒 Del token JWT
@@ -93,13 +97,13 @@ async def get_transactions(
 
 
 @router.get("/{transaction_uuid}/", response_model=TransactionResponse)
-@limiter.limit("50/minute")
 async def get_transaction_by_uuid(
     request: Request,
     transaction_uuid: str,
     current_user: User = Depends(get_current_active_user),
     handler: GetTransactionByUuidHandler = Depends(get_transaction_by_uuid_handler),
 ):
+    enforce_rate_limit(limiter_50_per_minute, request)
     query = GetTransactionByUuidQuery(
         uuid=transaction_uuid, user_id=cast(int, current_user.id)
     )
@@ -109,13 +113,13 @@ async def get_transaction_by_uuid(
 
 
 @router.post("/", response_model=TransactionResponse)
-@limiter.limit("20/minute")
 async def create_transaction(
     request: Request,
     transaction_request: CreateTransactionRequest,
     current_user: User = Depends(get_current_active_user),
     handler: CreateTransactionHandler = Depends(get_create_transaction_handler),
 ):
+    enforce_rate_limit(limiter_20_per_minute, request)
     # Convertir request → DTO
     dto = CreateTransactionDTO(
         account_uuid=transaction_request.account_uuid,
@@ -135,7 +139,6 @@ async def create_transaction(
 
 
 @router.put("/{transaction_uuid}/", response_model=TransactionResponse)
-@limiter.limit("15/minute")
 async def update_transaction(
     request: Request,
     transaction_uuid: str,
@@ -143,6 +146,7 @@ async def update_transaction(
     current_user: User = Depends(get_current_active_user),
     handler: UpdateTransactionCommandHandler = Depends(get_update_transaction_handler),
 ):
+    enforce_rate_limit(limiter_15_per_minute, request)
     command = UpdateTransactionCommand(
         transaction_uuid=transaction_uuid,
         user_id=cast(int, current_user.id),
@@ -159,7 +163,6 @@ async def update_transaction(
 
 
 @router.delete("/{transaction_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
-@limiter.limit("10/minute")
 async def delete_transaction(
     request: Request,
     transaction_uuid: str,
@@ -173,6 +176,7 @@ async def delete_transaction(
     - Requiere ownership: solo el dueño puede eliminar
     - Retorna 204 si exitoso, 404 si no encontrado
     """
+    enforce_rate_limit(limiter_10_per_minute, request)
     command = DeleteTransactionCommand(
         uuid=transaction_uuid, user_id=cast(int, current_user.id)
     )

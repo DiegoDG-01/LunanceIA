@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Depends, Request, UploadFile, File
 from typing import cast
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from domain.entities.user import User
 from application.ai.schemas.image_analysis import ImageAnalysis
@@ -16,18 +14,23 @@ from application.ai.queries.expense_advisor import (
     GetExpenseAdvisorQuery,
 )
 
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_2_per_day,
+    limiter_1_per_day,
+)
+
 router = APIRouter(prefix="", tags=["AI"])
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/analyze/image", response_model=ImageAnalysis)
-@limiter.limit("2/day")
 async def analyze_image(
     request: Request,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_active_user),
     handler: AnalyzeImageHandler = Depends(get_analyze_image_handler),
 ):
+    enforce_rate_limit(limiter_2_per_day, request)
     image_data = await file.read()
     query = AnalyzeImageQuery(
         image_data=image_data, mime_type=cast(str, file.content_type)
@@ -36,11 +39,11 @@ async def analyze_image(
 
 
 @router.get("/expense_advisor", response_model=ExpenseAnalysis)
-@limiter.limit("1/day")
 async def analyze(
     request: Request,
     current_user: User = Depends(get_current_active_user),
     handler: GetExpenseAdvisorHandler = Depends(get_expense_advisor_handler),
 ):
+    enforce_rate_limit(limiter_1_per_day, request)
     query = GetExpenseAdvisorQuery(user_id=cast(int, current_user.id))
     return await handler.handle(query)
