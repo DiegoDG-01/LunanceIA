@@ -43,4 +43,4 @@ class GetExpenseAdvisorHandler:
         prompt = f"Analiza estos gastos del mes: {expense_summary}"
         result = await self.agent.run(prompt)
 
-        return result.data
+        return result.output

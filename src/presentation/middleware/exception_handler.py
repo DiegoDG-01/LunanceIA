@@ -273,8 +273,19 @@ async def http_exception_handler(
     user_language = get_user_language(request)
     main_message = get_http_code_error_message(code=error_code, language=user_language)
 
+    details = None
+    if exc.status_code == 429 and exc.detail:
+        details = [
+            ErrorDetail(
+                loc=["rate_limit"],
+                msg=str(exc.detail),
+                type="rate_limit_exceeded",
+                input=None,
+            )
+        ]
+
     error_response = StandardErrorResponse(
-        error_code=error_code, message=main_message, details=None
+        error_code=error_code, message=main_message, details=details
     )
 
     response = JSONResponse(

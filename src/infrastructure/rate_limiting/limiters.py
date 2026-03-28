@@ -50,8 +50,17 @@ def enforce_rate_limit(limiter: FixedWindowRateLimiter, request: Request) -> Non
         current_window = status["window"]
         wait_time = max(1, int((current_window + 1) * window_size - time.time() + 1))
 
+        if window_size >= 86400:
+            unit = "day"
+        elif window_size >= 3600:
+            unit = "hour"
+        else:
+            unit = "minute"
+        detail_msg = f"Rate limit exceeded: {limiter.capacity} per 1 {unit}"
+
         raise HTTPException(
             status_code=429,
+            detail=detail_msg,
             headers={
                 "Retry-After": str(int(wait_time)),
                 "X-RateLimit-Remaining": "0",
