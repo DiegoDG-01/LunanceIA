@@ -7,7 +7,7 @@ from domain.entities.subscription_charge import SubscriptionCharge
 
 class SubscriptionChargeRepository(ABC):
     @abstractmethod
-    async def create(self, subscription: SubscriptionCharge) -> SubscriptionCharge:
+    async def create(self, charge: SubscriptionCharge) -> SubscriptionCharge:
         pass
 
     @abstractmethod

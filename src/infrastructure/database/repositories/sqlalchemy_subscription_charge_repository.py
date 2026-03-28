@@ -49,8 +49,8 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
             processing_date=entity.processing_date,
         )
 
-    async def create(self, subscription: SubscriptionCharge) -> SubscriptionCharge:
-        model = self._entity_to_model(subscription)
+    async def create(self, charge: SubscriptionCharge) -> SubscriptionCharge:
+        model = self._entity_to_model(charge)
         self.db.add(model)
         await self.db.flush()
         await self.db.refresh(model)
