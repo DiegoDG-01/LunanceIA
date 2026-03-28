@@ -38,7 +38,7 @@ class TestSubscriptionProcessor:
 
         mocks["charge_repo"].get_by_subscription_and_month = AsyncMock(return_value=None)
 
-        result = await processor._should_generate_transaction(sub, mocks["db"])
+        result = await processor._should_generate_transaction(sub)
         assert result is True
 
     async def test_should_generate_transaction_false_wrong_day(self, processor, mocks):
@@ -49,7 +49,7 @@ class TestSubscriptionProcessor:
         sub.billing_day = today.day + 1 if today.day < 28 else 1
         sub.end_date = None
 
-        result = await processor._should_generate_transaction(sub, mocks["db"])
+        result = await processor._should_generate_transaction(sub)
         assert result is False
 
     async def test_should_generate_transaction_false_already_charged(self, processor, mocks):
@@ -62,7 +62,7 @@ class TestSubscriptionProcessor:
 
         mocks["charge_repo"].get_by_subscription_and_month = AsyncMock(return_value=MagicMock())
 
-        result = await processor._should_generate_transaction(sub, mocks["db"])
+        result = await processor._should_generate_transaction(sub)
         assert result is False
 
     async def test_create_transaction_from_subscription(self, processor, mocks):
@@ -85,7 +85,7 @@ class TestSubscriptionProcessor:
 
         mocks["charge_repo"].update = AsyncMock()
 
-        await processor._create_transaction_from_subscription(sub, mocks["db"])
+        await processor._create_transaction_from_subscription(sub)
 
         mocks["charge_repo"].create.assert_called_once()
         mocks["tx_repo"].create.assert_called_once()
@@ -111,14 +111,14 @@ class TestSubscriptionProcessor:
         mocks["db"].commit = AsyncMock()
 
         # Mocking should_generate_transaction to control the flow
-        async def mock_should_generate(s, db):
+        async def mock_should_generate(s):
             return s.uuid == "sub-1"
 
         with patch.object(processor, '_should_generate_transaction', side_effect=mock_should_generate):
             with patch.object(processor, '_create_transaction_from_subscription', new=AsyncMock()) as mock_create:
-                stats = await processor.process_due_subscriptions(mocks["db"])
+                stats = await processor.process_due_subscriptions()
 
                 assert stats["processed"] == 2
                 assert stats["created"] == 1
                 assert stats["skipped"] == 1
-                mock_create.assert_called_once_with(sub1, mocks["db"])
+                mock_create.assert_called_once_with(sub1)
