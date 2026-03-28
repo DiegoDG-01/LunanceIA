@@ -1,34 +1,31 @@
-from sqlalchemy import Column, Integer, ForeignKey, DECIMAL, Index
-from sqlalchemy.dialects.mysql import CHAR
-from infrastructure.database.connection import Base
-
 import uuid
+from decimal import Decimal
+
+from sqlalchemy import ForeignKey, DECIMAL, Index
+from sqlalchemy.dialects.mysql import CHAR
+from sqlalchemy.orm import Mapped, mapped_column
+
+from infrastructure.database.connection import Base
 
 
 class CreditCardSettingsModel(Base):
     __tablename__ = "credit_card_settings"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    account_id = Column(
-        Integer,
-        ForeignKey("accounts.id", ondelete="CASCADE"),
-        unique=True,
-        nullable=False,
-        index=True,
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    account_id: Mapped[int] = mapped_column(
+        ForeignKey("accounts.id", ondelete="CASCADE"), unique=True, index=True
     )
-    uuid = Column(
-        CHAR(36),
-        unique=True,
-        index=True,
-        default=lambda: str(uuid.uuid4()),
-        nullable=False,
+    uuid: Mapped[str] = mapped_column(
+        CHAR(36), unique=True, index=True, default=lambda: str(uuid.uuid4())
     )
 
-    # Billing cicles fields
-    billing_cycle_day = Column(Integer, nullable=False)
-    payment_due_day = Column(Integer, nullable=False)
-    credit_limit = Column(DECIMAL(12, 2), nullable=False)
-    minimum_payment_percentage = Column(DECIMAL(5, 2), nullable=False, default=5.0)
+    # Billing cycle fields
+    billing_cycle_day: Mapped[int] = mapped_column()
+    payment_due_day: Mapped[int] = mapped_column()
+    credit_limit: Mapped[Decimal] = mapped_column(DECIMAL(12, 2))
+    minimum_payment_percentage: Mapped[Decimal] = mapped_column(
+        DECIMAL(5, 2), default=5.0
+    )
 
     # Indexes for reminder queries
     __table_args__ = (
