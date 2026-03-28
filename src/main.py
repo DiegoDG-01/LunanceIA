@@ -50,7 +50,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Lunance IA - Your Personal Intelligence Assistant",
     description="Manage your finances efficiently with our API",
-    version="4.3.4",
+    version="5.0.0",
     lifespan=lifespan,
 )
 
@@ -94,7 +94,7 @@ app.include_router(api_router, prefix="/api/v2")
 async def root(request: Request):
     return {
         "message": "Hello World",
-        "version": "4.3.4",
+        "version": "5.0.0",
     }
 
 
@@ -107,4 +107,4 @@ async def health_check(request: Request, db: AsyncSession = Depends(get_db)):
     except Exception:
         db_status = {"status": "unhealthy"}
 
-    return {"API": "healthy", "version": "4.3.4", "services": db_status}
+    return {"API": "healthy", "version": "5.0.0", "services": db_status}
