@@ -54,7 +54,7 @@ class TestGetInvestmentYieldsHandler:
             name="Investment",
             account_type=AccountType.INVESTMENT,
             current_balance=Money(Decimal("10000.00")),
-            bank_id=None,
+            bank_id=1,
             is_active=True,
             creation_date=datetime.now(),
         )
@@ -112,7 +112,7 @@ class TestGetInvestmentYieldsHandler:
             name="Investment",
             account_type=AccountType.INVESTMENT,
             current_balance=Money(Decimal("5000.00")),
-            bank_id=None,
+            bank_id=1,
             is_active=True,
             creation_date=datetime.now(),
         )

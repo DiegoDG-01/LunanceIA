@@ -52,50 +52,6 @@ class TestCreateAccountHandler:
         )
 
     @pytest.mark.asyncio
-    async def test_handle_success_without_bank(self, handler, mock_account_repo, mock_user_repo):
-        # 1. Setup Mocks
-        user_id = 1
-        mock_user = User(id=user_id, uuid="u-1", auth0_id="a-1", name="Test", email="t@t.com", is_active=True)
-        mock_user_repo.get_by_id = AsyncMock(return_value=mock_user)
-
-        # Simular que el repo guarda la cuenta y devuelve una con UUID
-        saved_account = MagicMock(spec=Account)
-        saved_account.uuid = "acc-uuid-123"
-        saved_account.id = 1
-        saved_account.name = "Test Account"
-        saved_account.account_type = AccountType.SAVINGS
-        saved_account.current_balance = Money(Decimal("100.00"))
-        saved_account.bank_id = None
-        saved_account.is_active = True
-
-        mock_account_repo.create = AsyncMock(return_value=saved_account)
-
-        # 2. Execute
-        dto = CreateAccountDTO(
-            user_id=user_id,
-            name="Test Account",
-            account_type=AccountType.SAVINGS,
-            bank_id=None,
-            initial_balance=Decimal("100.00"),
-            currency="MXN"
-        )
-        command = CreateAccountCommand(dto=dto)
-        result = await handler.handle(command)
-
-        # 3. Assertions
-        assert result.account_uuid == "acc-uuid-123"
-        assert result.bank_id is None
-        assert result.bank_name is None
-        assert result.bank_code is None
-        mock_user_repo.get_by_id.assert_called_once_with(user_id)
-        mock_account_repo.create.assert_called_once()
-        # Verificar que se creó con los datos correctos
-        args, _ = mock_account_repo.create.call_args
-        created_account = args[0]
-        assert created_account.name == "Test Account"
-        assert created_account.user_id == user_id
-
-    @pytest.mark.asyncio
     async def test_handle_success_with_bank(self, handler, mock_account_repo, mock_user_repo, mock_bank_repo):
         # 1. Setup Mocks
         user_id = 1
@@ -149,7 +105,7 @@ class TestCreateAccountHandler:
             user_id=99,
             name="X",
             account_type=AccountType.CASH,
-            bank_id=None,
+            bank_id=1,
             initial_balance=Decimal("0"),
             currency="MXN"
         )
@@ -169,7 +125,7 @@ class TestCreateAccountHandler:
             user_id=1,
             name="X",
             account_type=AccountType.CASH,
-            bank_id=None,
+            bank_id=1,
             initial_balance=Decimal("0"),
             currency="MXN"
         )

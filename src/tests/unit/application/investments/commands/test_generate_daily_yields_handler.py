@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from datetime import date, datetime
+from typing import Optional
 from decimal import Decimal
 
 from application.investments.commands.generate_daily_yields import (
@@ -47,7 +48,7 @@ class TestGenerateDailyYieldHandler:
             name="Investment",
             account_type=AccountType.INVESTMENT,
             current_balance=Money(Decimal(balance)),
-            bank_id=None,
+            bank_id=1,
             is_active=True,
             creation_date=datetime.now(),
         )
@@ -57,8 +58,8 @@ class TestGenerateDailyYieldHandler:
         rate: str = "10.00",
         interest_type: InterestType = InterestType.COMPOUND,
         investment_type: str = "fixed_term",
-        maturity_date: date = None,
-        base_principal: str = None,
+        maturity_date: Optional[date] = None,
+        base_principal: Optional[str] = None,
     ) -> InvestmentCardSettings:
         return InvestmentCardSettings(
             investment_type=investment_type,
