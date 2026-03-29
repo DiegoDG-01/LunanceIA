@@ -22,7 +22,7 @@ jobs:
         run: uv python install 3.13
 
       - name: Install dependencies
-        run: uv sync --frozen --all-groups
+        run: uv sync --frozen --group test
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable

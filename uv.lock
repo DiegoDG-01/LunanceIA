@@ -959,17 +959,21 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "aiosqlite" },
-    { name = "httpx" },
     { name = "locust" },
     { name = "maturin" },
     { name = "pre-commit" },
-    { name = "pyrefly" },
+    { name = "ruff" },
+    { name = "virtualenv" },
+]
+test = [
+    { name = "aiosqlite" },
+    { name = "httpx" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "virtualenv" },
+]
+typecheck = [
+    { name = "pyrefly" },
 ]
 
 [package.metadata]
@@ -1005,18 +1009,20 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "aiosqlite", specifier = ">=0.22.1" },
-    { name = "httpx", specifier = ">=0.28.1" },
     { name = "locust", specifier = ">=2.32.0" },
     { name = "maturin", specifier = ">=1.12.6" },
     { name = "pre-commit", specifier = ">=4.3.0" },
-    { name = "pyrefly", specifier = ">=0.57.1" },
-    { name = "pytest", specifier = ">=8.4.2" },
-    { name = "pytest-asyncio", specifier = ">=1.2.0" },
-    { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "ruff", specifier = ">=0.14.3" },
     { name = "virtualenv", specifier = ">=20.36.1" },
 ]
+test = [
+    { name = "aiosqlite", specifier = ">=0.22.1" },
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "pytest", specifier = ">=8.4.2" },
+    { name = "pytest-asyncio", specifier = ">=1.2.0" },
+    { name = "pytest-cov", specifier = ">=7.0.0" },
+]
+typecheck = [{ name = "pyrefly", specifier = ">=0.57.1" }]
 
 [[package]]
 name = "mako"
