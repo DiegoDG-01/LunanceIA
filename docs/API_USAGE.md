@@ -10,6 +10,7 @@ Esta guía te mostrará cómo usar la API REST de Lunance IA v2, incluyendo aute
 - [Manejo de Errores](#manejo-de-errores)
 - [Códigos de Estado](#códigos-de-estado)
 - [Límites y Paginación](#límites-y-paginación)
+- [IA - Análisis y Asesoría](#-ia---apiv2ai)
 
 ## 🔐 Autenticación con Auth0
 
@@ -284,19 +285,6 @@ POST /api/v2/transaction/
 }
 ```
 
-#### Crear Transacción desde Imagen (IA)
-```bash
-POST /api/v2/transaction/image/
-```
-
-Usa Google Gemini para extraer datos de una imagen de recibo/ticket.
-
-**Request:** `multipart/form-data`
-- `file`: Archivo de imagen (PNG, JPG, etc.)
-- `account_uuid`: UUID de la cuenta
-
-**Response:** Misma estructura que crear transacción normal.
-
 #### Actualizar Transacción
 ```bash
 PUT /api/v2/transaction/{transaction_uuid}/
@@ -527,6 +515,67 @@ Retorna proyecciones de rendimiento futuro basadas en la configuración actual d
 }
 ```
 
+### 🤖 IA - `/api/v2/ai/`
+
+#### Analizar Imagen (Recibo/Ticket)
+```bash
+POST /api/v2/ai/analyze/image
+```
+
+Usa Google Gemini para extraer datos estructurados de una imagen de recibo o ticket. Detecta automáticamente si es una transacción o una suscripción.
+
+**Límite de rate:** 2 requests por día por IP.
+
+**Request:** `multipart/form-data`
+- `file`: Archivo de imagen (PNG, JPG, etc.)
+
+**Response:**
+```json
+{
+  "is_subscription": false,
+  "amount": "250.50",
+  "description": "Compra en supermercado",
+  "category": "ALIMENTACION",
+  "category_id": null,
+  "transaction_date": "2024-12-14",
+  "notes": null,
+  "transaction_type": "EXPENSE",
+  "frequency": null,
+  "billing_day": null,
+  "name": null
+}
+```
+
+Si `is_subscription=true`, los campos `frequency`, `billing_day` y `name` estarán presentes y `transaction_type` será `null`.
+
+#### Asesor de Gastos
+```bash
+GET /api/v2/ai/expense_advisor
+```
+
+Analiza las transacciones del mes actual del usuario y genera recomendaciones personalizadas de ahorro por categoría.
+
+**Límite de rate:** 1 request por día por IP.
+
+**Response:**
+```json
+{
+  "suggestions": [
+    {
+      "category": "Alimentación",
+      "current_amount": 4500.00,
+      "suggested_amount": 3500.00,
+      "tip": "Considera planificar comidas semanales para reducir gastos en restaurantes."
+    }
+  ],
+  "total_current": 12000.00,
+  "total_suggested": 9500.00,
+  "summary": "Tus gastos del mes están por encima del promedio recomendado. Las categorías con mayor potencial de ahorro son Alimentación y Entretenimiento."
+}
+```
+
+> **Nota**: Si no hay transacciones registradas en el mes actual, el endpoint retorna `404` con código `NOT_FOUND_TRANSACTION_ACTIVITY`.
+
 ### 🏦 Bancos - `/api/v2/bank/`
 
 #### Listar Bancos
@@ -710,18 +759,13 @@ La API retorna errores en un formato estándar con soporte de internacionalizaci
 
 ```json
 {
-  "error_code": "RATE_LIMIT_EXCEEDED",
-  "message": "Se ha excedido el límite de peticiones",
-  "details": [
-    {
-      "loc": ["rate_limit"],
-      "msg": "Rate limit exceeded: 100 per 1 minute",
-      "type": "rate_limit_exceeded",
-      "input": null
-    }
-  ]
+  "detail": "Rate limit exceeded: 100 per 1 minute"
 }
 ```
+
+La respuesta incluye headers:
+- `Retry-After`: Segundos hasta que puedas reintentar
+- `X-RateLimit-Remaining`: `0`
 
 ### Internacionalización
 
@@ -781,7 +825,6 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 |----------|--------|------|
 | `GET /transaction/` | **50 requests/minuto** | Listado con filtros |
 | `POST /transaction/` | **20 requests/minuto** | Creación manual |
-| `POST /transaction/image/` | **5 requests/minuto** | Procesamiento IA de imágenes |
 | `GET /transaction/{uuid}` | **50 requests/minuto** | Detalle de transacción |
 | `PUT /transaction/{uuid}/` | **15 requests/minuto** | Actualización |
 | `DELETE /transaction/{uuid}/` | **10 requests/minuto** | Eliminación |
@@ -811,6 +854,13 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 | `GET /investments/{id}/yields/` | **50 requests/minuto** | Rendimientos históricos |
 | `GET /investments/{id}/projections/` | **30 requests/minuto** | Proyecciones |
 
+#### Endpoints de IA
+
+| Endpoint | Límite | Nota |
+|----------|--------|------|
+| `POST /ai/analyze/image` | **2 requests/día** | Análisis de imagen con Gemini |
+| `GET /ai/expense_advisor` | **1 request/día** | Análisis de gastos del mes |
+
 #### Endpoints de Bancos
 
 | Endpoint | Límite |
@@ -833,31 +883,24 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 ### ⚠️ Consideraciones Importantes
 
 **Para Desarrollo y Testing:**
-- El límite de **5 requests/minuto** en `/transaction/image/` puede afectar tests con procesamiento de imágenes
+- Los endpoints de IA (`/ai/analyze/image` y `/ai/expense_advisor`) tienen límites diarios muy bajos (2/día y 1/día respectivamente)
 - Los límites se aplican por IP, por lo que múltiples ejecuciones de tests desde la misma máquina se acumularán
-- **Recomendación**: Para desarrollo local, considera usar usuarios pre-existentes en tus tests
+- **Recomendación**: El rate limiting se deshabilita automáticamente cuando `ENVIRONMENT=TEST`, úsalo en tests
 
 **Respuesta al Exceder el Límite:**
 Cuando se excede el rate limit, recibirás un error `429 Too Many Requests` con el siguiente formato:
 
 ```json
 {
-  "error_code": "RATE_LIMIT_EXCEEDED",
-  "message": "Se ha excedido el límite de peticiones",
-  "details": [
-    {
-      "loc": ["rate_limit"],
-      "msg": "Rate limit exceeded: 5 per 1 hour",
-      "type": "rate_limit_exceeded"
-    }
-  ]
+  "detail": "Rate limit exceeded: 5 per 1 hour"
 }
 ```
 
-La respuesta también incluye headers útiles:
-- `X-RateLimit-Limit`: Límite máximo de requests
-- `X-RateLimit-Remaining`: Requests restantes en la ventana actual
-- `Retry-After`: Segundos hasta que puedas reintentar (opcional)
+La respuesta incluye los siguientes headers:
+- `Retry-After`: Segundos hasta que puedas reintentar
+- `X-RateLimit-Remaining`: `0`
+
+> **Nota**: Los límites expresados en días (p. ej. endpoints `/ai/`) muestran `per 1 day` en el mensaje.
 
 ### Paginación (Próximamente)
 

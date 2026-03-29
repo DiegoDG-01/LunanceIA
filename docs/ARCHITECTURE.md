@@ -39,7 +39,7 @@ graph TD
     subgraph Infrastructure ["🔧 Capa de Infraestructura (src/infrastructure/)"]
         DB[SQLAlchemy Models]
         SQLRepo[SQLAlchemy Repositories]
-        ExtServices[External Services - Gemini AI]
+        ExtServices["External Services - AI Agents (pydantic-ai + Gemini)"]
         Security[Auth0 / JWT Security]
     end
 
@@ -129,7 +129,7 @@ graph TD
 | **API Container** | Docker (FastAPI + fincore) | Contenedor principal de la aplicación en VPS 1 de IONOS |
 | **Base de Datos** | MySQL en IONOS VPS 2 | Solo acepta conexiones desde la IP del VPS 1 (puerto 3306) y SSH |
 | **Autenticación** | Auth0 | Proveedor de identidad; la API valida JWTs emitidos por Auth0 |
-| **IA** | Google Gemini | Extracción de datos de recibos/tickets vía imagen |
+| **IA** | Google Gemini + pydantic-ai | Análisis de imágenes (recibos/tickets) y asesoría de gastos mediante agentes estructurados |
 | **Logs** | Grafana Cloud (Loki) | Ingesta de logs estructurados desde la API |
 | **Métricas** | NetData | Métricas de infraestructura de ambos VPS |
 | **Orquestador** | Dockploy (Mac Mini) | Gestiona el ciclo de vida de los contenedores en los VPS de IONOS |
@@ -412,6 +412,16 @@ application/
 │   └── queries/
 │       ├── __init__.py
 │       └── get_dashboard_summary.py
+├── ai/                       # Feature: Agentes de IA
+│   ├── __init__.py
+│   ├── queries/
+│   │   ├── __init__.py
+│   │   ├── analyze_image.py      # Analiza imágenes de recibos/tickets
+│   │   └── expense_advisor.py    # Análisis y recomendaciones de gastos del mes
+│   └── schemas/
+│       ├── __init__.py
+│       ├── image_analysis.py     # Schema de respuesta del análisis de imagen
+│       └── expense_analysis.py   # Schema de respuesta del asesor de gastos
 ├── dto/                      # Data Transfer Objects (compartidos)
 │   ├── __init__.py
 │   ├── account_dto.py
@@ -421,7 +431,8 @@ application/
 │   ├── subscription_dto.py
 │   └── transaction_dto.py
 └── interfaces/               # Interfaces de aplicación
-    └── __init__.py
+    ├── ai_agent.py           # Contrato del agente IA (AIAgentInterface)
+    └── auth_service.py       # Contrato del servicio de autenticación (AuthService)
 ```
 
 #### Características de Aplicación:
@@ -431,6 +442,8 @@ application/
 - **Handlers**: Cada comando/consulta tiene su handler específico
 - **Services**: Lógica de aplicación compleja (ej. `SubscriptionProcessor` para procesamiento automático)
 - **Scheduled Jobs**: `GenerateDailyYieldHandler` para cálculo diario de rendimientos
+- **Agentes IA**: `AnalyzeImageHandler` y `GetExpenseAdvisorHandler` encapsulan la lógica de análisis con Gemini
+- **Interfaces**: `AIAgentInterface` y `AuthService` desacoplan la aplicación de las implementaciones concretas de infraestructura
 - **Nomenclatura limpia**: Los nombres de archivos no repiten "command" o "query" ya que la carpeta provee el contexto
 
 ### 🔧 Capa de Infraestructura (`src/infrastructure/`)
@@ -566,7 +579,7 @@ presentation/
 - **API REST**: 8 módulos de endpoints organizados por dominio
 - **Validación**: Schemas Pydantic para entrada y salida
 - **Dependency Injection**: Sistema granular de DI de FastAPI (un archivo por feature)
-- **Rate Limiting**: Protección por endpoint con slowapi
+- **Rate Limiting**: Protección por endpoint con fastapi-advanced-rate-limiter (FixedWindowRateLimiter)
 - **Versionado**: API v2 para nueva arquitectura
 - **Middleware**: Logging de requests + manejo estandarizado de excepciones
 
@@ -1044,10 +1057,11 @@ else:
 
 ### Rate Limiting
 
-Protección contra abuso con límites configurables usando `slowapi`:
-- **Por IP**: Para usuarios no autenticados
-- **Por usuario**: Para usuarios autenticados
-- **Headers informativos**: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After`
+Protección contra abuso con límites configurables usando `fastapi-advanced-rate-limiter` (algoritmo Fixed Window):
+- **Por IP + ruta**: Clave compuesta `{ip}:{path}` para límites granulares por endpoint
+- **Límites en minutos/horas/días**: Ventanas configurables (desde 5/min hasta 1/día para endpoints de IA)
+- **Deshabilitado en TEST**: El rate limiting se omite automáticamente cuando `ENVIRONMENT=TEST`
+- **Headers informativos**: `X-RateLimit-Remaining`, `Retry-After`
 
 ### JWT Token Validation
 
