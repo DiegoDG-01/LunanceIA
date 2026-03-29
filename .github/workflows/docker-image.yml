@@ -47,7 +47,7 @@ jobs:
           AUTH0_DOMAIN: "test-domain.auth0.com"
           AUTH0_AUDIENCE: "https://api.lunance.app"
           GEMINI_MODEL_ID: "gemini-2.5-flash"
-          GEMINI_API_KEY: "mock-gemini-key-123"
+          GOOGLE_API_KEY: "mock-google-key-123"
 
           # API Config
           ENVIRONMENT: "TEST"
