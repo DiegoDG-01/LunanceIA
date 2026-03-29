@@ -5,13 +5,17 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 ## 🚀 Características Principales
 
 ### 💰 Gestión Financiera Completa
-- **Seguimiento de Transacciones**: Registro detallado de ingresos y gastos con creación desde imagen (IA)
+- **Seguimiento de Transacciones**: Registro detallado de ingresos y gastos
 - **Gestión de Cuentas**: Soporte para múltiples tipos de cuenta (efectivo, débito, crédito, ahorros, inversión)
 - **Inversiones**: Cálculo automático de rendimientos diarios (interés simple y compuesto) con proyecciones
 - **Suscripciones**: Control de pagos recurrentes con generación automática de cargos
 - **Presupuestos Inteligentes**: Configuración de límites de gasto por categoría con alertas automáticas
 - **Metas de Ahorro**: Establecimiento y seguimiento de objetivos financieros
 - **Tareas Programadas**: Procesamiento diario automático de suscripciones y rendimientos de inversión
+
+### 🤖 Agentes IA
+- **Análisis de Imagen**: Extrae datos (monto, categoría, descripción, fecha) de imágenes de recibos/tickets (límite: 2 por día)
+- **Asesor de Gastos**: Analiza los gastos del mes actual y genera recomendaciones personalizadas de ahorro (límite: 1 por día)
 
 ### 🔐 Seguridad y Autenticación
 - **Auth0 Integration**: Autenticación empresarial con Auth0
@@ -33,8 +37,8 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 - **Migraciones**: Alembic 1.16+
 - **Autenticación**: Auth0 + JWT (python-jose 3.5+)
 - **Validación**: Pydantic 2.11+ con soporte de email
-- **Seguridad**: bcrypt 4.3+ + Rate Limiting (slowapi)
-- **IA**: Google Gemini API (google-genai 1.22+)
+- **Seguridad**: bcrypt 4.3+ + Rate Limiting (fastapi-advanced-rate-limiter 2.1+)
+- **IA**: Google Gemini API (google-genai 1.22+) + pydantic-ai-slim 1.72+ (agentes estructurados)
 - **Procesamiento de Imágenes**: Pillow 12.0+
 
 ### 🦀 Motor de Cálculo Rust (Beta)
@@ -157,12 +161,13 @@ La API REST de Lunance IA v2 utiliza autenticación JWT y sigue los principios d
 ### Endpoints Principales
 - 🔐 **Autenticación**: `/api/v2/auth/` (me, logout) - Login/Register via Auth0
 - 💳 **Cuentas**: `/api/v2/account/` (CRUD completo + activación/desactivación)
-- 💰 **Transacciones**: `/api/v2/transaction/` (CRUD completo + creación desde imagen con IA)
+- 💰 **Transacciones**: `/api/v2/transaction/` (CRUD completo)
 - 🔄 **Suscripciones**: `/api/v2/subscription/` (CRUD completo + cargos + activación)
 - 📈 **Inversiones**: `/api/v2/investments/` (rendimientos históricos + proyecciones)
 - 🏦 **Bancos**: `/api/v2/bank/` (catálogo de bancos)
 - 🏷️ **Categorías**: `/api/v2/category/` (listado de categorías)
 - 📊 **Dashboard**: `/api/v2/dashboard/` (resumen financiero)
+- 🤖 **IA**: `/api/v2/ai/` (análisis de imágenes + asesor de gastos)
 
 ### Documentación Interactiva
 > **Nota**: Swagger UI y ReDoc están deshabilitados por defecto en la configuración actual. Consulta la [Guía de API](docs/API_USAGE.md) para documentación detallada de endpoints.

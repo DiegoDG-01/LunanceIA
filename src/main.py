@@ -7,6 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from secure import Secure
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,
     limiter_10_per_minute,
@@ -49,8 +50,10 @@ app = FastAPI(
     version="5.0.0",
     docs_url="/docs" if settings.ENVIRONMENT.upper() != "PROD" else None,
     redoc_url="/redoc" if settings.ENVIRONMENT.upper() != "PROD" else None,
+    openapi_url="/openapi.json" if settings.ENVIRONMENT.upper() != "PROD" else None,
     lifespan=lifespan,
 )
+secure_header = Secure.with_default_headers()
 
 # Configurar CORS
 if settings.ENVIRONMENT.upper() == "PROD":
@@ -78,6 +81,14 @@ app.add_exception_handler(LunanceException, lunance_exception_handler)  # type: 
 app.add_exception_handler(RequestValidationError, validation_exception_handler)  # type: ignore[arg-type]
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)  # type: ignore[arg-type]
 app.add_exception_handler(Exception, generic_exception_handler)
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    await secure_header.set_headers_async(response)
+    return response
+
 
 # Incluir rutas de la nueva arquitectura
 app.include_router(api_router, prefix="/api/v2")
