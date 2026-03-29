@@ -50,6 +50,7 @@ app = FastAPI(
     version="5.0.0",
     docs_url="/docs" if settings.ENVIRONMENT.upper() != "PROD" else None,
     redoc_url="/redoc" if settings.ENVIRONMENT.upper() != "PROD" else None,
+    openapi_url="/openapi.json" if settings.ENVIRONMENT.upper() != "PROD" else None,
     lifespan=lifespan,
 )
 secure_header = Secure.with_default_headers()
