@@ -52,6 +52,135 @@ graph TD
     Presentation -.-> Infrastructure
 ```
 
+## 🏗️ Arquitectura de Infraestructura
+
+Vista completa del sistema desplegado en producción, incluyendo todos los servicios y su comunicación.
+
+```mermaid
+graph TD
+    subgraph Users["👤 Usuarios"]
+        Browser[Browser / Mobile App]
+    end
+
+    subgraph CF["☁️ Cloudflare"]
+        CF_DNS[DNS / Proxy\nlunance.app · api.lunance.app]
+        CF_Pages[Cloudflare Pages\nlunance.app - Frontend]
+    end
+
+    subgraph MacMini["🖥️ Mac Mini — Orquestador Local"]
+        GH_Runner[GitHub Actions\nSelf-hosted Runner]
+        Dockploy_Local[Dockploy\nOrchestrador de Deploys]
+    end
+
+    subgraph GitHub["🐙 GitHub"]
+        Repo[Repository]
+        Registry[Container Registry\nghcr.io]
+    end
+
+    subgraph VPS1["🟦 IONOS VPS 1 — API"]
+        Traefik[Traefik\nReverse Proxy / TLS]
+        Docker_API["Docker Container\nFastAPI + fincore (Rust)"]
+    end
+
+    subgraph VPS2["🟦 IONOS VPS 2 — Base de Datos"]
+        MySQL[(MySQL\nPuerto 3306\nIP restringida)]
+    end
+
+    subgraph ExternalSvc["🌐 Servicios Externos"]
+        Auth0[Auth0\nIdentity Provider]
+        Gemini[Google Gemini AI\nExtracción de recibos]
+        GrafanaCloud[Grafana Cloud\nLoki — Logs estructurados]
+        NetData[NetData\nMétricas de servidor]
+    end
+
+    %% Flujo de usuario
+    Browser -->|HTTPS| CF_DNS
+    CF_DNS -->|lunance.app| CF_Pages
+    CF_DNS -->|api.lunance.app| Traefik
+    CF_Pages -->|API calls| Traefik
+    Traefik --> Docker_API
+
+    %% Comunicación interna
+    Docker_API -->|Puerto 3306, IP restringida| MySQL
+    Docker_API -->|OAuth2 / JWT RS256| Auth0
+    Docker_API -->|REST API| Gemini
+    Docker_API -->|HTTP push| GrafanaCloud
+
+    %% Métricas de infraestructura
+    VPS1 -->|Métricas| NetData
+    VPS2 -->|Métricas| NetData
+
+    %% CI/CD
+    Repo -->|Trigger| GH_Runner
+    GH_Runner -->|docker push| Registry
+    GH_Runner -->|curl deploy trigger| Dockploy_Local
+    Dockploy_Local -->|Orquesta deploy| VPS1
+    Registry -->|docker pull| VPS1
+    GH_Runner -->|Deploy automático| CF_Pages
+```
+
+### Descripción de Componentes
+
+| Componente | Tecnología | Rol |
+| :--- | :--- | :--- |
+| **Cloudflare DNS/Proxy** | Cloudflare | DNS autoritativo + proxy para `lunance.app` y `api.lunance.app` (dominio comprado en IONOS) |
+| **Frontend** | Cloudflare Pages | SPA servida en el edge global |
+| **Reverse Proxy** | Traefik (via Dockploy) | Terminación TLS, enrutamiento HTTP hacia el contenedor de la API |
+| **API Container** | Docker (FastAPI + fincore) | Contenedor principal de la aplicación en VPS 1 de IONOS |
+| **Base de Datos** | MySQL en IONOS VPS 2 | Solo acepta conexiones desde la IP del VPS 1 (puerto 3306) y SSH |
+| **Autenticación** | Auth0 | Proveedor de identidad; la API valida JWTs emitidos por Auth0 |
+| **IA** | Google Gemini | Extracción de datos de recibos/tickets vía imagen |
+| **Logs** | Grafana Cloud (Loki) | Ingesta de logs estructurados desde la API |
+| **Métricas** | NetData | Métricas de infraestructura de ambos VPS |
+| **Orquestador** | Dockploy (Mac Mini) | Gestiona el ciclo de vida de los contenedores en los VPS de IONOS |
+
+---
+
+## 🚀 Pipeline CI/CD
+
+Todo el pipeline corre en un **GitHub Actions self-hosted** ejecutado en un **Mac Mini local**, que actúa como runner y orquestador del deploy.
+
+```mermaid
+sequenceDiagram
+    participant Dev as 👨‍💻 Developer
+    participant GH as GitHub
+    participant Runner as Mac Mini<br/>(Self-hosted Runner)
+    participant Registry as Container Registry<br/>(ghcr.io)
+    participant Dockploy as Dockploy<br/>(Mac Mini)
+    participant VPS as IONOS VPS 1<br/>(API)
+    participant Pages as Cloudflare Pages<br/>(Frontend)
+
+    Dev->>GH: git push → main
+    GH->>Runner: Trigger GitHub Actions
+
+    Note over Runner: 1. Tests
+    Runner->>Runner: pytest (unit · integration · e2e)
+
+    Note over Runner: 2. Build
+    Runner->>Runner: docker build<br/>(Python + fincore Rust compilado)
+
+    Note over Runner: 3. Push imagen
+    Runner->>Registry: docker push (nueva imagen tagueada)
+
+    Note over Runner: 4. Deploy API
+    Runner->>Dockploy: curl → deploy trigger
+    Dockploy->>Registry: docker pull (nueva imagen)
+    Dockploy->>VPS: Reemplaza contenedor<br/>(zero-downtime via Traefik)
+
+    Note over Runner: 5. Deploy Frontend
+    Runner->>Pages: Deploy automático<br/>(build + publish a Cloudflare Pages)
+```
+
+### Decisiones de Infraestructura
+
+- **Self-hosted runner en Mac Mini**: Evita los costos de runners en la nube y aprovecha la potencia local para compilar el módulo Rust (`fincore`) que requiere tiempo de compilación.
+- **Dockploy como orquestador**: Alternativa liviana a Kubernetes/ECS que gestiona contenedores en VPS sin costo adicional de plataforma.
+- **VPS separado para DB**: Aislamiento de la base de datos con reglas de firewall estrictas (solo IP de la API y SSH).
+- **Cloudflare Pages para Frontend**: CDN global sin costo, con deploy automático desde GitHub Actions.
+- **Cloudflare DNS sobre IONOS**: Aprovecha el proxy de Cloudflare para protección DDoS y ocultamiento de IP del servidor, aunque el dominio esté comprado en IONOS.
+
+---
+
 ## 🦀 Arquitectura Híbrida (Python + Rust)
 
 ### Visión General
@@ -1009,22 +1138,59 @@ class TestAccountEndpoints:
             assert data["balance"]["amount"] == 1000.00
 ```
 
-## 🚀 Despliegue y Escalabilidad
+## 🔄 Flujo Completo de un Request
 
-### Consideraciones de Arquitectura
+Desde el cliente hasta la base de datos, pasando por todas las capas.
 
-1. **Separación de Capas**: Permite escalar cada capa independientemente
-2. **Interfaces Abstractas**: Facilita el cambio de implementaciones
-3. **CQRS**: Permite optimizar lecturas y escrituras por separado
-4. **Value Objects**: Reduce bugs y mejora la mantenibilidad
-5. **Testing Strategy**: Cobertura completa desde unidad hasta e2e
+```mermaid
+sequenceDiagram
+    participant Client as Cliente (Browser)
+    participant CF as Cloudflare
+    participant Traefik as Traefik (VPS 1)
+    participant MW as Middleware<br/>(Logging + Exceptions)
+    participant Auth as Auth Dependencies<br/>(JWT Validation)
+    participant Endpoint as FastAPI Endpoint
+    participant Handler as CQRS Handler
+    participant Domain as Domain Entity
+    participant Repo as SQLAlchemy Repository
+    participant DB as MySQL (VPS 2)
+
+    Client->>CF: HTTPS Request
+    CF->>Traefik: Proxy (TLS terminado)
+    Traefik->>MW: HTTP Request
+    MW->>MW: Asigna Correlation ID<br/>Logging de request
+    MW->>Auth: Valida JWT (Auth0 RS256)
+    Auth->>Endpoint: current_user inyectado
+    Endpoint->>Endpoint: Valida Schema Pydantic
+    Endpoint->>Handler: Command / Query
+    Handler->>Domain: Aplica reglas de negocio
+    Domain-->>Handler: Entity validada
+    Handler->>Repo: save() / find()
+    Repo->>DB: SQL async (aiomysql)
+    DB-->>Repo: Resultado
+    Repo-->>Handler: Entity
+    Handler-->>Endpoint: DTO
+    Endpoint-->>Client: JSON Response (201/200)
+
+    Note over MW: En caso de excepción:<br/>mapea a error_code + HTTP status<br/>traduce mensaje (es/en)
+```
+
+## 🚀 Escalabilidad y Evolución
+
+### Decisiones Arquitectónicas para Escalar
+
+1. **Separación de capas**: Cada capa puede escalar independientemente
+2. **Interfaces abstractas**: Cambio de implementaciones sin afectar otras capas
+3. **CQRS**: Lecturas y escrituras optimizables por separado
+4. **Rust engine (fincore)**: Cálculos financieros pesados sin bloquear el event loop
+5. **Async I/O**: Todo el stack usa operaciones asíncronas (FastAPI + SQLAlchemy async + aiomysql)
 
 ### Evolución Futura
 
-- **Microservicios**: La arquitectura permite extraer dominios a servicios separados
+- **Cache Layer**: Redis para queries de dashboard y proyecciones
+- **Message Queues**: Procesamiento asíncrono de comandos (reemplazar APScheduler)
 - **Event Sourcing**: Compatible con CQRS para auditoría completa
-- **Cache Layer**: Fácil integración de Redis para consultas
-- **Message Queues**: Para procesamiento asíncrono de comandos
+- **Microservicios**: La Clean Architecture permite extraer dominios a servicios separados sin reescritura
 
 ---
 

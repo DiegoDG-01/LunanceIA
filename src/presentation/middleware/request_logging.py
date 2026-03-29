@@ -31,7 +31,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             extra={
                 "path": str(request.url.path),
                 "method": request.method,
-                "client_ip": request.client.host if request.client.host else "",
+                "client_ip": request.client.host if request.client else "",
                 "user_agent": request.headers.get("user-agent"),
             },
         )

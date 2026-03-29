@@ -1,19 +1,10 @@
 from fastapi import (
     APIRouter,
     Depends,
-    File,
-    Form,
-    UploadFile,
     status,
     Response,
     Request,
 )
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from PIL import Image, UnidentifiedImageError
-import io
-
-from infrastructure.external_services.gemini import GeminiService
 
 from application.transactions.queries.get_transactions import GetTransactionsQuery
 from application.transactions.queries.get_transactions import GetTransactionsHandler
@@ -24,7 +15,6 @@ from presentation.schemas.requests.transaction import CreateTransactionRequest
 from presentation.dependencies.auth_deps import get_current_active_user
 from presentation.dependencies import (
     get_create_transaction_handler,
-    get_gemini_service,
     get_transactions_handler,
     get_delete_transaction_handler,
     get_transaction_by_uuid_handler,
@@ -41,7 +31,7 @@ from application.transactions.queries.get_transaction_by_uuid import (
     GetTransactionByUuidQuery,
     GetTransactionByUuidHandler,
 )
-from typing import Optional
+from typing import Optional, cast
 from datetime import date
 from fastapi import Query
 from domain.objects.enums import TransactionType
@@ -52,14 +42,20 @@ from application.transactions.commands.update_transaction import (
     UpdateTransactionCommandHandler,
 )
 from presentation.dependencies import get_update_transaction_handler
-from shared.exceptions.domain import InvalidImageError, TransactionNotFoundError
+from shared.exceptions.domain import TransactionNotFoundError
+
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_50_per_minute,
+    limiter_20_per_minute,
+    limiter_15_per_minute,
+    limiter_10_per_minute,
+)
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/", response_model=list[TransactionResponse])
-@limiter.limit("50/minute")
 async def get_transactions(
     request: Request,
     # 📥 QUERY PARAMETERS: Recibe filtros del HTTP request
@@ -80,10 +76,10 @@ async def get_transactions(
     🌐 ENDPOINT HTTP: Punto de entrada para obtener transacciones
     ✨ Función: Valida input → crea query → ejecuta caso de uso → formatea response
     """
-
+    enforce_rate_limit(limiter_50_per_minute, request)
     # 📦 Crear el query object con todos los filtros
     query = GetTransactionsQuery(
-        user_id=current_user.id,  # 🔒 Del token JWT
+        user_id=cast(int, current_user.id),  # 🔒 Del token JWT
         skip=skip,
         limit=limit,
         start_date=start_date,
@@ -101,31 +97,33 @@ async def get_transactions(
 
 
 @router.get("/{transaction_uuid}/", response_model=TransactionResponse)
-@limiter.limit("50/minute")
 async def get_transaction_by_uuid(
     request: Request,
     transaction_uuid: str,
     current_user: User = Depends(get_current_active_user),
     handler: GetTransactionByUuidHandler = Depends(get_transaction_by_uuid_handler),
 ):
-    query = GetTransactionByUuidQuery(uuid=transaction_uuid, user_id=current_user.id)
+    enforce_rate_limit(limiter_50_per_minute, request)
+    query = GetTransactionByUuidQuery(
+        uuid=transaction_uuid, user_id=cast(int, current_user.id)
+    )
 
     transaction = await handler.handle(query)
     return TransactionResponse(**transaction.__dict__)
 
 
 @router.post("/", response_model=TransactionResponse)
-@limiter.limit("20/minute")
 async def create_transaction(
     request: Request,
     transaction_request: CreateTransactionRequest,
     current_user: User = Depends(get_current_active_user),
     handler: CreateTransactionHandler = Depends(get_create_transaction_handler),
 ):
+    enforce_rate_limit(limiter_20_per_minute, request)
     # Convertir request → DTO
     dto = CreateTransactionDTO(
         account_uuid=transaction_request.account_uuid,
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
         category_id=transaction_request.category_id,
         transaction_type=transaction_request.transaction_type,
         amount=transaction_request.amount,
@@ -140,57 +138,7 @@ async def create_transaction(
     return TransactionResponse(**result.__dict__)
 
 
-@router.post("/image", response_model=TransactionResponse)
-@limiter.limit("5/minute")  # Más restrictivo por ser procesamiento de imagen
-async def create_transaction_from_image(
-    request: Request,
-    file: UploadFile = File(...),
-    account_uuid: str = Form(...),
-    current_user: User = Depends(get_current_active_user),
-    gemini_service: GeminiService = Depends(get_gemini_service),
-    handler: CreateTransactionHandler = Depends(get_create_transaction_handler),
-):
-    if not file:
-        raise InvalidImageError("No file provided")
-
-    # 1. Leer imagen
-    image_data = await file.read()
-
-    try:
-        # Intentar abrir la imagen con PIL
-        image = Image.open(io.BytesIO(image_data))
-        # Verificar que realmente se puede cargar la imagen
-        image.verify()
-    except UnidentifiedImageError:
-        raise InvalidImageError("Invalid image format")
-    except Exception:
-        raise InvalidImageError("Error processing image")
-
-    # 2. Procesar con Gemini
-
-    gemini_result = await gemini_service.extract_transaction_data(image_data)
-
-    # 3. Create DTO combining Gemini + request
-    dto = CreateTransactionDTO(
-        user_id=current_user.id,
-        account_uuid=account_uuid,
-        category_id=gemini_result.category_id,
-        transaction_type=gemini_result.transaction_type,
-        amount=gemini_result.amount,
-        description=gemini_result.description,
-        notes=gemini_result.notes,
-        transaction_date=gemini_result.transaction_date,
-    )
-
-    # 4. Ejecutar mismo comando
-    command = CreateTransactionCommand(dto=dto)
-    result = await handler.handle(command)
-
-    return TransactionResponse(**result.__dict__)
-
-
 @router.put("/{transaction_uuid}/", response_model=TransactionResponse)
-@limiter.limit("15/minute")
 async def update_transaction(
     request: Request,
     transaction_uuid: str,
@@ -198,9 +146,10 @@ async def update_transaction(
     current_user: User = Depends(get_current_active_user),
     handler: UpdateTransactionCommandHandler = Depends(get_update_transaction_handler),
 ):
+    enforce_rate_limit(limiter_15_per_minute, request)
     command = UpdateTransactionCommand(
         transaction_uuid=transaction_uuid,
-        user_id=current_user.id,
+        user_id=cast(int, current_user.id),
         description=update_request.description,
         notes=update_request.notes,
         category_id=update_request.category_id,
@@ -214,7 +163,6 @@ async def update_transaction(
 
 
 @router.delete("/{transaction_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
-@limiter.limit("10/minute")
 async def delete_transaction(
     request: Request,
     transaction_uuid: str,
@@ -228,7 +176,10 @@ async def delete_transaction(
     - Requiere ownership: solo el dueño puede eliminar
     - Retorna 204 si exitoso, 404 si no encontrado
     """
-    command = DeleteTransactionCommand(uuid=transaction_uuid, user_id=current_user.id)
+    enforce_rate_limit(limiter_10_per_minute, request)
+    command = DeleteTransactionCommand(
+        uuid=transaction_uuid, user_id=cast(int, current_user.id)
+    )
 
     deleted = await handler.handle(command)
 

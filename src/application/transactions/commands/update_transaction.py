@@ -1,5 +1,6 @@
-from typing import Optional
-from datetime import datetime
+from decimal import Decimal
+from typing import Optional, cast
+from datetime import datetime, date
 from dataclasses import dataclass
 
 from domain.objects.money import Money
@@ -23,8 +24,8 @@ class UpdateTransactionCommand:
     notes: Optional[str] = None
     category_id: Optional[int] = None
     transaction_type: Optional[str] = None
-    amount: Optional[float] = None
-    transaction_date: Optional[str] = None
+    amount: Optional[Decimal] = None
+    transaction_date: Optional[date] = None
 
 
 class UpdateTransactionCommandHandler:
@@ -48,7 +49,7 @@ class UpdateTransactionCommandHandler:
         account = await self.account_repository.get_by_id(transaction.account_id)
 
         if not account:
-            raise AccountNotFoundError(command.user_id)
+            raise AccountNotFoundError(str(transaction.account_id))
 
         # 1. REVERTIR el efecto de la transacción original
         if transaction.transaction_type == TransactionType.EXPENSE:
@@ -100,16 +101,16 @@ class UpdateTransactionCommandHandler:
 
         # 5. OBTENER resultado para respuesta
         result = await self.transaction_repository.get_by_uuid_with_account_details(
-            transaction.uuid, command.user_id
+            cast(str, transaction.uuid), command.user_id
         )
 
         if not result:
             raise TransactionNotFoundError(command.transaction_uuid)
 
-        transaction_entity, account_name, account_type, account_bank, category_name = (
+        transaction_entity, account_name, account_type, bank_name, category_name = (
             result
         )
 
         return TransactionResponseDTO.from_entity(
-            transaction_entity, account_name, account_type, account_bank, category_name
+            transaction_entity, account_name, account_type, bank_name, category_name
         )

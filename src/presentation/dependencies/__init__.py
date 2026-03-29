@@ -16,7 +16,6 @@ from presentation.dependencies.repositories import (
 # Services
 from presentation.dependencies.services import (
     get_account_service,
-    get_gemini_service,
     get_jwt_service,
 )
 
@@ -72,7 +71,13 @@ from presentation.dependencies.auth_deps import (
     get_current_active_user,
     validate_token,
 )
+
+# Bank Handlers
 from .bank_deps import get_banks_handler
+
+# AI Handlers
+from .ai_deps import get_analyze_image_handler, get_expense_advisor_handler
+
 
 __all__ = [
     # Repositories
@@ -88,7 +93,6 @@ __all__ = [
     "get_dashboard_repository",
     # Services
     "get_account_service",
-    "get_gemini_service",
     "get_jwt_service",
     # Account
     "get_create_account_handler",
@@ -128,4 +132,7 @@ __all__ = [
     "validate_token",
     # Bank
     "get_banks_handler",
+    # AI
+    "get_analyze_image_handler",
+    "get_expense_advisor_handler",
 ]

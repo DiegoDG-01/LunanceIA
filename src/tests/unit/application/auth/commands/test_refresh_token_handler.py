@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, AsyncMock
 
 from application.auth.commands.refresh_token import RefreshTokenCommand, RefreshTokenHandler
 from application.auth.commands.login import LoginResponse
+from application.interfaces.auth_service import AuthConfig
 from domain.entities.user import User
 from domain.entities.refresh_token import RefreshToken
 from shared.exceptions.application import CommandValidationError, JWTValidationError
@@ -39,12 +40,20 @@ class TestRefreshTokenHandler:
         return uow
 
     @pytest.fixture
-    def handler(self, mock_user_repo, mock_auth_token_repo, mock_jwt_service, mock_uow):
+    def auth_config(self):
+        return AuthConfig(
+            access_token_expire_minutes=60,
+            refresh_token_expire_days=7,
+        )
+
+    @pytest.fixture
+    def handler(self, mock_user_repo, mock_auth_token_repo, mock_jwt_service, mock_uow, auth_config):
         return RefreshTokenHandler(
             user_repository=mock_user_repo,
             auth_token_repository=mock_auth_token_repo,
             jwt_service=mock_jwt_service,
             uow=mock_uow,
+            auth_config=auth_config,
         )
 
     @pytest.fixture

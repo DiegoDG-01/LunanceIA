@@ -46,3 +46,7 @@ class SubscriptionChargeRepository(ABC):
         self, subscription_id: int
     ) -> List[Tuple[SubscriptionCharge, str, str]]:
         pass
+
+    @abstractmethod
+    async def get_by_user_with_details(self, user_id: int) -> List[tuple]:
+        pass

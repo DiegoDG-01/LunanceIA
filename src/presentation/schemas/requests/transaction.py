@@ -12,7 +12,7 @@ class CreateTransactionRequest(BaseModel):
     account_uuid: str = Field(..., description="UUID de la cuenta")
     category_id: Optional[int] = Field(None, gt=0, description="ID de la categoría")
     transaction_type: TransactionType = Field(..., description="Tipo de transacción")
-    amount: Decimal = Field(..., gt=0, description="Monto")
+    amount: Decimal = Field(..., gt=Decimal("0"), description="Monto")
     # currency: str = Field("MXN", min_length=3, max_length=3, description="Moneda")
     description: Optional[str] = Field(None, max_length=500, description="Descripción")
     notes: Optional[str] = Field(None, max_length=1000, description="Notas")
@@ -34,7 +34,7 @@ class UpdateTransactionRequest(BaseModel):
     notes: Optional[str] = Field(None, max_length=1000, description="Nuevas notas")
     category_id: Optional[int] = Field(None, gt=0, description="Nueva categoría")
     transaction_type: Optional[TransactionType] = Field(None, description="Nuevo tipo")
-    amount: Optional[Decimal] = Field(None, gt=0, description="Nuevo monto")
+    amount: Optional[Decimal] = Field(None, gt=Decimal("0"), description="Nuevo monto")
     transaction_date: Optional[date] = Field(None, description="Nueva fecha")
 
     class Config:

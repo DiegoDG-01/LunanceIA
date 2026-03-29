@@ -5,6 +5,7 @@ class InterestType(str, Enum):
     SIMPLE = "SIMPLE"
     COMPOUND = "COMPOUND"
 
+
 class TransactionType(str, Enum):
     INCOME = "INCOME"
     EXPENSE = "EXPENSE"
@@ -51,3 +52,24 @@ class ReminderType(str, Enum):
     COBRO = "cobro"
     REVISION = "revision"
     OTRO = "otro"
+
+
+class CategoryName(str, Enum):
+    COMIDA = "Comida"
+    TRANSPORTE = "Transporte"
+    SUELDO = "Sueldo"
+    INVERSIONES = "Inversiones"
+    VIAJES = "Viajes"
+    VIVIENDA = "Vivienda"
+    SERVICIOS = "Servicios"
+    SALUD = "Salud"
+    ENTRETENIMIENTO = "Entretenimiento"
+    COMPRAS = "Compras"
+    EDUCACION = "Educación"
+    SUSCRIPCIONES = "Suscripciones"
+    REGALOS = "Regalos"
+    IMPUESTOS = "Impuestos"
+    OTROS_GASTOS = "Otros Gastos"
+    VENTAS = "Ventas"
+    PREMIOS = "Premios"
+    OTROS_INGRESOS = "Otros Ingresos"

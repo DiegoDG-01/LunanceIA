@@ -1,15 +1,10 @@
-from sqlalchemy import (
-    Column,
-    Integer,
-    String,
-    Boolean,
-    DateTime,
-    ForeignKey,
-    Enum,
-    DECIMAL,
-    Date,
-)
+from datetime import date, datetime
+from decimal import Decimal
+from typing import Optional
+
+from sqlalchemy import String, DateTime, ForeignKey, Enum, DECIMAL, Date
 from sqlalchemy.sql import func
+from sqlalchemy.orm import Mapped, mapped_column
 
 from infrastructure.database.connection import Base
 from domain.objects.enums import BudgetPeriod
@@ -18,16 +13,20 @@ from domain.objects.enums import BudgetPeriod
 class BudgetModel(Base):
     __tablename__ = "budgets"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_id = Column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
-    category_id = Column(Integer, ForeignKey("categories.id"))
-    name = Column(String(100), nullable=False)
-    limit_amount = Column(DECIMAL(12, 2), nullable=False)
-    period = Column(Enum(BudgetPeriod), nullable=False)
-    start_date = Column(Date, nullable=False, index=True)
-    end_date = Column(Date, index=True)
-    is_active = Column(Boolean, default=True, index=True)
-    alert_percentage = Column(Integer, default=80)
-    creation_date = Column(DateTime(timezone=True), server_default=func.now())
+    category_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("categories.id"), nullable=True
+    )
+    name: Mapped[str] = mapped_column(String(100))
+    limit_amount: Mapped[Decimal] = mapped_column(DECIMAL(12, 2))
+    period: Mapped[BudgetPeriod] = mapped_column(Enum(BudgetPeriod))
+    start_date: Mapped[date] = mapped_column(Date, index=True)
+    end_date: Mapped[Optional[date]] = mapped_column(Date, index=True, nullable=True)
+    is_active: Mapped[bool] = mapped_column(default=True, index=True)
+    alert_percentage: Mapped[int] = mapped_column(default=80)
+    creation_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

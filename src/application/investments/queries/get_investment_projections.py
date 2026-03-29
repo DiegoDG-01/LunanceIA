@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, cast
 
 from domain.objects.enums import InterestType
 from domain.repositories.account_repository import AccountRepository
@@ -23,8 +23,8 @@ from shared.exceptions.domain import (
 logger = logging.getLogger(__name__)
 
 try:
-    from fincore import calculate_projections
-    from fincore import FinCoreError, FCInvalidDecimalError
+    from fincore import calculate_projections  # type: ignore[import]
+    from fincore import FinCoreError, FCInvalidDecimalError  # type: ignore[import]
 except ImportError:
     logger.critical(
         "The 'fincore' financial engine is not available. "
@@ -61,7 +61,7 @@ class GetInvestmentProjectionsHandler:
             raise AccountNotFoundError(account_uuid=query.account_uuid)
 
         settings = await self.investment_card_settings_repository.get_by_account_id(
-            account_id=account.id
+            account_id=cast(int, account.id)
         )
 
         today = date.today()

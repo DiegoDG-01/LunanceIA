@@ -74,7 +74,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
         model.category_id = subscription.category_id
         model.name = subscription.name
         model.amount = subscription.amount.amount
-        model.frequency = subscription.frequency.value
+        model.frequency = subscription.frequency
         model.start_date = subscription.start_date
         model.end_date = subscription.end_date
         model.billing_day = subscription.billing_day

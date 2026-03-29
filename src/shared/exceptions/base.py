@@ -1,10 +1,12 @@
 """Excepciones base del sistema."""
 
+from typing import Optional
+
 
 class LunanceException(Exception):
     """Excepción base de la aplicación."""
 
-    def __init__(self, message: str, details: list = None):
+    def __init__(self, message: str, details: Optional[list] = None):
         self.message = message
         self.details = details
         super().__init__(message, details)

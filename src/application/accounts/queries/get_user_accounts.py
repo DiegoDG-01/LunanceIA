@@ -1,8 +1,12 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, cast
 
 from domain.repositories.account_repository import AccountRepository
-from application.dto.account_dto import AccountResponseDTO
+from application.dto.account_dto import (
+    AccountResponseDTO,
+    CreditCardSettingsDTO,
+    InvestmentCardSettingsDTO,
+)
 
 
 @dataclass
@@ -39,19 +43,41 @@ class GetUserAccountsHandler:
                 offset=query.offset,
             )
 
-        return [
-            AccountResponseDTO(
-                account_uuid=account.uuid,
-                name=account.name,
-                account_type=account.account_type,
-                bank_id=account.bank_id,
-                bank_name=account.bank_name,
-                bank_code=account.bank_code,
-                current_balance=account.current_balance.amount,
-                currency=account.current_balance.currency,
-                is_active=account.is_active,
-                credit_card_settings=account.credit_card_settings,
-                investment_settings=account.investment_settings,
+        result = []
+        for account in accounts:
+            cc_settings_dto = None
+            inv_settings_dto = None
+
+            if account.credit_card_settings:
+                cc_settings_dto = CreditCardSettingsDTO(
+                    billing_cycle_day=account.credit_card_settings.billing_cycle_day,
+                    payment_due_day=account.credit_card_settings.payment_due_day,
+                    credit_limit=account.credit_card_settings.credit_limit,
+                    minimum_payment_percentage=account.credit_card_settings.minimum_payment_percentage,
+                )
+
+            if account.investment_settings:
+                inv_settings_dto = InvestmentCardSettingsDTO(
+                    investment_type=account.investment_settings.investment_type,
+                    investment_rate=account.investment_settings.investment_rate,
+                    lock_period_end_date=account.investment_settings.lock_period_end_date,
+                    maturity_date=account.investment_settings.maturity_date,
+                    early_withdrawal_penalty=account.investment_settings.early_withdrawal_penalty,
+                )
+
+            result.append(
+                AccountResponseDTO(
+                    account_uuid=cast(str, account.uuid),
+                    name=account.name,
+                    account_type=account.account_type,
+                    bank_id=account.bank_id,
+                    bank_name=account.bank_name,
+                    bank_code=account.bank_code,
+                    current_balance=account.current_balance.amount,
+                    currency=account.current_balance.currency,
+                    is_active=account.is_active,
+                    credit_card_settings=cc_settings_dto,
+                    investment_settings=inv_settings_dto,
+                )
             )
-            for account in accounts
-        ]
+        return result

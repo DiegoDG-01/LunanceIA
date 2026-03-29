@@ -10,8 +10,8 @@ from domain.objects.enums import AccountType
 class CreditCardSettingsDTO:
     billing_cycle_day: int
     payment_due_day: int
-    credit_limit: Optional[Decimal] = None
-    minimum_payment_percentage: Optional[Decimal] = None
+    credit_limit: Decimal
+    minimum_payment_percentage: Decimal
 
 
 @dataclass
@@ -30,7 +30,7 @@ class CreateAccountDTO:
     """
 
     user_id: int
-    bank_id: Optional[int]
+    bank_id: int
     name: str
     account_type: AccountType
     initial_balance: Decimal = Decimal("0.00")

@@ -22,7 +22,7 @@ jobs:
         run: uv python install 3.13
 
       - name: Install dependencies
-        run: uv sync --frozen --all-groups
+        run: uv sync --frozen --group test
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -47,7 +47,7 @@ jobs:
           AUTH0_DOMAIN: "test-domain.auth0.com"
           AUTH0_AUDIENCE: "https://api.lunance.app"
           GEMINI_MODEL_ID: "gemini-2.5-flash"
-          GEMINI_API_KEY: "mock-gemini-key-123"
+          GOOGLE_API_KEY: "mock-google-key-123"
 
           # API Config
           ENVIRONMENT: "TEST"

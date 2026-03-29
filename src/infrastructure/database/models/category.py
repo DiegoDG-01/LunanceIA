@@ -1,4 +1,7 @@
-from sqlalchemy import Column, Integer, String, Boolean, Enum, Text
+from typing import Optional
+
+from sqlalchemy import String, Enum, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
 from infrastructure.database.connection import Base
 from domain.objects.enums import TransactionType
@@ -7,10 +10,10 @@ from domain.objects.enums import TransactionType
 class CategoryModel(Base):
     __tablename__ = "categories"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String(50), nullable=False)
-    type = Column(Enum(TransactionType), nullable=False, index=True)
-    icon = Column(String(50))
-    color = Column(String(7))  # Para código hex del color
-    description = Column(Text)
-    is_active = Column(Boolean, default=True)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(50))
+    type: Mapped[TransactionType] = mapped_column(Enum(TransactionType), index=True)
+    icon: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(default=True)

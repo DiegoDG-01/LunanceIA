@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, cast
 
 from application.dto.subscription_dto import SubscriptionLastTransactionsResponseDTO
 from domain.repositories.subscription_charge_repository import (
@@ -38,7 +38,7 @@ class GetLastTransactionsHandler:
             raise SubscriptionNotFoundError(subscription_uuid=query.subscription_uuid)
 
         last_transactions = await self.subscription_charge_repository.get_last_charges_by_subscription_id(
-            subscription_id=subscription.id,
+            subscription_id=cast(int, subscription.id),
         )
         transactions = []
         if not last_transactions:
@@ -50,7 +50,9 @@ class GetLastTransactionsHandler:
                     name=subs_name,
                     account_name=account_name,
                     amount=subs_charge.amount.amount,
-                    charge_date=subs_charge.processing_date.date(),
+                    charge_date=subs_charge.processing_date.date()
+                    if subs_charge.processing_date
+                    else subs_charge.charge_date,
                 )
             )
 

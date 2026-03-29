@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import AsyncGenerator
+from typing import AsyncGenerator, cast
 
 import pytest
 import pytest_asyncio
@@ -16,27 +16,7 @@ os.environ["ENVIRONMENT"] = "TEST"
 from main import app
 from infrastructure.database.connection import Base, get_db
 from presentation.dependencies.auth_deps import get_current_user, get_current_active_user
-from presentation.dependencies import get_gemini_service
 from domain.entities.user import User
-from infrastructure.external_services.gemini import GeminiService, GeminiTransactionResult
-from domain.objects.enums import TransactionType
-from decimal import Decimal
-from datetime import date
-
-# Mock Gemini Service
-class MockGeminiService:
-    async def extract_transaction_data(self, image_data: bytes) -> GeminiTransactionResult:
-        return GeminiTransactionResult(
-            amount=Decimal("450.00"),
-            transaction_type=TransactionType.EXPENSE,
-            description="Mocked receipt description",
-            notes="Extracted via mock gemini",
-            transaction_date=date.today(),
-            category_id=1 # Alimentos
-        )
-
-def mock_get_gemini_service():
-    return MockGeminiService()
 
 # Import models to register them with Base.metadata
 import infrastructure.database.models  # noqa: F401
@@ -44,7 +24,7 @@ import infrastructure.database.models  # noqa: F401
 @pytest.fixture(scope="session")
 def event_loop():
     """Create an instance of the default event loop for each test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
+    loop = asyncio.new_event_loop()
     yield loop
     loop.close()
 
@@ -87,12 +67,12 @@ async def mock_get_current_user(request: Request, db: AsyncSession = Depends(get
         await db.refresh(user_model)
 
     return User(
-        id=user_model.id,
-        uuid=user_model.uuid,
-        auth0_id=user_model.auth0_id,
-        name=user_model.name,
-        email=user_model.email,
-        is_active=user_model.is_active
+        id=cast(int, user_model.id),
+        uuid=cast(str, user_model.uuid),
+        auth0_id=cast(str, user_model.auth0_id) if user_model.auth0_id else None,
+        name=cast(str, user_model.name),
+        email=cast(str, user_model.email) if user_model.email else None,
+        is_active=cast(bool, user_model.is_active),
     )
 
 async def mock_get_current_active_user(current_user: User = Depends(mock_get_current_user)) -> User:
@@ -184,8 +164,6 @@ async def http_client(db_session: AsyncSession) -> AsyncGenerator[httpx.AsyncCli
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = mock_get_current_user
     app.dependency_overrides[get_current_active_user] = mock_get_current_active_user
-    app.dependency_overrides[get_gemini_service] = mock_get_gemini_service
-
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app),
         base_url="http://test/api/v2",

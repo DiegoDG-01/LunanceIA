@@ -1,7 +1,7 @@
 """Utilidades para validación."""
 
 import re
-from typing import List
+from typing import List, Optional
 from pydantic import EmailStr
 from email_validator import validate_email, EmailNotValidError
 
@@ -50,7 +50,7 @@ def validate_phone_number(phone: str) -> bool:
     return bool(re.match(pattern, phone))
 
 
-def sanitize_string(input_str: str, max_length: int = None) -> str:
+def sanitize_string(input_str: str, max_length: Optional[int] = None) -> str:
     """Sanitiza una cadena de texto."""
     if not input_str:
         return ""

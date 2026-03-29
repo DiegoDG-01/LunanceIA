@@ -23,3 +23,7 @@ class CategoryRepository(ABC):
     @abstractmethod
     async def delete(self, category_id: int) -> None:
         pass
+
+    @abstractmethod
+    async def get_by_name(self, category_name: str) -> Optional[Category]:
+        pass

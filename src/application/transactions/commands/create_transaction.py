@@ -1,5 +1,6 @@
 import dataclasses
 from dataclasses import dataclass
+from typing import cast
 
 from datetime import date
 
@@ -69,8 +70,8 @@ class CreateTransactionHandler:
             raise AccountNotFoundError(account_uuid=dto.account_uuid)
 
         transaction = Transaction.create_new(
-            user_id=user.id,
-            account_id=account.id,
+            user_id=cast(int, user.id),
+            account_id=cast(int, account.id),
             category_id=dto.category_id,
             transaction_type=dto.transaction_type,
             amount=money,
@@ -84,7 +85,7 @@ class CreateTransactionHandler:
         elif transaction.is_income():
             if account.account_type is AccountType.INVESTMENT:
                 settings = await self.investment_settings_repository.get_by_account_id(
-                    account_id=account.id
+                    account_id=cast(int, account.id)
                 )
                 if not settings:
                     raise InvestmentSettingsNotFoundError(transaction.transaction_type)
@@ -97,7 +98,7 @@ class CreateTransactionHandler:
                     + money.amount,
                 )
                 await self.investment_settings_repository.update(
-                    account_id=account.id, settings=updated_settings
+                    account_id=cast(int, account.id), settings=updated_settings
                 )
 
             new_balance = account.current_balance.add(money)
