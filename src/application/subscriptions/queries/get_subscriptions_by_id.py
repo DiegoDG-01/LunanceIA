@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, cast
+from typing import Optional
 
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.category_repository import CategoryRepository
@@ -36,16 +36,12 @@ class GetSubscriptionsByIdHandler:
         if not subscription:
             raise SubscriptionNotFoundError(subscription_uuid=query.subscription_uuid)
 
-        account = await self.account_repository.get_by_id(
-            cast(int, subscription.account_id)
-        )
+        account = await self.account_repository.get_by_id(subscription.account_id)
         account_uuid = account.uuid if account else None
         account_name = account.name if account else None
 
         category = (
-            await self.category_repository.get_by_id(
-                cast(int, subscription.category_id)
-            )
+            await self.category_repository.get_by_id(subscription.category_id)
             if subscription.category_id
             else None
         )

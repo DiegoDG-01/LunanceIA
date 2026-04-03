@@ -65,15 +65,15 @@ class LunanceUser(HttpUser):
             json=payload,
             name="/account/ [POST]",
             catch_response=True,
-        ) as response:
+        ) as response:  # type: ignore[assignment]
             if response.status_code == 201:
                 data = response.json()
                 account_uuid = data.get("account_uuid")
                 if account_uuid:
                     self.account_uuids.append(account_uuid)
-                response.success()
+                response.success()  # type: ignore[union-attr]
             else:
-                response.failure(f"Status {response.status_code}: {response.text}")
+                response.failure(f"Status {response.status_code}: {response.text}")  # type: ignore[union-attr]
 
     # --- Transactions (weight 5) ---
 
@@ -134,16 +134,16 @@ class LunanceUser(HttpUser):
             json=payload,
             name="/account/ [POST investment]",
             catch_response=True,
-        ) as response:
+        ) as response:  # type: ignore[assignment]
             if response.status_code == 201:
                 data = response.json()
                 account_uuid = data.get("account_uuid")
                 if account_uuid:
                     self.account_uuids.append(account_uuid)
                     self.investment_uuids.append(account_uuid)
-                response.success()
+                response.success()  # type: ignore[union-attr]
             else:
-                response.failure(f"Status {response.status_code}: {response.text}")
+                response.failure(f"Status {response.status_code}: {response.text}")  # type: ignore[union-attr]
 
     @task(5)
     def get_investment_yields(self):

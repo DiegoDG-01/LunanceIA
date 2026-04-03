@@ -111,8 +111,8 @@ class SubscriptionProcessor:
         save_charge = await self.subscription_charge_repository.create(charge)
 
         transaction = Transaction.create_new(
-            user_id=cast(int, subscription.user_id),
-            account_id=cast(int, subscription.account_id),
+            user_id=subscription.user_id,
+            account_id=subscription.account_id,
             category_id=subscription.category_id,
             amount=subscription.amount,
             transaction_type=TransactionType.EXPENSE,
