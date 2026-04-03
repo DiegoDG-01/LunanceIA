@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional, cast
-from passlib.context import CryptContext
+import bcrypt
 from jose import JWTError, jwt
 import hashlib
 import logging
@@ -24,10 +24,9 @@ class JWTService(AuthTokenServiceInterface):
     ):
         self.user_repository = user_repository
         self.auth_token_repository = auth_token_repository
-        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     def check_password(self, plain_password: str, hashed_password: str) -> bool:
-        return self.pwd_context.verify(plain_password, hashed_password)
+        return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
 
     def create_access_token(self, user_uuid: str, expires_in: Optional[int] = None):
         now = datetime.now(timezone.utc)
@@ -90,7 +89,7 @@ class JWTService(AuthTokenServiceInterface):
             raise RepositoryError("verify", "RefreshToken", str(e))
 
     def get_password_hash(self, password: str) -> str:
-        return self.pwd_context.hash(password)
+        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
     async def save_refresh_token(
         self, user_id: int, token: str, expires_at: datetime

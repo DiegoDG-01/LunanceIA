@@ -8,7 +8,6 @@ dependencies = [
     "alembic==1.18.4",
     "fastapi==0.135.3",
     "greenlet==3.3.2",
-    "passlib==1.7.4",
     "pydantic[email]==2.12.5",
     "pydantic-settings==2.13.1",
     "pymysql==1.1.2",
