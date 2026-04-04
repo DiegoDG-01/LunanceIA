@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 
 from datetime import date
-from typing import Optional
+from typing import Optional, cast
 from domain.objects.enums import TransactionType
 from domain.repositories.transaction_repository import TransactionRepository
 from application.dto.transaction_dto import TransactionResponseDTO
+from shared.exceptions.domain import TransactionNotFoundError
 
 
 @dataclass
@@ -48,9 +49,18 @@ class GetTransactionsHandler:
                 user_id=query.user_id, limit=query.limit, offset=query.skip
             )
 
+        if transactions is None:
+            raise TransactionNotFoundError(
+                f"Not found transactions for account: {query.account_uuid}"
+            )
+
         return [
             TransactionResponseDTO.from_entity(
-                transaction, account_name, account_type, account_uuid, category_name
+                transaction,
+                account_name,
+                account_type,
+                cast(str, account_uuid),
+                category_name,
             )
             for transaction, account_name, account_type, account_uuid, category_name in transactions
         ]

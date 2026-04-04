@@ -23,7 +23,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         transaction_model: TransactionModel,
         account_model: AccountModel,
         category_model: CategoryModel,
-    ) -> tuple[Transaction, str, AccountType, Optional[str], Optional[str]]:
+    ) -> tuple[Transaction, str, AccountType, str, Optional[str]]:
         transaction = self._model_to_entity(transaction_model)
         category_name = category_model.name if category_model else None
         return (

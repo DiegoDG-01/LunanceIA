@@ -51,7 +51,12 @@ class TransactionResponseDTO:
 
     @classmethod
     def from_entity(
-        cls, transaction, account_name, account_type, account_uuid, category_name
+        cls,
+        transaction,
+        account_name: str,
+        account_type: AccountType,
+        account_uuid: str,
+        category_name: Optional[str],
     ):
         """Create DTO from Transaction entity."""
         return cls(

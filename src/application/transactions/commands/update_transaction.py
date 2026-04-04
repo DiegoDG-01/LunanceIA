@@ -110,7 +110,8 @@ class UpdateTransactionCommandHandler:
         async with self.uow:
             await self.transaction_repository.update(transaction)
             await self.account_repository.update(account)
-            await self.account_repository.update(new_account)
+            if command.account_uuid is not None:
+                await self.account_repository.update(new_account)
             await self.uow.commit()
 
         # 5. OBTENER resultado para respuesta
@@ -121,10 +122,14 @@ class UpdateTransactionCommandHandler:
         if not result:
             raise TransactionNotFoundError(command.transaction_uuid)
 
-        transaction_entity, account_name, account_type, bank_name, category_name = (
+        transaction_entity, account_name, account_type, account_uuid, category_name = (
             result
         )
 
         return TransactionResponseDTO.from_entity(
-            transaction_entity, account_name, account_type, bank_name, category_name
+            transaction_entity,
+            account_name,
+            account_type,
+            cast(str, account_uuid),
+            category_name,
         )
