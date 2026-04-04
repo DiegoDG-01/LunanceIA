@@ -289,6 +289,8 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             model.description = transaction.description
         if transaction.notes is not None:
             model.notes = transaction.notes
+        if transaction.account_id is not None:
+            model.account_id = transaction.account_id
 
         await self.db.flush()
         await self.db.refresh(model)

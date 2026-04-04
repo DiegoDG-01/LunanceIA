@@ -26,6 +26,7 @@ class UpdateTransactionCommand:
     transaction_type: Optional[str] = None
     amount: Optional[Decimal] = None
     transaction_date: Optional[date] = None
+    account_uuid: Optional[str] = None
 
 
 class UpdateTransactionCommandHandler:
@@ -62,6 +63,16 @@ class UpdateTransactionCommandHandler:
         # 2. ACTUALIZAR los campos de la transacción
         transaction.category_id = command.category_id
 
+        if command.account_uuid is not None:
+            new_account = await self.account_repository.get_by_uuid_and_user_id(
+                account_uuid=command.account_uuid, user_id=command.user_id
+            )
+            if not new_account:
+                raise AccountNotFoundError(account_uuid=command.account_uuid)
+            transaction.account_id = cast(int, new_account.id)
+        else:
+            new_account = account
+
         if command.description is not None:
             transaction.description = command.description
 
@@ -87,16 +98,19 @@ class UpdateTransactionCommandHandler:
 
         # 3. APLICAR el efecto de la transacción actualizada
         if transaction.is_expense():
-            account.current_balance = account.current_balance.subtract(
+            new_account.current_balance = new_account.current_balance.subtract(
                 transaction.amount
             )
         elif transaction.is_income():
-            account.current_balance = account.current_balance.add(transaction.amount)
+            new_account.current_balance = new_account.current_balance.add(
+                transaction.amount
+            )
 
         # 4. GUARDAR ambos: transacción y cuenta
         async with self.uow:
             await self.transaction_repository.update(transaction)
             await self.account_repository.update(account)
+            await self.account_repository.update(new_account)
             await self.uow.commit()
 
         # 5. OBTENER resultado para respuesta
