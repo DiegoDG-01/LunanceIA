@@ -16,7 +16,6 @@ from application.ai.queries.expense_advisor import (
 
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,
-    limiter_2_per_day,
     limiter_1_per_day,
 )
 
@@ -30,7 +29,7 @@ async def analyze_image(
     current_user: User = Depends(get_current_active_user),
     handler: AnalyzeImageHandler = Depends(get_analyze_image_handler),
 ):
-    enforce_rate_limit(limiter_2_per_day, request)
+    enforce_rate_limit(limiter_1_per_day, request)
     image_data = await file.read()
     query = AnalyzeImageQuery(
         image_data=image_data, mime_type=cast(str, file.content_type)
