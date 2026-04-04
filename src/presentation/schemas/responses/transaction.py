@@ -16,4 +16,4 @@ class TransactionResponse(BaseModel):
     creation_date: datetime
     account_name: str
     account_type: AccountType
-    account_bank: Optional[str]
+    account_uuid: str

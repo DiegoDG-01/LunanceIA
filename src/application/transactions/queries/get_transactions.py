@@ -50,7 +50,7 @@ class GetTransactionsHandler:
 
         return [
             TransactionResponseDTO.from_entity(
-                transaction, account_name, account_type, account_bank, category_name
+                transaction, account_name, account_type, account_uuid, category_name
             )
-            for transaction, account_name, account_type, account_bank, category_name in transactions
+            for transaction, account_name, account_type, account_uuid, category_name in transactions
         ]

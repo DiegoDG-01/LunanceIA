@@ -47,11 +47,11 @@ class TransactionResponseDTO:
     creation_date: datetime
     account_name: str
     account_type: AccountType
-    account_bank: Optional[str]
+    account_uuid: str
 
     @classmethod
     def from_entity(
-        cls, transaction, account_name, account_type, account_bank, category_name
+        cls, transaction, account_name, account_type, account_uuid, category_name
     ):
         """Create DTO from Transaction entity."""
         return cls(
@@ -65,5 +65,5 @@ class TransactionResponseDTO:
             creation_date=transaction.creation_date,
             account_name=account_name,
             account_type=account_type,
-            account_bank=account_bank,
+            account_uuid=account_uuid,
         )
