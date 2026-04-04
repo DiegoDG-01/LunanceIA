@@ -27,7 +27,7 @@ async def get_general_data(
 ):
     enforce_rate_limit(limiter_10_per_minute, request)
     query = GetDashboardSummaryQuery(
-        user_uuid=cast(str, current_user.uuid), user_id=cast(int, current_user.id)
+        user_uuid=current_user.uuid, user_id=cast(int, current_user.id)
     )
     summary = await handler.handle(query)
 

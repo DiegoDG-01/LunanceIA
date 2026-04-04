@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import AsyncGenerator, cast
+from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio
@@ -67,12 +67,12 @@ async def mock_get_current_user(request: Request, db: AsyncSession = Depends(get
         await db.refresh(user_model)
 
     return User(
-        id=cast(int, user_model.id),
-        uuid=cast(str, user_model.uuid),
-        auth0_id=cast(str, user_model.auth0_id) if user_model.auth0_id else None,
-        name=cast(str, user_model.name),
-        email=cast(str, user_model.email) if user_model.email else None,
-        is_active=cast(bool, user_model.is_active),
+        id=user_model.id,
+        uuid=user_model.uuid,
+        auth0_id=user_model.auth0_id if user_model.auth0_id else None,
+        name=user_model.name,
+        email=user_model.email if user_model.email else None,
+        is_active=user_model.is_active,
     )
 
 async def mock_get_current_active_user(current_user: User = Depends(mock_get_current_user)) -> User:

@@ -80,9 +80,7 @@ class UpdateSubscriptionHandler:
             )
             await self.uow.commit()
 
-        account = await self.account_repository.get_by_id(
-            cast(int, subscription.account_id)
-        )
+        account = await self.account_repository.get_by_id(subscription.account_id)
         account_uuid = account.uuid if account else None
         account_name = account.name if account else None
 

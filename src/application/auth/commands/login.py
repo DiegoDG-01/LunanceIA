@@ -61,11 +61,11 @@ class LoginHandler:
             raise InvalidCredentialsError("password")
 
         access_token = self.jwt_service.create_access_token(
-            user_uuid=cast(str, user.uuid),
+            user_uuid=user.uuid,
             expires_in=self.auth_config.access_token_expire_minutes,
         )
         refresh_token = self.jwt_service.create_refresh_token(
-            user_uuid=cast(str, user.uuid),
+            user_uuid=user.uuid,
             expires_in=self.auth_config.refresh_token_expire_days,
         )
 

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import cast
 
 from domain.repositories.transaction_repository import TransactionRepository
 from application.dto.transaction_dto import TransactionResponseDTO
@@ -29,6 +30,6 @@ class GetTransactionByUuidHandler:
             transaction[0],
             transaction[1],
             transaction[2],
-            transaction[3],
+            cast(str, transaction[3]),
             transaction[4],
         )

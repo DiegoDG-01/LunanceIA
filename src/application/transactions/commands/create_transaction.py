@@ -119,17 +119,12 @@ class CreateTransactionHandler:
 
             transaction = await self.transaction_repository.create(transaction)
 
-            bank_name = None
-            if account.bank_id:
-                bank = await self.bank_repository.get_by_id(account.bank_id)
-                bank_name = bank.name if bank else None
-
             await self.uow.commit()
 
         return TransactionResponseDTO.from_entity(
-            transaction,
-            account.name,
-            account.account_type,
-            bank_name,
-            category_name,
+            transaction=transaction,
+            account_name=account.name,
+            account_type=account.account_type,
+            account_uuid=cast(str, account.uuid),
+            category_name=category_name,
         )

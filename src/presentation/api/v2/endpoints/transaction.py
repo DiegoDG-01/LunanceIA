@@ -156,6 +156,7 @@ async def update_transaction(
         transaction_type=update_request.transaction_type,
         amount=update_request.amount,
         transaction_date=update_request.transaction_date,
+        account_uuid=update_request.account_uuid,
     )
 
     updated_transaction = await handler.handle(command)

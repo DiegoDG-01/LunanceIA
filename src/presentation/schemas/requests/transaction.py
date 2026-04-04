@@ -36,6 +36,7 @@ class UpdateTransactionRequest(BaseModel):
     transaction_type: Optional[TransactionType] = Field(None, description="Nuevo tipo")
     amount: Optional[Decimal] = Field(None, gt=Decimal("0"), description="Nuevo monto")
     transaction_date: Optional[date] = Field(None, description="Nueva fecha")
+    account_uuid: Optional[str] = Field(None, description="UUID de la cuenta")
 
     class Config:
         json_schema_extra = {
@@ -46,6 +47,7 @@ class UpdateTransactionRequest(BaseModel):
                 "transaction_type": "EXPENSE",
                 "amount": 125.50,
                 "transaction_date": "2024-01-16",
+                "account_uuid": "some-uuid",
             }
         }
 

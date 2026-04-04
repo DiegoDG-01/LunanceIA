@@ -1,8 +1,9 @@
 import logging
-from typing import Optional
+from typing import Optional, cast
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, and_, delete
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import SQLAlchemyError
 
 from domain.repositories.auth_token_repository import AuthTokenRepository
@@ -88,7 +89,7 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
                 .values(is_revoked=True)
             )
 
-            result = await self.db.execute(stmt)
+            result = cast(CursorResult, await self.db.execute(stmt))
 
             await self.db.flush()
             return result.rowcount > 0
@@ -112,7 +113,7 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
                 .values(is_revoked=True)
             )
 
-            result = await self.db.execute(stmt)
+            result = cast(CursorResult, await self.db.execute(stmt))
 
             await self.db.flush()
             return result.rowcount > 0

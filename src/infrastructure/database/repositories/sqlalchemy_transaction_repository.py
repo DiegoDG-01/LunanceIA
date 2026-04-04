@@ -23,15 +23,14 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         transaction_model: TransactionModel,
         account_model: AccountModel,
         category_model: CategoryModel,
-        bank_name: Optional[str] = None,
-    ) -> tuple[Transaction, str, AccountType, Optional[str], Optional[str]]:
+    ) -> tuple[Transaction, str, AccountType, str, Optional[str]]:
         transaction = self._model_to_entity(transaction_model)
         category_name = category_model.name if category_model else None
         return (
             transaction,
             account_model.name,
             account_model.type,
-            bank_name,
+            account_model.uuid,
             category_name,
         )
 
@@ -290,6 +289,8 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             model.description = transaction.description
         if transaction.notes is not None:
             model.notes = transaction.notes
+        if transaction.account_id is not None:
+            model.account_id = transaction.account_id
 
         await self.db.flush()
         await self.db.refresh(model)
