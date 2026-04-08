@@ -24,5 +24,7 @@ def build_model() -> Model:
 
             provider = GoogleProvider(api_key=settings.AI_API_KEY)
             return GoogleModel(model_name=settings.AI_MODEL_ID, provider=provider)
+        case "Test":
+            return None
         case _:
             raise ValueError("Invalid AI provider")

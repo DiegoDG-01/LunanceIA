@@ -48,7 +48,7 @@ jobs:
           AUTH0_AUDIENCE: "https://api.lunance.app"
 
           # AI Config
-          AI_PROVIDER: "provider"
+          AI_PROVIDER: "Test"
           AI_MODEL_ID: "model_id"
           AI_API_KEY: "CHANGE_ME"
           AI_BASE_URL: "https://google.com"
