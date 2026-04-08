@@ -20,8 +20,10 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASSWORD: str
 
-    GOOGLE_API_KEY: str
-    GEMINI_MODEL_ID: str
+    AI_PROVIDER: str
+    AI_MODEL_ID: str
+    AI_API_KEY: str = ""
+    AI_BASE_URL: str = ""
 
     @property
     def database_url(self) -> str:
