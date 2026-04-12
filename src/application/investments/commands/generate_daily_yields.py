@@ -9,8 +9,10 @@ from domain.objects.money import Money
 from domain.entities.investment_yield import InvestmentYield
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.investment_yield_repository import InvestmentYieldRepository
+from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.utils.date import get_year_day_basis
+from domain.entities.transaction import Transaction, TransactionType
 
 
 logger = logging.getLogger(__name__)
@@ -26,10 +28,12 @@ class GenerateDailyYieldHandler:
         self,
         account_repository: AccountRepository,
         investment_yield_repository: InvestmentYieldRepository,
+        transaction_repository: TransactionRepository,
         uow: AbstractUnitOfWork,
     ):
         self.account_repository = account_repository
         self.investment_yield_repository = investment_yield_repository
+        self.transaction_repository = transaction_repository
         self.uow = uow
 
     async def handle(self, command: GenerateDailyYieldCommand) -> dict:
@@ -84,7 +88,19 @@ class GenerateDailyYieldHandler:
 
                     yield_amount = (principal * daily_rate).quantize(Decimal("0.01"))
                     cumulative_balance = account.current_balance.amount + yield_amount
-
+                    yield_transaction = Transaction.create_new(
+                        user_id=account.user_id,
+                        account_id=account.id,
+                        # TODO: Change harcoded category ID for better abstraction
+                        category_id=4,
+                        transaction_type=TransactionType.INCOME,
+                        amount=Money(
+                            amount=yield_amount,
+                            currency=account.current_balance.currency,
+                        ),
+                        description=f"Daily yield for {account.name}",
+                        transaction_date=today,
+                    )
                     yield_record = InvestmentYield.create_new(
                         account_id=cast(int, account.id),
                         yield_date=today,
@@ -94,15 +110,16 @@ class GenerateDailyYieldHandler:
                         annual_rate=annual_rate,
                         interest_type=account.investment_settings.interest_type,
                     )
-
-                    await self.investment_yield_repository.create(yield_record)
-
                     new_balance = Money(
                         amount=cumulative_balance,
                         currency=account.current_balance.currency,
                     )
+
                     account.update_balance(new_balance)
+
                     await self.account_repository.update(account)
+                    await self.transaction_repository.create(yield_transaction)
+                    await self.investment_yield_repository.create(yield_record)
 
                     processed += 1
                     logger.info(f"generated daily yield for account {account.id}")
