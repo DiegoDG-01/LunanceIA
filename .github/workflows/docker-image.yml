@@ -46,8 +46,12 @@ jobs:
           BANXICO_TOKEN: "mock-token-123"
           AUTH0_DOMAIN: "test-domain.auth0.com"
           AUTH0_AUDIENCE: "https://api.lunance.app"
-          GEMINI_MODEL_ID: "gemini-2.5-flash"
-          GOOGLE_API_KEY: "mock-google-key-123"
+
+          # AI Config
+          AI_PROVIDER: "Test"
+          AI_MODEL_ID: "model_id"
+          AI_API_KEY: "CHANGE_ME"
+          AI_BASE_URL: "https://google.com"
 
           # API Config
           ENVIRONMENT: "TEST"

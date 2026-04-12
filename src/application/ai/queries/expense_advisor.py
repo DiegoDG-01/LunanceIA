@@ -1,9 +1,12 @@
 from dataclasses import dataclass
 from datetime import date
+
 from application.ai.schemas.expense_analysis import ExpenseAnalysis
 from application.interfaces.ai_agent import AIAgentInterface
 from domain.repositories.transaction_repository import TransactionRepository
 from shared.exceptions.domain import TransactionNotActivityError
+from pydantic_ai.exceptions import UnexpectedModelBehavior, ModelHTTPError
+from shared.exceptions.domain import AIInvalidResponseError, AIServiceError
 
 
 @dataclass
@@ -40,7 +43,14 @@ class GetExpenseAdvisorHandler:
             for t, _, _, _, category_name in transactions
         ]
 
-        prompt = f"Analiza estos gastos del mes: {expense_summary}"
-        result = await self.agent.run(prompt)
+        prompt = f"Analiza estos gastos del mes (Recuerda que son pesos - MXN): {expense_summary}"
+        try:
+            result = await self.agent.run(
+                prompt,
+            )
+        except UnexpectedModelBehavior:
+            raise AIInvalidResponseError()
+        except ModelHTTPError as err:
+            raise AIServiceError(f"Error to communicate with the AI model {err}")
 
         return result.output

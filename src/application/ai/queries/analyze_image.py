@@ -3,6 +3,8 @@ from pydantic_ai import BinaryContent
 from application.ai.schemas.image_analysis import ImageAnalysis
 from application.interfaces.ai_agent import AIAgentInterface
 from domain.repositories.category_repository import CategoryRepository
+from pydantic_ai.exceptions import UnexpectedModelBehavior, ModelHTTPError
+from shared.exceptions.domain import AIInvalidResponseError, AIServiceError
 
 
 @dataclass
@@ -21,9 +23,14 @@ class AnalyzeImageHandler:
         self.agent = agent
 
     async def handle(self, query: AnalyzeImageQuery) -> ImageAnalysis:
-        result = await self.agent.run(
-            [BinaryContent(data=query.image_data, media_type=query.mime_type)],
-        )
+        try:
+            result = await self.agent.run(
+                [BinaryContent(data=query.image_data, media_type=query.mime_type)],
+            )
+        except UnexpectedModelBehavior:
+            raise AIInvalidResponseError()
+        except ModelHTTPError as err:
+            raise AIServiceError(f"Error to communicate with the AI model {err}")
 
         analysis = result.output
 

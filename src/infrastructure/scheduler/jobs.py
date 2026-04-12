@@ -65,11 +65,13 @@ async def process_investment_yield_job():
         try:
             account_repo = SQLAlchemyAccountRepository(db)
             yield_repo = SQLAlchemyInvestmentYieldRepository(db)
+            transaction_repo = SQLAlchemyTransactionRepository(db)
 
             uow = SQLAlchemyUnitOfWork(db)
             handler = GenerateDailyYieldHandler(
                 account_repository=account_repo,
                 investment_yield_repository=yield_repo,
+                transaction_repository=transaction_repo,
                 uow=uow,
             )
 

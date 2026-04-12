@@ -27,6 +27,7 @@ class TestGenerateDailyYieldHandler:
         return {
             "account_repo": MagicMock(),
             "investment_yield_repo": MagicMock(),
+            "transaction_repo": MagicMock(),
             "uow": uow,
         }
 
@@ -35,6 +36,7 @@ class TestGenerateDailyYieldHandler:
         return GenerateDailyYieldHandler(
             mocks["account_repo"],
             mocks["investment_yield_repo"],
+            mocks["transaction_repo"],
             mocks["uow"],
         )
 
@@ -82,6 +84,7 @@ class TestGenerateDailyYieldHandler:
             return_value=None
         )
         mocks["investment_yield_repo"].create = AsyncMock()
+        mocks["transaction_repo"].create = AsyncMock()
         mocks["account_repo"].update = AsyncMock()
 
         command = GenerateDailyYieldCommand(target_date=target_date)
@@ -113,6 +116,7 @@ class TestGenerateDailyYieldHandler:
             return_value=None
         )
         mocks["investment_yield_repo"].create = AsyncMock()
+        mocks["transaction_repo"].create = AsyncMock()
         mocks["account_repo"].update = AsyncMock()
 
         command = GenerateDailyYieldCommand(target_date=target_date)
@@ -211,6 +215,7 @@ class TestGenerateDailyYieldHandler:
             side_effect=[Exception("DB error"), None]
         )
         mocks["investment_yield_repo"].create = AsyncMock()
+        mocks["transaction_repo"].create = AsyncMock()
         mocks["account_repo"].update = AsyncMock()
 
         command = GenerateDailyYieldCommand(target_date=date(2026, 2, 27))
@@ -231,6 +236,7 @@ class TestGenerateDailyYieldHandler:
             return_value=None
         )
         mocks["investment_yield_repo"].create = AsyncMock()
+        mocks["transaction_repo"].create = AsyncMock()
         mocks["account_repo"].update = AsyncMock()
 
         command = GenerateDailyYieldCommand(target_date=date(2026, 2, 27))
