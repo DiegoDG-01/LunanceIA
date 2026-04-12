@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from datetime import date
 
-from pymysql import err
-
 from application.ai.schemas.expense_analysis import ExpenseAnalysis
 from application.interfaces.ai_agent import AIAgentInterface
 from domain.repositories.transaction_repository import TransactionRepository
@@ -52,7 +50,7 @@ class GetExpenseAdvisorHandler:
             )
         except UnexpectedModelBehavior:
             raise AIInvalidResponseError()
-        except ModelHTTPError:
+        except ModelHTTPError as err:
             raise AIServiceError(f"Error to communicate with the AI model {err}")
 
         return result.output
