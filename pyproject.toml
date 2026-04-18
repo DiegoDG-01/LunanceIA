@@ -16,7 +16,7 @@ dependencies = [
     "sqlalchemy==2.0.49",
     "uvicorn==0.43.0",
     "cryptography==46.0.7",
-    "python-multipart==0.0.22",
+    "python-multipart==0.0.26",
     "bcrypt==5.0.0",
     "google-genai==1.70.0",
     "email-validator==2.3.0",
