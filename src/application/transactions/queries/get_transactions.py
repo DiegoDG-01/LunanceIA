@@ -22,9 +22,7 @@ class GetTransactionsQuery:
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     transaction_type: Optional[TransactionType] = None
-    category_id: Optional[int] = (
-        None  # TODO: Implement category filtering in repository methods
-    )
+    category_id: Optional[int] = None
 
 
 class GetTransactionsHandler:
@@ -36,18 +34,16 @@ class GetTransactionsHandler:
         self.transaction_repository = transaction_repository
 
     async def handle(self, query: GetTransactionsQuery) -> list[TransactionResponseDTO]:
-        if query.start_date or query.end_date:
-            transactions = await self.transaction_repository.get_by_date_range(
-                user_id=query.user_id,
-                start_date=query.start_date,
-                end_date=query.end_date,
-                account_uuid=query.account_uuid,
-                transaction_type=query.transaction_type,
-            )
-        else:
-            transactions = await self.transaction_repository.get_by_user(
-                user_id=query.user_id, limit=query.limit, offset=query.skip
-            )
+        transactions = await self.transaction_repository.get_filtered(
+            user_id=query.user_id,
+            account_uuid=query.account_uuid,
+            offset=query.skip,
+            limit=query.limit,
+            start_date=query.start_date,
+            end_date=query.end_date,
+            transaction_type=query.transaction_type,
+            category_id=query.category_id,
+        )
 
         if transactions is None:
             raise TransactionNotFoundError(
