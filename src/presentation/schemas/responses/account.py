@@ -3,7 +3,7 @@ from decimal import Decimal
 from datetime import datetime, date
 from typing import Optional
 
-from domain.objects.enums import AccountType, InterestType
+from domain.objects.enums import AccountType, InterestType, TransactionType
 
 
 class CreditCardSettingsResponse(BaseModel):
@@ -71,11 +71,12 @@ class AccountSummaryResponse(BaseModel):
         None, description="Fecha de última transacción"
     )
 
-
+9
 class AccountRecentActivityResponse(BaseModel):
     """Schema de respuesta para resumen de cuenta."""
 
     name: str = Field(..., description="Nombre de la cuenta")
+    transaction_type: TransactionType = Field(..., description="Tipo de Transacción")
     category_name: Optional[str] = Field(None, description="Nombre de la categoria")
     amount: Decimal = Field(..., description="Amount")
     transaction_date: date = Field(..., description="Fecha de la cuenta")

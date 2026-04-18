@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Optional
 from datetime import date
 
-from domain.objects.enums import AccountType
+from domain.objects.enums import AccountType, TransactionType
 
 
 @dataclass
@@ -72,6 +72,7 @@ class AccountResponseDTO:
 @dataclass
 class AccountActivityResponseDTO:
     name: str
+    transaction_type: TransactionType
     category_name: Optional[str]
     amount: Decimal
     transaction_date: date
