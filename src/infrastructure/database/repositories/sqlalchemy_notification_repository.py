@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from typing import List
 
 from domain.entities.notification import Notification
@@ -45,20 +45,13 @@ class SQLAlchemyNotificationRepository(NotificationRepository):
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    async def delete(self, notification: int) -> bool:
-        stmt = select(NotificationModel).where(NotificationModel.id == notification)
-        result = await self.db.execute(stmt)
-        model = result.scalar_one_or_none()
-
-        if not model:
-            return False
-
-        await self.db.delete(model)
-        await self.db.flush()
-        return True
-
     async def get_by_user_id(self, user_id: int) -> List[Notification]:
         stmt = select(NotificationModel).where(NotificationModel.user_id == user_id)
         result = await self.db.execute(stmt)
         models = result.scalars().all()
         return [self._model_to_entity(model) for model in models]
+
+    async def delete_by_user_id(self, user_id: int) -> None:
+        stmt = delete(NotificationModel).where(NotificationModel.user_id == user_id)
+        await self.db.execute(stmt)
+        await self.db.flush()

@@ -12,11 +12,11 @@ class NotificationRepository(ABC):
         pass
 
     @abstractmethod
-    async def delete(self, notification_id: int) -> bool:
-        """Delete Notification"""
+    async def get_by_user_id(self, user_id: int) -> List[Notification]:
+        """Get Notification by id"""
         pass
 
     @abstractmethod
-    async def get_by_user_id(self, user_id: int) -> List[Notification]:
-        """Get Notification by id"""
+    async def delete_by_user_id(self, user_id: int) -> None:
+        """Delete all notifications for a user"""
         pass
