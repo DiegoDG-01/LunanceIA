@@ -143,8 +143,8 @@ async def validate_auth0_user(token: str, db: AsyncSession) -> User:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db),
+        credentials: HTTPAuthorizationCredentials = Depends(security),
+        db: AsyncSession = Depends(get_db),
 ):
     token = credentials.credentials
 
@@ -163,9 +163,27 @@ async def get_current_user(
 
 
 async def get_current_active_user(
-    current_user: User = Depends(get_current_user),
+        current_user: User = Depends(get_current_user),
 ) -> User:
     """Obtiene el usuario actual y verifica que esté activo."""
     if not current_user.is_active:
         raise UserInactiveError()
     return current_user
+
+
+async def get_current_active_user_from_url_token(
+        token: str,
+        db: AsyncSession,
+) -> User:
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        if payload.get("iss") == "lunance":
+            return await validate_local_user(token, db)
+    except ExpiredSignatureError:
+        raise JWTValidationError("Token expired")
+    except JWTError:
+        pass
+
+    return await validate_auth0_user(token, db)
