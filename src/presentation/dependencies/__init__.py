@@ -78,6 +78,9 @@ from .bank_deps import get_banks_handler
 # AI Handlers
 from .ai_deps import get_analyze_image_handler, get_expense_advisor_handler
 
+# Notification handlers
+from .notification_deps import get_notifications_handler
+
 
 __all__ = [
     # Repositories
@@ -135,4 +138,6 @@ __all__ = [
     # AI
     "get_analyze_image_handler",
     "get_expense_advisor_handler",
+    # Notifications
+    "get_notifications_handler",
 ]
