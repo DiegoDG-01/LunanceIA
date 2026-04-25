@@ -5,7 +5,6 @@ from pytz import utc
 from datetime import datetime, timedelta
 
 from infrastructure.scheduler.jobs import (
-    process_notification_job,
     process_subscriptions_job,
     process_investment_yield_job,
 )
@@ -24,7 +23,7 @@ class SchedulerService:
             id="process_subscriptions_job",
             name="Process daily subscriptions",
             replace_existing=True,
-            next_run_time=datetime.now(utc),
+            next_run_time=datetime.now(utc) + timedelta(seconds=30),
         )
 
         self.scheduler.add_job(
@@ -33,16 +32,6 @@ class SchedulerService:
             id="process_investment_yield_job",
             name="Process investment yield job",
             replace_existing=True,
-            # next_run_time=datetime.now(utc) + timedelta(minutes=1),
-        )
-
-        self.scheduler.add_job(
-            process_notification_job,
-            trigger=CronTrigger(minute="*/5"),
-            id="process_notification_job",
-            name="Process pending notifications",
-            replace_existing=True,
-            next_run_time=datetime.now(utc),
         )
 
         self.scheduler.start()
