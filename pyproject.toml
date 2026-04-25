@@ -32,6 +32,7 @@ dependencies = [
     "redis==7.4.0",
     "secure==1.0.1",
     "openai>=2.30.0",
+    "sse-starlette>=3.3.4",
 ]
 
 [dependency-groups]
