@@ -11,6 +11,9 @@ from domain.repositories.subscription_charge_repository import (
 )
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.objects.enums import TransactionType
+from domain.repositories.notification_repository import NotificationRepository
+from domain.entities.notification import Notification
+from domain.objects.enums import NotificationType
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +24,12 @@ class SubscriptionProcessor:
         subscription_repository: SubscriptionRepository,
         subscription_charge_repository: SubscriptionChargeRepository,
         transaction_repository: TransactionRepository,
+        notification_repo: NotificationRepository,
     ):
         self.subscription_repository = subscription_repository
         self.subscription_charge_repository = subscription_charge_repository
         self.transaction_repository = transaction_repository
+        self.notification_repo = notification_repo
 
     async def process_due_subscriptions(self) -> dict:
         logger.info("Processing due subscriptions")
@@ -48,6 +53,15 @@ class SubscriptionProcessor:
                     if await self._should_generate_transaction(subscription):
                         await self._create_transaction_from_subscription(subscription)
                         stats["created"] += 1
+                        notification = Notification.create_new(
+                            user_id=subscription.user_id,
+                            title=f"Subscription: {subscription.name}",
+                            message="Your subscription payment has been processed.",
+                            type=NotificationType.PUSH,
+                            is_read=False,
+                        )
+                        await self.notification_repo.create(notification)
+
                         logger.debug(
                             f"Transaction created for subscription {subscription.uuid}"
                         )
