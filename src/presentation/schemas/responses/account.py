@@ -71,7 +71,7 @@ class AccountSummaryResponse(BaseModel):
         None, description="Fecha de última transacción"
     )
 
-9
+
 class AccountRecentActivityResponse(BaseModel):
     """Schema de respuesta para resumen de cuenta."""
 
