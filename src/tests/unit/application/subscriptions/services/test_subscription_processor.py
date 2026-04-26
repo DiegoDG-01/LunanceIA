@@ -17,6 +17,7 @@ class TestSubscriptionProcessor:
             "sub_repo": MagicMock(),
             "charge_repo": MagicMock(),
             "tx_repo": MagicMock(),
+            "notification_repo": MagicMock(),
             "db": AsyncMock()
         }
 
@@ -25,7 +26,8 @@ class TestSubscriptionProcessor:
         return SubscriptionProcessor(
             mocks["sub_repo"],
             mocks["charge_repo"],
-            mocks["tx_repo"]
+            mocks["tx_repo"],
+            mocks["notification_repo"],
         )
 
     async def test_should_generate_transaction_true(self, processor, mocks):

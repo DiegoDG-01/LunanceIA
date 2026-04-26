@@ -45,6 +45,7 @@ class GetAccountActivitiesHandler:
             account_recent_activities.append(
                 AccountActivityResponseDTO(
                     name=transaction.description or "",
+                    transaction_type=transaction.transaction_type,
                     amount=transaction.amount.amount,
                     category_name=category_name,
                     transaction_date=transaction.transaction_date,

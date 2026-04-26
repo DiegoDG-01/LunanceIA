@@ -35,6 +35,9 @@ from infrastructure.database.repositories.sqlalchemy_credit_card_repository impo
 from infrastructure.database.repositories.sqlalchemy_investment_card_repository import (
     SQLAlchemyInvestmentSettingsRepository,
 )
+from infrastructure.database.repositories.sqlalchemy_notification_repository import (
+    SQLAlchemyNotificationRepository,
+)
 from domain.repositories.auth_token_repository import AuthTokenRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
@@ -110,3 +113,9 @@ def get_bank_repository(
     db: AsyncSession = Depends(get_db),
 ) -> SQLAlchemyBankRepository:
     return SQLAlchemyBankRepository(db)
+
+
+def get_notification_repository(
+    db: AsyncSession = Depends(get_db),
+) -> SQLAlchemyNotificationRepository:
+    return SQLAlchemyNotificationRepository(db)

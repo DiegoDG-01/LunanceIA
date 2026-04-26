@@ -10,6 +10,7 @@ from presentation.api.v2.endpoints import (
     bank,
     investment_yield,
     ai,
+    notification,
 )
 
 api_router = APIRouter()
@@ -29,3 +30,4 @@ api_router.include_router(
     investment_yield.router, prefix="/investments", tags=["Investment Yield"]
 )
 api_router.include_router(ai.router, prefix="/ai", tags=["AI"])
+api_router.include_router(notification.router, prefix="/notifications", tags=["/notifications"])

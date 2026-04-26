@@ -1,0 +1,62 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [ stage, master ]
+
+jobs:
+  test:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup Python
+        run: uv python install 3.13
+
+      - name: Install Dependencies
+        run: uv sync  --frozen --all-groups
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build and intall fincore
+        run: |
+          cd fincore && uvx maturin[patchelf] build --release
+          WHEEL=$(ls target/wheels/fincore-*.whl) && uv pip install "$WHEEL"
+
+      - name: Run tests
+        run: uv run pytest
+        env:
+          SECRET_KEY: "super-secret-test-key-of-at-least-32-characters"
+          SECRET_KEY_REFRESH: "super-secret-test-key-of-at-least-42-characters"
+          ALGORITHM: "HS256"
+          ACCESS_TOKEN_EXPIRE_MINUTES: 30
+          REFRESH_TOKEN_EXPIRE_DAYS: 7
+          BANXICO_TOKEN: "mock-token-123"
+          AUTH0_DOMAIN: "test-domain.auth0.com"
+          AUTH0_AUDIENCE: "https://api.lunance.app"
+          AI_PROVIDER: "test"
+          AI_MODEL_ID: "model_id"
+          AI_API_KEY: "CHANGE_ME"
+          AI_BASE_URL: "https://google.com"
+          ENVIRONMENT: "TEST"
+          DB_HOST: "localhost"
+          DB_PORT: 3306
+          DB_NAME: "lunance_test"
+          DB_USER: "luna"
+          DB_PASSWORD: "CHANGE_ME"
+          LOG_PROVIDER: "console"
+          LOG_LEVEL: "INFO"
+          LOG_FORMAT: "text"
+          LOKI_URL: "http://localhost:3100"
+          LOKI_USERNAME: "CHANGE_ME"
+          LOKI_PASSWORD: "CHANGE_ME"
+          LOKI_APP_NAME: "lunance-test"
+          LOKI_ENV: "development"
