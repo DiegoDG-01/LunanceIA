@@ -42,7 +42,7 @@ jobs:
           BANXICO_TOKEN: "mock-token-123"
           AUTH0_DOMAIN: "test-domain.auth0.com"
           AUTH0_AUDIENCE: "https://api.lunance.app"
-          AI_PROVIDER: "Test"
+          AI_PROVIDER: "test"
           AI_MODEL_ID: "model_id"
           AI_API_KEY: "CHANGE_ME"
           AI_BASE_URL: "https://google.com"
