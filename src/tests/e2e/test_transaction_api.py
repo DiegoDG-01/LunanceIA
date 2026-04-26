@@ -137,3 +137,131 @@ class TestTransactionValidation:
         }
         response = await http_client.post("/transaction", json=transaction_data, headers=auth_tokens.get_auth_headers())
         assert response.status_code == 422
+
+
+@pytest.mark.e2e
+class TestGetTransactionByUuid:
+    """Test GET /transaction/{transaction_uuid}/ endpoint."""
+
+    @pytest.fixture
+    async def test_account_and_transaction(self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens):
+        acc_res = await http_client.post(
+            "/account",
+            json={"name": "GetTx Account", "account_type": "CHECKING", "bank_id": 1, "initial_balance": 1000.0, "currency": "MXN"},
+            headers=auth_tokens.get_auth_headers(),
+        )
+        account_uuid = acc_res.json()["account_uuid"]
+        tx_res = await http_client.post(
+            "/transaction",
+            json={"account_uuid": account_uuid, "category_id": 1, "transaction_type": "EXPENSE", "amount": 50.0, "description": "Test", "transaction_date": "2024-01-15"},
+            headers=auth_tokens.get_auth_headers(),
+        )
+        return tx_res.json()
+
+    @pytest.mark.asyncio
+    async def test_get_transaction_by_uuid_success(self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens, test_account_and_transaction):
+        transaction_uuid = test_account_and_transaction["uuid"]
+
+        response = await http_client.get(
+            f"/transaction/{transaction_uuid}/",
+            headers=auth_tokens.get_auth_headers(),
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["uuid"] == transaction_uuid
+        assert float(data["amount"]) == 50.0
+
+    @pytest.mark.asyncio
+    async def test_get_transaction_by_uuid_not_found(self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens):
+        response = await http_client.get(
+            "/transaction/00000000-0000-0000-0000-000000000000/",
+            headers=auth_tokens.get_auth_headers(),
+        )
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_get_transaction_by_uuid_unauthorized(self, http_client: httpx.AsyncClient):
+        response = await http_client.get("/transaction/some-uuid/")
+        assert response.status_code == 401
+
+
+@pytest.mark.e2e
+class TestUpdateTransaction:
+    """Test PUT /transaction/{transaction_uuid}/ endpoint."""
+
+    @pytest.fixture
+    async def test_account_and_transaction(self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens):
+        acc_res = await http_client.post(
+            "/account",
+            json={"name": "UpdateTx Account", "account_type": "CHECKING", "bank_id": 1, "initial_balance": 2000.0, "currency": "MXN"},
+            headers=auth_tokens.get_auth_headers(),
+        )
+        account_uuid = acc_res.json()["account_uuid"]
+        tx_res = await http_client.post(
+            "/transaction",
+            json={"account_uuid": account_uuid, "category_id": 1, "transaction_type": "EXPENSE", "amount": 100.0, "description": "Original", "transaction_date": "2024-02-01"},
+            headers=auth_tokens.get_auth_headers(),
+        )
+        return {"account_uuid": account_uuid, "transaction": tx_res.json()}
+
+    @pytest.mark.asyncio
+    async def test_update_transaction_description(self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens, test_account_and_transaction):
+        transaction_uuid = test_account_and_transaction["transaction"]["uuid"]
+        account_uuid = test_account_and_transaction["account_uuid"]
+
+        response = await http_client.put(
+            f"/transaction/{transaction_uuid}/",
+            json={
+                "account_uuid": account_uuid,
+                "category_id": 1,
+                "transaction_type": "EXPENSE",
+                "amount": 100.0,
+                "description": "Updated description",
+                "transaction_date": "2024-02-01",
+            },
+            headers=auth_tokens.get_auth_headers(),
+        )
+
+        assert response.status_code == 200
+        assert response.json()["description"] == "Updated description"
+
+    @pytest.mark.asyncio
+    async def test_update_transaction_amount_adjusts_balance(self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens, test_account_and_transaction):
+        transaction_uuid = test_account_and_transaction["transaction"]["uuid"]
+        account_uuid = test_account_and_transaction["account_uuid"]
+
+        # Do NOT pass account_uuid in the update body to avoid the double-update code path
+        await http_client.put(
+            f"/transaction/{transaction_uuid}/",
+            json={
+                "category_id": 1,
+                "transaction_type": "EXPENSE",
+                "amount": 200.0,
+                "description": "Updated amount",
+                "transaction_date": "2024-02-01",
+            },
+            headers=auth_tokens.get_auth_headers(),
+        )
+
+        # Initial: 2000, created expense 100 → 1900
+        # Reverse 100: 2000, apply 200: 1800
+        acc_res = await http_client.get(f"/account/{account_uuid}", headers=auth_tokens.get_auth_headers())
+        assert float(acc_res.json()["current_balance"]) == 1800.0
+
+    @pytest.mark.asyncio
+    async def test_update_transaction_not_found(self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens):
+        response = await http_client.put(
+            "/transaction/00000000-0000-0000-0000-000000000000/",
+            json={"account_uuid": "some-uuid", "category_id": 1, "transaction_type": "EXPENSE", "amount": 50.0, "description": "X", "transaction_date": "2024-01-01"},
+            headers=auth_tokens.get_auth_headers(),
+        )
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_update_transaction_unauthorized(self, http_client: httpx.AsyncClient):
+        response = await http_client.put(
+            "/transaction/some-uuid/",
+            json={"account_uuid": "x", "category_id": 1, "transaction_type": "EXPENSE", "amount": 50.0, "description": "X"},
+        )
+        assert response.status_code == 401
