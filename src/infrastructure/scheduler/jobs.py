@@ -2,6 +2,9 @@ import logging
 from datetime import datetime, date
 
 from infrastructure.database.connection import AsyncSessionLocal
+from infrastructure.database.repositories.sqlalchemy_notification_repository import (
+    SQLAlchemyNotificationRepository,
+)
 from infrastructure.database.repositories.sqlalchemy_subscription_repository import (
     SQLAlchemySubscriptionRepository,
 )
@@ -29,6 +32,7 @@ from application.investments.commands.generate_daily_yields import (
     GenerateDailyYieldHandler,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,11 +45,13 @@ async def process_subscriptions_job():
             sub_repo = SQLAlchemySubscriptionRepository(db)
             charge_repo = SQLAlchemySubscriptionChargeRepository(db)
             transaction_repo = SQLAlchemyTransactionRepository(db)
+            notification_repo = SQLAlchemyNotificationRepository(db)
 
             processor = SubscriptionProcessor(
                 subscription_repository=sub_repo,
                 subscription_charge_repository=charge_repo,
                 transaction_repository=transaction_repo,
+                notification_repo=notification_repo,
             )
 
             stats = await processor.process_due_subscriptions()
@@ -66,12 +72,14 @@ async def process_investment_yield_job():
             account_repo = SQLAlchemyAccountRepository(db)
             yield_repo = SQLAlchemyInvestmentYieldRepository(db)
             transaction_repo = SQLAlchemyTransactionRepository(db)
+            notification_repo = SQLAlchemyNotificationRepository(db)
 
             uow = SQLAlchemyUnitOfWork(db)
             handler = GenerateDailyYieldHandler(
                 account_repository=account_repo,
                 investment_yield_repository=yield_repo,
                 transaction_repository=transaction_repo,
+                notification_repository=notification_repo,
                 uow=uow,
             )
 

@@ -143,3 +143,17 @@ class TransactionRepository(ABC):
         The limit is a default value of 5
         """
         pass
+
+    @abstractmethod
+    async def get_filtered(
+        self,
+        user_id: int,
+        account_uuid: Optional[str] = None,
+        transaction_type: Optional[TransactionType] = None,
+        category_id: Optional[int] = None,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> List[Tuple[Transaction, str, AccountType, Optional[str], Optional[str]]]:
+        pass

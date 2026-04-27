@@ -474,3 +474,52 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             )
             for transaction_model, category_model in results
         ]
+
+    async def get_filtered(
+        self,
+        user_id: int,
+        account_uuid: Optional[str] = None,
+        transaction_type: Optional[TransactionType] = None,
+        category_id: Optional[int] = None,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> List[Tuple[Transaction, str, AccountType, Optional[str], Optional[str]]]:
+        """Obtiene transacciones filtradas."""
+        stmt = (
+            select(TransactionModel, AccountModel, CategoryModel)
+            .join(AccountModel, TransactionModel.account_id == AccountModel.id)
+            .outerjoin(CategoryModel, TransactionModel.category_id == CategoryModel.id)
+            .where(TransactionModel.user_id == user_id)
+        )
+
+        if account_uuid:
+            stmt = stmt.where(AccountModel.uuid == account_uuid)
+
+        if transaction_type:
+            stmt = stmt.where(TransactionModel.type == transaction_type)
+
+        if category_id:
+            stmt = stmt.where(TransactionModel.category_id == category_id)
+
+        if start_date:
+            stmt = stmt.where(TransactionModel.transaction_date >= start_date)
+
+        if end_date:
+            stmt = stmt.where(TransactionModel.transaction_date <= end_date)
+
+        stmt = (
+            stmt.order_by(desc(TransactionModel.transaction_date))
+            .limit(limit)
+            .offset(offset)
+        )
+
+        result = await self.db.execute(stmt)
+        results = result.all()
+
+        return [
+            self._models_to_entity_with_account(transaction, acc, cat)
+            for transaction, acc, cat in results
+        ]
+

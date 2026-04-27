@@ -9,10 +9,12 @@ from domain.objects.money import Money
 from domain.entities.investment_yield import InvestmentYield
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.investment_yield_repository import InvestmentYieldRepository
+from domain.repositories.notification_repository import NotificationRepository
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.utils.date import get_year_day_basis
 from domain.entities.transaction import Transaction, TransactionType
+from domain.entities.notification import Notification, NotificationType
 
 
 logger = logging.getLogger(__name__)
@@ -29,11 +31,13 @@ class GenerateDailyYieldHandler:
         account_repository: AccountRepository,
         investment_yield_repository: InvestmentYieldRepository,
         transaction_repository: TransactionRepository,
+        notification_repository: NotificationRepository,
         uow: AbstractUnitOfWork,
     ):
         self.account_repository = account_repository
         self.investment_yield_repository = investment_yield_repository
         self.transaction_repository = transaction_repository
+        self.notification_repository = notification_repository
         self.uow = uow
 
     async def handle(self, command: GenerateDailyYieldCommand) -> dict:
@@ -114,12 +118,19 @@ class GenerateDailyYieldHandler:
                         amount=cumulative_balance,
                         currency=account.current_balance.currency,
                     )
-
+                    notification = Notification.create_new(
+                        user_id=account.user_id,
+                        title=f"Daily yield for {account.name}",
+                        message=f"Your daily yield of {yield_amount} has been generated and your new balance is {new_balance.amount} for {account.name}.",
+                        type=NotificationType.PUSH,
+                        is_read=False,
+                    )
                     account.update_balance(new_balance)
 
                     await self.account_repository.update(account)
                     await self.transaction_repository.create(yield_transaction)
                     await self.investment_yield_repository.create(yield_record)
+                    await self.notification_repository.create(notification)
 
                     processed += 1
                     logger.info(f"generated daily yield for account {account.id}")
