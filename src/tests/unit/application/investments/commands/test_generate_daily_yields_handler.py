@@ -24,10 +24,13 @@ class TestGenerateDailyYieldHandler:
         uow.__aexit__ = AsyncMock(return_value=False)
         uow.commit = AsyncMock()
         uow.rollback = AsyncMock()
+        notification_repo = MagicMock()
+        notification_repo.create = AsyncMock()
         return {
             "account_repo": MagicMock(),
             "investment_yield_repo": MagicMock(),
             "transaction_repo": MagicMock(),
+            "notification_repo": notification_repo,
             "uow": uow,
         }
 
@@ -37,6 +40,7 @@ class TestGenerateDailyYieldHandler:
             mocks["account_repo"],
             mocks["investment_yield_repo"],
             mocks["transaction_repo"],
+            mocks["notification_repo"],
             mocks["uow"],
         )
 

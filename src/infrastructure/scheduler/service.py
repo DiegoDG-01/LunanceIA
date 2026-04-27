@@ -2,7 +2,6 @@ import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from pytz import utc
-from datetime import datetime, timedelta
 
 from infrastructure.scheduler.jobs import (
     process_subscriptions_job,
@@ -23,7 +22,6 @@ class SchedulerService:
             id="process_subscriptions_job",
             name="Process daily subscriptions",
             replace_existing=True,
-            next_run_time=datetime.now(utc) + timedelta(seconds=30),
         )
 
         self.scheduler.add_job(
