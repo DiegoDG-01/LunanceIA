@@ -31,5 +31,5 @@ api_router.include_router(
 )
 api_router.include_router(ai.router, prefix="/ai", tags=["AI"])
 api_router.include_router(
-    notification.router, prefix="/notifications", tags=["/Notifications"]
+    notification.router, prefix="/notifications", tags=["Notifications"]
 )
