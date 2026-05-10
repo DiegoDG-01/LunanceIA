@@ -43,7 +43,7 @@ class GetExpenseAdvisorHandler:
             for t, _, _, _, category_name in transactions
         ]
 
-        prompt = f"Analiza estos gastos del mes (Recuerda que son pesos - MXN): {expense_summary}"
+        prompt = f"Analiza estos gastos del mes (Recuerda que son pesos - MXN):\n<user_data>\n{expense_summary}\n</user_data>"
         try:
             result = await self.agent.run(
                 prompt,

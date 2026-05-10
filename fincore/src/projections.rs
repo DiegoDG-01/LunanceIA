@@ -140,14 +140,14 @@ pub fn calculate_projections(
 
             let exponent = one / basis;
             let daily_rate = base.powd(exponent) - one;
-            let yield_amount = (balance * daily_rate).round_dp(2);
+            let yield_amount = balance * daily_rate;
             (balance, yield_amount)
         } else {
             // Interés simple:
             // daily_rate = annual_rate / 100 / year_basis
             // yield = original_principal * daily_rate
             let daily_rate = rate / hundred / basis;
-            let yield_amount = (original_principal * daily_rate).round_dp(2);
+            let yield_amount = original_principal * daily_rate;
             (original_principal, yield_amount)
         };
 
@@ -157,9 +157,9 @@ pub fn calculate_projections(
             year: current_year,
             month: current_month,
             day: current_day,
-            principal_amount: principal.to_string(),
-            yield_amount: daily_yield.to_string(),
-            projected_balance: balance.to_string(),
+            principal_amount: principal.round_dp(2).to_string(),
+            yield_amount: daily_yield.round_dp(2).to_string(),
+            projected_balance: balance.round_dp(2).to_string(),
         });
     }
 
