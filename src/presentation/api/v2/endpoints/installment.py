@@ -31,7 +31,12 @@ async def get_installment_purchases(
     enforce_rate_limit(limiter_50_per_minute, request)
     query = GetInstallmentPurchasesQuery(user_id=cast(int, current_user.id))
     result = await handler.handle(query)
-    return [InstallmentPurchaseResponse(**r.__dict__) for r in result]
+    return [
+        InstallmentPurchaseResponse(
+            **{**r.__dict__, "charges": [InstallmentChargeResponse(**c.__dict__) for c in r.charges]}
+        )
+        for r in result
+    ]
 
 
 @router.post("/", response_model=InstallmentPurchaseResponse)
@@ -55,7 +60,8 @@ async def create_installment_purchase(
         notes=body.notes,
     )
     result = await handler.handle(CreateInstallmentPurchaseCommand(dto=dto))
-    return InstallmentPurchaseResponse(**result.__dict__)
+    charges = [InstallmentChargeResponse(**c.__dict__) for c in result.charges]
+    return InstallmentPurchaseResponse(**{ **result.__dict__, "charges": charges})
 
 @router.post("/{charge_uuid}/pay/", response_model=InstallmentChargeResponse)
 async def pay_installment_charge(

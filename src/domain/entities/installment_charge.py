@@ -15,7 +15,7 @@ class InstallmentCharge:
     paid: bool
     transaction_id: Optional[int] = None
     paid_at: Optional[datetime] = None
-    creation_date: Optional[datetime] = None
+    created_date: Optional[datetime] = None
 
     @classmethod
     def create_new(
