@@ -47,10 +47,10 @@ class PayInstallmentChargeHandler:
 
         account = await self.account_repository.get_by_id(cast(int, purchase.account_id))
         if not account:
-            raise AccountNotFoundError()
+            raise AccountNotFoundError(account_uuid=str(purchase.account_id))
 
         money = Money(charge.amount)
-        new_balance = account.current_balance.subtract(money)
+        new_balance = account.current_balance.add(money)
 
         transaction = Transaction.create_new(
             user_id=command.user_id,
@@ -70,6 +70,11 @@ class PayInstallmentChargeHandler:
             transaction = await self.transaction_repository.create(transaction)
             charge.mark_as_paid(cast(int, transaction.id))
             charge = await self.installment_charge_repository.update(charge)
+
+            all_charges = await self.installment_charge_repository.get_by_purchase_id(purchase_id=purchase.id)
+            if all(c.paid for c in all_charges):
+                purchase.is_active = False
+                await self.installment_purchase_repository.update(purchase)
 
             await self.uow.commit()
 

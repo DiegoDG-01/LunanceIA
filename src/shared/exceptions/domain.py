@@ -255,3 +255,7 @@ class InvalidEmailError(ValidationError):
 class InvalidBalanceUpdateError(BusinessRuleError):
     def __init__(self, valance_update: str):
         super().__init__(f"Valance update invalido: {valance_update}")
+
+class InvalidInstallmentPaymentError(BusinessRuleError):
+    def __init__(self, expected: str, received: str):
+        super().__init__(f"Invalid account type: {expected} expected, {received} received")

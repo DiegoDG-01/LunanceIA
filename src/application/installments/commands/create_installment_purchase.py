@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal
 from typing import cast, List
 from dateutil.relativedelta import relativedelta
 
 from domain.objects.money import Money
+from domain.objects.enums import AccountType
 from domain.entities.installment_purchase import InstallmentPurchase
 from domain.entities.installment_charge import InstallmentCharge
 from domain.repositories.account_repository import AccountRepository
@@ -12,7 +14,7 @@ from domain.repositories.installment_purchase_repository import InstallmentPurch
 from domain.repositories.installment_charge_repository import InstallmentChargeRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from application.dto.installment_dto import CreateInstallmentPurchaseDTO, InstallmentChargeResponseDTO, InstallmentPurchaseResponseDTO
-from shared.exceptions.domain import UserNotFoundError, AccountNotFoundError
+from shared.exceptions.domain import UserNotFoundError, AccountNotFoundError, InvalidInstallmentPaymentError
 
 
 @dataclass
@@ -47,8 +49,13 @@ class CreateInstallmentPurchaseHandler:
         )
         if not account:
             raise AccountNotFoundError(account_uuid=dto.account_uuid)
+        if account.account_type != AccountType.CREDIT_CARD:
+            raise InvalidInstallmentPaymentError(expected=AccountType.CREDIT_CARD, received=account.account_type)
 
         money = Money(dto.total_amount, dto.currency)
+
+        new_balance = account.current_balance.subtract(money)
+        account.update_balance(new_balance)
 
         purchase = InstallmentPurchase.create_new(
             user_id=cast(int, user.id),
@@ -67,6 +74,7 @@ class CreateInstallmentPurchaseHandler:
             purchase = await self.installment_purchase_repository.create(purchase)
             charges = self._generate_charges(purchase)
             charges = await self.installment_charge_repository.create_bulk(charges)
+            await self.account_repository.update(account)
 
             await self.uow.commit()
 
@@ -92,13 +100,22 @@ class CreateInstallmentPurchaseHandler:
     @staticmethod
     def _generate_charges(purchase: InstallmentPurchase) -> List[InstallmentCharge]:
         charges = []
+        total_charged = Decimal("0")
+
         for i in range(purchase.num_installments):
             due_date = purchase.purchase_date + relativedelta(months=i + 1)
+            is_last = i == purchase.num_installments - 1
+            if is_last:
+                amount = purchase.total_amount.amount - total_charged
+            else:
+                amount = purchase.monthly_payment
+                total_charged += amount
+
             charges.append(
                 InstallmentCharge.create_new(
                     installment_purchase_id=cast(int, purchase.id),
                     installment_number=i + 1,
-                    amount=purchase.monthly_payment,
+                    amount=amount,
                     due_date=due_date,
                 )
             )
