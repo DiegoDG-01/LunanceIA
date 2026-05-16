@@ -78,3 +78,8 @@ class CategoryName(str, Enum):
     VENTAS = "Ventas"
     PREMIOS = "Premios"
     OTROS_INGRESOS = "Otros Ingresos"
+
+
+class InstallmentType(str, Enum):
+    NO_INTEREST = "NO_INTEREST"
+    WITH_INTEREST = "WITH_INTEREST"
