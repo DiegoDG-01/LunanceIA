@@ -18,5 +18,11 @@ class CreateInstallmentPurchaseRequest(BaseModel):
     notes: Optional[str] = Field(None, max_length=1000, description="Notas")
 
 
+class UpdateInstallmentPurchaseRequest(BaseModel):
+    description: Optional[str] = Field(None, max_length=500)
+    notes: Optional[str] = Field(None, max_length=1000)
+    category_id: Optional[int] = Field(None, gt=0)
+
+
 class PayInstallmentChargeRequest(BaseModel):
     payment_date: date = Field(..., description="Fecha de pago")
