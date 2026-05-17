@@ -74,7 +74,7 @@ class TestPayInstallmentChargeHandler:
     def _make_transaction(self) -> Transaction:
         return Transaction(
             id=99, uuid="tx-uuid-1", user_id=1, account_id=10,
-            category_id=None, transaction_type=TransactionType.EXPENSE,
+            category_id=None, transaction_type=TransactionType.INCOME,
             amount=Money(Decimal("1000.00")), transaction_date=date.today(),
             creation_date=datetime.now(),
         )

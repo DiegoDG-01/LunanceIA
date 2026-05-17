@@ -56,7 +56,7 @@ class PayInstallmentChargeHandler:
             user_id=command.user_id,
             account_id=cast(int, account.id),
             category_id=purchase.category_id,
-            transaction_type=TransactionType.EXPENSE,
+            transaction_type=TransactionType.INCOME,
             amount=money,
             transaction_date=command.payment_date,
             description=f"Payment for installment {purchase.description} ({charge.installment_number}/{purchase.num_installments})",
