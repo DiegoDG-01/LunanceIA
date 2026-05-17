@@ -24,3 +24,7 @@ class InstallmentChargeRepository(ABC):
     @abstractmethod
     async def update(self, charge: InstallmentCharge) -> InstallmentCharge:
         pass
+
+    @abstractmethod
+    async def delete_by_purchase_id(self, purchase_id: int) -> None:
+        pass

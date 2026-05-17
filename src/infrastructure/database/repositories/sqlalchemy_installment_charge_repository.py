@@ -94,6 +94,16 @@ class SQLAlchemyInstallmentChargeRepository(InstallmentChargeRepository):
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
+    async def delete_by_purchase_id(self, purchase_id: int) -> None:
+        stmt = select(InstallmentChargeModel).where(
+            InstallmentChargeModel.installment_purchase_id == purchase_id
+        )
+        result = await self.db.execute(stmt)
+        models = result.scalars().all()
+        for model in models:
+            await self.db.delete(model)
+        await self.db.flush()
+
 
 
 
