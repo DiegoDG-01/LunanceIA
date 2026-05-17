@@ -26,7 +26,7 @@ class SQLAlchemyInstallmentChargeRepository(InstallmentChargeRepository):
             paid=model.paid,
             transaction_id=model.transaction_id,
             paid_at=model.paid_at,
-            created_date=model.creation_date,
+            creation_date=model.creation_date,
         )
 
     async def create_bulk(self, charges: List[InstallmentCharge]) -> List[InstallmentCharge]:
