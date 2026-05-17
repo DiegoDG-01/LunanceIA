@@ -94,13 +94,14 @@ class SQLAlchemyInstallmentPurchaseRepository(InstallmentPurchaseRepository):
         model.is_active = purchase.is_active
         model.notes = purchase.notes
         model.description = purchase.description
+        model.category_id = purchase.category_id
         await self.db.flush()
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    async def delete(self, purchase: InstallmentPurchase) -> bool:
+    async def delete(self, purchase_uuid: str) -> bool:
         stmt = select(InstallmentPurchaseModel).where(
-            InstallmentPurchaseModel.id == purchase.id
+            InstallmentPurchaseModel.uuid == purchase_uuid
         )
         result = await self.db.execute(stmt)
         model = result.scalar_one_or_none()

@@ -26,5 +26,5 @@ class InstallmentPurchaseRepository(ABC):
         pass
 
     @abstractmethod
-    async def delete(self, purchase_id: int) -> bool:
+    async def delete(self, purchase_uuid: str) -> bool:
         pass
