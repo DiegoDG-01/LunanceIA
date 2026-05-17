@@ -1,7 +1,9 @@
 from fastapi import Depends
 
 from application.installments.commands.create_installment_purchase import CreateInstallmentPurchaseHandler
+from application.installments.commands.delete_installment_purchase import DeleteInstallmentPurchaseHandler
 from application.installments.commands.pay_installment_charge import PayInstallmentChargeHandler
+from application.installments.commands.update_installment_purchase import UpdateInstallmentPurchaseHandler
 from application.installments.queries.get_installment_purchases import GetInstallmentPurchasesHandler
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.database.repositories.sqlalchemy_account_repository import SQLAlchemyAccountRepository
@@ -61,5 +63,33 @@ def get_pay_installment_charge_handler(
         transaction_repository=transaction_repo,
         installment_charge_repository=charge_repo,
         installment_purchase_repository=purchase_repo,
+        uow=uow,
+    )
+
+def get_delete_installment_handler(
+    account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
+    transaction_repo: SQLAlchemyTransactionRepository = Depends(get_transaction_repository),
+    purchase_repo: SQLAlchemyInstallmentPurchaseRepository = Depends(get_installment_purchase_repository),
+    charge_repo: SQLAlchemyInstallmentChargeRepository = Depends(get_installment_charge_repository),
+    uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
+) -> DeleteInstallmentPurchaseHandler:
+    return DeleteInstallmentPurchaseHandler(
+        account_repository=account_repo,
+        transaction_repository=transaction_repo,
+        installment_purchase_repository=purchase_repo,
+        installment_charge_repository=charge_repo,
+        uow=uow,
+    )
+
+def get_update_installment_handler(
+    account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
+    purchase_repo: SQLAlchemyInstallmentPurchaseRepository = Depends(get_installment_purchase_repository),
+    charge_repo: SQLAlchemyInstallmentChargeRepository = Depends(get_installment_charge_repository),
+    uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
+) -> UpdateInstallmentPurchaseHandler:
+    return UpdateInstallmentPurchaseHandler(
+        account_repository=account_repo,
+        installment_purchase_repository=purchase_repo,
+        installment_charge_repository=charge_repo,
         uow=uow,
     )

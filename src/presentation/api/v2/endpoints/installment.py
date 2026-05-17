@@ -4,19 +4,24 @@ from typing import cast
 from application.dto.installment_dto import CreateInstallmentPurchaseDTO
 from application.installments.commands.create_installment_purchase import CreateInstallmentPurchaseHandler, \
     CreateInstallmentPurchaseCommand
+from application.installments.commands.delete_installment_purchase import DeleteInstallmentPurchaseHandler, \
+    DeleteInstallmentPurchaseCommand
 from application.installments.commands.pay_installment_charge import PayInstallmentChargeHandler, \
     PayInstallmentChargeCommand
+from application.installments.commands.update_installment_purchase import UpdateInstallmentPurchaseHandler, \
+    UpdateInstallmentPurchaseCommand
 from application.installments.queries.get_installment_purchases import GetInstallmentPurchasesHandler, \
     GetInstallmentPurchasesQuery
 from presentation.dependencies.installment_deps import (
     get_installment_purchases_handler,
     get_create_installment_handler,
-    get_pay_installment_charge_handler
+    get_pay_installment_charge_handler, get_delete_installment_handler, get_update_installment_handler
 )
 from domain.entities.user import User
 from infrastructure.rate_limiting.limiters import enforce_rate_limit, limiter_50_per_minute, limiter_20_per_minute
 from presentation.dependencies import get_current_active_user
-from presentation.schemas.requests.installment import CreateInstallmentPurchaseRequest, PayInstallmentChargeRequest
+from presentation.schemas.requests.installment import CreateInstallmentPurchaseRequest, PayInstallmentChargeRequest, \
+    UpdateInstallmentPurchaseRequest
 from presentation.schemas.responses.installment import InstallmentPurchaseResponse, InstallmentChargeResponse
 
 router = APIRouter()
@@ -79,3 +84,37 @@ async def pay_installment_charge(
     )
     result = await handler.handle(command)
     return InstallmentChargeResponse(**result.__dict__)
+
+@router.delete("/{purchase_uuid}/", status_code=204)
+async def delete_installment_purchase(
+    request: Request,
+    purchase_uuid: str,
+    current_user: User = Depends(get_current_active_user),
+    handler: DeleteInstallmentPurchaseHandler = Depends(get_delete_installment_handler)
+):
+    enforce_rate_limit(limiter_20_per_minute, request)
+    command = DeleteInstallmentPurchaseCommand(
+        user_id=cast(int, current_user.id),
+        purchase_uuid=purchase_uuid
+    )
+    await handler.handle(command)
+
+@router.patch("/{purchase_uuid}/", response_model=InstallmentPurchaseResponse)
+async def update_installment_purchase(
+    request: Request,
+    purchase_uuid: str,
+    body: UpdateInstallmentPurchaseRequest,
+    current_user: User = Depends(get_current_active_user),
+    handler: UpdateInstallmentPurchaseHandler = Depends(get_update_installment_handler)
+):
+    enforce_rate_limit(limiter_20_per_minute, request)
+    command = UpdateInstallmentPurchaseCommand(
+        user_id=cast(int, current_user.id),
+        purchase_uuid=purchase_uuid,
+        description=body.description,
+        notes=body.notes,
+        category_id=body.category_id,
+    )
+    result = await handler.handle(command)
+    charges = [InstallmentChargeResponse(**c.__dict__) for c in result.charges]
+    return InstallmentPurchaseResponse(**{ **result.__dict__, "charges": charges})
