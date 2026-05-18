@@ -116,10 +116,7 @@ class TestDeleteInstallmentPurchaseHandler:
             self._make_charge(4, paid=False),
         ]
         self._setup_base_mocks(mocks, purchase, account, charges)
-        mocks["transaction_repo"].get_by_id = AsyncMock(
-            side_effect=lambda tx_id: self._make_transaction(tx_id)
-        )
-        mocks["transaction_repo"].delete_by_uuid = AsyncMock()
+        mocks["transaction_repo"].delete_bulk_by_ids = AsyncMock(return_value=True)
 
         await handler.handle(DeleteInstallmentPurchaseCommand(user_id=1, purchase_uuid="purchase-uuid-1"))
 
@@ -136,10 +133,7 @@ class TestDeleteInstallmentPurchaseHandler:
             for i in range(1, 4)
         ]
         self._setup_base_mocks(mocks, purchase, account, charges)
-        mocks["transaction_repo"].get_by_id = AsyncMock(
-            side_effect=lambda tx_id: self._make_transaction(tx_id)
-        )
-        mocks["transaction_repo"].delete_by_uuid = AsyncMock()
+        mocks["transaction_repo"].delete_bulk_by_ids = AsyncMock(return_value=True)
 
         await handler.handle(DeleteInstallmentPurchaseCommand(user_id=1, purchase_uuid="purchase-uuid-1"))
 
@@ -158,14 +152,13 @@ class TestDeleteInstallmentPurchaseHandler:
             self._make_charge(3, paid=False),
         ]
         self._setup_base_mocks(mocks, purchase, account, charges)
-        mocks["transaction_repo"].get_by_id = AsyncMock(
-            side_effect=lambda tx_id: self._make_transaction(tx_id)
-        )
-        mocks["transaction_repo"].delete_by_uuid = AsyncMock()
+        mocks["transaction_repo"].delete_bulk_by_ids = AsyncMock(return_value=True)
 
         await handler.handle(DeleteInstallmentPurchaseCommand(user_id=1, purchase_uuid="purchase-uuid-1"))
 
-        assert mocks["transaction_repo"].delete_by_uuid.call_count == 2
+        mocks["transaction_repo"].delete_bulk_by_ids.assert_called_once_with(
+            transaction_ids=[101, 102], user_id=1
+        )
 
     @pytest.mark.asyncio
     async def test_no_transactions_deleted_when_none_paid(self, handler, mocks):
@@ -174,11 +167,11 @@ class TestDeleteInstallmentPurchaseHandler:
         charges = [self._make_charge(i) for i in range(1, 4)]
 
         self._setup_base_mocks(mocks, purchase, account, charges)
+        mocks["transaction_repo"].delete_bulk_by_ids = AsyncMock(return_value=True)
 
         await handler.handle(DeleteInstallmentPurchaseCommand(user_id=1, purchase_uuid="purchase-uuid-1"))
 
-        mocks["transaction_repo"].get_by_id.assert_not_called()
-        mocks["transaction_repo"].delete_by_uuid.assert_not_called()
+        mocks["transaction_repo"].delete_bulk_by_ids.assert_not_called()
 
     # --- Eliminación de registros ---
 
