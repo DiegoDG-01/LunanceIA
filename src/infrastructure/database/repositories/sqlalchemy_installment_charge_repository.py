@@ -65,6 +65,23 @@ class SQLAlchemyInstallmentChargeRepository(InstallmentChargeRepository):
         models = result.scalars().all()
         return [self._model_to_entity(model) for model in models]
 
+    async def get_bulk_by_purchase_ids(
+        self, purchase_ids: List[int]
+    ) -> List[InstallmentCharge]:
+        if not purchase_ids:
+            return []
+        stmt = (
+            select(InstallmentChargeModel)
+            .where(InstallmentChargeModel.installment_purchase_id.in_(purchase_ids))
+            .order_by(
+                InstallmentChargeModel.installment_purchase_id,
+                InstallmentChargeModel.installment_number,
+            )
+        )
+        result = await self.db.execute(stmt)
+        models = result.scalars().all()
+        return [self._model_to_entity(model) for model in models]
+
     async def get_pending_charges(self, user_id: int) -> List[InstallmentCharge]:
         stmt = (
             select(InstallmentChargeModel)

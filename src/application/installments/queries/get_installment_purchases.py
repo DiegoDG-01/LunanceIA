@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import cast
 
@@ -47,16 +48,24 @@ class GetInstallmentPurchasesHandler:
         if not purchases:
             return []
 
-        result = []
         account_ids = {cast(int, p.account_id) for p in purchases}
-        accounts = await self.account_repository.get_bulk_by_ids(account_ids=list(account_ids))
+        accounts = await self.account_repository.get_bulk_by_ids(
+            account_ids=list(account_ids)
+        )
         accounts_by_id = {acc.id: acc for acc in accounts}
 
+        purchase_ids = [cast(int, p.id) for p in purchases]
+        all_charges = await self.installment_charge_repository.get_bulk_by_purchase_ids(
+            purchase_ids=purchase_ids
+        )
+        charges_by_purchase_id: dict[int, list] = defaultdict(list)
+        for c in all_charges:
+            charges_by_purchase_id[c.installment_purchase_id].append(c)
+
+        result = []
         for purchase in purchases:
             account = accounts_by_id[cast(int, purchase.account_id)]
-            charges = await self.installment_charge_repository.get_by_purchase_id(
-                cast(int, purchase.id)
-            )
+            charges = charges_by_purchase_id[cast(int, purchase.id)]
 
             charge_dtos = [
                 InstallmentChargeResponseDTO(

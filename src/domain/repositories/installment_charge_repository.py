@@ -20,6 +20,12 @@ class InstallmentChargeRepository(ABC):
         pass
 
     @abstractmethod
+    async def get_bulk_by_purchase_ids(
+        self, purchase_ids: List[int]
+    ) -> List[InstallmentCharge]:
+        pass
+
+    @abstractmethod
     async def get_pending_charges(self, user_id: int) -> List[InstallmentCharge]:
         pass
 
