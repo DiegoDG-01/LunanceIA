@@ -1,6 +1,7 @@
 from datetime import date
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, func, desc, select, case
+from sqlalchemy import and_, func, desc, select, delete, case
 from typing import Optional, List, Tuple
 
 from domain.entities.transaction import Transaction
@@ -313,6 +314,15 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             return True
 
         return False
+
+    async def delete_bulk_by_ids(self, transaction_ids: list[int], user_id: int) -> bool:
+        """Elimina transacciones por IDs."""
+        stmt = delete(TransactionModel).where(
+            TransactionModel.id.in_(transaction_ids),
+            TransactionModel.user_id == user_id,
+        )
+        result = await self.db.execute(stmt)
+        return result.rowcount >= 0
 
     async def get_total_by_type(
         self,

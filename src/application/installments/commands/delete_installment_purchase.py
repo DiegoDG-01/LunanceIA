@@ -58,20 +58,18 @@ class DeleteInstallmentPurchaseHandler:
                 paid_total += charge.amount
                 transactions_ids_to_delete.append(charge.transaction_id)
 
-        net_restore = purchase.total_amount.amount - paid_total
-        new_balance = account.current_balance.add(Money(net_restore))
-
         async with self.uow:
+            net_restore = purchase.total_amount.amount - paid_total
+            new_balance = account.current_balance.add(Money(net_restore))
             account.update_balance(new_balance)
 
-            for transactions_id in transactions_ids_to_delete:
-                transaction = await self.transaction_repository.get_by_id(
-                    transactions_id
+            if transactions_ids_to_delete:
+                deleted = await self.transaction_repository.delete_bulk_by_ids(
+                    transaction_ids=transactions_ids_to_delete, user_id=command.user_id
                 )
-                if transaction and transaction.uuid:
-                    await self.transaction_repository.delete_by_uuid(
-                        uuid=transaction.uuid, user_id=command.user_id
-                    )
+                if not deleted:
+                    raise ValueError("Failed to delete transactions")
+
             await self.installment_charge_repository.delete_by_purchase_id(
                 purchase_id=cast(int, purchase.id)
             )
