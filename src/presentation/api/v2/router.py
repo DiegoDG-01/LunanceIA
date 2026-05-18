@@ -11,6 +11,7 @@ from presentation.api.v2.endpoints import (
     investment_yield,
     ai,
     notification,
+    installment,
 )
 
 api_router = APIRouter()
@@ -32,4 +33,7 @@ api_router.include_router(
 api_router.include_router(ai.router, prefix="/ai", tags=["AI"])
 api_router.include_router(
     notification.router, prefix="/notifications", tags=["Notifications"]
+)
+api_router.include_router(
+    installment.router, prefix="/installments", tags=["Installments"]
 )

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional, List
 
 from domain.objects.money import Money
@@ -48,7 +48,7 @@ class Transaction:
             description=description,
             notes=notes,
             tags=tags,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     def is_income(self):

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Optional
 from decimal import Decimal
 
@@ -54,7 +54,7 @@ class TestGetInvestmentProjectionsHandler:
             current_balance=Money(Decimal(balance)),
             bank_id=1,
             is_active=True,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     def _make_settings(

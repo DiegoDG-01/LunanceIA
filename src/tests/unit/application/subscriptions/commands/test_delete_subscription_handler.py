@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from decimal import Decimal
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from application.subscriptions.commands.delete_subscription import (
     DeleteSubscriptionCommand,
@@ -38,7 +38,7 @@ class TestDeleteSubscriptionHandler:
             name="Netflix", amount=Money(Decimal("199.00")),
             frequency=Frequency.MONTHLY, start_date=date.today(),
             end_date=None, billing_day=1, is_active=True,
-            description=None, service_url=None, creation_date=datetime.now(),
+            description=None, service_url=None, creation_date=datetime.now(timezone.utc),
         )
 
     @pytest.mark.asyncio

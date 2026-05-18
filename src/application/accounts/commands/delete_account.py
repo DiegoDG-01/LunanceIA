@@ -6,7 +6,11 @@ from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.services.account_service import AccountService
 
-from shared.exceptions.domain import AccountNotFoundError
+from shared.exceptions.domain import (
+    AccountNotFoundError,
+    AccountHasBalanceError,
+    AccountHasTransactionsError,
+)
 
 
 @dataclass
@@ -44,14 +48,17 @@ class DeleteAccountHandler:
 
         # Validar que se puede eliminar
         if not self.account_service.validate_account_for_deletion(account):
-            raise ValueError("No se puede eliminar cuenta con balance diferente a cero")
+            raise AccountHasBalanceError(
+                account_id=cast(int, account.id),
+                balance=float(account.current_balance.amount),
+            )
 
         # Verificar que no hay transacciones pendientes
         transactions = await self.transaction_repository.get_by_account(
             cast(int, account.id), command.user_id
         )
         if transactions:
-            raise ValueError("No se puede eliminar cuenta con transacciones existentes")
+            raise AccountHasTransactionsError(account_id=cast(int, account.id))
 
         # Eliminar cuenta
         async with self.uow:

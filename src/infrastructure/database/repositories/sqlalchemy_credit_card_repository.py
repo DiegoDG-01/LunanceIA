@@ -5,6 +5,7 @@ from sqlalchemy import select
 from domain.repositories.credit_card_repository import CreditCardSettingsRepository
 from domain.objects.credit_card_settings import CreditCardSettings
 from infrastructure.database.models.credit_card import CreditCardSettingsModel
+from shared.exceptions.domain import CreditCardSettingsNotFoundError
 
 
 class SQLAlchemyCreditCardSettingsRepository(CreditCardSettingsRepository):
@@ -57,7 +58,7 @@ class SQLAlchemyCreditCardSettingsRepository(CreditCardSettingsRepository):
         model = result.scalar_one_or_none()
 
         if model is None:
-            raise ValueError("Credit card settings no encontrada")
+            raise CreditCardSettingsNotFoundError(str(account_id))
 
         model.billing_cycle_day = settings.billing_cycle_day
         model.payment_due_day = settings.payment_due_day

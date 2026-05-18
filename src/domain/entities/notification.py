@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import datetime
 from typing import Optional
 
 from domain.objects.enums import NotificationType
@@ -14,7 +14,6 @@ class Notification:
     type: NotificationType
     is_read: bool
     created_at: Optional[datetime] = None
-
 
     @classmethod
     def create_new(

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from decimal import Decimal
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from application.subscriptions.commands.create_subscription import (
     CreateSubscriptionCommand,
@@ -53,7 +53,7 @@ class TestCreateSubscriptionHandler:
             id=10, uuid="acc-uuid-1", user_id=1, bank_id=1,
             name="Test Account", account_type=AccountType.CHECKING,
             current_balance=Money(Decimal("5000.00")), is_active=True,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
         acc.uuid = "acc-uuid-1"
         return acc
@@ -64,7 +64,7 @@ class TestCreateSubscriptionHandler:
             name="Netflix", amount=Money(Decimal("199.00")),
             frequency=Frequency.MONTHLY, start_date=date.today(),
             end_date=None, billing_day=1, is_active=True,
-            description=None, service_url=None, creation_date=datetime.now(),
+            description=None, service_url=None, creation_date=datetime.now(timezone.utc),
         )
 
     @pytest.mark.asyncio

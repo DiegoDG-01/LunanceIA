@@ -1,6 +1,7 @@
 from os import environ
 from pydantic_ai.models import Model
 from infrastructure.config.settings import settings
+from shared.exceptions.domain import InvalidAIProviderError
 from enum import StrEnum
 
 
@@ -45,4 +46,4 @@ def build_model() -> Model:
         case AIProvider.TEST:
             return None
         case _:
-            raise ValueError("Invalid AI provider")
+            raise InvalidAIProviderError(provider=str(settings.AI_PROVIDER))

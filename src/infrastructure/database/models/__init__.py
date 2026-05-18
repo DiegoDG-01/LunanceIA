@@ -14,6 +14,7 @@ from .investment_account import InvestmentCardSettingsModel
 from .bank import BankModel
 from .investment_yield import InvestmentYieldModel
 from .notifications import NotificationModel
+from .installment import InstallmentPurchaseModel, InstallmentChargeModel
 
 __all__ = [
     "BudgetModel",
@@ -32,4 +33,6 @@ __all__ = [
     "BankModel",
     "InvestmentYieldModel",
     "NotificationModel",
+    "InstallmentPurchaseModel",
+    "InstallmentChargeModel",
 ]

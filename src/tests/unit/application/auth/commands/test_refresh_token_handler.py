@@ -7,7 +7,7 @@ from application.interfaces.auth_service import AuthConfig
 from domain.entities.user import User
 from domain.entities.refresh_token import RefreshToken
 from shared.exceptions.application import CommandValidationError, JWTValidationError
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 @pytest.mark.unit
@@ -69,7 +69,7 @@ class TestRefreshTokenHandler:
             user_id=1,
             token_hash="hashed-refresh-token",
             is_revoked=False,
-            expired_at=datetime.now() + timedelta(days=7),
+            expired_at=datetime.now(timezone.utc) + timedelta(days=7),
         )
 
     @pytest.mark.asyncio

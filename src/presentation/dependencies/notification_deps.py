@@ -14,7 +14,9 @@ from presentation.dependencies.repositories import (
 
 
 def get_notifications_handler(
-    notification_repo: SQLAlchemyNotificationRepository = Depends(get_notification_repository),
+    notification_repo: SQLAlchemyNotificationRepository = Depends(
+        get_notification_repository
+    ),
     uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> GetAndClearNotificationsHandler:
     return GetAndClearNotificationsHandler(notification_repo, uow)

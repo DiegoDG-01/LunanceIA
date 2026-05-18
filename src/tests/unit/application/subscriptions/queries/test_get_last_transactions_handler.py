@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Optional
 from decimal import Decimal
 
@@ -47,7 +47,7 @@ class TestGetLastTransactionsHandler:
             is_active=True,
             description=None,
             service_url=None,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     def _make_charge(
