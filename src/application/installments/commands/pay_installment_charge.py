@@ -11,7 +11,7 @@ from domain.repositories.installment_purchase_repository import InstallmentPurch
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from application.dto.installment_dto import InstallmentChargeResponseDTO
-from shared.exceptions.domain import AccountNotFoundError
+from shared.exceptions.domain import AccountNotFoundError, InstallmentChargeNotFoundError
 
 
 @dataclass
@@ -39,14 +39,14 @@ class PayInstallmentChargeHandler:
     async def handle(self, command: PayInstallmentChargeCommand) -> InstallmentChargeResponseDTO:
         charge = await self.installment_charge_repository.get_by_uuid(command.charge_uuid)
         if not charge:
-            raise ValueError("Charge not found")
+            raise InstallmentChargeNotFoundError(command.charge_uuid)
 
         purchase = await self.installment_purchase_repository.get_by_id(purchase_id=charge.installment_purchase_id)
-        if not purchase:
-            raise ValueError("Purchase not found")
+        if not purchase or purchase.user_id != command.user_id:
+            raise InstallmentChargeNotFoundError(command.charge_uuid)
 
         account = await self.account_repository.get_by_id(cast(int, purchase.account_id))
-        if not account:
+        if not account or account.user_id != command.user_id:
             raise AccountNotFoundError(account_uuid=str(purchase.account_id))
 
         money = Money(charge.amount)
@@ -86,7 +86,6 @@ class PayInstallmentChargeHandler:
             paid=charge.paid,
             paid_at=charge.paid_at,
         )
-
 
 
 

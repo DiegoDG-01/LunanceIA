@@ -13,7 +13,7 @@ from domain.entities.installment_purchase import InstallmentPurchase
 from domain.entities.transaction import Transaction
 from domain.objects.enums import AccountType, InstallmentType, TransactionType
 from domain.objects.money import Money
-from shared.exceptions.domain import AccountNotFoundError
+from shared.exceptions.domain import AccountNotFoundError, InstallmentChargeNotFoundError
 
 
 @pytest.mark.unit
@@ -201,3 +201,26 @@ class TestPayInstallmentChargeHandler:
             await handler.handle(PayInstallmentChargeCommand(
                 user_id=1, charge_uuid="charge-uuid-1", payment_date=date.today()
             ))
+
+    @pytest.mark.asyncio
+    async def test_rejects_charge_from_another_user_without_mutating_state(self, handler, mocks):
+        charge = self._make_charge()
+        purchase = self._make_purchase()
+        purchase.user_id = 2
+
+        mocks["charge_repo"].get_by_uuid = AsyncMock(return_value=charge)
+        mocks["purchase_repo"].get_by_id = AsyncMock(return_value=purchase)
+        mocks["account_repo"].get_by_id = AsyncMock()
+        mocks["account_repo"].update = AsyncMock()
+        mocks["transaction_repo"].create = AsyncMock()
+        mocks["charge_repo"].update = AsyncMock()
+
+        with pytest.raises(InstallmentChargeNotFoundError):
+            await handler.handle(PayInstallmentChargeCommand(
+                user_id=1, charge_uuid="charge-uuid-1", payment_date=date.today()
+            ))
+
+        mocks["account_repo"].get_by_id.assert_not_called()
+        mocks["account_repo"].update.assert_not_called()
+        mocks["transaction_repo"].create.assert_not_called()
+        mocks["charge_repo"].update.assert_not_called()

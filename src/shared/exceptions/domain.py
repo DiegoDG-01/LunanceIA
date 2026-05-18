@@ -51,6 +51,13 @@ class SubscriptionNotFoundError(NotFoundError):
         super().__init__(f"Suscripción con ID {subscription_uuid} no encontrada")
 
 
+class InstallmentChargeNotFoundError(NotFoundError):
+    """Cargo de compra a plazos no encontrado."""
+
+    def __init__(self, charge_uuid: str):
+        super().__init__(f"Cargo de compra a plazos con ID {charge_uuid} no encontrado")
+
+
 class AccountInactiveError(BusinessRuleError):
     """Cuenta inactiva."""
 
