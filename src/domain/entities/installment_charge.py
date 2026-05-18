@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime, date
 from decimal import Decimal
 from typing import Optional
+from datetime import timezone
 
 
 @dataclass
@@ -35,7 +36,7 @@ class InstallmentCharge:
             paid=False,
             transaction_id=None,
             paid_at=None,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     def mark_as_paid(self, transaction_id: int) -> None:
