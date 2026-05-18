@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from domain.entities.user import User
 from domain.repositories.user_repository import UserRepository
 from infrastructure.database.models.user import UserModel
+from shared.exceptions.domain import UserNotFoundError
 
 
 class SQLAlchemyUserRepository(UserRepository):
@@ -91,7 +92,7 @@ class SQLAlchemyUserRepository(UserRepository):
         model = result.scalar_one_or_none()
 
         if not model:
-            raise ValueError("Usuario no encontrado")
+            raise UserNotFoundError()
 
         # Actualizar campos
         model.name = user.name
@@ -109,7 +110,7 @@ class SQLAlchemyUserRepository(UserRepository):
         model = result.scalar_one_or_none()
 
         if not model:
-            raise ValueError("Usuario no encontrado")
+            raise UserNotFoundError()
 
         model.is_active = False
         await self.db.flush()
@@ -123,7 +124,7 @@ class SQLAlchemyUserRepository(UserRepository):
         model = result.scalar_one_or_none()
 
         if not model:
-            raise ValueError("Usuario no encontrado")
+            raise UserNotFoundError()
 
         await self.db.delete(model)
         await self.db.flush()

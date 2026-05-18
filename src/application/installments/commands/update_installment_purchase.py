@@ -13,7 +13,10 @@ from domain.repositories.installment_purchase_repository import (
     InstallmentPurchaseRepository,
 )
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from shared.exceptions.domain import AccountNotFoundError
+from shared.exceptions.domain import (
+    AccountNotFoundError,
+    InstallmentPurchaseNotFoundError,
+)
 
 
 @dataclass
@@ -45,7 +48,7 @@ class UpdateInstallmentPurchaseHandler:
             uuid=command.purchase_uuid, user_id=command.user_id
         )
         if not purchase:
-            raise ValueError("Purchase not found")
+            raise InstallmentPurchaseNotFoundError(purchase_uuid=command.purchase_uuid)
 
         account = await self.account_repository.get_by_id(purchase.account_id)
         if not account:

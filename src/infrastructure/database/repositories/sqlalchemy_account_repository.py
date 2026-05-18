@@ -14,6 +14,7 @@ from infrastructure.database.models import (
     BankModel,
 )
 from infrastructure.database.models.account import AccountModel
+from shared.exceptions.domain import AccountNotFoundError
 
 
 class SQLAlchemyAccountRepository(AccountRepository):
@@ -216,7 +217,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         model = result.scalar_one_or_none()
 
         if not model:
-            raise Exception("Account not found")
+            raise AccountNotFoundError(str(account.uuid))
 
         model.name = account.name
         model.type = account.account_type
@@ -237,7 +238,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         model = result.scalar_one_or_none()
 
         if not model:
-            raise Exception("Account not found")
+            raise AccountNotFoundError(str(account.uuid))
 
         await self.db.delete(model)
         await self.db.flush()

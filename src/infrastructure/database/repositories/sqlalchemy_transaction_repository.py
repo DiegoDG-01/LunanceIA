@@ -11,6 +11,7 @@ from domain.objects.enums import TransactionType, AccountType
 from infrastructure.database.models.transaction import TransactionModel
 from infrastructure.database.models.account import AccountModel
 from infrastructure.database.models.category import CategoryModel
+from shared.exceptions.domain import TransactionNotFoundError
 
 
 class SQLAlchemyTransactionRepository(TransactionRepository):
@@ -272,7 +273,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         model = result.scalar_one_or_none()
 
         if not model:
-            raise ValueError("Transacción no encontrada")
+            raise TransactionNotFoundError(f"Transaction not found: {transaction.uuid}")
 
         # Actualizar campos
         # Set category_id in all cases
@@ -315,7 +316,9 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
 
         return False
 
-    async def delete_bulk_by_ids(self, transaction_ids: list[int], user_id: int) -> bool:
+    async def delete_bulk_by_ids(
+        self, transaction_ids: list[int], user_id: int
+    ) -> bool:
         """Elimina transacciones por IDs."""
         stmt = delete(TransactionModel).where(
             TransactionModel.id.in_(transaction_ids),

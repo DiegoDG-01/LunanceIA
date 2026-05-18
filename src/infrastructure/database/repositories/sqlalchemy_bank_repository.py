@@ -5,7 +5,7 @@ from sqlalchemy import select
 from domain.repositories.bank_repository import BankRepository
 from domain.entities.bank import Bank
 
-# from shared.exceptions import BankNotFound
+from shared.exceptions.domain import BankNotFoundError
 from infrastructure.database.models.bank import BankModel
 
 
@@ -61,7 +61,7 @@ class SQLAlchemyBankRepository(BankRepository):
     async def update(self, bank: Bank) -> Bank:
         bank_model = await self.db.get(BankModel, bank.id)
         if not bank_model:
-            raise ValueError("Bank not found")
+            raise BankNotFoundError(bank_id=bank.id)
 
         bank_model.name = bank.name
         bank_model.code = bank.code
@@ -77,7 +77,7 @@ class SQLAlchemyBankRepository(BankRepository):
     async def delete(self, bank_id: int) -> None:
         bank_model = await self.db.get(BankModel, bank_id)
         if not bank_model:
-            raise ValueError("Bank not found")
+            raise BankNotFoundError(bank_id=bank_id)
 
         await self.db.delete(bank_model)
         await self.db.flush()

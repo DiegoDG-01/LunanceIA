@@ -33,7 +33,9 @@ class TransactionRepository(ABC):
     pass
 
     @abstractmethod
-    async def delete_bulk_by_ids(self, transaction_ids: list[int], user_id: int) -> bool:
+    async def delete_bulk_by_ids(
+        self, transaction_ids: list[int], user_id: int
+    ) -> bool:
         pass
 
     @abstractmethod

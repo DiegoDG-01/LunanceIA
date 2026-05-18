@@ -12,7 +12,11 @@ from domain.repositories.installment_purchase_repository import (
 )
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from shared.exceptions.domain import AccountNotFoundError
+from shared.exceptions.domain import (
+    AccountNotFoundError,
+    BulkDeleteFailedError,
+    InstallmentPurchaseNotFoundError,
+)
 
 
 @dataclass
@@ -41,7 +45,7 @@ class DeleteInstallmentPurchaseHandler:
             uuid=command.purchase_uuid, user_id=command.user_id
         )
         if not purchase:
-            raise ValueError("Purchase not found")
+            raise InstallmentPurchaseNotFoundError(purchase_uuid=command.purchase_uuid)
 
         account = await self.account_repository.get_by_id(purchase.account_id)
         if not account:
@@ -68,7 +72,7 @@ class DeleteInstallmentPurchaseHandler:
                     transaction_ids=transactions_ids_to_delete, user_id=command.user_id
                 )
                 if not deleted:
-                    raise ValueError("Failed to delete transactions")
+                    raise BulkDeleteFailedError(entity="transactions")
 
             await self.installment_charge_repository.delete_by_purchase_id(
                 purchase_id=cast(int, purchase.id)

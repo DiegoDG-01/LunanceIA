@@ -12,6 +12,7 @@ from domain.repositories.investment_card_repository import (
     InvestmentCardSettingsRepository,
 )
 from domain.repositories.unit_of_work import AbstractUnitOfWork
+from shared.exceptions.domain import AccountNotFoundError
 
 
 @dataclass
@@ -47,7 +48,7 @@ class UpdateAccountHandler:
             dto.account_uuid, dto.user_id
         )
         if not account:
-            raise ValueError("Cuenta no encontrada")
+            raise AccountNotFoundError(dto.account_uuid)
 
         # Actualizar campos si se proporcionan
         if dto.name is not None:
