@@ -1,7 +1,7 @@
 from pydantic import EmailStr
 from typing import Optional
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from email_validator import validate_email, EmailNotValidError
 import uuid as uuid_lib
 
@@ -18,8 +18,12 @@ class User:
     id: Optional[int] = None  # ← Opcional, se asigna al guardar en DB
     uuid: str = field(default_factory=lambda: str(uuid_lib.uuid4()))  # ← Auto-genera
     email_verified: bool = False
-    last_login: datetime = field(default_factory=datetime.now)  # ← Auto-genera
-    registration_date: datetime = field(default_factory=datetime.now)  # ← Auto-genera
+    last_login: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )  # ← Auto-genera
+    registration_date: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )  # ← Auto-genera
     is_active: bool = True
 
     @classmethod

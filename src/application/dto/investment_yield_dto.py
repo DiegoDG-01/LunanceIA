@@ -17,9 +17,8 @@ class InvestmentYieldResponseDTO:
     interest_type: InterestType
     created_at: Optional[datetime]
 
-
     @classmethod
-    def from_entity(cls, entity) -> 'InvestmentYieldResponseDTO':
+    def from_entity(cls, entity) -> "InvestmentYieldResponseDTO":
         return cls(
             uuid=entity.uuid,
             yield_date=entity.yield_date,
@@ -28,7 +27,7 @@ class InvestmentYieldResponseDTO:
             cumulative_balance=entity.cumulative_balance,
             annual_rate=entity.annual_rate,
             interest_type=entity.interest_type,
-            created_at=entity.created_at
+            created_at=entity.created_at,
         )
 
 

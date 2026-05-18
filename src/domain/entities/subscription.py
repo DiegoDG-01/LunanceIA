@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional
 
 from domain.objects.money import Money
@@ -54,5 +54,5 @@ class Subscription:
             is_active=True,
             description=description,
             service_url=service_url,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )

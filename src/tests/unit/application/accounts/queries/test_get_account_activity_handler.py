@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Optional
 from decimal import Decimal
 
@@ -41,7 +41,7 @@ class TestGetAccountActivitiesHandler:
             account_type=AccountType.SAVINGS,
             current_balance=Money(Decimal("5000.00")),
             is_active=True,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     def _make_transaction(

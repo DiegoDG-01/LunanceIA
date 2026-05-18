@@ -10,7 +10,7 @@ from domain.objects.money import Money
 from domain.objects.enums import TransactionType, AccountType
 from shared.exceptions.domain import UserNotFoundError, AccountNotFoundError, InsufficientFundsError
 from decimal import Decimal
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 @pytest.mark.unit
 class TestCreateTransactionHandler:
@@ -58,7 +58,7 @@ class TestCreateTransactionHandler:
             current_balance=Money(Decimal("1000.00")),
             bank_id=1,
             is_active=True,
-            creation_date=datetime.now()
+            creation_date=datetime.now(timezone.utc)
         )
         mock_category = Category(id=1, name="Food", type="EXPENSE")
 
@@ -79,7 +79,7 @@ class TestCreateTransactionHandler:
             transaction_date=date.today(),
             description="Lunch",
             notes="",
-            creation_date=datetime.now()
+            creation_date=datetime.now(timezone.utc)
         )
 
         mocks["transaction_repo"].create = AsyncMock(return_value=saved_tx)
@@ -119,7 +119,7 @@ class TestCreateTransactionHandler:
             current_balance=Money(Decimal("1000.00")),
             bank_id=1,
             is_active=True,
-            creation_date=datetime.now()
+            creation_date=datetime.now(timezone.utc)
         )
 
         mocks["user_repo"].get_by_id = AsyncMock(return_value=mock_user)
@@ -136,7 +136,7 @@ class TestCreateTransactionHandler:
             amount=Money(Decimal("500.00")),
             transaction_date=date.today(),
             description="Salary",
-            creation_date=datetime.now()
+            creation_date=datetime.now(timezone.utc)
         )
 
         mocks["transaction_repo"].create = AsyncMock(return_value=saved_tx)
@@ -165,7 +165,7 @@ class TestCreateTransactionHandler:
         mock_account = Account(
             id=10, uuid="acc", user_id=user_id, name="B", account_type=AccountType.CASH,
             current_balance=Money(Decimal("50.00")),
-            bank_id=1, is_active=True, creation_date=datetime.now()
+            bank_id=1, is_active=True, creation_date=datetime.now(timezone.utc)
         )
 
         mocks["user_repo"].get_by_id = AsyncMock(return_value=mock_user)

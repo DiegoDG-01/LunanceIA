@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone
 
 from application.accounts.commands.state_account import (
     StateAccountCommand,
@@ -48,7 +48,7 @@ class TestStateAccountHandler:
             account_type=AccountType.SAVINGS,
             current_balance=Money(Decimal("1000.00")),
             is_active=is_active,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     @pytest.mark.asyncio

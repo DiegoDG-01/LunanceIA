@@ -74,6 +74,12 @@ class SQLAlchemyAccountRepository(AccountRepository):
             return None
         return self._model_to_entity(model)
 
+    async def get_bulk_by_ids(self, account_ids: List[int]) -> List[Account]:
+        stmt = select(AccountModel).where(AccountModel.id.in_(account_ids))
+        result = await self.db.execute(stmt)
+        models = result.scalars().all()
+        return [self._model_to_entity(model) for model in models]
+
     async def get_by_uuid_and_user_id(
         self, account_uuid: str, user_id: int
     ) -> Optional[Account]:

@@ -53,6 +53,7 @@ class ReminderType(str, Enum):
     REVISION = "revision"
     OTRO = "otro"
 
+
 class NotificationType(str, Enum):
     SMS = "sms"
     EMAIL = "email"
@@ -78,3 +79,8 @@ class CategoryName(str, Enum):
     VENTAS = "Ventas"
     PREMIOS = "Premios"
     OTROS_INGRESOS = "Otros Ingresos"
+
+
+class InstallmentType(str, Enum):
+    NO_INTEREST = "NO_INTEREST"
+    WITH_INTEREST = "WITH_INTEREST"

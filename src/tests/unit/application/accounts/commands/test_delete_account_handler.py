@@ -11,7 +11,7 @@ from domain.objects.money import Money
 from domain.services.account_service import AccountService
 from shared.exceptions.domain import AccountNotFoundError
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 @pytest.mark.unit
@@ -49,7 +49,7 @@ class TestDeleteAccountHandler:
             account_type=AccountType.SAVINGS,
             current_balance=Money(Decimal(balance)),
             is_active=True,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     @pytest.mark.asyncio
