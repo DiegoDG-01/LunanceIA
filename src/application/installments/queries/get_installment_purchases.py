@@ -44,11 +44,16 @@ class GetInstallmentPurchasesHandler:
         purchases = await self.installment_purchase_repository.get_all_by_user_id(
             query.user_id
         )
+        if not purchases:
+            return []
+
         result = []
+        account_ids = {cast(int, p.account_id) for p in purchases}
+        accounts = await self.account_repository.get_bulk_by_ids(account_ids=list(account_ids))
+        accounts_by_id = {acc.id: acc for acc in accounts}
+
         for purchase in purchases:
-            account = await self.account_repository.get_by_id(
-                cast(int, purchase.account_id)
-            )
+            account = accounts_by_id[cast(int, purchase.account_id)]
             charges = await self.installment_charge_repository.get_by_purchase_id(
                 cast(int, purchase.id)
             )

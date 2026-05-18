@@ -18,6 +18,10 @@ class AccountRepository(ABC):
         pass
 
     @abstractmethod
+    async def get_bulk_by_ids(self, account_ids: List[int]) -> List[Account]:
+        """Get account by id"""
+
+    @abstractmethod
     async def get_by_uuid_and_user_id(
         self, account_uuid: str, user_id: int
     ) -> Optional[Account]:
