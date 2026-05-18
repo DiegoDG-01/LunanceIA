@@ -45,10 +45,12 @@ class AnalyzeImageHandler:
             raise InvalidImageError("Image is too large")
 
         try:
-            with Image.open(BytesIO(image_data)) as img:
+            image_stream = BytesIO(image_data)
+            with Image.open(image_stream) as img:
                 img.verify()
 
-            with Image.open(BytesIO(image_data)) as img:
+            image_stream.seek(0)
+            with Image.open(image_stream) as img:
                 width, height = img.size
         except UnidentifiedImageError:
             raise InvalidImageError("This is not a valid image file")
