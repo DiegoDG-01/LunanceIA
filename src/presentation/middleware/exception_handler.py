@@ -124,6 +124,30 @@ EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     InvalidBalanceUpdateError: ("VALIDATION_INVALID_BALANCE_UPDATE", 400),
 }
 
+SENSITIVE_FIELDS = {
+      "password",
+      "refresh_token",
+      "access_token",
+      "token",
+      "authorization",
+      "secret",
+      "api_key",
+  }
+
+def is_sensitive_loc(loc) -> bool:
+    return any(str(part).lower() in SENSITIVE_FIELDS for part in loc or [])
+
+def sanitized_validation_errors(errors: list[dict]) -> list[dict]:
+    sanitized = []
+    for error in errors:
+        clean = dict(error)
+        if is_sensitive_loc(clean.get("loc")):
+            clean["input"] = "[REDACTED]"
+        retunable_ctx = clean.get("ctx")
+        if isinstance(retunable_ctx, dict):
+            clean["ctx"] = dict(retunable_ctx)
+        sanitized.append(clean)
+    return sanitized
 
 def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
     """
@@ -201,7 +225,7 @@ async def validation_exception_handler(
 
     Extracts validation errors, translates each message based on the user's language, and returns a JSON response with detailed error information and a main validation error message.
     """
-    logger.warning(f"Validation error: {exc.errors()}")
+    logger.warning(f"Validation error: {sanitized_validation_errors(exc.errors())}")
 
     # Detectar idioma del usuario
     user_language = get_user_language(request)
@@ -231,7 +255,7 @@ async def validation_exception_handler(
                 loc=error.get("loc"),
                 msg=translated_msg,
                 type=error_type,
-                input=error.get("input"),
+                input=None if is_sensitive_loc(error.get("loc")) else error.get("input"),
             )
         )
 
