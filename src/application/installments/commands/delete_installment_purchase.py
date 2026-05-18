@@ -48,7 +48,7 @@ class DeleteInstallmentPurchaseHandler:
             raise AccountNotFoundError(account_uuid=str(purchase.account_id))
 
         charges = await self.installment_charge_repository.get_by_purchase_id(
-            purchase_id=purchase.id
+            purchase_id=cast(int, purchase.id)
         )
 
         paid_total = Decimal("0")
@@ -60,9 +60,10 @@ class DeleteInstallmentPurchaseHandler:
 
         net_restore = purchase.total_amount.amount - paid_total
         new_balance = account.current_balance.add(Money(net_restore))
-        account.update_balance(new_balance)
 
         async with self.uow:
+            account.update_balance(new_balance)
+
             for transactions_id in transactions_ids_to_delete:
                 transaction = await self.transaction_repository.get_by_id(
                     transactions_id

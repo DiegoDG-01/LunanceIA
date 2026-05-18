@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, delete
 
 from domain.entities.installment_charge import InstallmentCharge
 from domain.repositories.installment_charge_repository import (
@@ -116,11 +116,7 @@ class SQLAlchemyInstallmentChargeRepository(InstallmentChargeRepository):
         return self._model_to_entity(model)
 
     async def delete_by_purchase_id(self, purchase_id: int) -> None:
-        stmt = select(InstallmentChargeModel).where(
+        stmt = delete(InstallmentChargeModel).where(
             InstallmentChargeModel.installment_purchase_id == purchase_id
         )
-        result = await self.db.execute(stmt)
-        models = result.scalars().all()
-        for model in models:
-            await self.db.delete(model)
-        await self.db.flush()
+        await self.db.execute(stmt)
