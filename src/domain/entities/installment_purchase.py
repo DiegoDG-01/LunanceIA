@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from decimal import Decimal
 from typing import Optional
 
@@ -39,7 +39,6 @@ class InstallmentPurchase:
         purchase_date: date,
         notes: Optional[str] = None,
     ) -> "InstallmentPurchase":
-
         monthly_payment = cls._calculate_monthly_payment(
             total_amount.amount,
             num_installments,
@@ -61,7 +60,7 @@ class InstallmentPurchase:
             purchase_date=purchase_date,
             notes=notes,
             is_active=True,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     @staticmethod
@@ -75,36 +74,9 @@ class InstallmentPurchase:
             return round(principal / n, 2)
 
         monthly_rate = annual_rate / Decimal("12") / Decimal("100")
-        payment = principal * (monthly_rate * (1 + monthly_rate) ** n) / ((1 + monthly_rate) ** n - 1)
+        payment = (
+            principal
+            * (monthly_rate * (1 + monthly_rate) ** n)
+            / ((1 + monthly_rate) ** n - 1)
+        )
         return round(payment, 2)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

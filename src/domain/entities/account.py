@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional, cast
 
@@ -49,7 +49,7 @@ class Account:
             account_type=account_type,
             current_balance=initial_balance,
             is_active=True,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     def deactivate(self) -> None:

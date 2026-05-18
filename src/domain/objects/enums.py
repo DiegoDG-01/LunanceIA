@@ -53,6 +53,7 @@ class ReminderType(str, Enum):
     REVISION = "revision"
     OTRO = "otro"
 
+
 class NotificationType(str, Enum):
     SMS = "sms"
     EMAIL = "email"

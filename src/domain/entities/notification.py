@@ -15,7 +15,6 @@ class Notification:
     is_read: bool
     created_at: Optional[datetime] = None
 
-
     @classmethod
     def create_new(
         cls,

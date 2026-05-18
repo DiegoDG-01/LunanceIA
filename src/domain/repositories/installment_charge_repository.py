@@ -6,7 +6,9 @@ from domain.entities.installment_charge import InstallmentCharge
 
 class InstallmentChargeRepository(ABC):
     @abstractmethod
-    async def create_bulk(self, charges: List[InstallmentCharge]) -> List[InstallmentCharge]:
+    async def create_bulk(
+        self, charges: List[InstallmentCharge]
+    ) -> List[InstallmentCharge]:
         pass
 
     @abstractmethod

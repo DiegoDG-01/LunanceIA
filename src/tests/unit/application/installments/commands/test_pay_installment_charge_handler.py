@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from decimal import Decimal
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from application.installments.commands.pay_installment_charge import (
     PayInstallmentChargeCommand,
@@ -47,7 +47,7 @@ class TestPayInstallmentChargeHandler:
             id=10, uuid="acc-uuid-1", user_id=1, bank_id=1,
             name="BBVA TDC", account_type=AccountType.CREDIT_CARD,
             current_balance=Money(balance),
-            is_active=True, creation_date=datetime.now(),
+            is_active=True, creation_date=datetime.now(timezone.utc),
         )
 
     def _make_purchase(self, num_installments: int = 12) -> InstallmentPurchase:
@@ -60,7 +60,7 @@ class TestPayInstallmentChargeHandler:
             annual_interest_rate=Decimal("0"),
             monthly_payment=Decimal("1000.00"),
             purchase_date=date.today(), notes=None,
-            is_active=True, creation_date=datetime.now(),
+            is_active=True, creation_date=datetime.now(timezone.utc),
         )
 
     def _make_charge(self, installment_number: int = 1, paid: bool = False) -> InstallmentCharge:
@@ -68,7 +68,7 @@ class TestPayInstallmentChargeHandler:
             id=installment_number, uuid=f"charge-uuid-{installment_number}",
             installment_purchase_id=1, installment_number=installment_number,
             amount=Decimal("1000.00"), due_date=date.today(),
-            paid=paid, creation_date=datetime.now(),
+            paid=paid, creation_date=datetime.now(timezone.utc),
         )
 
     def _make_transaction(self) -> Transaction:
@@ -76,7 +76,7 @@ class TestPayInstallmentChargeHandler:
             id=99, uuid="tx-uuid-1", user_id=1, account_id=10,
             category_id=None, transaction_type=TransactionType.INCOME,
             amount=Money(Decimal("1000.00")), transaction_date=date.today(),
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     @pytest.mark.asyncio

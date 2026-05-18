@@ -4,8 +4,12 @@ from decimal import Decimal
 
 from domain.objects.money import Money
 from domain.repositories.account_repository import AccountRepository
-from domain.repositories.installment_charge_repository import InstallmentChargeRepository
-from domain.repositories.installment_purchase_repository import InstallmentPurchaseRepository
+from domain.repositories.installment_charge_repository import (
+    InstallmentChargeRepository,
+)
+from domain.repositories.installment_purchase_repository import (
+    InstallmentPurchaseRepository,
+)
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.exceptions.domain import AccountNotFoundError
@@ -43,7 +47,9 @@ class DeleteInstallmentPurchaseHandler:
         if not account:
             raise AccountNotFoundError(account_uuid=str(purchase.account_id))
 
-        charges = await self.installment_charge_repository.get_by_purchase_id(purchase_id=purchase.id)
+        charges = await self.installment_charge_repository.get_by_purchase_id(
+            purchase_id=purchase.id
+        )
 
         paid_total = Decimal("0")
         transactions_ids_to_delete = []
@@ -58,66 +64,18 @@ class DeleteInstallmentPurchaseHandler:
 
         async with self.uow:
             for transactions_id in transactions_ids_to_delete:
-                transaction = await self.transaction_repository.get_by_id(transactions_id)
+                transaction = await self.transaction_repository.get_by_id(
+                    transactions_id
+                )
                 if transaction and transaction.uuid:
                     await self.transaction_repository.delete_by_uuid(
                         uuid=transaction.uuid, user_id=command.user_id
                     )
-            await self.installment_charge_repository.delete_by_purchase_id(purchase_id=cast(int, purchase.id))
-            await self.installment_purchase_repository.delete(purchase_uuid=cast(str, purchase.uuid))
+            await self.installment_charge_repository.delete_by_purchase_id(
+                purchase_id=cast(int, purchase.id)
+            )
+            await self.installment_purchase_repository.delete(
+                purchase_uuid=cast(str, purchase.uuid)
+            )
             await self.account_repository.update(account)
             await self.uow.commit()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

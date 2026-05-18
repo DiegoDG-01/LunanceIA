@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from decimal import Decimal
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from application.installments.commands.update_installment_purchase import (
     UpdateInstallmentPurchaseCommand,
@@ -44,7 +44,7 @@ class TestUpdateInstallmentPurchaseHandler:
             id=10, uuid="acc-uuid-1", user_id=1, bank_id=1,
             name="BBVA TDC", account_type=AccountType.CREDIT_CARD,
             current_balance=Money(Decimal("38000.00")),
-            is_active=True, creation_date=datetime.now(),
+            is_active=True, creation_date=datetime.now(timezone.utc),
         )
 
     def _make_purchase(self) -> InstallmentPurchase:
@@ -57,7 +57,7 @@ class TestUpdateInstallmentPurchaseHandler:
             annual_interest_rate=Decimal("0"),
             monthly_payment=Decimal("1000.00"),
             purchase_date=date.today(), notes="Notas originales",
-            is_active=True, creation_date=datetime.now(),
+            is_active=True, creation_date=datetime.now(timezone.utc),
         )
 
     def _make_charge(self, number: int) -> InstallmentCharge:
@@ -65,7 +65,7 @@ class TestUpdateInstallmentPurchaseHandler:
             id=number, uuid=f"charge-uuid-{number}",
             installment_purchase_id=1, installment_number=number,
             amount=Decimal("1000.00"), due_date=date.today(),
-            paid=False, creation_date=datetime.now(),
+            paid=False, creation_date=datetime.now(timezone.utc),
         )
 
     def _setup_base_mocks(self, mocks, purchase, account):

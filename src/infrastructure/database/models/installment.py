@@ -12,7 +12,7 @@ from sqlalchemy import (
     DECIMAL,
     Integer,
     Text,
-    CHAR
+    CHAR,
 )
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column
@@ -68,26 +68,9 @@ class InstallmentChargeModel(Base):
     amount: Mapped[Decimal] = mapped_column(DECIMAL(12, 2))
     due_date: Mapped[date] = mapped_column(Date, index=True)
     paid: Mapped[bool] = mapped_column(Boolean, default=False)
-    paid_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    paid_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     creation_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

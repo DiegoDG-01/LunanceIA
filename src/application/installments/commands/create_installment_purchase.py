@@ -9,11 +9,23 @@ from domain.entities.installment_purchase import InstallmentPurchase
 from domain.entities.installment_charge import InstallmentCharge
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.user_repository import UserRepository
-from domain.repositories.installment_purchase_repository import InstallmentPurchaseRepository
-from domain.repositories.installment_charge_repository import InstallmentChargeRepository
+from domain.repositories.installment_purchase_repository import (
+    InstallmentPurchaseRepository,
+)
+from domain.repositories.installment_charge_repository import (
+    InstallmentChargeRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from application.dto.installment_dto import CreateInstallmentPurchaseDTO, InstallmentChargeResponseDTO, InstallmentPurchaseResponseDTO
-from shared.exceptions.domain import UserNotFoundError, AccountNotFoundError, InvalidInstallmentPaymentError
+from application.dto.installment_dto import (
+    CreateInstallmentPurchaseDTO,
+    InstallmentChargeResponseDTO,
+    InstallmentPurchaseResponseDTO,
+)
+from shared.exceptions.domain import (
+    UserNotFoundError,
+    AccountNotFoundError,
+    InvalidInstallmentPaymentError,
+)
 
 
 @dataclass
@@ -36,7 +48,9 @@ class CreateInstallmentPurchaseHandler:
         self.installment_charge_repository = installment_charge_repository
         self.uow = uow
 
-    async def handle(self, command: CreateInstallmentPurchaseCommand) -> InstallmentPurchaseResponseDTO:
+    async def handle(
+        self, command: CreateInstallmentPurchaseCommand
+    ) -> InstallmentPurchaseResponseDTO:
         dto = command.dto
 
         user = await self.user_repository.get_by_id(dto.user_id)
@@ -49,7 +63,9 @@ class CreateInstallmentPurchaseHandler:
         if not account:
             raise AccountNotFoundError(account_uuid=dto.account_uuid)
         if account.account_type != AccountType.CREDIT_CARD:
-            raise InvalidInstallmentPaymentError(expected=AccountType.CREDIT_CARD, received=account.account_type)
+            raise InvalidInstallmentPaymentError(
+                expected=AccountType.CREDIT_CARD, received=account.account_type
+            )
 
         money = Money(dto.total_amount, dto.currency)
 
@@ -90,11 +106,8 @@ class CreateInstallmentPurchaseHandler:
         ]
 
         return InstallmentPurchaseResponseDTO.from_entity(
-            purchase=purchase,
-            account_uuid=dto.account_uuid,
-            charges=charges_dtos
+            purchase=purchase, account_uuid=dto.account_uuid, charges=charges_dtos
         )
-
 
     @staticmethod
     def _generate_charges(purchase: InstallmentPurchase) -> List[InstallmentCharge]:
@@ -119,26 +132,3 @@ class CreateInstallmentPurchaseHandler:
                 )
             )
         return charges
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from decimal import Decimal
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from application.installments.commands.delete_installment_purchase import (
     DeleteInstallmentPurchaseCommand,
@@ -48,7 +48,7 @@ class TestDeleteInstallmentPurchaseHandler:
             id=10, uuid="acc-uuid-1", user_id=1, bank_id=1,
             name="BBVA TDC", account_type=AccountType.CREDIT_CARD,
             current_balance=Money(balance),
-            is_active=True, creation_date=datetime.now(),
+            is_active=True, creation_date=datetime.now(timezone.utc),
         )
 
     def _make_purchase(self, total: Decimal = Decimal("12000.00")) -> InstallmentPurchase:
@@ -61,7 +61,7 @@ class TestDeleteInstallmentPurchaseHandler:
             annual_interest_rate=Decimal("0"),
             monthly_payment=Decimal("1000.00"),
             purchase_date=date.today(), notes=None,
-            is_active=True, creation_date=datetime.now(),
+            is_active=True, creation_date=datetime.now(timezone.utc),
         )
 
     def _make_charge(self, number: int, paid: bool = False, transaction_id=None) -> InstallmentCharge:
@@ -70,7 +70,7 @@ class TestDeleteInstallmentPurchaseHandler:
             installment_purchase_id=1, installment_number=number,
             amount=Decimal("1000.00"), due_date=date.today(),
             paid=paid, transaction_id=transaction_id,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     def _make_transaction(self, tx_id: int) -> Transaction:
@@ -78,7 +78,7 @@ class TestDeleteInstallmentPurchaseHandler:
             id=tx_id, uuid=f"tx-uuid-{tx_id}", user_id=1, account_id=10,
             category_id=None, transaction_type=TransactionType.EXPENSE,
             amount=Money(Decimal("1000.00")), transaction_date=date.today(),
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     def _setup_base_mocks(self, mocks, purchase, account, charges):

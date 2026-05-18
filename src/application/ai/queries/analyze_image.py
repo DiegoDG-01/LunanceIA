@@ -9,7 +9,11 @@ from application.ai.schemas.image_analysis import ImageAnalysis
 from application.interfaces.ai_agent import AIAgentInterface
 from domain.repositories.category_repository import CategoryRepository
 from pydantic_ai.exceptions import UnexpectedModelBehavior, ModelHTTPError
-from shared.exceptions.domain import AIInvalidResponseError, AIServiceError, InvalidImageError
+from shared.exceptions.domain import (
+    AIInvalidResponseError,
+    AIServiceError,
+    InvalidImageError,
+)
 
 
 @dataclass

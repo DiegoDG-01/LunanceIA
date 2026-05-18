@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,7 +25,7 @@ class SQLAlchemyUserRepository(UserRepository):
             password=model.password,
             picture=model.picture,
             email_verified=model.email_verified,
-            last_login=model.last_login or datetime.now(),
+            last_login=model.last_login or datetime.now(timezone.utc),
             registration_date=model.registration_date,
             is_active=model.is_active,
         )

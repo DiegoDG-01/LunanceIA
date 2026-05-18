@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 
 from infrastructure.database.connection import AsyncSessionLocal
 from infrastructure.database.repositories.sqlalchemy_notification_repository import (
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 async def process_subscriptions_job():
     """Process due subscriptions - runs in the existing event loop"""
-    logger.info(f"Processing subscriptions job at {datetime.now()}")
+    logger.info(f"Processing subscriptions job at {datetime.now(timezone.utc)}")
 
     async with AsyncSessionLocal() as db:
         try:
@@ -57,7 +57,9 @@ async def process_subscriptions_job():
             stats = await processor.process_due_subscriptions()
             await db.commit()
 
-            logger.info(f"Job finished at {datetime.now()} with stats: {stats}")
+            logger.info(
+                f"Job finished at {datetime.now(timezone.utc)} with stats: {stats}"
+            )
 
         except Exception as e:
             await db.rollback()
@@ -65,7 +67,7 @@ async def process_subscriptions_job():
 
 
 async def process_investment_yield_job():
-    logger.info(f"Processing investment yield job at {datetime.now()}")
+    logger.info(f"Processing investment yield job at {datetime.now(timezone.utc)}")
 
     async with AsyncSessionLocal() as db:
         try:
@@ -87,7 +89,9 @@ async def process_investment_yield_job():
                 GenerateDailyYieldCommand(target_date=date.today())
             )
 
-            logger.info(f"Job finished at {datetime.now()} with stats: {stats}")
+            logger.info(
+                f"Job finished at {datetime.now(timezone.utc)} with stats: {stats}"
+            )
         except Exception as e:
             await db.rollback()
             logger.error(f"Error processing investment yield job: {e}")

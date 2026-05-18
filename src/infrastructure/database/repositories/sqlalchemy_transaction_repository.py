@@ -522,4 +522,3 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             self._models_to_entity_with_account(transaction, acc, cat)
             for transaction, acc, cat in results
         ]
-

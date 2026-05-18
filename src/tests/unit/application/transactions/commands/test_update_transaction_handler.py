@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from decimal import Decimal
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from application.transactions.commands.update_transaction import (
     UpdateTransactionCommand,
@@ -46,7 +46,7 @@ class TestUpdateTransactionCommandHandler:
             account_type=AccountType.CHECKING,
             current_balance=Money(Decimal(balance)),
             is_active=True,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     def _make_transaction(
@@ -64,7 +64,7 @@ class TestUpdateTransactionCommandHandler:
             amount=Money(Decimal(amount)),
             transaction_date=date.today(),
             description="Original description",
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     def _make_response_dto(self) -> TransactionResponseDTO:
@@ -79,7 +79,7 @@ class TestUpdateTransactionCommandHandler:
             description="Updated description",
             notes=None,
             transaction_date=date.today(),
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     @pytest.mark.asyncio

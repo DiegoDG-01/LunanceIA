@@ -1,6 +1,6 @@
 import json
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -132,7 +132,7 @@ async def validate_auth0_user(token: str, db: AsyncSession) -> User:
                 email=user_info.get("email"),
                 picture=user_info.get("picture"),
                 email_verified=bool(user_info.get("email_verified", False)),
-                last_login=user_info.get("last_login") or datetime.now(),
+                last_login=user_info.get("last_login") or datetime.now(timezone.utc),
             )
             user = await user_repo.create(new_user)
 
@@ -143,8 +143,8 @@ async def validate_auth0_user(token: str, db: AsyncSession) -> User:
 
 
 async def get_current_user(
-        credentials: HTTPAuthorizationCredentials = Depends(security),
-        db: AsyncSession = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
 ):
     token = credentials.credentials
 
@@ -163,7 +163,7 @@ async def get_current_user(
 
 
 async def get_current_active_user(
-        current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> User:
     """Obtiene el usuario actual y verifica que esté activo."""
     if not current_user.is_active:
@@ -172,8 +172,8 @@ async def get_current_active_user(
 
 
 async def get_current_active_user_from_url_token(
-        token: str,
-        db: AsyncSession,
+    token: str,
+    db: AsyncSession,
 ) -> User:
     try:
         payload = jwt.decode(

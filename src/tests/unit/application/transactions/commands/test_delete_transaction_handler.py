@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from decimal import Decimal
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from application.transactions.commands.delete_transaction import (
     DeleteTransactionCommand,
@@ -45,7 +45,7 @@ class TestDeleteTransactionHandler:
             account_type=AccountType.CHECKING,
             current_balance=Money(Decimal(balance)),
             is_active=True,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     def _make_transaction(
@@ -63,7 +63,7 @@ class TestDeleteTransactionHandler:
             amount=Money(Decimal(amount)),
             transaction_date=date.today(),
             description="Test",
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     @pytest.mark.asyncio

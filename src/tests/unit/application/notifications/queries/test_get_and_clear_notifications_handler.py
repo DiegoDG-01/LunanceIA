@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
-from datetime import datetime
+from datetime import datetime, timezone
 
 from application.notifications.queries.get_and_clear_notifications import (
     GetAndClearNotificationsQuery,
@@ -37,7 +37,7 @@ class TestGetAndClearNotificationsHandler:
             message="Your subscription was charged",
             type=NotificationType.PUSH,
             is_read=False,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
 
     @pytest.mark.asyncio

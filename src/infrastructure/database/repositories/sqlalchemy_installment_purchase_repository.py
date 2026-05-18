@@ -3,7 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from domain.entities.installment_purchase import InstallmentPurchase
-from domain.repositories.installment_purchase_repository import InstallmentPurchaseRepository
+from domain.repositories.installment_purchase_repository import (
+    InstallmentPurchaseRepository,
+)
 from domain.objects.money import Money
 from infrastructure.database.models.installment import InstallmentPurchaseModel
 
@@ -67,10 +69,12 @@ class SQLAlchemyInstallmentPurchaseRepository(InstallmentPurchaseRepository):
         model = result.scalar_one_or_none()
         return self._model_to_entity(model) if model else None
 
-    async def get_by_uuid(self, uuid: str, user_id: int) -> Optional[InstallmentPurchase]:
+    async def get_by_uuid(
+        self, uuid: str, user_id: int
+    ) -> Optional[InstallmentPurchase]:
         stmt = select(InstallmentPurchaseModel).where(
             InstallmentPurchaseModel.uuid == uuid,
-            InstallmentPurchaseModel.user_id == user_id
+            InstallmentPurchaseModel.user_id == user_id,
         )
         result = await self.db.execute(stmt)
         model = result.scalar_one_or_none()
@@ -83,7 +87,6 @@ class SQLAlchemyInstallmentPurchaseRepository(InstallmentPurchaseRepository):
         result = await self.db.execute(stmt)
         models = result.scalars().all()
         return [self._model_to_entity(model) for model in models]
-
 
     async def update(self, purchase: InstallmentPurchase) -> InstallmentPurchase:
         stmt = select(InstallmentPurchaseModel).where(
@@ -109,88 +112,3 @@ class SQLAlchemyInstallmentPurchaseRepository(InstallmentPurchaseRepository):
             return False
         await self.db.delete(model)
         return True
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

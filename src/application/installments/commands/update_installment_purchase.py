@@ -1,10 +1,17 @@
 from dataclasses import dataclass
 from typing import Optional, cast
 
-from application.dto.installment_dto import InstallmentPurchaseResponseDTO, InstallmentChargeResponseDTO
+from application.dto.installment_dto import (
+    InstallmentPurchaseResponseDTO,
+    InstallmentChargeResponseDTO,
+)
 from domain.repositories.account_repository import AccountRepository
-from domain.repositories.installment_charge_repository import InstallmentChargeRepository
-from domain.repositories.installment_purchase_repository import InstallmentPurchaseRepository
+from domain.repositories.installment_charge_repository import (
+    InstallmentChargeRepository,
+)
+from domain.repositories.installment_purchase_repository import (
+    InstallmentPurchaseRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.exceptions.domain import AccountNotFoundError
 
@@ -31,7 +38,9 @@ class UpdateInstallmentPurchaseHandler:
         self.installment_charge_repository = installment_charge_repository
         self.uow = uow
 
-    async def handle(self, command: UpdateInstallmentPurchaseCommand) -> InstallmentPurchaseResponseDTO:
+    async def handle(
+        self, command: UpdateInstallmentPurchaseCommand
+    ) -> InstallmentPurchaseResponseDTO:
         purchase = await self.installment_purchase_repository.get_by_uuid(
             uuid=command.purchase_uuid, user_id=command.user_id
         )
@@ -53,7 +62,9 @@ class UpdateInstallmentPurchaseHandler:
             purchase = await self.installment_purchase_repository.update(purchase)
             await self.uow.commit()
 
-        charges = await self.installment_charge_repository.get_by_purchase_id(purchase_id=cast(int, purchase.id))
+        charges = await self.installment_charge_repository.get_by_purchase_id(
+            purchase_id=cast(int, purchase.id)
+        )
         charges_dtos = [
             InstallmentChargeResponseDTO(
                 uuid=cast(str, c.uuid),
@@ -69,77 +80,5 @@ class UpdateInstallmentPurchaseHandler:
         return InstallmentPurchaseResponseDTO.from_entity(
             purchase=purchase,
             account_uuid=cast(str, account.uuid),
-            charges=charges_dtos
+            charges=charges_dtos,
         )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from decimal import Decimal
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from application.installments.commands.create_installment_purchase import (
     CreateInstallmentPurchaseCommand,
@@ -58,7 +58,7 @@ class TestCreateInstallmentPurchaseHandler:
             id=10, uuid="acc-uuid-1", user_id=1, bank_id=1,
             name="BBVA TDC", account_type=AccountType.CREDIT_CARD,
             current_balance=Money(Decimal("50000.00")),
-            is_active=True, creation_date=datetime.now(),
+            is_active=True, creation_date=datetime.now(timezone.utc),
         )
 
     def _make_purchase(self, num_installments: int = 12) -> InstallmentPurchase:
@@ -71,7 +71,7 @@ class TestCreateInstallmentPurchaseHandler:
             annual_interest_rate=Decimal("0"),
             monthly_payment=Decimal("2000.00"),
             purchase_date=date.today(), notes=None,
-            is_active=True, creation_date=datetime.now(),
+            is_active=True, creation_date=datetime.now(timezone.utc),
         )
 
     def _make_charges(self, purchase: InstallmentPurchase):
@@ -80,7 +80,7 @@ class TestCreateInstallmentPurchaseHandler:
                 id=i, uuid=f"charge-uuid-{i}", installment_purchase_id=1,
                 installment_number=i, amount=purchase.monthly_payment,
                 due_date=date.today(), paid=False,
-                creation_date=datetime.now(),
+                creation_date=datetime.now(timezone.utc),
             )
             for i in range(1, purchase.num_installments + 1)
         ]
@@ -165,7 +165,7 @@ class TestCreateInstallmentPurchaseHandler:
             num_installments=3, installment_type=InstallmentType.NO_INTEREST,
             annual_interest_rate=Decimal("0"), monthly_payment=Decimal("3333.67"),
             purchase_date=date.today(), notes=None, is_active=True,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
         charges = self._make_charges(purchase)
 
@@ -212,7 +212,7 @@ class TestCreateInstallmentPurchaseHandler:
             id=10, uuid="acc-uuid-1", user_id=1, bank_id=1,
             name="Débito", account_type=AccountType.CHECKING,
             current_balance=Money(Decimal("10000.00")),
-            is_active=True, creation_date=datetime.now(),
+            is_active=True, creation_date=datetime.now(timezone.utc),
         )
         mocks["user_repo"].get_by_id = AsyncMock(return_value=user)
         mocks["account_repo"].get_by_uuid_and_user_id = AsyncMock(return_value=checking_account)

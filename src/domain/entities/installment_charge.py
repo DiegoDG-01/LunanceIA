@@ -42,4 +42,4 @@ class InstallmentCharge:
     def mark_as_paid(self, transaction_id: int) -> None:
         self.paid = True
         self.transaction_id = transaction_id
-        self.paid_at = datetime.now()
+        self.paid_at = datetime.now(timezone.utc)

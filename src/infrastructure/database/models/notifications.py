@@ -22,5 +22,5 @@ class NotificationModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),  # TIMESTAMP WITH TIME ZONE
         default=lambda: datetime.now(timezone.utc),
-        index=True
+        index=True,
     )

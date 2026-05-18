@@ -43,8 +43,12 @@ from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
     SQLAlchemyUnitOfWork,
 )
-from infrastructure.database.repositories.sqlalchemy_installment_purchase_repository import SQLAlchemyInstallmentPurchaseRepository
-from infrastructure.database.repositories.sqlalchemy_installment_charge_repository import SQLAlchemyInstallmentChargeRepository
+from infrastructure.database.repositories.sqlalchemy_installment_purchase_repository import (
+    SQLAlchemyInstallmentPurchaseRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_installment_charge_repository import (
+    SQLAlchemyInstallmentChargeRepository,
+)
 
 
 def get_unit_of_work_repository(
@@ -121,6 +125,7 @@ def get_notification_repository(
     db: AsyncSession = Depends(get_db),
 ) -> SQLAlchemyNotificationRepository:
     return SQLAlchemyNotificationRepository(db)
+
 
 def get_installment_purchase_repository(
     db: AsyncSession = Depends(get_db),

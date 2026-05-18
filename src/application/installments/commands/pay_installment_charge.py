@@ -6,12 +6,19 @@ from domain.objects.enums import TransactionType
 from domain.objects.money import Money
 from domain.entities.transaction import Transaction
 from domain.repositories.account_repository import AccountRepository
-from domain.repositories.installment_charge_repository import InstallmentChargeRepository
-from domain.repositories.installment_purchase_repository import InstallmentPurchaseRepository
+from domain.repositories.installment_charge_repository import (
+    InstallmentChargeRepository,
+)
+from domain.repositories.installment_purchase_repository import (
+    InstallmentPurchaseRepository,
+)
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from application.dto.installment_dto import InstallmentChargeResponseDTO
-from shared.exceptions.domain import AccountNotFoundError, InstallmentChargeNotFoundError
+from shared.exceptions.domain import (
+    AccountNotFoundError,
+    InstallmentChargeNotFoundError,
+)
 
 
 @dataclass
@@ -36,16 +43,24 @@ class PayInstallmentChargeHandler:
         self.installment_purchase_repository = installment_purchase_repository
         self.uow = uow
 
-    async def handle(self, command: PayInstallmentChargeCommand) -> InstallmentChargeResponseDTO:
-        charge = await self.installment_charge_repository.get_by_uuid(command.charge_uuid)
+    async def handle(
+        self, command: PayInstallmentChargeCommand
+    ) -> InstallmentChargeResponseDTO:
+        charge = await self.installment_charge_repository.get_by_uuid(
+            command.charge_uuid
+        )
         if not charge:
             raise InstallmentChargeNotFoundError(command.charge_uuid)
 
-        purchase = await self.installment_purchase_repository.get_by_id(purchase_id=charge.installment_purchase_id)
+        purchase = await self.installment_purchase_repository.get_by_id(
+            purchase_id=charge.installment_purchase_id
+        )
         if not purchase or purchase.user_id != command.user_id:
             raise InstallmentChargeNotFoundError(command.charge_uuid)
 
-        account = await self.account_repository.get_by_id(cast(int, purchase.account_id))
+        account = await self.account_repository.get_by_id(
+            cast(int, purchase.account_id)
+        )
         if not account or account.user_id != command.user_id:
             raise AccountNotFoundError(account_uuid=str(purchase.account_id))
 
@@ -60,7 +75,7 @@ class PayInstallmentChargeHandler:
             amount=money,
             transaction_date=command.payment_date,
             description=f"Payment for installment {purchase.description} ({charge.installment_number}/{purchase.num_installments})",
-            notes=f"Payment for installment {purchase.id}"
+            notes=f"Payment for installment {purchase.id}",
         )
 
         async with self.uow:
@@ -71,7 +86,9 @@ class PayInstallmentChargeHandler:
             charge.mark_as_paid(cast(int, transaction.id))
             charge = await self.installment_charge_repository.update(charge)
 
-            all_charges = await self.installment_charge_repository.get_by_purchase_id(purchase_id=purchase.id)
+            all_charges = await self.installment_charge_repository.get_by_purchase_id(
+                purchase_id=purchase.id
+            )
             if all(c.paid for c in all_charges):
                 purchase.is_active = False
                 await self.installment_purchase_repository.update(purchase)
@@ -86,53 +103,3 @@ class PayInstallmentChargeHandler:
             paid=charge.paid,
             paid_at=charge.paid_at,
         )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

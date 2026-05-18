@@ -21,9 +21,7 @@ class AuthTokenRepository(ABC):
         pass
 
     @abstractmethod
-    async def revoke_refresh_token(
-        self, user_id: int, refresh_hash_token: str
-    ) -> bool:
+    async def revoke_refresh_token(self, user_id: int, refresh_hash_token: str) -> bool:
         """Revoke refresh token"""
         pass
 

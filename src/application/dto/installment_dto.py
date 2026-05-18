@@ -49,7 +49,9 @@ class InstallmentPurchaseResponseDTO:
     charges: List[InstallmentChargeResponseDTO]
 
     @classmethod
-    def from_entity(cls, purchase, account_uuid: str, charges: list) -> "InstallmentPurchaseResponseDTO":
+    def from_entity(
+        cls, purchase, account_uuid: str, charges: list
+    ) -> "InstallmentPurchaseResponseDTO":
         return cls(
             uuid=purchase.uuid,
             account_uuid=account_uuid,
@@ -64,5 +66,5 @@ class InstallmentPurchaseResponseDTO:
             notes=purchase.notes,
             is_active=purchase.is_active,
             creation_date=purchase.creation_date,
-            charges=charges
+            charges=charges,
         )
