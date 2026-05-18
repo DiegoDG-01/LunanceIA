@@ -1,6 +1,6 @@
 import logging
 from typing import Optional, cast
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, and_, delete
 from sqlalchemy.engine import CursorResult
@@ -52,7 +52,7 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
                     RefreshTokenModel.user_id == user_id,
                     RefreshTokenModel.token_hash == refresh_hash_token,
                     RefreshTokenModel.is_revoked.is_(False),
-                    RefreshTokenModel.expired_at > datetime.now(),
+                    RefreshTokenModel.expired_at > datetime.now(timezone.utc),
                 )
             )
             result = await self.db.execute(stmt)
@@ -128,7 +128,7 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
     async def cleanup_expired_tokens(self) -> bool:
         try:
             stmt = delete(RefreshTokenModel).where(
-                RefreshTokenModel.expired_at < datetime.now(),
+                RefreshTokenModel.expired_at < datetime.now(timezone.utc),
                 RefreshTokenModel.is_revoked.is_(True),
             )
             await self.db.execute(stmt)

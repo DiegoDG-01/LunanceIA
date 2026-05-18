@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from application.investments.queries.get_investment_yields import (
@@ -56,7 +56,7 @@ class TestGetInvestmentYieldsHandler:
             current_balance=Money(Decimal("10000.00")),
             bank_id=1,
             is_active=True,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
         mock_yields = [
             InvestmentYield(
@@ -69,7 +69,7 @@ class TestGetInvestmentYieldsHandler:
                 cumulative_balance=Decimal("10002.74"),
                 annual_rate=Decimal("10.00"),
                 interest_type=InterestType.COMPOUND,
-                created_at=datetime.now(),
+                created_at=datetime.now(timezone.utc),
             ),
             InvestmentYield(
                 id=2,
@@ -81,7 +81,7 @@ class TestGetInvestmentYieldsHandler:
                 cumulative_balance=Decimal("10005.48"),
                 annual_rate=Decimal("10.00"),
                 interest_type=InterestType.COMPOUND,
-                created_at=datetime.now(),
+                created_at=datetime.now(timezone.utc),
             ),
         ]
 
@@ -114,7 +114,7 @@ class TestGetInvestmentYieldsHandler:
             current_balance=Money(Decimal("5000.00")),
             bank_id=1,
             is_active=True,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
         mocks["account_repo"].get_by_uuid_and_user_id = AsyncMock(

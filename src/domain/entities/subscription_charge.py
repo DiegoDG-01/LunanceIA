@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional
 
 from domain.objects.money import Money
@@ -38,12 +38,12 @@ class SubscriptionCharge:
     def mark_as_paid(self, transaction_id: int):
         self.transaction_id = transaction_id
         self.status = TransactionStatus.PAGADO
-        self.processing_date = datetime.now()
+        self.processing_date = datetime.now(timezone.utc)
 
     def mark_as_failed(self):
         self.status = TransactionStatus.FALLIDO
-        self.processing_date = datetime.now()
+        self.processing_date = datetime.now(timezone.utc)
 
     def mark_as_cancelled(self):
         self.status = TransactionStatus.CANCELADO
-        self.processing_date = datetime.now()
+        self.processing_date = datetime.now(timezone.utc)

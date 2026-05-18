@@ -51,6 +51,13 @@ class SubscriptionNotFoundError(NotFoundError):
         super().__init__(f"Suscripción con ID {subscription_uuid} no encontrada")
 
 
+class InstallmentChargeNotFoundError(NotFoundError):
+    """Cargo de compra a plazos no encontrado."""
+
+    def __init__(self, charge_uuid: str):
+        super().__init__(f"Cargo de compra a plazos con ID {charge_uuid} no encontrado")
+
+
 class AccountInactiveError(BusinessRuleError):
     """Cuenta inactiva."""
 
@@ -255,3 +262,38 @@ class InvalidEmailError(ValidationError):
 class InvalidBalanceUpdateError(BusinessRuleError):
     def __init__(self, valance_update: str):
         super().__init__(f"Valance update invalido: {valance_update}")
+
+
+class InvalidInstallmentPaymentError(BusinessRuleError):
+    def __init__(self, expected: str, received: str):
+        super().__init__(
+            f"Invalid account type: {expected} expected, {received} received"
+        )
+
+
+class BankNotFoundError(NotFoundError):
+    """Banco no encontrado."""
+
+    def __init__(self, bank_id: int | str):
+        super().__init__(f"Banco con ID {bank_id} no encontrado")
+
+
+class InstallmentPurchaseNotFoundError(NotFoundError):
+    """Compra a plazos no encontrada."""
+
+    def __init__(self, purchase_uuid: str):
+        super().__init__(f"Compra a plazos con UUID {purchase_uuid} no encontrada")
+
+
+class InvalidAIProviderError(ValidationError):
+    """Proveedor de IA inválido."""
+
+    def __init__(self, provider: str):
+        super().__init__(f"Proveedor de IA inválido: {provider}")
+
+
+class BulkDeleteFailedError(BusinessRuleError):
+    """Eliminación masiva fallida."""
+
+    def __init__(self, entity: str):
+        super().__init__(f"No se pudieron eliminar los registros de {entity}")

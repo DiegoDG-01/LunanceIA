@@ -1,5 +1,4 @@
-from datetime import datetime, date
-from typing import Optional
+from datetime import datetime
 
 from sqlalchemy import String, DateTime, ForeignKey, Enum, Text
 from datetime import timezone
@@ -23,5 +22,5 @@ class NotificationModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),  # TIMESTAMP WITH TIME ZONE
         default=lambda: datetime.now(timezone.utc),
-        index=True
+        index=True,
     )

@@ -68,6 +68,7 @@ def days_in_month(year: int, month: int) -> int:
     """Obtiene la cantidad de días en un mes."""
     return calendar.monthrange(year, month)[1]
 
+
 def get_year_day_basis(target_date: date) -> int:
     """Retorna 366 si el año de la fecha es bisiesto, 365 en caso contrario."""
     return 366 if calendar.isleap(target_date.year) else 365

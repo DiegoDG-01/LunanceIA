@@ -9,9 +9,13 @@ from domain.entities.account import Account
 from domain.objects.enums import AccountType
 from domain.objects.money import Money
 from domain.services.account_service import AccountService
-from shared.exceptions.domain import AccountNotFoundError
+from shared.exceptions.domain import (
+    AccountNotFoundError,
+    AccountHasBalanceError,
+    AccountHasTransactionsError,
+)
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 @pytest.mark.unit
@@ -49,7 +53,7 @@ class TestDeleteAccountHandler:
             account_type=AccountType.SAVINGS,
             current_balance=Money(Decimal(balance)),
             is_active=True,
-            creation_date=datetime.now(),
+            creation_date=datetime.now(timezone.utc),
         )
 
     @pytest.mark.asyncio
@@ -84,7 +88,7 @@ class TestDeleteAccountHandler:
 
         command = DeleteAccountCommand(account_uuid="acc-uuid-1", user_id=1)
 
-        with pytest.raises(ValueError, match="transacciones"):
+        with pytest.raises(AccountHasTransactionsError, match="transacciones"):
             await handler.handle(command)
 
         mocks["account_repo"].delete.assert_not_called()
@@ -99,5 +103,5 @@ class TestDeleteAccountHandler:
 
         command = DeleteAccountCommand(account_uuid="acc-uuid-1", user_id=1)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(AccountHasBalanceError):
             await handler.handle(command)

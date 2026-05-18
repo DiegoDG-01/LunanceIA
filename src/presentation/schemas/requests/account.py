@@ -54,7 +54,6 @@ class CreateAccountRequest(BaseModel):
             raise InvalidAccountSettingsError(
                 "Credit card settings can only be set for credit cards"
             )
-            # raise ValueError("Credit card settings can only be set for credit accounts")
         return v
 
     @field_validator("investment_settings")
@@ -64,7 +63,6 @@ class CreateAccountRequest(BaseModel):
             raise InvalidAccountSettingsError(
                 "Investment settings can only be set for investments"
             )
-            # raise ValueError("Investment settings can only be set for investment accounts")
         return v
 
 

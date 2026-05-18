@@ -7,9 +7,7 @@ class LoginRequest(BaseModel):
     username: str = Field(
         ..., min_length=1, max_length=100, description="Nombre de usuario"
     )
-    password: str = Field(
-        ..., min_length=8, description="Contraseña"
-    )
+    password: str = Field(..., min_length=8, description="Contraseña")
 
 
 class RegisterRequest(BaseModel):
@@ -18,9 +16,7 @@ class RegisterRequest(BaseModel):
     username: str = Field(
         ..., min_length=1, max_length=100, description="Nombre de usuario"
     )
-    password: str = Field(
-        ..., min_length=8, description="Contraseña"
-    )
+    password: str = Field(..., min_length=8, description="Contraseña")
 
 
 class RefreshTokenRequest(BaseModel):

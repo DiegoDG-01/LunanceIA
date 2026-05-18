@@ -27,23 +27,23 @@ class SubscriptionRepository(ABC):
 
     @abstractmethod
     async def get_by_uuid_and_user_id(
-            self, subscription_uuid: str, user_id: int
+        self, subscription_uuid: str, user_id: int
     ) -> Optional[Subscription]:
         """Get subscription by uuid"""
         pass
 
     @abstractmethod
     async def get_by_account(
-            self, account_uuid: str, user_id: int, limit: int = 100, offset: int = 0
+        self, account_uuid: str, user_id: int, limit: int = 100, offset: int = 0
     ) -> List[Subscription]:
         """Get subscriptions by account"""
         pass
 
     @abstractmethod
     async def get_by_category(
-            self,
-            user_id: int,
-            category_id: int,
+        self,
+        user_id: int,
+        category_id: int,
     ) -> List[Subscription]:
         """Get subscriptions by category"""
         pass

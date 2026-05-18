@@ -10,7 +10,6 @@ from infrastructure.database.models.notifications import NotificationModel
 
 
 class SQLAlchemyNotificationRepository(NotificationRepository):
-
     def __init__(self, db: AsyncSession):
         self.db = db
 
@@ -35,7 +34,7 @@ class SQLAlchemyNotificationRepository(NotificationRepository):
             message=entity.message,
             type=entity.type.value,
             is_read=entity.is_read,
-            created_at=entity.created_at
+            created_at=entity.created_at,
         )
 
     async def create(self, notification: Notification) -> Notification:

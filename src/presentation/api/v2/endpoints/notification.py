@@ -10,7 +10,10 @@ from presentation.dependencies.auth_deps import get_current_active_user
 from presentation.dependencies.notification_deps import get_notifications_handler
 from presentation.schemas.responses.notification import NotificationResponse
 from domain.entities.user import User
-from infrastructure.rate_limiting.limiters import enforce_rate_limit, limiter_5_per_minute
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_5_per_minute,
+)
 
 router = APIRouter()
 

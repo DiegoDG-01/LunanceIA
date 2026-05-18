@@ -7,6 +7,7 @@ from domain.repositories.subscription_repository import SubscriptionRepository
 from domain.objects.money import Money
 from infrastructure.database.models import AccountModel
 from infrastructure.database.models.subscription import SubscriptionModel
+from shared.exceptions.domain import SubscriptionNotFoundError
 
 
 class SQLAlchemySubscriptionRepository(SubscriptionRepository):
@@ -67,7 +68,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
         model = result.scalar_one_or_none()
 
         if not model:
-            raise ValueError("Subscription no encontrada")
+            raise SubscriptionNotFoundError(str(subscription.uuid))
 
         model.user_id = subscription.user_id
         model.account_id = subscription.account_id

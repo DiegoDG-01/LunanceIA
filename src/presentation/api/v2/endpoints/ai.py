@@ -30,10 +30,7 @@ async def analyze_image(
     handler: AnalyzeImageHandler = Depends(get_analyze_image_handler),
 ):
     enforce_rate_limit(limiter_1_per_day, request)
-    image_data = await file.read()
-    query = AnalyzeImageQuery(
-        image_data=image_data, mime_type=cast(str, file.content_type)
-    )
+    query = AnalyzeImageQuery(file=file)
     return await handler.handle(query)
 
 
