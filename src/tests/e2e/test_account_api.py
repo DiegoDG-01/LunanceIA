@@ -324,14 +324,12 @@ class TestUpdateAccount:
 
     @pytest.mark.asyncio
     async def test_update_account_not_found(self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens):
-        # UpdateAccountHandler raises ValueError (not a proper domain exception).
-        # In test context this propagates unhandled — mark as xfail to document the known bug.
-        with pytest.raises(Exception):
-            await http_client.patch(
-                "/account/00000000-0000-0000-0000-000000000000/",
-                json={"name": "Updated"},
-                headers=auth_tokens.get_auth_headers(),
-            )
+        response = await http_client.patch(
+            "/account/00000000-0000-0000-0000-000000000000/",
+            json={"name": "Updated"},
+            headers=auth_tokens.get_auth_headers(),
+        )
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_update_account_unauthorized(self, http_client: httpx.AsyncClient):

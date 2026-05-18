@@ -93,7 +93,7 @@ class SQLAlchemyInstallmentChargeRepository(InstallmentChargeRepository):
             .where(
                 and_(
                     InstallmentPurchaseModel.user_id == user_id,
-                    InstallmentChargeModel.paid == False,
+                    InstallmentChargeModel.paid.is_(False),
                 )
             )
             .order_by(InstallmentChargeModel.due_date)
