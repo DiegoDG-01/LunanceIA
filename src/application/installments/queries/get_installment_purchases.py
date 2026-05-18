@@ -6,7 +6,7 @@ from domain.repositories.user_repository import UserRepository
 from domain.repositories.installment_purchase_repository import InstallmentPurchaseRepository
 from domain.repositories.installment_charge_repository import InstallmentChargeRepository
 from application.dto.installment_dto import InstallmentPurchaseResponseDTO, InstallmentChargeResponseDTO
-from shared.exceptions.domain import UserNotFoundError, AccountNotFoundError
+from shared.exceptions.domain import UserNotFoundError
 
 
 @dataclass

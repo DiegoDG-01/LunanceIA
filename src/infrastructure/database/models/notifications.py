@@ -1,5 +1,4 @@
-from datetime import datetime, date
-from typing import Optional
+from datetime import datetime
 
 from sqlalchemy import String, DateTime, ForeignKey, Enum, Text
 from datetime import timezone

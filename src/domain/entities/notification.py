@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import datetime
 from typing import Optional
 
 from domain.objects.enums import NotificationType

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from datetime import date
 from decimal import Decimal
 from typing import cast, List
 from dateutil.relativedelta import relativedelta
