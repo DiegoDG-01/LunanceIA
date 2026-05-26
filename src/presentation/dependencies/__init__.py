@@ -11,6 +11,7 @@ from presentation.dependencies.repositories import (
     get_investment_settings_repository,
     get_auth_token_repository,
     get_dashboard_repository,
+    get_budget_repository,
 )
 
 # Services
@@ -81,6 +82,17 @@ from .ai_deps import get_analyze_image_handler, get_expense_advisor_handler
 # Notification handlers
 from .notification_deps import get_notifications_handler
 
+# Budget handlers
+from .budget_deps import (
+    get_create_budget_handler,
+    get_update_budget_handler,
+    get_delete_budget_handler,
+    get_state_budget_handler,
+    get_budgets_handler,
+    get_budget_by_id_handler,
+    get_budget_progress_handler,
+)
+
 
 __all__ = [
     # Repositories
@@ -140,4 +152,14 @@ __all__ = [
     "get_expense_advisor_handler",
     # Notifications
     "get_notifications_handler",
+    # Budget
+    "get_create_budget_handler",
+    "get_update_budget_handler",
+    "get_delete_budget_handler",
+    "get_state_budget_handler",
+    "get_budgets_handler",
+    "get_budget_by_id_handler",
+    "get_budget_progress_handler",
+    # Repositories
+    "get_budget_repository",
 ]
