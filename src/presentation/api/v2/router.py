@@ -12,6 +12,7 @@ from presentation.api.v2.endpoints import (
     ai,
     notification,
     installment,
+    budget,
 )
 
 api_router = APIRouter()
@@ -37,3 +38,4 @@ api_router.include_router(
 api_router.include_router(
     installment.router, prefix="/installments", tags=["Installments"]
 )
+api_router.include_router(budget.router, prefix="/budgets", tags=["Budgets"])
