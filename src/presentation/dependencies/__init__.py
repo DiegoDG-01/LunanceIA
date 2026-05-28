@@ -92,6 +92,14 @@ from .budget_deps import (
     get_budget_by_id_handler,
     get_budget_progress_handler,
 )
+from .saving_goal_deps import (
+    get_create_saving_goal_handler,
+    get_update_saving_goal_handler,
+    get_delete_saving_goal_handler,
+    get_saving_goals_by_id_handler,
+    get_state_saving_goal_handler,
+    get_saving_goals_handler,
+)
 
 
 __all__ = [
@@ -162,4 +170,11 @@ __all__ = [
     "get_budget_progress_handler",
     # Repositories
     "get_budget_repository",
+    # Saving Goals
+    "get_create_saving_goal_handler",
+    "get_update_saving_goal_handler",
+    "get_delete_saving_goal_handler",
+    "get_state_saving_goal_handler",
+    "get_saving_goals_handler",
+    "get_saving_goals_by_id_handler",
 ]
