@@ -314,3 +314,9 @@ class BudgetLimitExceededError(BusinessRuleError):
             f"El presupuesto '{budget_name}' ha superado su límite de {limit:.2f}. "
             f"Gasto actual: {spent:.2f}"
         )
+
+class SavingGoalNotFoundError(NotFoundError):
+    """Goal no encontrado."""
+
+    def __init__(self, goal_uuid: str):
+        super().__init__(f"Goal con UUID {goal_uuid} no encontrado")
