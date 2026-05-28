@@ -13,6 +13,7 @@ from presentation.api.v2.endpoints import (
     notification,
     installment,
     budget,
+    goals,
 )
 
 api_router = APIRouter()
@@ -39,3 +40,4 @@ api_router.include_router(
     installment.router, prefix="/installments", tags=["Installments"]
 )
 api_router.include_router(budget.router, prefix="/budgets", tags=["Budgets"])
+api_router.include_router(goals.router, prefix="/goals", tags=["Goals"])
