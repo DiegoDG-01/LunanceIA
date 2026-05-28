@@ -2,6 +2,9 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.database.connection import get_db
+from infrastructure.database.repositories.sqlalchemy_saving_goal_repository import (
+    SQLAlchemySavingGoalRepository
+)
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
 )
@@ -146,3 +149,8 @@ def get_budget_repository(
     db: AsyncSession = Depends(get_db),
 ) -> SQLAlchemyBudgetRepository:
     return SQLAlchemyBudgetRepository(db)
+
+def get_saving_goals_repository(
+    db: AsyncSession = Depends(get_db),
+) -> SQLAlchemySavingGoalRepository:
+    return SQLAlchemySavingGoalRepository(db)
