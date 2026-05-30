@@ -28,6 +28,14 @@ class InvestmentCardSettings:
             if not 0 <= self.early_withdrawal_penalty <= 100:
                 raise InvalidPenaltyPercentageError(str(self.early_withdrawal_penalty))
 
-        valid_types = ["fixed_term", "stocks", "bonds", "mutual_fund", "etf", "other"]
+        valid_types = [
+            "fixed_term",
+            "stocks",
+            "bonds",
+            "mutual_fund",
+            "etf",
+            "other",
+            "variable",
+        ]
         if self.investment_type not in valid_types:
             raise InvalidInvestmentTypeError(self.investment_type)

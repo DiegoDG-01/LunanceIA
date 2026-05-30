@@ -168,7 +168,7 @@ async def create_subscription(
     return SubscriptionResponse(**result.__dict__)
 
 
-@router.put(
+@router.patch(
     "/{subscription_uuid}/",
     response_model=SubscriptionResponse,
     status_code=status.HTTP_200_OK,
