@@ -50,6 +50,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             notes=model.notes,
             creation_date=model.creation_date,
             category_id=model.category_id,
+            transfer_uuid=model.transfer_uuid,
         )
 
     def _entity_to_model(self, entity: Transaction) -> TransactionModel:
@@ -65,6 +66,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             description=entity.description,
             notes=entity.notes,
             creation_date=entity.creation_date,
+            transfer_uuid=entity.transfer_uuid,
         )
 
     async def create(self, transaction: Transaction) -> Transaction:
