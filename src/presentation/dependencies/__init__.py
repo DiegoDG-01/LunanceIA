@@ -100,7 +100,7 @@ from .saving_goal_deps import (
     get_state_saving_goal_handler,
     get_saving_goals_handler,
 )
-
+from .transfer_deps import get_create_transfer_handler
 
 __all__ = [
     # Repositories
@@ -177,4 +177,6 @@ __all__ = [
     "get_state_saving_goal_handler",
     "get_saving_goals_handler",
     "get_saving_goals_by_id_handler",
+    # Transfer
+    "get_create_transfer_handler",
 ]
