@@ -72,3 +72,29 @@ class TransactionResponseDTO:
             account_type=account_type,
             account_uuid=account_uuid,
         )
+
+@dataclass
+class CreateTransferDTO:
+    """DTO para crear transferencia entre cuentas."""
+    user_id: int
+    source_account_uuid: str
+    destination_account_uuid: str
+    amount: Decimal
+    description: Optional[str] = None
+    notes: Optional[str] = None
+    transfer_date: Optional[date] = None
+    currency: str = "MXN"
+
+
+@dataclass
+class TransferResponseDTO:
+    """DTO para respuesta de transferencia."""
+    transfer_uuid: str
+    amount: Decimal
+    transfer_date: date
+    description: Optional[str]
+    source_account_name: str
+    source_account_uuid: str
+    destination_account_name: str
+    destination_account_uuid: str
+    creation_date: datetime
