@@ -163,3 +163,8 @@ class TransactionRepository(ABC):
         offset: int = 0,
     ) -> List[Tuple[Transaction, str, AccountType, Optional[str], Optional[str]]]:
         pass
+
+    @abstractmethod
+    async def get_by_transfer_uuid(self, transfer_uuid: str, user_id: int) -> List[Transaction]:
+        """Get transfer by transfer uuid"""
+        pass

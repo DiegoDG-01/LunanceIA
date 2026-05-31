@@ -537,3 +537,18 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             self._models_to_entity_with_account(transaction, acc, cat)
             for transaction, acc, cat in results
         ]
+
+    async def get_by_transfer_uuid(self, transfer_uuid: str, user_id: int) -> List[Transaction]:
+        stmt = (
+            select(TransactionModel)
+            .where(
+                and_(
+                    TransactionModel.transfer_uuid == transfer_uuid,
+                    TransactionModel.user_id == user_id,
+                )
+            )
+            .order_by(TransactionModel.id.asc())
+        )
+        result = await self.db.execute(stmt)
+        models = result.scalars().all()
+        return [self._model_to_entity(model) for model in models]
