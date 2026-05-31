@@ -48,6 +48,7 @@ class TransactionResponseDTO:
     account_name: str
     account_type: AccountType
     account_uuid: str
+    transfer_uuid: Optional[str] = None
 
     @classmethod
     def from_entity(
@@ -71,11 +72,14 @@ class TransactionResponseDTO:
             account_name=account_name,
             account_type=account_type,
             account_uuid=account_uuid,
+            transfer_uuid=transaction.transfer_uuid,
         )
+
 
 @dataclass
 class CreateTransferDTO:
     """DTO para crear transferencia entre cuentas."""
+
     user_id: int
     source_account_uuid: str
     destination_account_uuid: str
@@ -89,6 +93,7 @@ class CreateTransferDTO:
 @dataclass
 class TransferResponseDTO:
     """DTO para respuesta de transferencia."""
+
     transfer_uuid: str
     amount: Decimal
     transfer_date: date
