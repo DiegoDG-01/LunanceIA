@@ -35,6 +35,6 @@ class DeleteSavingGoalHandler:
             await self.uow.commit()
 
         if not deleted:
-            raise ValueError("Saving goal not found")
+            raise SavingGoalNotFoundError(command.saving_goal_uuid)
 
         return True
