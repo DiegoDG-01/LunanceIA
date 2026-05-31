@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from domain.objects.enums import TransactionType
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
@@ -46,7 +47,7 @@ class DeleteTransactionHandler:
         elif transaction.is_income():
             new_balance = account.current_balance.subtract(transaction.amount)
         else:
-            raise InvalidTransactionTypeError(transaction.transaction_type.value)
+            raise InvalidTransactionTypeError(account.account_type.value)
 
         account.update_balance(new_balance)
 
