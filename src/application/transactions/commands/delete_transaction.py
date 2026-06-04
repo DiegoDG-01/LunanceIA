@@ -47,7 +47,7 @@ class DeleteTransactionHandler:
         elif transaction.is_income():
             new_balance = account.current_balance.subtract(transaction.amount)
         else:
-            raise InvalidTransactionTypeError(account.account_type.value)
+            raise InvalidTransactionTypeError(transaction.transaction_type.value)
 
         account.update_balance(new_balance)
 

@@ -2,9 +2,6 @@ import uuid
 from ctypes import cast
 from dataclasses import dataclass
 from datetime import date
-
-from sqlalchemy.engine import create
-
 from application.dto.transaction_dto import CreateTransferDTO, TransferResponseDTO
 from domain.entities.transaction import Transaction
 from domain.objects.enums import TransactionType
