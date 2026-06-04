@@ -6,7 +6,7 @@ requires-python = ">=3.13"
 dependencies = [
     "aiomysql==0.3.2",
     "alembic==1.18.4",
-    "fastapi==0.136.1",
+    "fastapi==0.136.3",
     "greenlet==3.5.0",
     "pydantic[email]==2.13.4",
     "pydantic-settings==2.13.1",
@@ -27,7 +27,7 @@ dependencies = [
     "google-auth-oauthlib==1.4.0",
     "google-api-python-client==2.196.0",
     "cachetools==7.1.2",
-    "pydantic-ai-slim[google,openai]==1.97.0",
+    "pydantic-ai-slim[google,openai]==1.99.0",
     "fastapi-advanced-rate-limiter==2.1.0",
     "redis==7.4.0",
     "secure==1.0.1",
