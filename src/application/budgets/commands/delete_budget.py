@@ -21,12 +21,6 @@ class DeleteBudgetHandler:
         self.uow = uow
 
     async def handle(self, command: DeleteBudgetCommand) -> bool:
-        budget = await self.budget_repository.get_by_uuid_and_user_id(
-            command.budget_uuid, command.user_id
-        )
-        if not budget:
-            raise BudgetNotFoundError(command.budget_uuid)
-
         async with self.uow:
             deleted = await self.budget_repository.delete(
                 uuid=command.budget_uuid, user_id=command.user_id

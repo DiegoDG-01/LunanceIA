@@ -31,7 +31,10 @@ from application.budgets.queries.get_budget_progress import (
     GetBudgetProgressQuery,
     GetBudgetProgressHandler,
 )
-from presentation.schemas.requests.budget import CreateBudgetRequest, UpdateBudgetRequest
+from presentation.schemas.requests.budget import (
+    CreateBudgetRequest,
+    UpdateBudgetRequest,
+)
 from presentation.schemas.responses.budget import BudgetResponse, BudgetProgressResponse
 from presentation.dependencies.auth_deps import get_current_active_user
 from presentation.dependencies.budget_deps import (
@@ -133,7 +136,7 @@ async def create_budget(
     return BudgetResponse(**result.__dict__)
 
 
-@router.put(
+@router.patch(
     "/{budget_uuid}/",
     response_model=BudgetResponse,
     status_code=status.HTTP_200_OK,
