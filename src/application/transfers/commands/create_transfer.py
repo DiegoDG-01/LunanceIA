@@ -55,7 +55,7 @@ class CreateTransferHandler:
             raise AccountNotFoundError(account_uuid=dto.source_account_uuid)
 
         if source.account_type == AccountType.CREDIT_CARD:
-            raise TransferAccountTypeNotAllowedError()
+            raise TransferAccountTypeNotAllowedError(source.account_type.value)
 
         destination = await self.account_repository.get_by_uuid_and_user_id(
             dto.destination_account_uuid, dto.user_id

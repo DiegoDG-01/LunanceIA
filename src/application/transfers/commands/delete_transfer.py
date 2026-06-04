@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from shared.exceptions.domain import TransactionNotFoundError
+from shared.exceptions.domain import TransactionNotFoundError, AccountNotFoundError
 
 
 @dataclass
@@ -37,23 +37,26 @@ class DeleteTransferHandler:
         source_account = await self.account_repository.get_by_id(account_id=outgoing.account_id)
         destination_account = await self.account_repository.get_by_id(account_id=incoming.account_id)
 
+        if not source_account:
+            raise AccountNotFoundError(str(outgoing.account_id))
+        if not destination_account:
+            raise AccountNotFoundError(str(incoming.account_id))
+
         async with self.uow:
-            if source_account:
-                source_account.update_balance(
-                    source_account.current_balance.add(outgoing.amount)
-                )
-            if destination_account:
-                destination_account.update_balance(
-                    destination_account.current_balance.subtract(incoming.amount)
-                )
+            source_account.update_balance(
+                source_account.current_balance.add(outgoing.amount)
+            )
+            destination_account.update_balance(
+                destination_account.current_balance.subtract(incoming.amount)
+            )
 
             await self.account_repository.update(source_account)
             await self.account_repository.update(destination_account)
             await self.transaction_repository.delete_by_uuid(
-                outgoing.uuid, command.user_id
+                cast(str, outgoing.uuid), command.user_id
             )
             await self.transaction_repository.delete_by_uuid(
-                incoming.uuid, command.user_id
+                cast(str, incoming.uuid), command.user_id
             )
             await self.uow.commit()
 
