@@ -15,7 +15,7 @@ class SavingGoal:
     target_date: Optional[date] = None
     description: Optional[str] = None
     is_active: bool = True
-    completion_date: Optional[datetime] = None
+    completion_date: Optional[date] = None
     creation_date: datetime = None
 
 

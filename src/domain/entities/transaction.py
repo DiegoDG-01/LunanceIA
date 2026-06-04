@@ -20,6 +20,7 @@ class Transaction:
     notes: Optional[str] = None
     tags: Optional[List[int]] = None
     creation_date: Optional[datetime] = None
+    transfer_uuid: Optional[str] = None
 
     @classmethod
     def create_new(

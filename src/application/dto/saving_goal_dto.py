@@ -32,11 +32,11 @@ class SavingGoalResponseDTO:
     target_amount: Decimal
     current_amount: Decimal
     progress_percentage: float
+    creation_date: datetime
     target_date: Optional[date] = None
     description: Optional[str] = None
     is_active: bool = True
-    completion_date: Optional[datetime] = None
-    creation_date: datetime = None
+    completion_date: Optional[date] = None
 
     @classmethod
     def from_entity(cls, goal: SavingGoal, account_uuid: str, account_name: str, current_amount: Decimal):

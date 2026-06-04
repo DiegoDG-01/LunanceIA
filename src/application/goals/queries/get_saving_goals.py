@@ -35,6 +35,8 @@ class GetSavingGoalsHandler:
         result = []
         for goal in goals:
             account = accounts_map.get(goal.account_id)
+            if not account:
+                continue
             result.append(
                 SavingGoalResponseDTO.from_entity(
                     goal=goal,

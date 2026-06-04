@@ -17,4 +17,4 @@ class SavingGoalResponse(BaseModel):
     description: Optional[str] = None
     is_active: bool = True
     completion_date: Optional[date] = None
-    creation_date: datetime = None
+    creation_date: datetime

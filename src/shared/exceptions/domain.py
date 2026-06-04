@@ -315,8 +315,28 @@ class BudgetLimitExceededError(BusinessRuleError):
             f"Gasto actual: {spent:.2f}"
         )
 
+
 class SavingGoalNotFoundError(NotFoundError):
     """Goal no encontrado."""
 
     def __init__(self, goal_uuid: str):
         super().__init__(f"Goal con UUID {goal_uuid} no encontrado")
+
+
+class SameAccountTransferError(BusinessRuleError):
+    """No se puede transferir a la misma cuenta."""
+
+    def __init__(self):
+        super().__init__("La cuenta origen y destino no pueden ser la misma")
+
+
+class TransferNotAllowedError(BusinessRuleError):
+    """Transferencia no permitida por regla de negocio."""
+
+    def __init__(self, reason: str):
+        super().__init__(f"Transferencia no permitida: {reason}")
+
+class TransferAccountTypeNotAllowedError(BusinessRuleError):
+    """Tipo de cuenta no permitida para transferencia."""
+    def __init__(self, account_type: str):
+        super().__init__(f"Tipo de cuenta no permitida para transferencia: {account_type}")
