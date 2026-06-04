@@ -2,6 +2,9 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.database.connection import get_db
+from infrastructure.database.repositories.sqlalchemy_saving_goal_repository import (
+    SQLAlchemySavingGoalRepository
+)
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
 )
@@ -48,6 +51,9 @@ from infrastructure.database.repositories.sqlalchemy_installment_purchase_reposi
 )
 from infrastructure.database.repositories.sqlalchemy_installment_charge_repository import (
     SQLAlchemyInstallmentChargeRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_budget_repository import (
+    SQLAlchemyBudgetRepository,
 )
 
 
@@ -137,3 +143,14 @@ def get_installment_charge_repository(
     db: AsyncSession = Depends(get_db),
 ) -> SQLAlchemyInstallmentChargeRepository:
     return SQLAlchemyInstallmentChargeRepository(db)
+
+
+def get_budget_repository(
+    db: AsyncSession = Depends(get_db),
+) -> SQLAlchemyBudgetRepository:
+    return SQLAlchemyBudgetRepository(db)
+
+def get_saving_goals_repository(
+    db: AsyncSession = Depends(get_db),
+) -> SQLAlchemySavingGoalRepository:
+    return SQLAlchemySavingGoalRepository(db)
