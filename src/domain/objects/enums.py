@@ -84,3 +84,11 @@ class CategoryName(str, Enum):
 class InstallmentType(str, Enum):
     NO_INTEREST = "NO_INTEREST"
     WITH_INTEREST = "WITH_INTEREST"
+
+
+class APIKeyScope(str, Enum):
+    TRANSACTIONS_READ = "transactions:read"
+    TRANSACTIONS_WRITE = "transactions:write"
+    ACCOUNTS_READ = "accounts:read"
+    CATEGORIES_READ = "categories:read"
+    DASHBOARD_READ = "dashboard:read"

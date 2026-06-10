@@ -55,6 +55,9 @@ from infrastructure.database.repositories.sqlalchemy_installment_charge_reposito
 from infrastructure.database.repositories.sqlalchemy_budget_repository import (
     SQLAlchemyBudgetRepository,
 )
+from infrastructure.database.repositories.sqlalchemy_api_key_repository import (
+    SQLAlchemyAPIKeyRepository,
+)
 
 
 def get_unit_of_work_repository(
@@ -154,3 +157,8 @@ def get_saving_goals_repository(
     db: AsyncSession = Depends(get_db),
 ) -> SQLAlchemySavingGoalRepository:
     return SQLAlchemySavingGoalRepository(db)
+
+def get_api_key_repository(
+    db: AsyncSession = Depends(get_db),
+) -> SQLAlchemyAPIKeyRepository:
+    return SQLAlchemyAPIKeyRepository(db)
