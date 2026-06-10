@@ -158,6 +158,49 @@ class TestMe:
         assert response.status_code == 401
 
 
+class TestRefreshToken:
+    """Test POST /auth/refresh endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_refresh_success_returns_new_tokens(self, http_client: httpx.AsyncClient):
+        await http_client.post(
+            "/auth/register",
+            json={"username": "refreshuser_e2e", "password": "Password123!"},
+        )
+        login_response = await http_client.post(
+            "/auth/login",
+            json={"username": "refreshuser_e2e", "password": "Password123!"},
+        )
+        refresh_token = login_response.json()["refresh_token"]
+
+        response = await http_client.post(
+            "/auth/refresh",
+            json={"refresh_token": refresh_token},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "access_token" in data
+        assert "refresh_token" in data
+        assert isinstance(data["access_token"], str)
+        assert isinstance(data["refresh_token"], str)
+
+    @pytest.mark.asyncio
+    async def test_refresh_invalid_token(self, http_client: httpx.AsyncClient):
+        response = await http_client.post(
+            "/auth/refresh",
+            json={"refresh_token": "not-a-valid-refresh-token"},
+        )
+
+        assert response.status_code in [400, 401]
+
+    @pytest.mark.asyncio
+    async def test_refresh_missing_token(self, http_client: httpx.AsyncClient):
+        response = await http_client.post("/auth/refresh", json={})
+
+        assert response.status_code == 422
+
+
 class TestLogout:
     """Test POST /auth/logout endpoint."""
 
