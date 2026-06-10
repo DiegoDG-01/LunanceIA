@@ -21,6 +21,7 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 - **Auth0 Integration**: Autenticación empresarial con Auth0
 - **JWT Tokens**: Validación de tokens mediante Auth0
 - **Autenticación OAuth2**: Estándar de la industria para APIs
+- **API Keys**: Acceso programático con autenticación dual (JWT o `X-API-Key`) y permisos por scope; las keys se guardan hasheadas (SHA-256) y nunca permiten editar ni eliminar
 
 ### 🎯 Organización y Personalización
 - **Sistema de Categorías**: Clasificación flexible de transacciones
@@ -168,6 +169,7 @@ La API REST de Lunance IA v2 utiliza autenticación JWT y sigue los principios d
 - 🏷️ **Categorías**: `/api/v2/category/` (listado de categorías)
 - 📊 **Dashboard**: `/api/v2/dashboard/` (resumen financiero)
 - 🤖 **IA**: `/api/v2/ai/` (análisis de imágenes + asesor de gastos)
+- 🔑 **API Keys**: `/api/v2/api-keys/` (crear/listar/revocar keys para acceso programático con scopes)
 
 ### Documentación Interactiva
 > **Nota**: Swagger UI y ReDoc están deshabilitados por defecto en la configuración actual. Consulta la [Guía de API](docs/API_USAGE.md) para documentación detallada de endpoints.
