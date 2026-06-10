@@ -111,7 +111,7 @@ class TestGetSubscriptionById:
 
 @pytest.mark.e2e
 class TestUpdateSubscription:
-    """Test PUT /subscription/{subscription_uuid}/ endpoint."""
+    """Test PATCH /subscription/{subscription_uuid}/ endpoint."""
 
     @pytest.fixture
     async def created_subscription(self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens):
@@ -133,7 +133,7 @@ class TestUpdateSubscription:
         sub_uuid = created_subscription["subscription"]["uuid"]
         account_uuid = created_subscription["account_uuid"]
 
-        response = await http_client.put(
+        response = await http_client.patch(
             f"/subscription/{sub_uuid}/",
             json={"account_uuid": account_uuid, "name": "HBO Max", "amount": 199.0, "frequency": "MONTHLY", "start_date": str(date.today()), "billing_day": 10, "is_active": True},
             headers=auth_tokens.get_auth_headers(),
@@ -145,7 +145,7 @@ class TestUpdateSubscription:
 
     @pytest.mark.asyncio
     async def test_update_subscription_not_found(self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens):
-        response = await http_client.put(
+        response = await http_client.patch(
             "/subscription/00000000-0000-0000-0000-000000000000/",
             json={"name": "Updated", "amount": 99.0, "frequency": "MONTHLY", "start_date": str(date.today()), "billing_day": 1, "is_active": True},
             headers=auth_tokens.get_auth_headers(),
@@ -154,7 +154,7 @@ class TestUpdateSubscription:
 
     @pytest.mark.asyncio
     async def test_update_subscription_unauthorized(self, http_client: httpx.AsyncClient):
-        response = await http_client.put(
+        response = await http_client.patch(
             "/subscription/some-uuid/",
             json={"name": "x", "amount": 10.0, "frequency": "MONTHLY", "start_date": str(date.today()), "billing_day": 1},
         )

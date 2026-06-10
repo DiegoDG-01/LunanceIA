@@ -16,6 +16,7 @@ from shared.exceptions.base import (
     ValidationError as LunanceValidationError,
     UnauthorizedError,
     BusinessRuleError,
+    NotFoundError,
 )
 from shared.exceptions.domain import (
     UserNotFoundError,
@@ -88,6 +89,9 @@ EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     InvestmentSettingsNotFoundError: ("INVESTMENT_SETTINGS_NOT_FOUND", 404),
     CreditCardSettingsNotFoundError: ("CREDIT_CARD_SETTINGS_NOT_FOUND", 404),
     TransactionNotActivityError: ("NOT_FOUND_ACTIVITY", 404),
+    # Fallback para cualquier NotFoundError sin entrada específica
+    # (presupuestos, metas de ahorro, compras a plazos, bancos, etc.)
+    NotFoundError: ("NOT_FOUND", 404),
     # --- Conflictos de Negocio (409) ---
     EmailAlreadyExistsError: ("BUSINESS_EMAIL_EXISTS", 409),
     AccountHasBalanceError: ("BUSINESS_ACCOUNT_HAS_BALANCE", 409),
