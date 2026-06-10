@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, update
 from typing import Optional, List
 from datetime import datetime, timezone
 
@@ -66,7 +66,9 @@ class SQLAlchemyAPIKeyRepository(APIKeyRepository):
         return [self._model_to_entity(model) for model in models]
 
     async def revoke(self, uuid: str, user_id: int) -> bool:
-        stmt = select(APIKeyModel).where(APIKeyModel.uuid == uuid, APIKeyModel.user_id == user_id)
+        stmt = select(APIKeyModel).where(
+            APIKeyModel.uuid == uuid, APIKeyModel.user_id == user_id
+        )
         result = await self.db.execute(stmt)
         model = result.scalar_one_or_none()
         if model:
@@ -76,10 +78,9 @@ class SQLAlchemyAPIKeyRepository(APIKeyRepository):
         return False
 
     async def touch_last_used(self, api_key_id: int) -> None:
-        stmt = select(APIKeyModel).where(APIKeyModel.id == api_key_id)
-        result = await self.db.execute(stmt)
-        model = result.scalar_one_or_none()
-        if model:
-            model.last_used_at = datetime.now(timezone.utc)
-            await self.db.flush()
-
+        stmt = (
+            update(APIKeyModel)
+            .where(APIKeyModel.id == api_key_id)
+            .values(last_used_at=datetime.now(timezone.utc))
+        )
+        await self.db.execute(stmt)
