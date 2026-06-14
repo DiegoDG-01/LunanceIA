@@ -52,6 +52,9 @@ dev = [
     "locust==2.32.0",
 ]
 
+[project.optional-dependencies]
+mcp = ["mcp[cli]>=1.27.2", "httpx>=0.28.1"]
+
 typecheck = [
     "pyrefly==0.57.1",
 ]
