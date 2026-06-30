@@ -15,7 +15,7 @@ dependencies = [
     "python-jose[cryptography]==3.5.0",
     "sqlalchemy==2.0.49",
     "uvicorn==0.43.0",
-    "cryptography==48.0.0",
+    "cryptography==48.0.1",
     "python-multipart==0.0.29",
     "bcrypt==5.0.0",
     "google-genai==2.4.0",
