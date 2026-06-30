@@ -33,6 +33,7 @@ dependencies = [
     "secure==1.0.1",
     "openai>=2.37.0",
     "python-dateutil>=2.9.0.post0",
+    "numpy==2.4.6",
 ]
 
 [dependency-groups]
@@ -52,8 +53,10 @@ dev = [
     "locust==2.32.0",
 ]
 
-[project.optional-dependencies]
-mcp = ["mcp[cli]>=1.27.2", "httpx>=0.28.1"]
+mcp = [
+    "mcp[cli]>=1.27.2",
+    "httpx>=0.28.1"
+]
 
 typecheck = [
     "pyrefly==0.57.1",

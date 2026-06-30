@@ -1,9 +1,21 @@
+from uuid import UUID
+
 from mcp.server.fastmcp import FastMCP, Context
+from mcp.server.transport_security import TransportSecuritySettings
 
 from presentation.mcp.client import get_api_key, request_api
 from presentation.mcp.config import mcp_settings
 
-mcp = FastMCP(name="Lunance", host=mcp_settings.MCP_HOST, port=mcp_settings.MCP_PORT)
+mcp = FastMCP(
+    name="Lunance",
+    host=mcp_settings.MCP_HOST,
+    port=mcp_settings.MCP_PORT,
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=mcp_settings.allowed_hosts,
+        allowed_origins=mcp_settings.allowed_origins,
+    ),
+)
 
 
 @mcp.tool()
@@ -39,6 +51,10 @@ async def list_transactions(
 @mcp.tool()
 async def get_transaction(ctx: Context, transaction_uuid: str) -> str:
     """Obtiene el detalle de una transacción específica por su UUID."""
+    try:
+        UUID(transaction_uuid)
+    except ValueError:
+        return "El 'transaction_uuid' no tiene un formato válido."
     return await request_api(
         "GET", f"/transaction/{transaction_uuid}/", get_api_key(ctx)
     )

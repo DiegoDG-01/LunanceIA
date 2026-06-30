@@ -17,7 +17,7 @@ from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_api_key_repository import (
-    SQLAlchemyAPIKeyRepository
+    SQLAlchemyAPIKeyRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
     SQLAlchemyUnitOfWork,
@@ -211,6 +211,7 @@ async def get_current_active_user_from_url_token(
 
     return await validate_auth0_user(token, db)
 
+
 def get_api_key_service(
     db: AsyncSession = Depends(get_db),
 ) -> APIKeyService:
@@ -228,11 +229,13 @@ async def get_user_dual_auth(
     service: APIKeyService = Depends(get_api_key_service),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-
     if api_key:
         user, scopes = await service.authenticate(api_key)
         request.state.auth_method = "api_key"
         request.state.api_key_scopes = scopes
+        # Identificador para rate limiting por usuario (no por IP): el tráfico
+        # vía MCP llega siempre como 127.0.0.1 y compartiría un solo bucket.
+        request.state.rate_limit_id = f"user:{user.id}"
         return user
 
     if credentials:
@@ -240,6 +243,7 @@ async def get_user_dual_auth(
         user = await get_current_active_user_from_url_token(credentials.credentials, db)
         if not user.is_active:
             raise UserInactiveError()
+        request.state.rate_limit_id = f"user:{user.id}"
         return user
 
     raise UnauthorizedError("Missing authentication credentials")
@@ -255,6 +259,9 @@ def require_scope(scope: str) -> Callable:
 
         scopes = getattr(request.state, "api_key_scopes", [])
         if scope not in scopes:
-            raise HTTPException(status_code=403, detail=f"API key missing required scope: {scope}")
+            raise HTTPException(
+                status_code=403, detail=f"API key missing required scope: {scope}"
+            )
         return user
+
     return checker

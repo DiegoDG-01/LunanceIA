@@ -33,6 +33,12 @@ async def request_api(method: str, path: str, api_key: str, **kwargs) -> str:
         resp.raise_for_status()
         return resp.text
     except httpx.HTTPStatusError as e:
-        return f"Error {e.response.status_code}: {e.response.text}"
+        status = e.response.status_code
+        if status >= 500:
+            # No exponer trazas internas al modelo/usuario.
+            return (
+                f"Error {status}: la API tuvo un problema interno. Intenta más tarde."
+            )
+        return f"Error {status}: {e.response.text}"
     except httpx.HTTPError as e:
         return f"No se pudo conectar con la API: {e}"
