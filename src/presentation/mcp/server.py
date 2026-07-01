@@ -264,5 +264,210 @@ async def get_investment_projections(
     )
 
 
+@mcp.tool()
+async def get_account(ctx: Context, account_uuid: str) -> str:
+    """Obtiene el detalle de una cuenta específica por su UUID (saldo, tipo, banco)."""
+    try:
+        UUID(account_uuid)
+    except ValueError:
+        return "El 'account_uuid' no tiene un formato válido."
+    return await request_api("GET", f"/account/{account_uuid}", get_api_key(ctx))
+
+
+@mcp.tool()
+async def get_account_activity(ctx: Context, account_uuid: str) -> str:
+    """Obtiene la actividad reciente (últimos movimientos) de una cuenta por su UUID."""
+    try:
+        UUID(account_uuid)
+    except ValueError:
+        return "El 'account_uuid' no tiene un formato válido."
+    return await request_api(
+        "GET", f"/account/{account_uuid}/activity", get_api_key(ctx)
+    )
+
+
+@mcp.tool()
+async def create_account(
+    ctx: Context,
+    bank_id: int,
+    name: str,
+    account_type: str,  # CHECKING / SAVINGS / CREDIT_CARD / DEBIT_CARD / INVESTMENT / CASH
+    initial_balance: float = 0.0,
+    currency: str = "MXN",
+) -> str:
+    """Crea una nueva cuenta básica del usuario. 'account_type' debe ser uno de:
+    CHECKING, SAVINGS, CREDIT_CARD, DEBIT_CARD, INVESTMENT, CASH. 'bank_id' es el
+    ID del banco (usa list_banks/list_accounts como referencia). Para cuentas de
+    crédito o inversión con ajustes avanzados, indícalo desde la app. Confirma con
+    el usuario antes de crear."""
+    body = {
+        "bank_id": bank_id,
+        "name": name,
+        "account_type": account_type,
+        "initial_balance": initial_balance,
+        "currency": currency,
+    }
+    return await request_api("POST", "/account", get_api_key(ctx), json=body)
+
+
+@mcp.tool()
+async def list_subscriptions(
+    ctx: Context,
+    account_uuid: str | None = None,
+    category_id: int | None = None,
+    active_only: bool = False,
+    limit: int = 100,
+    offset: int = 0,
+) -> str:
+    """Lista las suscripciones del usuario (Netflix, Spotify, etc.), con filtros
+    opcionales por cuenta, categoría o estado. Úsala para responder qué paga
+    recurrentemente o cuánto suma en suscripciones."""
+    params = {
+        k: v
+        for k, v in {
+            "account_uuid": account_uuid,
+            "category_id": category_id,
+            "active_only": active_only,
+            "limit": limit,
+            "offset": offset,
+        }.items()
+        if v is not None
+    }
+    return await request_api("GET", "/subscription", get_api_key(ctx), params=params)
+
+
+@mcp.tool()
+async def list_subscription_charges(
+    ctx: Context, limit: int = 100, offset: int = 0
+) -> str:
+    """Lista los cargos de suscripciones del usuario con detalle de transacción,
+    categoría y cuenta."""
+    return await request_api(
+        "GET",
+        "/subscription/charges/",
+        get_api_key(ctx),
+        params={"limit": limit, "offset": offset},
+    )
+
+
+@mcp.tool()
+async def get_subscription(ctx: Context, subscription_uuid: str) -> str:
+    """Obtiene el detalle de una suscripción específica por su UUID."""
+    try:
+        UUID(subscription_uuid)
+    except ValueError:
+        return "El 'subscription_uuid' no tiene un formato válido."
+    return await request_api(
+        "GET", f"/subscription/{subscription_uuid}/", get_api_key(ctx)
+    )
+
+
+@mcp.tool()
+async def create_subscription(
+    ctx: Context,
+    account_uuid: str,
+    category_id: int,
+    name: str,
+    amount: float,
+    frequency: str,  # DAILY / WEEKLY / BIWEEKLY / MONTHLY / BIMONTHLY / QUARTERLY / SEMI_ANNUAL / ANNUAL
+    start_date: str,  # ISO: YYYY-MM-DD
+    end_date: str | None = None,
+    billing_day: int | None = None,  # día del mes 1-31
+    description: str | None = None,
+    service_url: str | None = None,
+) -> str:
+    """Crea una nueva suscripción recurrente. 'frequency' debe ser uno de: DAILY,
+    WEEKLY, BIWEEKLY, MONTHLY, BIMONTHLY, QUARTERLY, SEMI_ANNUAL, ANNUAL. 'amount'
+    es el monto por cargo (positivo). Usa list_accounts y list_categories si no
+    conoces 'account_uuid' o 'category_id'. Confirma con el usuario antes de crear."""
+    body = {
+        k: v
+        for k, v in {
+            "account_uuid": account_uuid,
+            "category_id": category_id,
+            "name": name,
+            "amount": amount,
+            "frequency": frequency,
+            "start_date": start_date,
+            "end_date": end_date,
+            "billing_day": billing_day,
+            "description": description,
+            "service_url": service_url,
+        }.items()
+        if v is not None
+    }
+    return await request_api("POST", "/subscription", get_api_key(ctx), json=body)
+
+
+@mcp.tool()
+async def list_installments(ctx: Context) -> str:
+    """Lista las compras a plazos / meses sin intereses (MSI) del usuario, con sus
+    cargos. Úsala para responder qué compras a plazos tiene y cuánto le resta."""
+    return await request_api("GET", "/installments", get_api_key(ctx))
+
+
+@mcp.tool()
+async def create_installment(
+    ctx: Context,
+    account_uuid: str,
+    description: str,
+    total_amount: float,
+    num_installments: int,  # 2 a 48
+    installment_type: str,  # NO_INTEREST / WITH_INTEREST
+    purchase_date: str,  # ISO: YYYY-MM-DD
+    category_id: int | None = None,
+    annual_interest_rate: float = 0.0,
+    notes: str | None = None,
+) -> str:
+    """Crea una compra a plazos. 'installment_type' debe ser 'NO_INTEREST' (MSI) o
+    'WITH_INTEREST'. 'num_installments' es el número de meses (2-48). Si es con
+    interés, indica 'annual_interest_rate'. Usa list_accounts si no conoces
+    'account_uuid'. Confirma con el usuario antes de crear."""
+    body = {
+        k: v
+        for k, v in {
+            "account_uuid": account_uuid,
+            "category_id": category_id,
+            "description": description,
+            "total_amount": total_amount,
+            "num_installments": num_installments,
+            "installment_type": installment_type,
+            "annual_interest_rate": annual_interest_rate,
+            "purchase_date": purchase_date,
+            "notes": notes,
+        }.items()
+        if v is not None
+    }
+    return await request_api("POST", "/installments", get_api_key(ctx), json=body)
+
+
+@mcp.tool()
+async def create_transfer(
+    ctx: Context,
+    source_account_uuid: str,
+    destination_account_uuid: str,
+    amount: float,
+    description: str | None = None,
+    notes: str | None = None,
+    transfer_date: str | None = None,  # ISO: YYYY-MM-DD
+) -> str:
+    """Registra una transferencia de dinero entre dos cuentas del usuario. 'amount'
+    es positivo. IMPORTANTE: mueve dinero real entre cuentas — muestra siempre un
+    resumen (origen, destino, monto) y pide confirmación explícita antes de enviar."""
+    body = {
+        k: v
+        for k, v in {
+            "source_account_uuid": source_account_uuid,
+            "destination_account_uuid": destination_account_uuid,
+            "amount": amount,
+            "description": description,
+            "notes": notes,
+            "transfer_date": transfer_date,
+        }.items()
+        if v is not None
+    }
+    return await request_api("POST", "/transfers", get_api_key(ctx), json=body)
+
+
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")
