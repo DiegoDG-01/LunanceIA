@@ -400,3 +400,25 @@ class TestAPIKeyLifecycle:
             headers={"X-API-Key": created["raw_key"]},
         )
         assert response.status_code == 403
+
+    async def test_banks_read_scope_allows_listing_banks(
+        self, http_client, auth_tokens
+    ):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["banks:read"]
+        )
+
+        response = await http_client.get(
+            "/bank", headers={"X-API-Key": created["raw_key"]}
+        )
+        assert response.status_code == 200
+
+    async def test_banks_read_scope_required(self, http_client, auth_tokens):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["transactions:read"]
+        )
+
+        response = await http_client.get(
+            "/bank", headers={"X-API-Key": created["raw_key"]}
+        )
+        assert response.status_code == 403

@@ -106,14 +106,27 @@ class TestGetBanks:
         # Both should return same results
         assert data_default["total"] == data_explicit["total"]
 
+    @pytest.mark.asyncio
+    async def test_get_banks_requires_authentication(
+        self, http_client: httpx.AsyncClient
+    ):
+        """Sin credenciales, el endpoint responde 401 (ya no es público)."""
+        response = await http_client.get("/bank/")
+
+        assert response.status_code == 401
+
 
 class TestBankResponseFormat:
     """Test bank API response format."""
 
     @pytest.mark.asyncio
-    async def test_bank_list_response_format(self, http_client: httpx.AsyncClient):
+    async def test_bank_list_response_format(
+        self, http_client: httpx.AsyncClient, auth_tokens
+    ):
         """Test that bank list response follows expected format."""
-        response = await http_client.get("/bank/")
+        response = await http_client.get(
+            "/bank/", headers=auth_tokens.get_auth_headers()
+        )
 
         assert response.status_code == 200
 
