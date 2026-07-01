@@ -10,7 +10,8 @@ from presentation.schemas.responses.account import (
     AccountListResponse,
     AccountRecentActivityResponse,
 )
-from presentation.dependencies.auth_deps import get_current_active_user
+from domain.objects.enums import APIKeyScope
+from presentation.dependencies.auth_deps import get_current_active_user, require_scope
 from presentation.dependencies import (
     get_create_account_handler,
     get_update_account_handler,
@@ -70,7 +71,7 @@ async def get_user_accounts(
     only_active: bool = False,
     limit: int = Query(50, ge=1, le=150),
     offset: int = Query(0, ge=0),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.ACCOUNTS_READ.value)),
     handler: GetUserAccountsHandler = Depends(get_user_accounts_handler),
 ):
     """Obtiene todas las cuentas del usuario."""
@@ -94,7 +95,7 @@ async def get_user_accounts(
 async def get_account(
     request: Request,
     account_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.ACCOUNTS_READ.value)),
     handler: GetAccountByIdHandler = Depends(get_account_by_id_handler),
 ):
     """Obtiene una cuenta específica."""
@@ -251,7 +252,7 @@ async def activate_account(
 async def get_account_activity(
     request: Request,
     account_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.ACCOUNTS_READ.value)),
     handler: GetAccountActivitiesHandler = Depends(get_activity_account_handler),
 ):
     enforce_rate_limit(limiter_50_per_minute, request)

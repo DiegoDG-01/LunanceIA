@@ -8,7 +8,8 @@ from application.dashboard.queries.get_dashboard_summary import (
 from presentation.dependencies import get_dashboard_summary_handler
 
 from domain.entities.user import User
-from presentation.dependencies.auth_deps import get_current_active_user
+from domain.objects.enums import APIKeyScope
+from presentation.dependencies.auth_deps import require_scope
 
 
 from infrastructure.rate_limiting.limiters import (
@@ -22,7 +23,7 @@ router = APIRouter()
 @router.get("/")
 async def get_general_data(
     request: Request,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.DASHBOARD_READ.value)),
     handler: GetDashboardSummaryHandler = Depends(get_dashboard_summary_handler),
 ):
     enforce_rate_limit(limiter_10_per_minute, request)
