@@ -92,3 +92,8 @@ class APIKeyScope(str, Enum):
     ACCOUNTS_READ = "accounts:read"
     CATEGORIES_READ = "categories:read"
     DASHBOARD_READ = "dashboard:read"
+    BUDGETS_READ = "budgets:read"
+    BUDGETS_WRITE = "budgets:write"
+    GOALS_READ = "goals:read"
+    GOALS_WRITE = "goals:write"
+    INVESTMENTS_READ = "investments:read"
