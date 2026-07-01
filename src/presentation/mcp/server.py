@@ -287,6 +287,15 @@ async def get_account_activity(ctx: Context, account_uuid: str) -> str:
 
 
 @mcp.tool()
+async def list_banks(ctx: Context, only_active: bool = True) -> str:
+    """Lista los bancos disponibles con su 'id'. Úsala para obtener el 'bank_id'
+    que necesita create_account."""
+    return await request_api(
+        "GET", "/bank", get_api_key(ctx), params={"only_active": only_active}
+    )
+
+
+@mcp.tool()
 async def create_account(
     ctx: Context,
     bank_id: int,
