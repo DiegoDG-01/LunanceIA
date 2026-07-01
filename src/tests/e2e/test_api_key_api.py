@@ -160,3 +160,51 @@ class TestAPIKeyLifecycle:
         )
         listed = next(k for k in response.json() if k["uuid"] == created["uuid"])
         assert listed["last_used_at"] is not None
+
+    async def test_accounts_read_scope_allows_listing_accounts(
+        self, http_client, auth_tokens
+    ):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["accounts:read"]
+        )
+
+        response = await http_client.get(
+            "/account", headers={"X-API-Key": created["raw_key"]}
+        )
+        assert response.status_code == 200
+
+    async def test_accounts_read_scope_required_for_accounts(
+        self, http_client, auth_tokens
+    ):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["transactions:read"]
+        )
+
+        response = await http_client.get(
+            "/account", headers={"X-API-Key": created["raw_key"]}
+        )
+        assert response.status_code == 403
+
+    async def test_categories_read_scope_allows_listing_categories(
+        self, http_client, auth_tokens
+    ):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["categories:read"]
+        )
+
+        response = await http_client.get(
+            "/category", headers={"X-API-Key": created["raw_key"]}
+        )
+        assert response.status_code == 200
+
+    async def test_dashboard_read_scope_allows_reading_dashboard(
+        self, http_client, auth_tokens
+    ):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["dashboard:read"]
+        )
+
+        response = await http_client.get(
+            "/dashboard", headers={"X-API-Key": created["raw_key"]}
+        )
+        assert response.status_code == 200
