@@ -208,3 +208,104 @@ class TestAPIKeyLifecycle:
             "/dashboard", headers={"X-API-Key": created["raw_key"]}
         )
         assert response.status_code == 200
+
+    async def test_budgets_read_scope_allows_listing_budgets(
+        self, http_client, auth_tokens
+    ):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["budgets:read"]
+        )
+
+        response = await http_client.get(
+            "/budgets", headers={"X-API-Key": created["raw_key"]}
+        )
+        assert response.status_code == 200
+
+    async def test_budgets_read_scope_required_for_budgets(
+        self, http_client, auth_tokens
+    ):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["transactions:read"]
+        )
+
+        response = await http_client.get(
+            "/budgets", headers={"X-API-Key": created["raw_key"]}
+        )
+        assert response.status_code == 403
+
+    async def test_budgets_write_scope_creates_budget(self, http_client, auth_tokens):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["budgets:write"]
+        )
+
+        response = await http_client.post(
+            "/budgets",
+            json={
+                "name": "Comida via API key",
+                "limit_amount": 5000.0,
+                "period": "mensual",
+                "start_date": "2026-06-01",
+            },
+            headers={"X-API-Key": created["raw_key"]},
+        )
+        assert response.status_code == 201
+        assert response.json()["name"] == "Comida via API key"
+
+    async def test_budgets_read_only_cannot_create_budget(
+        self, http_client, auth_tokens
+    ):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["budgets:read"]
+        )
+
+        response = await http_client.post(
+            "/budgets",
+            json={
+                "name": "No debería crearse",
+                "limit_amount": 100.0,
+                "period": "mensual",
+                "start_date": "2026-06-01",
+            },
+            headers={"X-API-Key": created["raw_key"]},
+        )
+        assert response.status_code == 403
+
+    async def test_goals_read_scope_allows_listing_goals(
+        self, http_client, auth_tokens
+    ):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["goals:read"]
+        )
+
+        response = await http_client.get(
+            "/goals", headers={"X-API-Key": created["raw_key"]}
+        )
+        assert response.status_code == 200
+
+    async def test_investments_read_scope_required_for_projections(
+        self, http_client, auth_tokens
+    ):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["transactions:read"]
+        )
+
+        response = await http_client.get(
+            "/investments/00000000-0000-0000-0000-000000000000/projections/",
+            headers={"X-API-Key": created["raw_key"]},
+        )
+        assert response.status_code == 403
+
+    async def test_investments_read_scope_passes_auth_gate(
+        self, http_client, auth_tokens
+    ):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["investments:read"]
+        )
+
+        response = await http_client.get(
+            "/investments/00000000-0000-0000-0000-000000000000/projections/",
+            headers={"X-API-Key": created["raw_key"]},
+        )
+        # La key tiene el scope: pasa el gate de auth (no 403). La cuenta no
+        # existe, así que el handler responde 404 — no un rechazo por permisos.
+        assert response.status_code != 403
