@@ -15,7 +15,8 @@ from fastapi import status, Response
 from infrastructure.rate_limiting.limiters import limiter_10_per_minute
 from application.dto.transaction_dto import CreateTransferDTO
 from domain.entities.user import User
-from presentation.dependencies.auth_deps import get_current_active_user
+from domain.objects.enums import APIKeyScope
+from presentation.dependencies.auth_deps import get_current_active_user, require_scope
 from presentation.dependencies.transfer_deps import get_create_transfer_handler
 from presentation.schemas.requests.transfer import CreateTransferRequest
 from presentation.schemas.responses.transfer import TransferResponse
@@ -31,7 +32,7 @@ router = APIRouter()
 async def create_transfer(
     request: Request,
     transfer_request: CreateTransferRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.TRANSFERS_WRITE.value)),
     handler: CreateTransferHandler = Depends(get_create_transfer_handler),
 ):
     enforce_rate_limit(limiter_20_per_minute, request)
