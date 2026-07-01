@@ -309,3 +309,94 @@ class TestAPIKeyLifecycle:
         # La key tiene el scope: pasa el gate de auth (no 403). La cuenta no
         # existe, así que el handler responde 404 — no un rechazo por permisos.
         assert response.status_code != 403
+
+    async def test_accounts_write_scope_creates_account(
+        self, http_client, auth_tokens
+    ):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["accounts:write"]
+        )
+
+        response = await http_client.post(
+            "/account",
+            json={
+                "name": "Cuenta via API key",
+                "account_type": "CHECKING",
+                "bank_id": 1,
+                "initial_balance": 1000.0,
+                "currency": "MXN",
+            },
+            headers={"X-API-Key": created["raw_key"]},
+        )
+        assert response.status_code == 201
+        assert response.json()["name"] == "Cuenta via API key"
+
+    async def test_accounts_read_only_cannot_create_account(
+        self, http_client, auth_tokens
+    ):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["accounts:read"]
+        )
+
+        response = await http_client.post(
+            "/account",
+            json={
+                "name": "No debería crearse",
+                "account_type": "CHECKING",
+                "bank_id": 1,
+                "initial_balance": 0.0,
+                "currency": "MXN",
+            },
+            headers={"X-API-Key": created["raw_key"]},
+        )
+        assert response.status_code == 403
+
+    async def test_subscriptions_read_scope_allows_listing(
+        self, http_client, auth_tokens
+    ):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["subscriptions:read"]
+        )
+
+        response = await http_client.get(
+            "/subscription", headers={"X-API-Key": created["raw_key"]}
+        )
+        assert response.status_code == 200
+
+    async def test_subscriptions_read_scope_required(self, http_client, auth_tokens):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["transactions:read"]
+        )
+
+        response = await http_client.get(
+            "/subscription", headers={"X-API-Key": created["raw_key"]}
+        )
+        assert response.status_code == 403
+
+    async def test_installments_read_scope_allows_listing(
+        self, http_client, auth_tokens
+    ):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["installments:read"]
+        )
+
+        response = await http_client.get(
+            "/installments", headers={"X-API-Key": created["raw_key"]}
+        )
+        assert response.status_code == 200
+
+    async def test_transfers_write_scope_required(self, http_client, auth_tokens):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["transactions:read"]
+        )
+
+        response = await http_client.post(
+            "/transfers",
+            json={
+                "source_account_uuid": "00000000-0000-0000-0000-000000000000",
+                "destination_account_uuid": "00000000-0000-0000-0000-000000000001",
+                "amount": 100.0,
+            },
+            headers={"X-API-Key": created["raw_key"]},
+        )
+        assert response.status_code == 403
