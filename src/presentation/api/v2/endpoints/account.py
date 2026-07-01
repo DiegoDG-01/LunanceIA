@@ -113,7 +113,7 @@ async def get_account(
 async def create_account(
     request: Request,
     account_request: CreateAccountRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.ACCOUNTS_WRITE.value)),
     handler: CreateAccountHandler = Depends(get_create_account_handler),
 ):
     """Crea una nueva cuenta."""
