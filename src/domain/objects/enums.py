@@ -103,3 +103,4 @@ class APIKeyScope(str, Enum):
     INSTALLMENTS_READ = "installments:read"
     INSTALLMENTS_WRITE = "installments:write"
     TRANSFERS_WRITE = "transfers:write"
+    BANKS_READ = "banks:read"
