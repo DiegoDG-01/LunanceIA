@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, status, Response, Request, Query
 from typing import cast
 
 from domain.entities.user import User
+from domain.objects.enums import APIKeyScope
 from application.dto.saving_goal_dto import CreateSavingGoalDTO, UpdateSavingGoalDTO
 from application.goals.commands.create_saving_goal import (
     CreateSavingGoalCommand,
@@ -32,7 +33,7 @@ from presentation.schemas.requests.saving_goal import (
     UpdateSavingGoalRequest,
 )
 from presentation.schemas.responses.saving_goal import SavingGoalResponse
-from presentation.dependencies.auth_deps import get_current_active_user
+from presentation.dependencies.auth_deps import get_current_active_user, require_scope
 from presentation.dependencies.saving_goal_deps import (
     get_create_saving_goal_handler,
     get_update_saving_goal_handler,
@@ -55,7 +56,7 @@ router = APIRouter()
 async def get_saving_goals(
     request: Request,
     active_only: bool = Query(False, description="Solo metas activas"),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.GOALS_READ.value)),
     handler: GetSavingGoalsHandler = Depends(get_saving_goals_handler),
 ):
     """Obtiene todas las metas de ahorro del usuario autenticado."""
@@ -72,7 +73,7 @@ async def get_saving_goals(
 async def get_saving_goal(
     request: Request,
     goal_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.GOALS_READ.value)),
     handler: GetSavingGoalByIdHandler = Depends(get_saving_goals_by_id_handler),
 ):
     """Obtiene una meta de ahorro específica por su UUID."""
@@ -89,7 +90,7 @@ async def get_saving_goal(
 async def create_saving_goal(
     request: Request,
     goal_request: SavingGoalRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.GOALS_WRITE.value)),
     handler: CreateSavingGoalHandler = Depends(get_create_saving_goal_handler),
 ):
     """Crea una nueva meta de ahorro."""
