@@ -46,4 +46,4 @@
           run: |
             curl -s -o /dev/null -w "%{http_code}" \
               -X POST \
-              http://192.168.1.222:3000/api/deploy/5ARMUu6CW4cVJZjlD7Gc0
+              ${{ secrets.DOKPLOY_PROD_WEBHOOK }}

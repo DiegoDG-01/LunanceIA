@@ -30,12 +30,14 @@ from presentation.dependencies.installment_deps import (
     get_update_installment_handler,
 )
 from domain.entities.user import User
+from domain.objects.enums import APIKeyScope
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,
     limiter_50_per_minute,
     limiter_20_per_minute,
 )
 from presentation.dependencies import get_current_active_user
+from presentation.dependencies.auth_deps import require_scope
 from presentation.schemas.requests.installment import (
     CreateInstallmentPurchaseRequest,
     PayInstallmentChargeRequest,
@@ -52,7 +54,7 @@ router = APIRouter()
 @router.get("/", response_model=list[InstallmentPurchaseResponse])
 async def get_installment_purchases(
     request: Request,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.INSTALLMENTS_READ.value)),
     handler: GetInstallmentPurchasesHandler = Depends(
         get_installment_purchases_handler
     ),
@@ -75,7 +77,7 @@ async def get_installment_purchases(
 async def create_installment_purchase(
     request: Request,
     body: CreateInstallmentPurchaseRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.INSTALLMENTS_WRITE.value)),
     handler: CreateInstallmentPurchaseHandler = Depends(get_create_installment_handler),
 ):
     enforce_rate_limit(limiter_20_per_minute, request)

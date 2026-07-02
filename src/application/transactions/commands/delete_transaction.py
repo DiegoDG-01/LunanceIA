@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from domain.objects.enums import TransactionType
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork

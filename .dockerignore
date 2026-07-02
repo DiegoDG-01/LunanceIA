@@ -6,6 +6,7 @@
 # Docker
 .dockerignore
 Dockerfile
+Dockerfile.mcp
 docker-compose.yml
 
 # Python

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, status, Response, Request, Query
 from typing import Optional, List, cast
 
 from domain.entities.user import User
+from domain.objects.enums import APIKeyScope
 from application.dto.subscription_dto import (
     CreateSubscriptionDTO,
     UpdateSubscriptionDTO,
@@ -46,7 +47,7 @@ from presentation.schemas.requests.subscription import (
     CreateSubscriptionRequest,
     UpdateSubscriptionRequest,
 )
-from presentation.dependencies.auth_deps import get_current_active_user
+from presentation.dependencies.auth_deps import get_current_active_user, require_scope
 from presentation.dependencies import (
     get_create_subscription_handler,
     get_subscriptions_handler,
@@ -77,7 +78,7 @@ async def get_subscriptions(
     active_only: bool = Query(False, description="Solo suscripciones activas"),
     limit: int = Query(100, ge=1, le=1000, description="Máximo de resultados"),
     offset: int = Query(0, ge=0, description="Offset para paginación"),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_READ.value)),
     handler: GetSubscriptionsHandler = Depends(get_subscriptions_handler),
 ):
     enforce_rate_limit(limiter_50_per_minute, request)
@@ -101,7 +102,7 @@ async def get_subscription_charges(
     request: Request,
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_READ.value)),
     handler: GetSubscriptionChargesHandler = Depends(get_subscription_charges_handler),
 ):
     """
@@ -123,7 +124,7 @@ async def get_subscription_charges(
 async def get_subscription(
     request: Request,
     subscription_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_READ.value)),
     handler: GetSubscriptionsByIdHandler = Depends(get_subscription_by_id_handler),
 ):
     query = GetSubscriptionsByIdQuery(
@@ -140,7 +141,7 @@ async def get_subscription(
 async def create_subscription(
     request: Request,
     subscription_request: CreateSubscriptionRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_WRITE.value)),
     handler: CreateSubscriptionHandler = Depends(get_create_subscription_handler),
 ):
     """
@@ -168,7 +169,7 @@ async def create_subscription(
     return SubscriptionResponse(**result.__dict__)
 
 
-@router.put(
+@router.patch(
     "/{subscription_uuid}/",
     response_model=SubscriptionResponse,
     status_code=status.HTTP_200_OK,
@@ -243,7 +244,7 @@ async def delete_subscription(
 async def get_subscription_last_charge(
     request: Request,
     subscription_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_READ.value)),
     handler: GetLastTransactionsHandler = Depends(get_last_transactions_handler),
 ):
     enforce_rate_limit(limiter_20_per_minute, request)
