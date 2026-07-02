@@ -16,7 +16,8 @@ def get_client() -> httpx.AsyncClient:
 
 
 def get_api_key(ctx: Context) -> str:
-    request = ctx.request_context.request
+    request_context = ctx.request_context
+    request = request_context.request if request_context else None
     api_key = request.headers.get("X-API-KEY") if request else None
     if not api_key:
         raise ValueError("API key not found in request headers")

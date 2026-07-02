@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class MCPSettings(BaseSettings):
@@ -17,10 +17,11 @@ class MCPSettings(BaseSettings):
     def allowed_origins(self) -> list[str]:
         return [h.strip() for h in self.MCP_ALLOWED_ORIGINS.split(",") if h.strip()]
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 mcp_settings = MCPSettings()

@@ -238,6 +238,11 @@ async def get_investment_yields(
 ) -> str:
     """Lista los rendimientos históricos (yields) de una cuenta de inversión.
     'account_uuid' identifica la cuenta de inversión."""
+    try:
+        UUID(account_uuid)
+    except ValueError:
+        return "account_uuid invalid format"
+
     return await request_api(
         "GET",
         f"/investments/{account_uuid}/yields/",
@@ -255,6 +260,11 @@ async def get_investment_projections(
     """Obtiene la proyección de rendimiento de una cuenta de inversión: balance
     actual, tasa anual, balance final proyectado y proyección diaria. 'days' son
     los días a proyectar; si se omite proyecta hasta el vencimiento (o 365 días)."""
+    try:
+        UUID(account_uuid)
+    except ValueError:
+        return "account_uuid invalid format"
+
     params = {"days": days} if days is not None else {}
     return await request_api(
         "GET",
