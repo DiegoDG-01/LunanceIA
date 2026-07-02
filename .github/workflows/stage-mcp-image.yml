@@ -1,8 +1,14 @@
-  name: Stage Deploy
+  name: Stage MCP Deploy
 
   on:
     push:
       branches: [ stage ]
+      paths:
+        - 'src/presentation/mcp/**'
+        - 'Dockerfile.mcp'
+        - 'pyproject.toml'
+        - 'uv.lock'
+        - '.github/workflows/stage-mcp-image.yml'
 
   jobs:
     build-and-push:
@@ -25,25 +31,26 @@
           id: meta
           uses: docker/metadata-action@v5
           with:
-            images: diegodg01/lunance-api
+            images: diegodg01/lunance-api          # mismo repo privado, tag mcp-*
             tags: |
-              type=raw,value=stage
-              type=sha,prefix=stage-
+              type=raw,value=mcp-stage
+              type=sha,prefix=mcp-stage-
 
         - name: Build and Push
           uses: docker/build-push-action@v5
           with:
             context: .
+            file: Dockerfile.mcp
             platforms: linux/arm64
             push: true
             tags: ${{ steps.meta.outputs.tags }}
             labels: ${{ steps.meta.outputs.labels }}
-            cache-from: type=registry,ref=diegodg01/lunance-api:buildcache
-            cache-to: type=registry,ref=diegodg01/lunance-api:buildcache,mode=max
+            cache-from: type=registry,ref=diegodg01/lunance-api:mcp-stage-buildcache
+            cache-to: type=registry,ref=diegodg01/lunance-api:mcp-stage-buildcache,mode=max
 
-        - name: Trigger Dokploy Stage deployment
+        - name: Trigger Dokploy Stage MCP deployment
           if: success()
           run: |
             curl -s -o /dev/null -w "%{http_code}" \
               -X POST \
-              ${{ secrets.DOKPLOY_PROD_WEBHOOK }}
+              ${{ secrets.DOKPLOY_MCP_PROD_WEBHOOK }}

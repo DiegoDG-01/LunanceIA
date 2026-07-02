@@ -1,8 +1,7 @@
-  name: Stage Deploy
+  name: Production MCP Deploy
 
   on:
-    push:
-      branches: [ stage ]
+    workflow_dispatch:
 
   jobs:
     build-and-push:
@@ -25,25 +24,27 @@
           id: meta
           uses: docker/metadata-action@v5
           with:
-            images: diegodg01/lunance-api
+            images: diegodg01/lunance-api          # mismo repo privado, distinto tag
+            # tag por SHA (mcp-prod-<sha>) = ancla de rollback por commit
             tags: |
-              type=raw,value=stage
-              type=sha,prefix=stage-
+              type=raw,value=mcp-latest
+              type=sha,prefix=mcp-prod-
 
         - name: Build and Push
           uses: docker/build-push-action@v5
           with:
             context: .
-            platforms: linux/arm64
+            file: Dockerfile.mcp                   # el Dockerfile renombrado
+            platforms: linux/amd64
             push: true
             tags: ${{ steps.meta.outputs.tags }}
             labels: ${{ steps.meta.outputs.labels }}
-            cache-from: type=registry,ref=diegodg01/lunance-api:buildcache
-            cache-to: type=registry,ref=diegodg01/lunance-api:buildcache,mode=max
+            cache-from: type=registry,ref=diegodg01/lunance-api:mcp-buildcache
+            cache-to: type=registry,ref=diegodg01/lunance-api:mcp-buildcache,mode=max
 
-        - name: Trigger Dokploy Stage deployment
+        - name: Trigger Dokploy MCP Production deployment
           if: success()
           run: |
             curl -s -o /dev/null -w "%{http_code}" \
               -X POST \
-              ${{ secrets.DOKPLOY_PROD_WEBHOOK }}
+              ${{ secrets.DOKPLOY_MCP_PROD_WEBHOOK }}

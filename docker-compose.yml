@@ -15,6 +15,26 @@ services:
     networks:
       - lunance-net           # Connect to custom network
 
+  # MCP server service (expone las tools financieras de Lunance por streamable-http)
+  mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    ports:
+      - "8001:8001"           # MCP streamable-http
+    depends_on:
+      - api                   # El MCP reenvía las peticiones a la API
+    environment:
+      # (2) Saliente: MCP -> API, por el nombre de servicio en la red interna
+      - LUNANCE_API_BASE_URL=http://api:8000
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8001
+      # (1) Entrante: quién puede llamar AL MCP en local. En prod se usa el dominio real.
+      - MCP_ALLOWED_HOSTS=localhost:8001,127.0.0.1:8001,mcp:8001
+      - MCP_ALLOWED_ORIGINS=http://localhost:8001,http://127.0.0.1:8001
+    networks:
+      - lunance-net
+
   # MySQL database service
   db:
     image: mysql:8.0          # Use official MySQL 8.0 image
