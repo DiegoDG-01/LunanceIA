@@ -80,11 +80,29 @@ Los endpoints aceptan **ambos** métodos (autenticación dual): si llega `X-API-
 |-------|---------|
 | `transactions:read` | Listar y ver transacciones |
 | `transactions:write` | Crear transacciones |
-| `accounts:read` | Listar / ver cuentas *(pendiente de habilitar)* |
-| `categories:read` | Listar categorías *(pendiente de habilitar)* |
-| `dashboard:read` | Ver dashboard *(pendiente de habilitar)* |
+| `accounts:read` | Listar / ver cuentas y su actividad |
+| `accounts:write` | Crear cuentas |
+| `categories:read` | Listar categorías |
+| `dashboard:read` | Ver el dashboard financiero |
+| `budgets:read` | Listar / ver presupuestos y su progreso |
+| `budgets:write` | Crear presupuestos |
+| `goals:read` | Listar / ver metas de ahorro |
+| `goals:write` | Crear metas de ahorro |
+| `investments:read` | Ver rendimientos y proyecciones de inversión |
+| `subscriptions:read` | Listar / ver suscripciones y sus cargos |
+| `subscriptions:write` | Crear suscripciones |
+| `installments:read` | Listar compras a plazos (MSI) |
+| `installments:write` | Crear compras a plazos (MSI) |
+| `transfers:write` | Crear transferencias entre cuentas |
+| `banks:read` | Ver el catálogo de bancos |
 
-> No existen scopes de edición ni eliminación **a propósito**: una API key nunca puede modificar ni borrar datos.
+> No existen scopes de edición ni eliminación **a propósito**: una API key solo puede
+> **leer y crear**, nunca modificar ni borrar datos. `transfers` solo tiene `:write`
+> (crear); las transferencias se consultan dentro de las transacciones.
+
+> 🤖 **Uso vía MCP:** estos scopes son la base del servidor MCP que expone la API a
+> agentes/LLM. Para ejecutarlo, sus herramientas y cómo probarlo, consulta
+> [MCP.md](MCP.md).
 
 ### Usar una API Key en Requests
 

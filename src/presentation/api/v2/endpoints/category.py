@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Request, Depends
 
 from domain.entities.user import User
-from presentation.dependencies.auth_deps import get_current_active_user
+from domain.objects.enums import APIKeyScope
+from presentation.dependencies.auth_deps import require_scope
 from presentation.schemas.responses.category import (
     CategoryResponse,
     CategoryListResponse,
@@ -25,7 +26,7 @@ router = APIRouter()
 async def get_categories(
     request: Request,
     only_active: bool = True,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.CATEGORIES_READ.value)),
     handler: GetCategoriesHandler = Depends(get_categories_handler),
 ):
     enforce_rate_limit(limiter_50_per_minute, request)

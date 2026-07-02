@@ -41,8 +41,12 @@ def enforce_rate_limit(limiter: FixedWindowRateLimiter, request: Request) -> Non
     if settings.ENVIRONMENT.upper() == "TEST":
         return
 
-    ip = request.client.host if request.client else "unknown"
-    key = f"{ip}:{request.url.path}"
+    # Si la petición está autenticada, limita por usuario (no por IP): el tráfico
+    # vía MCP llega siempre como 127.0.0.1 y compartiría un único bucket.
+    principal = getattr(request.state, "rate_limit_id", None)
+    if principal is None:
+        principal = request.client.host if request.client else "unknown"
+    key = f"{principal}:{request.url.path}"
 
     if not limiter.allow_request(key):
         status = limiter.get_status(key)

@@ -6,13 +6,14 @@ from fastapi import (
     Request,
 )
 
+from domain.objects.enums import APIKeyScope
 from application.transactions.queries.get_transactions import GetTransactionsQuery
 from application.transactions.queries.get_transactions import GetTransactionsHandler
 from domain.entities.user import User
 from application.dto.transaction_dto import CreateTransactionDTO
 from presentation.schemas.responses.transaction import TransactionResponse
 from presentation.schemas.requests.transaction import CreateTransactionRequest
-from presentation.dependencies.auth_deps import get_current_active_user
+from presentation.dependencies.auth_deps import get_current_active_user, require_scope
 from presentation.dependencies import (
     get_create_transaction_handler,
     get_transactions_handler,
@@ -69,7 +70,7 @@ async def get_transactions(
     category_id: Optional[int] = Query(None, gt=0, description="ID de categoría"),
     account_uuid: Optional[str] = Query(None, description="UUID de la cuenta"),
     # 🔐 DEPENDENCIAS: Inyección automática de FastAPI
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.TRANSACTIONS_READ.value)),
     handler: GetTransactionsHandler = Depends(get_transactions_handler),
 ):
     """
@@ -100,7 +101,7 @@ async def get_transactions(
 async def get_transaction_by_uuid(
     request: Request,
     transaction_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.TRANSACTIONS_READ.value)),
     handler: GetTransactionByUuidHandler = Depends(get_transaction_by_uuid_handler),
 ):
     enforce_rate_limit(limiter_50_per_minute, request)
@@ -116,7 +117,7 @@ async def get_transaction_by_uuid(
 async def create_transaction(
     request: Request,
     transaction_request: CreateTransactionRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.TRANSACTIONS_WRITE.value)),
     handler: CreateTransactionHandler = Depends(get_create_transaction_handler),
 ):
     enforce_rate_limit(limiter_20_per_minute, request)

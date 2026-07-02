@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, status, Response, Request, Query
 from typing import Optional, cast
 
 from domain.entities.user import User
+from domain.objects.enums import APIKeyScope
 from application.dto.budget_dto import CreateBudgetDTO, UpdateBudgetDTO
 from application.budgets.commands.create_budget import (
     CreateBudgetCommand,
@@ -36,7 +37,7 @@ from presentation.schemas.requests.budget import (
     UpdateBudgetRequest,
 )
 from presentation.schemas.responses.budget import BudgetResponse, BudgetProgressResponse
-from presentation.dependencies.auth_deps import get_current_active_user
+from presentation.dependencies.auth_deps import get_current_active_user, require_scope
 from presentation.dependencies.budget_deps import (
     get_create_budget_handler,
     get_update_budget_handler,
@@ -61,7 +62,7 @@ async def get_budgets(
     request: Request,
     active_only: bool = Query(False, description="Solo presupuestos activos"),
     category_id: Optional[int] = Query(None, gt=0, description="Filtrar por categoría"),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.BUDGETS_READ.value)),
     handler: GetBudgetsHandler = Depends(get_budgets_handler),
 ):
     """Obtiene todos los presupuestos del usuario autenticado."""
@@ -79,7 +80,7 @@ async def get_budgets(
 async def get_budget(
     request: Request,
     budget_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.BUDGETS_READ.value)),
     handler: GetBudgetByIdHandler = Depends(get_budget_by_id_handler),
 ):
     """Obtiene un presupuesto específico por su UUID."""
@@ -96,7 +97,7 @@ async def get_budget(
 async def get_budget_progress(
     request: Request,
     budget_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.BUDGETS_READ.value)),
     handler: GetBudgetProgressHandler = Depends(get_budget_progress_handler),
 ):
     """
@@ -116,7 +117,7 @@ async def get_budget_progress(
 async def create_budget(
     request: Request,
     budget_request: CreateBudgetRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.BUDGETS_WRITE.value)),
     handler: CreateBudgetHandler = Depends(get_create_budget_handler),
 ):
     """Crea un nuevo presupuesto."""
