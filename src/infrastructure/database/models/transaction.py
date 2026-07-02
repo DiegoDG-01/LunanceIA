@@ -50,6 +50,9 @@ class TransactionModel(Base):
     category_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("categories.id"), nullable=True
     )
+    transfer_uuid: Mapped[Optional[str]] = mapped_column(
+        CHAR(36), nullable=True, index=True
+    )
     uuid: Mapped[str] = mapped_column(
         CHAR(36), unique=True, index=True, default=lambda: str(uuid.uuid4())
     )

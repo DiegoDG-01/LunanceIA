@@ -1,0 +1,25 @@
+FROM python:3.13-alpine
+
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache curl && \
+    curl -LsSf https://astral.sh/uv/install.sh | UV_INSTALL_DIR=/usr/local/bin sh && \
+    addgroup -S lunance && adduser -S lunance -G lunance
+
+WORKDIR /app
+
+COPY --chown=lunance:lunance pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --only-group mcp --no-install-project
+
+COPY --chown=lunance:lunance src/presentation/__init__.py ./src/presentation/__init__.py
+COPY --chown=lunance:lunance src/presentation/mcp/ ./src/presentation/mcp/
+
+RUN chown -R lunance:lunance /app/.venv
+USER lunance
+
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONPATH=/app/src MCP_HOST=0.0.0.0 MCP_PORT=8001
+
+EXPOSE 8001
+
+CMD ["python", "-m", "presentation.mcp.server"]

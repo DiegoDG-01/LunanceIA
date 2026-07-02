@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import cast
 
+import bcrypt
+
 from domain.repositories.user_repository import UserRepository
 from domain.repositories.auth_token_repository import AuthTokenRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
@@ -11,6 +13,9 @@ from shared.exceptions.domain import (
     UserInactiveError,
     InvalidCredentialsError,
 )
+
+
+_DUMMY_PASSWORD_HASH = bcrypt.gensalt()
 
 
 @dataclass
@@ -49,15 +54,15 @@ class LoginHandler:
             )
 
         user = await self.user_repository.get_by_username(command.username)
-        if not user:
+
+        if not user or user.password is None:
+            bcrypt.checkpw(command.password.encode(), _DUMMY_PASSWORD_HASH)
             raise InvalidCredentialsError("username")
 
         if not user.is_active:
             raise UserInactiveError()
 
-        if not self.jwt_service.check_password(
-            command.password, cast(str, user.password)
-        ):
+        if not self.jwt_service.check_password(command.password, user.password):
             raise InvalidCredentialsError("password")
 
         access_token = self.jwt_service.create_access_token(

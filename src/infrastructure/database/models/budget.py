@@ -1,8 +1,9 @@
+import uuid
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import String, DateTime, ForeignKey, Enum, DECIMAL, Date
+from sqlalchemy import String, DateTime, ForeignKey, Enum, DECIMAL, Date, CHAR
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,6 +20,9 @@ class BudgetModel(Base):
     )
     category_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("categories.id"), nullable=True
+    )
+    uuid: Mapped[str] = mapped_column(
+        CHAR(36), unique=True, index=True, default=lambda: str(uuid.uuid4())
     )
     name: Mapped[str] = mapped_column(String(100))
     limit_amount: Mapped[Decimal] = mapped_column(DECIMAL(12, 2))

@@ -12,6 +12,10 @@ from presentation.api.v2.endpoints import (
     ai,
     notification,
     installment,
+    budget,
+    goals,
+    transfer,
+    api_key,
 )
 
 api_router = APIRouter()
@@ -37,3 +41,7 @@ api_router.include_router(
 api_router.include_router(
     installment.router, prefix="/installments", tags=["Installments"]
 )
+api_router.include_router(budget.router, prefix="/budgets", tags=["Budgets"])
+api_router.include_router(goals.router, prefix="/goals", tags=["Goals"])
+api_router.include_router(transfer.router, prefix="/transfers", tags=["Transfer"])
+api_router.include_router(api_key.router, prefix="/api-keys", tags=["API Keys"])

@@ -15,7 +15,21 @@ os.environ["ENVIRONMENT"] = "TEST"
 
 from main import app
 from infrastructure.database.connection import Base, get_db
-from presentation.dependencies.auth_deps import get_current_user, get_current_active_user
+from presentation.dependencies.auth_deps import (
+    get_current_user,
+    get_current_active_user,
+    get_user_dual_auth,
+)
+from infrastructure.database.repositories.sqlalchemy_api_key_repository import (
+    SQLAlchemyAPIKeyRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_user_repository import (
+    SQLAlchemyUserRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
+    SQLAlchemyUnitOfWork,
+)
+from infrastructure.security.api_key_service import APIKeyService
 from domain.entities.user import User
 
 # Import models to register them with Base.metadata
@@ -77,6 +91,24 @@ async def mock_get_current_user(request: Request, db: AsyncSession = Depends(get
 
 async def mock_get_current_active_user(current_user: User = Depends(mock_get_current_user)) -> User:
     return current_user
+
+async def mock_get_user_dual_auth(request: Request, db: AsyncSession = Depends(get_db)) -> User:
+    """Mock dual auth: API keys se autentican de verdad contra la BD de test;
+    la rama JWT usa el usuario mock (igual que get_current_user)."""
+    api_key = request.headers.get("X-API-Key")
+    if api_key:
+        service = APIKeyService(
+            SQLAlchemyAPIKeyRepository(db),
+            SQLAlchemyUserRepository(db),
+            SQLAlchemyUnitOfWork(db),
+        )
+        user, scopes = await service.authenticate(api_key)
+        request.state.auth_method = "api_key"
+        request.state.api_key_scopes = scopes
+        return user
+
+    request.state.auth_method = "jwt"
+    return await mock_get_current_user(request, db)
 
 # Use SQLite in-memory for fast tests
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -164,6 +196,7 @@ async def http_client(db_session: AsyncSession) -> AsyncGenerator[httpx.AsyncCli
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = mock_get_current_user
     app.dependency_overrides[get_current_active_user] = mock_get_current_active_user
+    app.dependency_overrides[get_user_dual_auth] = mock_get_user_dual_auth
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app),
         base_url="http://test/api/v2",

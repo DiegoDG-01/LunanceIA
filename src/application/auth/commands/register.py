@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+
+from sqlalchemy.exc import IntegrityError
+
 from domain.entities.user import User
 from domain.repositories.user_repository import UserRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
@@ -55,10 +58,12 @@ class RegisterHandler:
         password_hash = self.jwt_service.get_password_hash(command.password)
         user = User.create_local_user(name=command.username, password=password_hash)
 
-        # Guardar usuario
         async with self.uow:
-            saved_user = await self.user_repository.create(user)
-            await self.uow.commit()
+            try:
+                saved_user = await self.user_repository.create(user)
+                await self.uow.commit()
+            except IntegrityError:
+                raise UsernameAlreadyExistsError()
 
         return RegisterResponse(
             user_uuid=saved_user.uuid,

@@ -16,11 +16,13 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 ### 🤖 Agentes IA
 - **Análisis de Imagen**: Extrae datos (monto, categoría, descripción, fecha) de imágenes de recibos/tickets (límite: 2 por día)
 - **Asesor de Gastos**: Analiza los gastos del mes actual y genera recomendaciones personalizadas de ahorro (límite: 1 por día)
+- **Servidor MCP**: Expone la API como herramientas para agentes/LLM (consultar y registrar finanzas en lenguaje natural), autenticado por API Key con permisos por scope. Ver [MCP.md](docs/MCP.md)
 
 ### 🔐 Seguridad y Autenticación
 - **Auth0 Integration**: Autenticación empresarial con Auth0
 - **JWT Tokens**: Validación de tokens mediante Auth0
 - **Autenticación OAuth2**: Estándar de la industria para APIs
+- **API Keys**: Acceso programático con autenticación dual (JWT o `X-API-Key`) y permisos por scope; las keys se guardan hasheadas (SHA-256) y nunca permiten editar ni eliminar
 
 ### 🎯 Organización y Personalización
 - **Sistema de Categorías**: Clasificación flexible de transacciones
@@ -168,6 +170,7 @@ La API REST de Lunance IA v2 utiliza autenticación JWT y sigue los principios d
 - 🏷️ **Categorías**: `/api/v2/category/` (listado de categorías)
 - 📊 **Dashboard**: `/api/v2/dashboard/` (resumen financiero)
 - 🤖 **IA**: `/api/v2/ai/` (análisis de imágenes + asesor de gastos)
+- 🔑 **API Keys**: `/api/v2/api-keys/` (crear/listar/revocar keys para acceso programático con scopes)
 
 ### Documentación Interactiva
 > **Nota**: Swagger UI y ReDoc están deshabilitados por defecto en la configuración actual. Consulta la [Guía de API](docs/API_USAGE.md) para documentación detallada de endpoints.
@@ -187,6 +190,8 @@ Lunance IA incluye una colección completa de [Bruno](https://www.usebruno.com/)
 > 💡 **Ventajas**: Bruno es un cliente API de código abierto, offline-first, que guarda las colecciones en archivos JSON planos (ideal para Git). No requiere cuenta ni sincronización en la nube.
 
 > 📋 **Guía Completa de API**: Para ejemplos detallados, autenticación JWT, códigos de error y flujos completos, consulta [API_USAGE.md](docs/API_USAGE.md)
+
+> 🤖 **Servidor MCP (Model Context Protocol)**: Para exponer la API a agentes/LLM (herramientas disponibles, cómo ejecutarlo y probarlo), consulta [MCP.md](docs/MCP.md)
 
 ## 🏗️ Arquitectura
 
