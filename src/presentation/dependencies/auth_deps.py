@@ -24,6 +24,10 @@ from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
 )
 from infrastructure.security.api_key_service import APIKeyService
 from infrastructure.config.settings import settings
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_auth_failure,
+)
 from shared.exceptions.base import UnauthorizedError
 from shared.exceptions.application import (
     JWTValidationError,
@@ -166,23 +170,27 @@ async def validate_auth0_user(token: str, db: AsyncSession) -> User:
 
 
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db),
 ):
     token = credentials.credentials
-
     try:
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
-        )
-        if payload.get("iss") == "lunance":
-            return await validate_local_user(token, db)
-    except ExpiredSignatureError:
-        raise JWTValidationError("Token expired")
-    except JWTError:
-        pass
+        try:
+            payload = jwt.decode(
+                token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+            )
+            if payload.get("iss") == "lunance":
+                return await validate_local_user(token, db)
+        except ExpiredSignatureError:
+            raise JWTValidationError("Token expired")
+        except JWTError:
+            pass
 
-    return await validate_auth0_user(token, db)
+        return await validate_auth0_user(token, db)
+    except (UnauthorizedError, JWTValidationError):
+        _throttle_auth_failure(request)
+        raise
 
 
 async def get_current_active_user(
@@ -230,7 +238,11 @@ async def get_user_dual_auth(
     db: AsyncSession = Depends(get_db),
 ) -> User:
     if api_key:
-        user, scopes = await service.authenticate(api_key)
+        try:
+            user, scopes = await service.authenticate(api_key)
+        except UnauthorizedError:
+            _throttle_auth_failure(request)
+            raise
         request.state.auth_method = "api_key"
         request.state.api_key_scopes = scopes
         # Identificador para rate limiting por usuario (no por IP): el tráfico
@@ -239,13 +251,21 @@ async def get_user_dual_auth(
         return user
 
     if credentials:
+        try:
+            user = await get_current_active_user_from_url_token(
+                credentials.credentials, db
+            )
+            if not user.is_active:
+                raise UserInactiveError()
+        except (UnauthorizedError, JWTValidationError, UserInactiveError):
+            _throttle_auth_failure(request)
+            raise
+
         request.state.auth_method = "jwt"
-        user = await get_current_active_user_from_url_token(credentials.credentials, db)
-        if not user.is_active:
-            raise UserInactiveError()
         request.state.rate_limit_id = f"user:{user.id}"
         return user
 
+    _throttle_auth_failure(request)
     raise UnauthorizedError("Missing authentication credentials")
 
 
@@ -265,3 +285,10 @@ def require_scope(scope: str) -> Callable:
         return user
 
     return checker
+
+
+def _throttle_auth_failure(request: Request) -> None:
+    """Limita los intentos de auth inválidos por IP (M2): evita el flooding
+    no autenticado contra la capa de auth + BD. Lanza 429 si se supera."""
+    client_ip = request.client.host if request.client else "unknown"
+    enforce_rate_limit(limiter_auth_failure, request, key=f"auth_failure:{client_ip}")

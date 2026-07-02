@@ -13,9 +13,16 @@ from shared.exceptions.base import UnauthorizedError
 from shared.exceptions.domain import UserInactiveError
 
 
-def _request() -> SimpleNamespace:
-    """Request mínimo con .state, suficiente para las dependencias de auth."""
-    return SimpleNamespace(state=SimpleNamespace())
+def _request(ip: str = "203.0.113.10") -> SimpleNamespace:
+    """Request mínimo con .state/.client/.url, suficiente para las dependencias de auth.
+
+    Incluye .client porque _throttle_auth_failure (M2) lee request.client.host.
+    """
+    return SimpleNamespace(
+        state=SimpleNamespace(),
+        client=SimpleNamespace(host=ip),
+        url=SimpleNamespace(path="/api/v2/test"),
+    )
 
 
 def _response(status_code: int, json_data: dict | None = None) -> httpx.Response:
@@ -118,6 +125,48 @@ class TestGetUserDualAuth:
                 service=AsyncMock(),
                 db=None,
             )
+
+    async def test_invalid_api_key_flooding_is_rate_limited_per_ip(self, monkeypatch):
+        """M2: el flooding con API keys inválidas se acota por IP con 429, para
+        no dejar sin límite las peticiones no autenticadas contra la capa de BD.
+        """
+        import infrastructure.rate_limiting.limiters as limiters_mod
+
+        # enforce_rate_limit hace short-circuit con ENVIRONMENT=TEST; lo desactivamos
+        # sustituyendo el settings del módulo (robusto ante la inmutabilidad de pydantic).
+        monkeypatch.setattr(limiters_mod, "settings", SimpleNamespace(ENVIRONMENT="DEV"))
+
+        service = AsyncMock()
+        service.authenticate.side_effect = UnauthorizedError("Invalid or expired API key")
+        # IP dedicada: el limitador es un singleton en memoria compartido por la sesión.
+        request = _request(ip="198.51.100.42")
+
+        async def _attempt():
+            return await auth_deps.get_user_dual_auth(
+                request=request,
+                api_key="moon_bad",
+                credentials=None,
+                service=service,
+                db=None,
+            )
+
+        blocked = False
+        for _ in range(30):
+            try:
+                await _attempt()
+            except HTTPException as exc:
+                assert exc.status_code == 429
+                blocked = True
+                break
+            except UnauthorizedError:
+                continue
+
+        assert blocked, "El flooding de API keys inválidas debe bloquearse con 429"
+
+        # Una vez superado el umbral, la misma IP sigue bloqueada.
+        with pytest.raises(HTTPException) as exc_info:
+            await _attempt()
+        assert exc_info.value.status_code == 429
 
 
 @pytest.mark.asyncio

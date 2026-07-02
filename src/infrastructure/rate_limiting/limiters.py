@@ -1,4 +1,5 @@
 import time
+from typing import Optional
 
 from fastapi import HTTPException, Request
 from fastapi_advanced_rate_limiter.fixed_window import FixedWindowRateLimiter
@@ -35,18 +36,24 @@ limiter_50_per_minute = FixedWindowRateLimiter(
 limiter_100_per_minute = FixedWindowRateLimiter(
     capacity=100, fill_rate=100 / 60, scope="ip", backend="memory"
 )
+limiter_auth_failure = FixedWindowRateLimiter(
+    capacity=20, fill_rate=20 / 60, scope="ip", backend="memory"
+)
 
 
-def enforce_rate_limit(limiter: FixedWindowRateLimiter, request: Request) -> None:
+def enforce_rate_limit(
+    limiter: FixedWindowRateLimiter, request: Request, *, key: Optional[str] = None
+) -> None:
     if settings.ENVIRONMENT.upper() == "TEST":
         return
 
-    # Si la petición está autenticada, limita por usuario (no por IP): el tráfico
-    # vía MCP llega siempre como 127.0.0.1 y compartiría un único bucket.
-    principal = getattr(request.state, "rate_limit_id", None)
-    if principal is None:
-        principal = request.client.host if request.client else "unknown"
-    key = f"{principal}:{request.url.path}"
+    if key is None:
+        # Si la petición está autenticada, limita por usuario (no por IP): el tráfico
+        # vía MCP llega siempre como 127.0.0.1 y compartiría un único bucket.
+        principal = getattr(request.state, "rate_limit_id", None)
+        if principal is None:
+            principal = request.client.host if request.client else "unknown"
+        key = f"{principal}:{request.url.path}"
 
     if not limiter.allow_request(key):
         status = limiter.get_status(key)
