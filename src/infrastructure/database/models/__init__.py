@@ -15,6 +15,7 @@ from .bank import BankModel
 from .investment_yield import InvestmentYieldModel
 from .notifications import NotificationModel
 from .installment import InstallmentPurchaseModel, InstallmentChargeModel
+from .api_key import APIKeyModel
 
 __all__ = [
     "BudgetModel",
@@ -35,4 +36,5 @@ __all__ = [
     "NotificationModel",
     "InstallmentPurchaseModel",
     "InstallmentChargeModel",
+    "APIKeyModel",
 ]

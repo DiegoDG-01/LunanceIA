@@ -83,10 +83,17 @@ app.add_exception_handler(StarletteHTTPException, http_exception_handler)  # typ
 app.add_exception_handler(Exception, generic_exception_handler)
 
 
+# Swagger/ReDoc (solo habilitados fuera de PROD) cargan JS/CSS desde CDN y usan
+# scripts inline, incompatibles con el CSP por defecto de `secure`.
+DOCS_PATHS = {"/docs", "/redoc", "/openapi.json"}
+
+
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     await secure_header.set_headers_async(response)
+    if request.url.path in DOCS_PATHS:
+        del response.headers["Content-Security-Policy"]
     return response
 
 

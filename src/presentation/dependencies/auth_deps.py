@@ -1,19 +1,28 @@
 import json
 import asyncio
+from typing import Callable
+from typing import Optional
 from datetime import datetime, timezone
 
-from fastapi import Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, Request, HTTPException, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, APIKeyHeader
 from jose import JWTError, ExpiredSignatureError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from domain.entities.user import User
-from shared.exceptions.domain import UserInactiveError
+from shared.exceptions.domain import EmailAlreadyExistsError, UserInactiveError
 from infrastructure.database.connection import get_db
 from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
+from infrastructure.database.repositories.sqlalchemy_api_key_repository import (
+    SQLAlchemyAPIKeyRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
+    SQLAlchemyUnitOfWork,
+)
+from infrastructure.security.api_key_service import APIKeyService
 from infrastructure.config.settings import settings
 from shared.exceptions.base import UnauthorizedError
 from shared.exceptions.application import (
@@ -27,6 +36,8 @@ from cachetools import TTLCache, cached
 
 security = HTTPBearer()
 jwks_cache = TTLCache(maxsize=1, ttl=3600)
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+optional_bearer = HTTPBearer(auto_error=False)
 
 
 @cached(cache=jwks_cache)
@@ -45,6 +56,7 @@ def get_user_info(access_token: str) -> dict:
         url = f"https://{settings.AUTH0_DOMAIN}/userinfo"
         headers = {"Authorization": f"Bearer {access_token}"}
         response = httpx.get(url, headers=headers)
+        response.raise_for_status()
 
         return response.json()
     except httpx.HTTPError as e:
@@ -122,6 +134,7 @@ async def validate_auth0_user(token: str, db: AsyncSession) -> User:
             raise UnauthorizedError("Invalid token: missing user")
 
         user_repo = SQLAlchemyUserRepository(db)
+        uow = SQLAlchemyUnitOfWork(db)
         user = await user_repo.get_by_auth0_uuid(auth0_user_uuid)
 
         if user is None:
@@ -134,7 +147,17 @@ async def validate_auth0_user(token: str, db: AsyncSession) -> User:
                 email_verified=bool(user_info.get("email_verified", False)),
                 last_login=user_info.get("last_login") or datetime.now(timezone.utc),
             )
-            user = await user_repo.create(new_user)
+            try:
+                async with uow:
+                    user = await user_repo.create(new_user)
+                    await uow.commit()
+            except IntegrityError:
+                # Carrera: otra petición concurrente ya creó este usuario.
+                user = await user_repo.get_by_auth0_uuid(auth0_user_uuid)
+                if user is None:
+                    # El conflicto no fue por auth0_id: el email ya
+                    # pertenece a otra cuenta. No se auto-vincula.
+                    raise EmailAlreadyExistsError(user_info.get("email") or "")
 
         return user
 
@@ -187,3 +210,58 @@ async def get_current_active_user_from_url_token(
         pass
 
     return await validate_auth0_user(token, db)
+
+
+def get_api_key_service(
+    db: AsyncSession = Depends(get_db),
+) -> APIKeyService:
+    return APIKeyService(
+        SQLAlchemyAPIKeyRepository(db),
+        SQLAlchemyUserRepository(db),
+        SQLAlchemyUnitOfWork(db),
+    )
+
+
+async def get_user_dual_auth(
+    request: Request,
+    api_key: Optional[str] = Security(api_key_header),
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(optional_bearer),
+    service: APIKeyService = Depends(get_api_key_service),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    if api_key:
+        user, scopes = await service.authenticate(api_key)
+        request.state.auth_method = "api_key"
+        request.state.api_key_scopes = scopes
+        # Identificador para rate limiting por usuario (no por IP): el tráfico
+        # vía MCP llega siempre como 127.0.0.1 y compartiría un solo bucket.
+        request.state.rate_limit_id = f"user:{user.id}"
+        return user
+
+    if credentials:
+        request.state.auth_method = "jwt"
+        user = await get_current_active_user_from_url_token(credentials.credentials, db)
+        if not user.is_active:
+            raise UserInactiveError()
+        request.state.rate_limit_id = f"user:{user.id}"
+        return user
+
+    raise UnauthorizedError("Missing authentication credentials")
+
+
+def require_scope(scope: str) -> Callable:
+    async def checker(
+        request: Request,
+        user: User = Depends(get_user_dual_auth),
+    ) -> User:
+        if getattr(request.state, "auth_method", None) == "jwt":
+            return user
+
+        scopes = getattr(request.state, "api_key_scopes", [])
+        if scope not in scopes:
+            raise HTTPException(
+                status_code=403, detail=f"API key missing required scope: {scope}"
+            )
+        return user
+
+    return checker

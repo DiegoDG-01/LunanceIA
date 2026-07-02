@@ -5,6 +5,7 @@ Esta guía te mostrará cómo usar la API REST de Lunance IA v2, incluyendo aute
 ## 📋 Tabla de Contenidos
 
 - [Autenticación JWT](#autenticación-jwt)
+- [Autenticación con API Keys](#-autenticación-con-api-keys)
 - [Endpoints Principales](#endpoints-principales)
 - [Ejemplos de Uso](#ejemplos-de-uso)
 - [Manejo de Errores](#manejo-de-errores)
@@ -59,6 +60,61 @@ curl -X POST "http://localhost:8000/api/v2/auth/logout" \
      }'
 ```
 
+## 🔑 Autenticación con API Keys
+
+Además del JWT (usuarios humanos), la API soporta **API keys** para acceso programático: integraciones, automatizaciones y agentes/LLM (vía MCP). El usuario genera la key desde la app y la incluye en el header `X-API-Key`.
+
+### JWT vs API Key
+
+| | JWT (`Authorization: Bearer`) | API Key (`X-API-Key`) |
+|---|---|---|
+| Para | Usuario en la app | Acceso programático / integraciones |
+| Alcance | Acceso completo | Limitado por **scopes** |
+| Puede editar / eliminar | Sí | **No** (solo lectura y creación) |
+
+Los endpoints aceptan **ambos** métodos (autenticación dual): si llega `X-API-Key` se usa esa vía; si no, se valida el JWT. Un usuario por JWT siempre tiene acceso completo; una API key solo puede hacer lo que sus scopes permitan.
+
+### Scopes disponibles
+
+| Scope | Permite |
+|-------|---------|
+| `transactions:read` | Listar y ver transacciones |
+| `transactions:write` | Crear transacciones |
+| `accounts:read` | Listar / ver cuentas y su actividad |
+| `accounts:write` | Crear cuentas |
+| `categories:read` | Listar categorías |
+| `dashboard:read` | Ver el dashboard financiero |
+| `budgets:read` | Listar / ver presupuestos y su progreso |
+| `budgets:write` | Crear presupuestos |
+| `goals:read` | Listar / ver metas de ahorro |
+| `goals:write` | Crear metas de ahorro |
+| `investments:read` | Ver rendimientos y proyecciones de inversión |
+| `subscriptions:read` | Listar / ver suscripciones y sus cargos |
+| `subscriptions:write` | Crear suscripciones |
+| `installments:read` | Listar compras a plazos (MSI) |
+| `installments:write` | Crear compras a plazos (MSI) |
+| `transfers:write` | Crear transferencias entre cuentas |
+| `banks:read` | Ver el catálogo de bancos |
+
+> No existen scopes de edición ni eliminación **a propósito**: una API key solo puede
+> **leer y crear**, nunca modificar ni borrar datos. `transfers` solo tiene `:write`
+> (crear); las transferencias se consultan dentro de las transacciones.
+
+> 🤖 **Uso vía MCP:** estos scopes son la base del servidor MCP que expone la API a
+> agentes/LLM. Para ejecutarlo, sus herramientas y cómo probarlo, consulta
+> [MCP.md](MCP.md).
+
+### Usar una API Key en Requests
+
+```bash
+curl -X GET "http://localhost:8000/api/v2/transaction/" \
+     -H "X-API-Key: moon_xxxxxxxxxxxxxxxxxxxxxxxx"
+```
+
+Si la key no tiene el scope requerido, la API responde `403 Forbidden`. Si es inválida, fue revocada o expiró, responde `401 Unauthorized`.
+
+> La gestión de keys (crear / listar / revocar) se hace **con JWT**, no con API key. Ver [API Keys](#-api-keys---apiv2api-keys) en la sección de endpoints.
+
 ## 🌐 Endpoints Principales
 
 ### 🔐 Autenticación - `/api/v2/auth/`
@@ -98,6 +154,70 @@ POST /api/v2/auth/logout
   "message": "Logout exitoso"
 }
 ```
+
+### 🔑 API Keys - `/api/v2/api-keys/`
+
+> Gestión de API keys del usuario. **Estos endpoints requieren JWT** (no se pueden usar con una API key).
+
+#### Crear API Key
+```bash
+POST /api/v2/api-keys/
+```
+
+**Request:**
+```json
+{
+  "name": "Mi integración",
+  "scopes": ["transactions:read", "transactions:write"],
+  "expires_at": "2026-12-31T23:59:59Z"
+}
+```
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `name` | string | ✅ | Nombre identificador (1–100 chars) |
+| `scopes` | array | ✅ | Mínimo 1; solo valores válidos del enum de scopes |
+| `expires_at` | datetime | ❌ | Expiración ISO 8601 (`null`/omitido = no expira) |
+
+**Response:** `201 Created` — ⚠️ `raw_key` se devuelve **una sola vez**; el backend solo guarda su hash.
+```json
+{
+  "raw_key": "moon_AbC123dEf456...",
+  "uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Mi integración",
+  "key_prefix": "moon_AbC123",
+  "scopes": ["transactions:read", "transactions:write"],
+  "expires_at": "2026-12-31T23:59:59Z",
+  "created_at": "2026-06-09T14:30:00Z"
+}
+```
+
+#### Listar API Keys
+```bash
+GET /api/v2/api-keys/
+```
+
+**Response:** lista de keys del usuario. Nunca incluye `raw_key` ni el hash.
+```json
+[
+  {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Mi integración",
+    "key_prefix": "moon_AbC123",
+    "scopes": ["transactions:read", "transactions:write"],
+    "is_active": true,
+    "expires_at": "2026-12-31T23:59:59Z",
+    "last_used_at": "2026-06-09T15:00:00Z",
+    "created_at": "2026-06-09T14:30:00Z"
+  }
+]
+```
+
+#### Revocar API Key
+```bash
+DELETE /api/v2/api-keys/{api_key_uuid}/
+```
+
+**Response:** `204 No Content` si se revocó; `404 Not Found` si no existe o no pertenece al usuario. La revocación es permanente (la key queda inactiva).
 
 ### 💳 Cuentas - `/api/v2/account/`
 
@@ -226,6 +346,8 @@ Alterna el estado activo/inactivo de la cuenta.
 **Response:** Misma estructura que obtener cuenta por ID.
 
 ### 💰 Transacciones - `/api/v2/transaction/`
+
+> **Acceso por API key:** lectura requiere scope `transactions:read` y la creación `transactions:write`. `PUT` y `DELETE` son **solo JWT** (no accesibles con API key).
 
 #### Listar Transacciones
 ```bash

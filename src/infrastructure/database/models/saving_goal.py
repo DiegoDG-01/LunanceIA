@@ -1,8 +1,9 @@
+import uuid
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import String, DateTime, ForeignKey, DECIMAL, Text, Date
+from sqlalchemy import String, DateTime, ForeignKey, DECIMAL, Text, Date, CHAR
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -16,12 +17,14 @@ class SavingGoalModel(Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
-    account_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("accounts.id"), nullable=True
+    account_id: Mapped[int] = mapped_column(
+        ForeignKey("accounts.id"),
+    )
+    uuid: Mapped[str] = mapped_column(
+        CHAR(36), unique=True, index=True, default=lambda: str(uuid.uuid4())
     )
     name: Mapped[str] = mapped_column(String(100))
     target_amount: Mapped[Decimal] = mapped_column(DECIMAL(12, 2))
-    current_amount: Mapped[Decimal] = mapped_column(DECIMAL(12, 2), default=0.00)
     target_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True, index=True)
