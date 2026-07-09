@@ -73,6 +73,12 @@ class CreateAccountHandler:
         if dto.investment_settings and dto.account_type != AccountType.INVESTMENT:
             raise InvalidAccountSettingsError(AccountType.INVESTMENT)
 
+        if dto.account_type == AccountType.CREDIT_CARD and not dto.credit_card_settings:
+            raise InvalidAccountSettingsError(AccountType.CREDIT_CARD)
+
+        if dto.account_type == AccountType.INVESTMENT and not dto.investment_settings:
+            raise InvalidAccountSettingsError(AccountType.INVESTMENT)
+
         # Create entity to domain
         initial_balance = Money(amount=dto.initial_balance, currency=dto.currency)
         account = Account.create_new(
