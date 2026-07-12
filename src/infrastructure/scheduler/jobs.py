@@ -46,12 +46,14 @@ async def process_subscriptions_job():
             charge_repo = SQLAlchemySubscriptionChargeRepository(db)
             transaction_repo = SQLAlchemyTransactionRepository(db)
             notification_repo = SQLAlchemyNotificationRepository(db)
+            account_repo = SQLAlchemyAccountRepository(db)
 
             processor = SubscriptionProcessor(
                 subscription_repository=sub_repo,
                 subscription_charge_repository=charge_repo,
                 transaction_repository=transaction_repo,
                 notification_repo=notification_repo,
+                account_repository=account_repo,
             )
 
             stats = await processor.process_due_subscriptions()

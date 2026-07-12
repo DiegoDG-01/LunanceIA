@@ -5,6 +5,7 @@ from typing import cast
 from domain.entities.subscription import Subscription
 from domain.entities.transaction import Transaction
 from domain.entities.subscription_charge import SubscriptionCharge
+from domain.repositories.account_repository import AccountRepository
 from domain.repositories.subscription_repository import SubscriptionRepository
 from domain.repositories.subscription_charge_repository import (
     SubscriptionChargeRepository,
@@ -14,6 +15,7 @@ from domain.objects.enums import TransactionType
 from domain.repositories.notification_repository import NotificationRepository
 from domain.entities.notification import Notification
 from domain.objects.enums import NotificationType
+from shared.exceptions.domain import AccountNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +27,13 @@ class SubscriptionProcessor:
         subscription_charge_repository: SubscriptionChargeRepository,
         transaction_repository: TransactionRepository,
         notification_repo: NotificationRepository,
+        account_repository: AccountRepository,
     ):
         self.subscription_repository = subscription_repository
         self.subscription_charge_repository = subscription_charge_repository
         self.transaction_repository = transaction_repository
         self.notification_repo = notification_repo
+        self.account_repository = account_repository
 
     async def process_due_subscriptions(self) -> dict:
         logger.info("Processing due subscriptions")
@@ -116,6 +120,13 @@ class SubscriptionProcessor:
     ) -> Transaction:
         today = date.today()
 
+        account = await self.account_repository.get_by_id(subscription.account_id)
+        if account is None:
+            raise AccountNotFoundError(str(subscription.account_id))
+
+        new_balance = account.current_balance.subtract(subscription.amount)
+        account.update_balance(new_balance)
+
         charge = SubscriptionCharge.create_pending(
             subscription_id=cast(int, subscription.id),
             charge_date=today,
@@ -136,6 +147,7 @@ class SubscriptionProcessor:
 
         created_transaction = await self.transaction_repository.create(transaction)
 
+        await self.account_repository.update(account)
         save_charge.mark_as_paid(cast(int, created_transaction.id))
         await self.subscription_charge_repository.update(save_charge)
 
