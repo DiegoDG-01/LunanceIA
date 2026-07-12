@@ -4,7 +4,6 @@ from application.dto.saving_goal_dto import UpdateSavingGoalDTO, SavingGoalRespo
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.saving_goal_repository import SavingGoalRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from domain.repositories.user_repository import UserRepository
 from shared.exceptions.domain import AccountNotFoundError, SavingGoalNotFoundError
 
 
@@ -51,11 +50,10 @@ class UpdateSavingGoalHandler:
         async with self.uow:
             updated_goal = await self.goal_repository.update(goal)
             await self.uow.commit()
-            
+
         return SavingGoalResponseDTO.from_entity(
             goal=updated_goal,
             account_name=account.name,
             account_uuid=account.uuid,
             current_amount=account.current_balance.amount,
         )
-
