@@ -61,14 +61,15 @@ class UpdateTransactionCommandHandler:
             )
 
         # 2. ACTUALIZAR los campos de la transacción
-        transaction.category_id = command.category_id
+        if command.category_id is not None:
+            transaction.category_id = command.category_id
 
-        if command.account_uuid is not None:
+        if command.account_uuid is not None and command.account_uuid != account.uuid:
             new_account = await self.account_repository.get_by_uuid_and_user_id(
-                account_uuid=command.account_uuid, user_id=command.user_id
+                account_uuid=cast(str, command.account_uuid), user_id=command.user_id
             )
             if not new_account:
-                raise AccountNotFoundError(account_uuid=command.account_uuid)
+                raise AccountNotFoundError(account_uuid=cast(str, command.account_uuid))
             transaction.account_id = cast(int, new_account.id)
         else:
             new_account = account
@@ -110,7 +111,7 @@ class UpdateTransactionCommandHandler:
         async with self.uow:
             await self.transaction_repository.update(transaction)
             await self.account_repository.update(account)
-            if command.account_uuid is not None:
+            if new_account is not account:
                 await self.account_repository.update(new_account)
             await self.uow.commit()
 
