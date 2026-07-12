@@ -22,9 +22,16 @@ class TestInstallmentCRUD:
                 "bank_id": 1,
                 "initial_balance": 100000.00,
                 "currency": "MXN",
+                "credit_card_settings": {
+                    "billing_cycle_day": 15,
+                    "payment_due_day": 5,
+                    "credit_limit": 100000.00,
+                    "minimum_payment_percentage": 5,
+                },
             },
             headers=auth_tokens.get_auth_headers(),
         )
+        assert response.status_code == 201, response.text
         return response.json()
 
     async def _create_purchase(
