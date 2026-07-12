@@ -13,7 +13,7 @@ class SubscriptionResponse(BaseModel):
     category_name: Optional[str]
     frequency: Frequency
     amount: Decimal
-    billing_day: int
+    billing_day: Optional[int]
     description: Optional[str]
     service_url: Optional[str]
     start_date: date

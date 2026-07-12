@@ -313,12 +313,34 @@ async def create_account(
     account_type: str,  # CHECKING / SAVINGS / CREDIT_CARD / DEBIT_CARD / INVESTMENT / CASH
     initial_balance: float = 0.0,
     currency: str = "MXN",
+    # Ajustes de inversión (solo cuando account_type == INVESTMENT)
+    investment_type: str
+    | None = None,  # fixed_term / stocks / bonds / mutual_fund / etf / variable / other
+    investment_rate: float | None = None,  # tasa de interés anual
+    lock_period_end_date: str | None = None,  # ISO: YYYY-MM-DD
+    maturity_date: str | None = None,  # ISO: YYYY-MM-DD
+    early_withdrawal_penalty: float | None = None,  # porcentaje 0-100
+    # Ajustes de tarjeta de crédito (solo cuando account_type == CREDIT_CARD)
+    billing_cycle_day: int | None = None,  # día de facturación 1-31
+    payment_due_day: int | None = None,  # día de pago 1-31
+    credit_limit: float | None = None,
+    minimum_payment_percentage: float | None = None,  # porcentaje 0-100
 ) -> str:
-    """Crea una nueva cuenta básica del usuario. 'account_type' debe ser uno de:
+    """Crea una nueva cuenta del usuario. 'account_type' debe ser uno de:
     CHECKING, SAVINGS, CREDIT_CARD, DEBIT_CARD, INVESTMENT, CASH. 'bank_id' es el
-    ID del banco (usa list_banks/list_accounts como referencia). Para cuentas de
-    crédito o inversión con ajustes avanzados, indícalo desde la app. Confirma con
-    el usuario antes de crear."""
+    ID del banco (usa list_banks/list_accounts como referencia).
+
+    Para cuentas de inversión (account_type=INVESTMENT) puedes incluir los ajustes:
+    'investment_type' (fixed_term, stocks, bonds, mutual_fund, etf, variable, other)
+    e 'investment_rate' son obligatorios juntos; 'lock_period_end_date',
+    'maturity_date' y 'early_withdrawal_penalty' (0-100) son opcionales.
+
+    Para tarjetas de crédito (account_type=CREDIT_CARD) puedes incluir los ajustes:
+    'billing_cycle_day' (1-31), 'payment_due_day' (1-31), 'credit_limit' y
+    'minimum_payment_percentage' (0-100) — se envían juntos.
+
+    Los ajustes de inversión solo aplican a INVESTMENT y los de crédito solo a
+    CREDIT_CARD. Confirma el resumen con el usuario antes de crear."""
     body = {
         "bank_id": bank_id,
         "name": name,
@@ -326,6 +348,34 @@ async def create_account(
         "initial_balance": initial_balance,
         "currency": currency,
     }
+
+    investment_settings = {
+        k: v
+        for k, v in {
+            "investment_type": investment_type,
+            "investment_rate": investment_rate,
+            "lock_period_end_date": lock_period_end_date,
+            "maturity_date": maturity_date,
+            "early_withdrawal_penalty": early_withdrawal_penalty,
+        }.items()
+        if v is not None
+    }
+    if investment_settings:
+        body["investment_settings"] = investment_settings
+
+    credit_card_settings = {
+        k: v
+        for k, v in {
+            "billing_cycle_day": billing_cycle_day,
+            "payment_due_day": payment_due_day,
+            "credit_limit": credit_limit,
+            "minimum_payment_percentage": minimum_payment_percentage,
+        }.items()
+        if v is not None
+    }
+    if credit_card_settings:
+        body["credit_card_settings"] = credit_card_settings
+
     return await request_api("POST", "/account", get_api_key(ctx), json=body)
 
 

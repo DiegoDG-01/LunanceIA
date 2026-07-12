@@ -60,11 +60,13 @@ Vista completa del sistema desplegado en producción, incluyendo todos los servi
 graph TD
     subgraph Users["👤 Usuarios"]
         Browser[Browser / Mobile App]
+        Agent["AI Agents / LLM Clients\n(Claude, MCP Inspector, ...)"]
     end
 
     subgraph CF["☁️ Cloudflare"]
-        CF_DNS[DNS / Proxy\nlunance.app · api.lunance.app]
+        CF_DNS["DNS / Proxy\nlunance.app · api.lunance.app · mcp.lunance.app"]
         CF_Pages[Cloudflare Pages\nlunance.app - Frontend]
+        CF_R2["Cloudflare R2\nBackups de BD (S3-compatible)"]
     end
 
     subgraph MacMini["🖥️ Mac Mini — Orquestador Local"]
@@ -80,6 +82,7 @@ graph TD
     subgraph VPS1["🟦 IONOS VPS 1 — API"]
         Traefik[Traefik\nReverse Proxy / TLS]
         Docker_API["Docker Container\nFastAPI + fincore (Rust)"]
+        Docker_MCP["Docker Container\nServidor MCP (streamable-http :8001)"]
     end
 
     subgraph VPS2["🟦 IONOS VPS 2 — Base de Datos"]
@@ -89,16 +92,22 @@ graph TD
     subgraph ExternalSvc["🌐 Servicios Externos"]
         Auth0[Auth0\nIdentity Provider]
         Gemini[Google Gemini AI\nExtracción de recibos]
-        GrafanaCloud[Grafana Cloud\nLoki — Logs estructurados]
+        GrafanaCloud["Grafana Cloud\nLoki — Logs estructurados"]
         NetData[NetData\nMétricas de servidor]
     end
 
     %% Flujo de usuario
     Browser -->|HTTPS| CF_DNS
+    Agent -->|MCP streamable-http + X-API-Key| CF_DNS
     CF_DNS -->|lunance.app| CF_Pages
     CF_DNS -->|api.lunance.app| Traefik
+    CF_DNS -->|mcp.lunance.app| Traefik
     CF_Pages -->|API calls| Traefik
     Traefik --> Docker_API
+    Traefik --> Docker_MCP
+
+    %% MCP -> API (proxy interno respetando los scopes de la API Key)
+    Docker_MCP -->|HTTP interno + X-API-Key| Docker_API
 
     %% Comunicación interna
     Docker_API -->|Puerto 3306, IP restringida| MySQL
@@ -112,22 +121,28 @@ graph TD
 
     %% CI/CD
     Repo -->|Trigger| GH_Runner
-    GH_Runner -->|docker push| Registry
+    GH_Runner -->|"docker push (API + MCP)"| Registry
     GH_Runner -->|curl deploy trigger| Dockploy_Local
     Dockploy_Local -->|Orquesta deploy| VPS1
     Registry -->|docker pull| VPS1
     GH_Runner -->|Deploy automático| CF_Pages
+
+    %% Backups de BD (Dockploy -> Cloudflare R2)
+    Dockploy_Local -.->|mysqldump programado| MySQL
+    Dockploy_Local -->|Sube backups| CF_R2
 ```
 
 ### Descripción de Componentes
 
 | Componente | Tecnología | Rol |
 | :--- | :--- | :--- |
-| **Cloudflare DNS/Proxy** | Cloudflare | DNS autoritativo + proxy para `lunance.app` y `api.lunance.app` (dominio comprado en IONOS) |
+| **Cloudflare DNS/Proxy** | Cloudflare | DNS autoritativo + proxy para `lunance.app`, `api.lunance.app` y `mcp.lunance.app` (dominio comprado en IONOS). TLS extremo a extremo con **Cloudflare Origin Certificate** (SSL mode *Full (strict)*) |
 | **Frontend** | Cloudflare Pages | SPA servida en el edge global |
-| **Reverse Proxy** | Traefik (via Dockploy) | Terminación TLS, enrutamiento HTTP hacia el contenedor de la API |
+| **Reverse Proxy** | Traefik (via Dockploy) | Terminación TLS, enrutamiento HTTP hacia los contenedores de la API y del MCP (por SNI: `api.*` y `mcp.*`) |
 | **API Container** | Docker (FastAPI + fincore) | Contenedor principal de la aplicación en VPS 1 de IONOS |
+| **MCP Container** | Docker (FastMCP, streamable-http) | Contenedor que expone la API como herramientas para agentes/LLM en `mcp.lunance.app` (puerto 8001). Actúa como **proxy**: reenvía cada llamada a la API por la red interna de Docker (`http://api:8000`) inyectando la `X-API-Key` del usuario y respetando sus scopes; no accede a la BD. Ver [MCP.md](MCP.md) |
 | **Base de Datos** | MySQL en IONOS VPS 2 | Solo acepta conexiones desde la IP del VPS 1 (puerto 3306) y SSH |
+| **Backups de BD** | Cloudflare R2 (S3-compatible) | Dockploy ejecuta dumps programados de MySQL y los sube a un bucket de R2, manteniendo las copias fuera de los VPS |
 | **Autenticación** | Auth0 | Proveedor de identidad; la API valida JWTs emitidos por Auth0 |
 | **IA** | Google Gemini + pydantic-ai | Análisis de imágenes (recibos/tickets) y asesoría de gastos mediante agentes estructurados |
 | **Logs** | Grafana Cloud (Loki) | Ingesta de logs estructurados desde la API |
@@ -178,6 +193,9 @@ sequenceDiagram
 - **VPS separado para DB**: Aislamiento de la base de datos con reglas de firewall estrictas (solo IP de la API y SSH).
 - **Cloudflare Pages para Frontend**: CDN global sin costo, con deploy automático desde GitHub Actions.
 - **Cloudflare DNS sobre IONOS**: Aprovecha el proxy de Cloudflare para protección DDoS y ocultamiento de IP del servidor, aunque el dominio esté comprado en IONOS.
+- **Servidor MCP como contenedor independiente**: El MCP corre en su propio contenedor (`Dockerfile.mcp`) junto a la API en el VPS 1, comunicándose con ella por la red interna de Docker (`http://api:8000`) — nunca toca la BD directamente. Tiene su propio pipeline (workflows `stage-mcp-image.yml` / `prod-mcp-image.yml`, tags `mcp-stage` / `mcp-latest`), por lo que su ciclo de build y deploy es independiente del de la API.
+- **TLS del MCP con Cloudflare Origin Certificate**: Como el transporte del MCP es *streamable-http* (conexiones de streaming), `mcp.lunance.app` se sirve proxied con un Origin Certificate instalado en Traefik y SSL mode *Full (strict)*, evitando la renovación HTTP-01 de Let's Encrypt (que falla estando tras el proxy).
+- **Backups de BD gestionados por Dockploy hacia Cloudflare R2**: Dockploy ejecuta dumps programados de MySQL y los sube a un bucket de **Cloudflare R2** (almacenamiento de objetos S3-compatible), manteniendo las copias fuera de los VPS y sin costos de egress.
 
 ---
 

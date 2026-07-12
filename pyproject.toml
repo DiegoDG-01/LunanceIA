@@ -27,7 +27,7 @@ dependencies = [
     "google-auth-oauthlib==1.4.0",
     "google-api-python-client==2.196.0",
     "cachetools==7.1.2",
-    "pydantic-ai-slim[google,openai]==1.99.0",
+    "pydantic-ai-slim[google,openai]==1.102.0",
     "fastapi-advanced-rate-limiter==2.1.0",
     "redis==7.4.0",
     "secure==1.0.1",
