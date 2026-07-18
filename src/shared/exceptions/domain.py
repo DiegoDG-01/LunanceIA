@@ -336,7 +336,34 @@ class TransferNotAllowedError(BusinessRuleError):
     def __init__(self, reason: str):
         super().__init__(f"Transferencia no permitida: {reason}")
 
+
 class TransferAccountTypeNotAllowedError(BusinessRuleError):
     """Tipo de cuenta no permitida para transferencia."""
+
     def __init__(self, account_type: str):
-        super().__init__(f"Tipo de cuenta no permitida para transferencia: {account_type}")
+        super().__init__(
+            f"Tipo de cuenta no permitida para transferencia: {account_type}"
+        )
+
+
+class InvalidIncomeDateRangeError(ValidationError):
+    """Rango de fechas de ingreso recurrente inválido."""
+
+    def __init__(self, start_date: str, end_date: str):
+        super().__init__(
+            f"La fecha de fin ({end_date}) no puede ser anterior a la de inicio ({start_date})"
+        )
+
+
+class RecurringIncomeNotFoundError(NotFoundError):
+    """Ingreso recurrente no encontrado."""
+
+    def __init__(self, income_uuid: str):
+        super().__init__(f"Ingreso recurrente con ID {income_uuid} no encontrado")
+
+
+class IncomeDepositNotFoundError(NotFoundError):
+    """Depósito de ingreso recurrente no encontrado."""
+
+    def __init__(self, deposit_uuid: str):
+        super().__init__(f"Depósito con ID {deposit_uuid} no encontrado")
