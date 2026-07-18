@@ -1,9 +1,10 @@
 # API Keys — Cambios para el front en creación de keys
 
 **TL;DR:** hay 2 scopes nuevos (`incomes:read`, `incomes:write`) que deben aparecer en el
-selector de scopes al crear una API key, y **cambió el significado de todos los scopes
-`:write`**: antes solo permitían *crear*, ahora permiten *crear, editar y eliminar*. El
-endpoint de creación de keys no cambió — esto es principalmente UI y copy.
+selector de scopes al crear una API key, **cambió el significado de todos los scopes
+`:write`** (antes solo permitían *crear*, ahora permiten *crear, editar y eliminar*), y
+hay un **breaking change en el endpoint de revocar** (ver sección al final). El endpoint
+de creación de keys no cambió.
 
 ---
 
@@ -112,3 +113,28 @@ Contexto de por qué importa: estas keys son las que se conectan al **servidor M
 (asistentes de IA). Un agente con `:write` puede editar y borrar registros reales del
 usuario — la elección de scopes en este formulario es ahora la frontera de seguridad
 principal. Detalle completo de qué herramienta MCP usa cada scope: `docs/MCP.md`.
+
+---
+
+## ⚠️ Breaking change: revocar y eliminar ahora son operaciones distintas
+
+Antes `DELETE /api-keys/{uuid}/` solo **revocaba** (la key dejaba de funcionar pero
+seguía apareciendo en el listado con `is_active: false`, para siempre). Ahora:
+
+| Operación | Endpoint | Efecto |
+|---|---|---|
+| **Revocar** | `PATCH /api-keys/{uuid}/revoke/` 🆕 | La key deja de autenticar pero se conserva en el listado (`is_active: false`) |
+| **Eliminar** | `DELETE /api-keys/{uuid}/` (cambió) | Borra la key permanentemente — desaparece del listado |
+
+**Acción requerida en el front:**
+
+1. El botón "Revocar" actual llama `DELETE` — debe cambiar a `PATCH .../revoke/`.
+   Si no se actualiza, revocará... borrando la key sin dejar rastro.
+2. Agregar el botón/acción "Eliminar" (con confirmación — es permanente e irreversible)
+   que llame al `DELETE`.
+3. UX sugerida: en keys activas ofrecer ambas acciones; en keys ya revocadas, solo
+   "Eliminar" (para limpiar el listado).
+
+Ambos endpoints devuelven `204` en éxito y `404` si la key no existe o no es del
+usuario. Ambos requieren sesión JWT — no se pueden invocar con una API key (una key no
+puede administrar keys).
