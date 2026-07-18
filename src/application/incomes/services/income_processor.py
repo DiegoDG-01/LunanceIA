@@ -1,5 +1,5 @@
 from typing import cast
-from datetime import date
+from datetime import date, timezone, datetime
 
 import logging
 from domain.entities.recurring_income import RecurringIncome
@@ -36,7 +36,7 @@ class IncomeProcessor:
     async def process_due_incomes(self) -> dict:
         logger.info("Processing due incomes")
 
-        today = date.today()
+        today = datetime.now(timezone.utc).date()
 
         stats = {
             "processed": 0,

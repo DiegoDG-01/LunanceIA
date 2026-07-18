@@ -55,7 +55,6 @@ class CreateRecurringIncomeHandler:
             if dto.category_id
             else None
         )
-
         category_name = category.name if category else None
 
         amount = Money(amount=dto.amount, currency=dto.currency)
