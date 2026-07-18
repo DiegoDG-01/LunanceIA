@@ -16,6 +16,7 @@ from presentation.api.v2.endpoints import (
     goals,
     transfer,
     api_key,
+    income,
 )
 
 api_router = APIRouter()
@@ -45,3 +46,4 @@ api_router.include_router(budget.router, prefix="/budgets", tags=["Budgets"])
 api_router.include_router(goals.router, prefix="/goals", tags=["Goals"])
 api_router.include_router(transfer.router, prefix="/transfers", tags=["Transfer"])
 api_router.include_router(api_key.router, prefix="/api-keys", tags=["API Keys"])
+api_router.include_router(income.router, prefix="/incomes", tags=["Incomes"])

@@ -47,7 +47,7 @@ from presentation.schemas.requests.subscription import (
     CreateSubscriptionRequest,
     UpdateSubscriptionRequest,
 )
-from presentation.dependencies.auth_deps import get_current_active_user, require_scope
+from presentation.dependencies.auth_deps import require_scope
 from presentation.dependencies import (
     get_create_subscription_handler,
     get_subscriptions_handler,
@@ -178,7 +178,7 @@ async def update_subscription(
     request: Request,
     subscription_uuid: str,
     subscription_request: UpdateSubscriptionRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_WRITE.value)),
     handler: UpdateSubscriptionHandler = Depends(get_update_subscription_handler),
 ):
     enforce_rate_limit(limiter_20_per_minute, request)
@@ -209,7 +209,7 @@ async def update_subscription(
 async def activate_subscription(
     request: Request,
     subscription_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_WRITE.value)),
     handler: StateSubscriptionHandler = Depends(get_state_subscription_handler),
 ):
     enforce_rate_limit(limiter_5_per_minute, request)
@@ -225,7 +225,7 @@ async def activate_subscription(
 async def delete_subscription(
     request: Request,
     subscription_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_WRITE.value)),
     handler: DeleteSubscriptionHandler = Depends(get_delete_subscription_handler),
 ):
     enforce_rate_limit(limiter_5_per_minute, request)

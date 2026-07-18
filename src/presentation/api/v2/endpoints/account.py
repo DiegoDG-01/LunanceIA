@@ -11,7 +11,7 @@ from presentation.schemas.responses.account import (
     AccountRecentActivityResponse,
 )
 from domain.objects.enums import APIKeyScope
-from presentation.dependencies.auth_deps import get_current_active_user, require_scope
+from presentation.dependencies.auth_deps import require_scope
 from presentation.dependencies import (
     get_create_account_handler,
     get_update_account_handler,
@@ -159,7 +159,7 @@ async def update_account(
     request: Request,
     account_uuid: str,
     update_request: UpdateAccountRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.ACCOUNTS_WRITE.value)),
     handler: UpdateAccountHandler = Depends(get_update_account_handler),
 ):
     enforce_rate_limit(limiter_50_per_minute, request)
@@ -202,7 +202,7 @@ async def update_account(
 async def delete_account(
     request: Request,
     account_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.ACCOUNTS_WRITE.value)),
     handler: DeleteAccountHandler = Depends(get_delete_account_handler),
 ):
     """Elimina una cuenta."""
@@ -222,7 +222,7 @@ async def delete_account(
 async def activate_account(
     request: Request,
     account_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.ACCOUNTS_WRITE.value)),
     handler: StateAccountHandler = Depends(get_state_account_handler),
 ):
     """Activa/desactiva una cuenta."""

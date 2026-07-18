@@ -46,32 +46,37 @@ Código: `src/presentation/mcp/` → `server.py` (tools), `client.py` (cliente H
 
 ## 🧰 Herramientas disponibles
 
-Cada tool llama a un endpoint que exige el scope indicado. Solo hay **lectura y creación**
-(no editar/eliminar).
+Cada tool llama a un endpoint que exige el scope indicado. El CRUD completo está
+disponible: las operaciones de **lectura** requieren el scope `:read` del recurso y las de
+**creación/edición/eliminación** el scope `:write`.
 
 | Sección | Tools | Scope requerido |
 |---|---|---|
 | **Transacciones** | `list_transactions`, `get_transaction` | `transactions:read` |
-| | `create_transaction` | `transactions:write` |
+| | `create_transaction`, `update_transaction`, `delete_transaction` | `transactions:write` |
 | **Cuentas** | `list_accounts`, `get_account`, `get_account_activity` | `accounts:read` |
-| | `create_account` | `accounts:write` |
+| | `create_account`, `update_account`, `set_account_status`, `delete_account` | `accounts:write` |
 | **Categorías** | `list_categories` | `categories:read` |
 | **Dashboard** | `get_dashboard` | `dashboard:read` |
 | **Presupuestos** | `list_budgets`, `get_budget`, `get_budget_progress` | `budgets:read` |
-| | `create_budget` | `budgets:write` |
+| | `create_budget`, `update_budget`, `toggle_budget`, `delete_budget` | `budgets:write` |
 | **Metas de ahorro** | `list_goals`, `get_goal` | `goals:read` |
-| | `create_goal` | `goals:write` |
+| | `create_goal`, `update_goal`, `toggle_goal`, `delete_goal` | `goals:write` |
 | **Inversiones** | `get_investment_yields`, `get_investment_projections` | `investments:read` |
 | **Suscripciones** | `list_subscriptions`, `list_subscription_charges`, `get_subscription` | `subscriptions:read` |
-| | `create_subscription` | `subscriptions:write` |
+| | `create_subscription`, `update_subscription`, `toggle_subscription`, `delete_subscription` | `subscriptions:write` |
+| **Ingresos recurrentes** | `list_incomes`, `get_income_deposits` | `incomes:read` |
+| | `create_income`, `update_income`, `toggle_income`, `delete_income` | `incomes:write` |
 | **Compras a plazos (MSI)** | `list_installments` | `installments:read` |
-| | `create_installment` | `installments:write` |
-| **Transferencias** | `create_transfer` | `transfers:write` |
+| | `create_installment`, `update_installment`, `pay_installment_charge`, `delete_installment` | `installments:write` |
+| **Transferencias** | `create_transfer`, `delete_transfer` | `transfers:write` |
 | **Bancos** | `list_banks` | `banks:read` |
 
-> Total: **26 herramientas**. Excluidos a propósito del MCP: `auth`, `api-keys` (por
-> seguridad), `ai` (el MCP ya es la capa de IA), y todas las operaciones de
-> **editar/eliminar** y el **pago de cuotas** (`installment pay`).
+> Total: **50 herramientas**. Excluidos a propósito del MCP: `auth` y `api-keys` (por
+> seguridad) y `ai` (el MCP ya es la capa de IA).
+>
+> Para limitar a un agente a solo-lectura, emite su API key únicamente con scopes
+> `:read` — las tools de escritura devolverán `403`.
 
 ---
 
@@ -153,9 +158,11 @@ Variables de entorno (leídas por `presentation/mcp/config.py`, admite `.env`):
 
 - **Doble candado:** la key se valida (existencia, usuario, expiración) **y** se comprueba
   el scope del endpoint (`require_scope`). Sin el scope → `403`.
-- **Solo lectura y creación.** Ninguna tool edita ni elimina datos.
-- **Transferencias:** `create_transfer` mueve dinero real entre cuentas; su descripción
-  instruye al agente a confirmar con el usuario antes de ejecutar.
+- **Escritura bajo scope explícito:** editar/eliminar requiere que la API key tenga el
+  scope `:write` del recurso. Una key solo-lectura no puede modificar nada.
+- **Operaciones destructivas:** todas las tools `delete_*` (y `create_transfer`, que mueve
+  dinero real) instruyen al agente en su descripción a pedir confirmación explícita del
+  usuario antes de ejecutar. Los deletes son permanentes.
 - Las API Keys se guardan **hasheadas (SHA-256)**; la key completa (`raw_key`) se muestra
   una sola vez al crearla.
 - Protección anti **DNS-rebinding** vía `allowed_hosts` / `allowed_origins`.
