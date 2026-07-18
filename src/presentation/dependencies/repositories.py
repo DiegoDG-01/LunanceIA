@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.database.connection import get_db
 from infrastructure.database.repositories.sqlalchemy_saving_goal_repository import (
-    SQLAlchemySavingGoalRepository
+    SQLAlchemySavingGoalRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
@@ -31,6 +31,12 @@ from infrastructure.database.repositories.sqlalchemy_subscription_repository imp
 )
 from infrastructure.database.repositories.sqlalchemy_subscription_charge_repository import (
     SQLAlchemySubscriptionChargeRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_recurring_income_repository import (
+    SQLAlchemyRecurringIncomeRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_income_deposit_repository import (
+    SQLAlchemyIncomeDepositRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_credit_card_repository import (
     SQLAlchemyCreditCardSettingsRepository,
@@ -153,12 +159,26 @@ def get_budget_repository(
 ) -> SQLAlchemyBudgetRepository:
     return SQLAlchemyBudgetRepository(db)
 
+
 def get_saving_goals_repository(
     db: AsyncSession = Depends(get_db),
 ) -> SQLAlchemySavingGoalRepository:
     return SQLAlchemySavingGoalRepository(db)
 
+
 def get_api_key_repository(
     db: AsyncSession = Depends(get_db),
 ) -> SQLAlchemyAPIKeyRepository:
     return SQLAlchemyAPIKeyRepository(db)
+
+
+def get_recurring_income_repository(
+    db: AsyncSession = Depends(get_db),
+) -> SQLAlchemyRecurringIncomeRepository:
+    return SQLAlchemyRecurringIncomeRepository(db)
+
+
+def get_income_deposit_repository(
+    db: AsyncSession = Depends(get_db),
+) -> SQLAlchemyIncomeDepositRepository:
+    return SQLAlchemyIncomeDepositRepository(db)
