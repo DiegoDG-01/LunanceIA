@@ -538,5 +538,83 @@ async def create_transfer(
     return await request_api("POST", "/transfers", get_api_key(ctx), json=body)
 
 
+@mcp.tool()
+async def list_incomes(
+    ctx: Context,
+    account_uuid: str | None = None,
+    category_id: int | None = None,
+    active_only: bool = False,
+    limit: int = 100,
+    offset: int = 0,
+) -> str:
+    """Lista los ingresos recurrentes del usuario (nómina, renta, etc.), con
+    filtros opcionales por cuenta, categoría o estado. Úsala para responder
+    cuánto ingresa recurrentemente o cuándo es su próximo pago."""
+    params = {
+        k: v
+        for k, v in {
+            "account_uuid": account_uuid,
+            "category_id": category_id,
+            "active_only": active_only,
+            "limit": limit,
+            "offset": offset,
+        }.items()
+        if v is not None
+    }
+    return await request_api("GET", "/incomes", get_api_key(ctx), params=params)
+
+
+@mcp.tool()
+async def create_income(
+    ctx: Context,
+    account_uuid: str,
+    category_id: int,
+    name: str,
+    amount: float,
+    frequency: str,
+    start_date: str,
+    end_date: str | None = None,
+    next_payment_date: str | None = None,
+    description: str | None = None,
+) -> str:
+    """Crea un ingreso recurrente (nómina, renta, pensión). frequency acepta:
+    DAILY, WEEKLY, BIWEEKLY, MONTHLY, BIMONTHLY, QUARTERLY, SEMI_ANNUAL,
+    ANNUAL. Las fechas van en formato YYYY-MM-DD."""
+    body = {
+        k: v
+        for k, v in {
+            "account_uuid": account_uuid,
+            "category_id": category_id,
+            "name": name,
+            "amount": amount,
+            "frequency": frequency,
+            "start_date": start_date,
+            "end_date": end_date,
+            "next_payment_date": next_payment_date,
+            "description": description,
+        }.items()
+        if v is not None
+    }
+    return await request_api("POST", "/incomes", get_api_key(ctx), json=body)
+
+
+@mcp.tool()
+async def get_income_deposits(
+    ctx: Context, income_uuid: str, limit: int = 100, offset: int = 0
+) -> str:
+    """Historial de depósitos generados por un ingreso recurrente (cuándo y
+    cuánto se ha depositado)."""
+    try:
+        UUID(income_uuid)
+    except ValueError:
+        return "El 'income_uuid' no tiene un formato válido."
+    return await request_api(
+        "GET",
+        f"/incomes/{income_uuid}/deposits/",
+        get_api_key(ctx),
+        params={"limit": limit, "offset": offset},
+    )
+
+
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")
