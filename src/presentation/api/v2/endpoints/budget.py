@@ -37,7 +37,7 @@ from presentation.schemas.requests.budget import (
     UpdateBudgetRequest,
 )
 from presentation.schemas.responses.budget import BudgetResponse, BudgetProgressResponse
-from presentation.dependencies.auth_deps import get_current_active_user, require_scope
+from presentation.dependencies.auth_deps import require_scope
 from presentation.dependencies.budget_deps import (
     get_create_budget_handler,
     get_update_budget_handler,
@@ -146,7 +146,7 @@ async def update_budget(
     request: Request,
     budget_uuid: str,
     budget_request: UpdateBudgetRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.BUDGETS_WRITE.value)),
     handler: UpdateBudgetHandler = Depends(get_update_budget_handler),
 ):
     """Actualiza un presupuesto existente."""
@@ -173,7 +173,7 @@ async def update_budget(
 async def toggle_budget_status(
     request: Request,
     budget_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.BUDGETS_WRITE.value)),
     handler: StateBudgetHandler = Depends(get_state_budget_handler),
 ):
     """Activa o desactiva un presupuesto."""
@@ -190,7 +190,7 @@ async def toggle_budget_status(
 async def delete_budget(
     request: Request,
     budget_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.BUDGETS_WRITE.value)),
     handler: DeleteBudgetHandler = Depends(get_delete_budget_handler),
 ):
     """Elimina un presupuesto permanentemente."""

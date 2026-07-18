@@ -33,7 +33,7 @@ from presentation.schemas.requests.saving_goal import (
     UpdateSavingGoalRequest,
 )
 from presentation.schemas.responses.saving_goal import SavingGoalResponse
-from presentation.dependencies.auth_deps import get_current_active_user, require_scope
+from presentation.dependencies.auth_deps import require_scope
 from presentation.dependencies.saving_goal_deps import (
     get_create_saving_goal_handler,
     get_update_saving_goal_handler,
@@ -86,7 +86,9 @@ async def get_saving_goal(
     return SavingGoalResponse(**goal.__dict__)
 
 
-@router.post("/", response_model=SavingGoalResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/", response_model=SavingGoalResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_saving_goal(
     request: Request,
     goal_request: SavingGoalRequest,
@@ -113,7 +115,7 @@ async def update_saving_goal(
     request: Request,
     goal_uuid: str,
     goal_request: UpdateSavingGoalRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.GOALS_WRITE.value)),
     handler: UpdateSavingGoalHandler = Depends(get_update_saving_goal_handler),
 ):
     """Actualiza una meta de ahorro existente."""
@@ -137,7 +139,7 @@ async def update_saving_goal(
 async def toggle_saving_goal_status(
     request: Request,
     goal_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.GOALS_WRITE.value)),
     handler: StateSavingGoalHandler = Depends(get_state_saving_goal_handler),
 ):
     """Activa o desactiva una meta de ahorro."""
@@ -154,7 +156,7 @@ async def toggle_saving_goal_status(
 async def delete_saving_goal(
     request: Request,
     goal_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.GOALS_WRITE.value)),
     handler: DeleteSavingGoalHandler = Depends(get_delete_saving_goal_handler),
 ):
     """Elimina una meta de ahorro permanentemente."""

@@ -43,7 +43,7 @@ from presentation.schemas.responses.recurring_income import (
     RecurringIncomeResponse,
     IncomeDepositResponse,
 )
-from presentation.dependencies.auth_deps import get_current_active_user, require_scope
+from presentation.dependencies.auth_deps import require_scope
 from presentation.dependencies import (
     get_create_recurring_income_handler,
     get_update_recurring_income_handler,
@@ -172,7 +172,7 @@ async def update_recurring_income(
     request: Request,
     income_uuid: str,
     income_request: UpdateRecurringIncomeRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.INCOMES_WRITE.value)),
     handler: UpdateRecurringIncomeHandler = Depends(
         get_update_recurring_income_handler
     ),
@@ -204,7 +204,7 @@ async def update_recurring_income(
 async def activate_recurring_income(
     request: Request,
     income_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.INCOMES_WRITE.value)),
     handler: StateRecurringIncomeHandler = Depends(get_state_recurring_income_handler),
 ):
     enforce_rate_limit(limiter_5_per_minute, request)
@@ -220,7 +220,7 @@ async def activate_recurring_income(
 async def delete_recurring_income(
     request: Request,
     income_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.INCOMES_WRITE.value)),
     handler: DeleteRecurringIncomeHandler = Depends(
         get_delete_recurring_income_handler
     ),
