@@ -14,6 +14,7 @@ from shared.exceptions.domain import (
     CategoryNotFoundError,
     AccountNotFoundError,
     RecurringIncomeNotFoundError,
+    InvalidIncomeDateRangeError,
 )
 
 
@@ -81,6 +82,11 @@ class UpdateRecurringIncomeHandler:
             income.is_active = dto.is_active
         if dto.description is not None:
             income.description = dto.description
+
+        if income.end_date is not None and income.end_date < income.start_date:
+            raise InvalidIncomeDateRangeError(
+                str(income.start_date), str(income.end_date)
+            )
 
         async with self.uow:
             updated_income = await self.recurring_income.update(income)

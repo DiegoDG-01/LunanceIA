@@ -180,6 +180,39 @@ class TestRecurringIncomeUpdateAndState:
         assert float(data["amount"]) == 18000.00
 
     @pytest.mark.asyncio
+    async def test_update_rejects_end_date_before_start_date(
+        self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens, created_income
+    ):
+        """PATCH con end_date anterior al start_date guardado debe rechazarse."""
+        response = await http_client.patch(
+            f"/incomes/{created_income['uuid']}/",
+            json={"end_date": "2020-01-01"},
+            headers=auth_tokens.get_auth_headers(),
+        )
+
+        assert response.status_code in (400, 422)
+
+    @pytest.mark.asyncio
+    async def test_update_rejects_start_date_beyond_end_date(
+        self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens, created_income
+    ):
+        """Mover solo start_date más allá del end_date existente también es inválido."""
+        set_end = await http_client.patch(
+            f"/incomes/{created_income['uuid']}/",
+            json={"end_date": "2030-12-31"},
+            headers=auth_tokens.get_auth_headers(),
+        )
+        assert set_end.status_code == 200
+
+        response = await http_client.patch(
+            f"/incomes/{created_income['uuid']}/",
+            json={"start_date": "2031-06-01"},
+            headers=auth_tokens.get_auth_headers(),
+        )
+
+        assert response.status_code in (400, 422)
+
+    @pytest.mark.asyncio
     async def test_toggle_income_state(
         self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens, created_income
     ):
