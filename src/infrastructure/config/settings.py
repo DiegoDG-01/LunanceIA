@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     ENVIRONMENT: str = "PROD"
+    FRONTEND_URL: str = ""
     BANXICO_TOKEN: str = ""
 
     AUTH0_DOMAIN: str

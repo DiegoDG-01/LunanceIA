@@ -63,7 +63,7 @@ if settings.ENVIRONMENT.upper() == "PROD":
         "https://lunance.app",
     ]
 elif settings.ENVIRONMENT.upper() in ["DEV", "TEST"]:
-    origins = ["http://localhost:8080"]
+    origins = [settings.FRONTEND_URL]
 else:
     raise ValueError("Invalid environment")
 
