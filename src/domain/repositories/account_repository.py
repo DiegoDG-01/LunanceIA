@@ -13,7 +13,9 @@ class AccountRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_id(self, account_id: int) -> Optional[Account]:
+    async def get_by_id(
+        self, account_id: int, *, for_update: bool = False
+    ) -> Optional[Account]:
         """Get account by id"""
         pass
 
