@@ -77,9 +77,15 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    async def get_by_id(self, transaction_id: int) -> Optional[Transaction]:
+    async def get_by_id(
+        self, transaction_id: int, *, for_update: bool = False
+    ) -> Optional[Transaction]:
         """Obtiene transacción por ID."""
         stmt = select(TransactionModel).where(TransactionModel.id == transaction_id)
+
+        if for_update:
+            stmt = stmt.with_for_update()
+
         result = await self.db.execute(stmt)
         model = result.scalar_one_or_none()
 
@@ -426,12 +432,16 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         return result.scalar() or 0
 
     async def get_by_uuid_and_user_id(
-        self, uuid: str, user_id: int
+        self, uuid: str, user_id: int, *, for_update: bool = False
     ) -> Optional[Transaction]:
         """Obtiene transacción por UUID y user_id para validar ownership."""
         stmt = select(TransactionModel).where(
             and_(TransactionModel.uuid == uuid, TransactionModel.user_id == user_id)
         )
+
+        if for_update:
+            stmt = stmt.with_for_update()
+
         result = await self.db.execute(stmt)
         model = result.scalar_one_or_none()
         return self._model_to_entity(model) if model else None
@@ -538,7 +548,9 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             for transaction, acc, cat in results
         ]
 
-    async def get_by_transfer_uuid(self, transfer_uuid: str, user_id: int) -> List[Transaction]:
+    async def get_by_transfer_uuid(
+        self, transfer_uuid: str, user_id: int
+    ) -> List[Transaction]:
         stmt = (
             select(TransactionModel)
             .where(

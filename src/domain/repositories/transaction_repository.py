@@ -17,7 +17,9 @@ class TransactionRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_id(self, transaction_id: int) -> Optional[Transaction]:
+    async def get_by_id(
+        self, transaction_id: int, *, for_update: bool = False
+    ) -> Optional[Transaction]:
         """Get transaction by id"""
         pass
 
@@ -107,7 +109,7 @@ class TransactionRepository(ABC):
 
     @abstractmethod
     async def get_by_uuid_and_user_id(
-        self, uuid: str, user_id: int
+        self, uuid: str, user_id: int, *, for_update: bool = False
     ) -> Optional[Transaction]:
         """Get transaction by UUID and user ID for ownership validation"""
         pass
@@ -165,6 +167,8 @@ class TransactionRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_transfer_uuid(self, transfer_uuid: str, user_id: int) -> List[Transaction]:
+    async def get_by_transfer_uuid(
+        self, transfer_uuid: str, user_id: int
+    ) -> List[Transaction]:
         """Get transfer by transfer uuid"""
         pass

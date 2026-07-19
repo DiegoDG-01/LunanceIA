@@ -29,28 +29,30 @@ class DeleteTransactionHandler:
         self.uow = uow
 
     async def handle(self, command: DeleteTransactionCommand):
-        transaction = await self.transaction_repository.get_by_uuid_and_user_id(
-            command.uuid, command.user_id
-        )
-
-        if not transaction:
-            raise TransactionNotFoundError(command.uuid)
-
-        account = await self.account_repository.get_by_id(transaction.account_id)
-
-        if not account:
-            raise AccountNotFoundError(str(transaction.account_id))
-
-        if transaction.is_expense():
-            new_balance = account.current_balance.add(transaction.amount)
-        elif transaction.is_income():
-            new_balance = account.current_balance.subtract(transaction.amount)
-        else:
-            raise InvalidTransactionTypeError(transaction.transaction_type.value)
-
-        account.update_balance(new_balance)
-
         async with self.uow:
+            transaction = await self.transaction_repository.get_by_uuid_and_user_id(
+                command.uuid, command.user_id, for_update=True
+            )
+
+            if not transaction:
+                raise TransactionNotFoundError(command.uuid)
+
+            account = await self.account_repository.get_by_id(
+                transaction.account_id, for_update=True
+            )
+
+            if not account:
+                raise AccountNotFoundError(str(transaction.account_id))
+
+            if transaction.is_expense():
+                new_balance = account.current_balance.add(transaction.amount)
+            elif transaction.is_income():
+                new_balance = account.current_balance.subtract(transaction.amount)
+            else:
+                raise InvalidTransactionTypeError(transaction.transaction_type.value)
+
+            account.update_balance(new_balance)
+
             await self.account_repository.update(account)
 
             deleted = await self.transaction_repository.delete_by_uuid(
