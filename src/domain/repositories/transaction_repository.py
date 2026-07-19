@@ -168,7 +168,7 @@ class TransactionRepository(ABC):
 
     @abstractmethod
     async def get_by_transfer_uuid(
-        self, transfer_uuid: str, user_id: int
+        self, transfer_uuid: str, user_id: int, *, for_update: bool = False
     ) -> List[Transaction]:
         """Get transfer by transfer uuid"""
         pass

@@ -549,7 +549,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         ]
 
     async def get_by_transfer_uuid(
-        self, transfer_uuid: str, user_id: int
+        self, transfer_uuid: str, user_id: int, *, for_update: bool = False
     ) -> List[Transaction]:
         stmt = (
             select(TransactionModel)
@@ -561,6 +561,10 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             )
             .order_by(TransactionModel.id.asc())
         )
+
+        if for_update:
+            stmt = stmt.with_for_update()
+
         result = await self.db.execute(stmt)
         models = result.scalars().all()
         return [self._model_to_entity(model) for model in models]

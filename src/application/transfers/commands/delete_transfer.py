@@ -25,24 +25,32 @@ class DeleteTransferHandler:
         self.uow = uow
 
     async def handle(self, command: DeleteTransferCommand) -> bool:
-        transactions = await self.transaction_repository.get_by_transfer_uuid(
-            transfer_uuid=command.transfer_uuid, user_id=command.user_id
-        )
-
-        if len(transactions) != 2:
-            raise TransactionNotFoundError(command.transfer_uuid)
-
-        outgoing, incoming = transactions[0], transactions[1]
-
-        source_account = await self.account_repository.get_by_id(account_id=outgoing.account_id)
-        destination_account = await self.account_repository.get_by_id(account_id=incoming.account_id)
-
-        if not source_account:
-            raise AccountNotFoundError(str(outgoing.account_id))
-        if not destination_account:
-            raise AccountNotFoundError(str(incoming.account_id))
-
         async with self.uow:
+            transactions = await self.transaction_repository.get_by_transfer_uuid(
+                transfer_uuid=command.transfer_uuid,
+                user_id=command.user_id,
+                for_update=True,
+            )
+
+            if len(transactions) != 2:
+                raise TransactionNotFoundError(command.transfer_uuid)
+
+            outgoing, incoming = transactions[0], transactions[1]
+
+            locked_accounts = {}
+            for account_id in sorted({outgoing.account_id, incoming.account_id}):
+                account = await self.account_repository.get_by_id(
+                    account_id, for_update=True
+                )
+
+                if not account or account.user_id != command.user_id:
+                    raise AccountNotFoundError(str(account_id))
+
+                locked_accounts[account_id] = account
+
+            source_account = locked_accounts[outgoing.account_id]
+            destination_account = locked_accounts[incoming.account_id]
+
             source_account.update_balance(
                 source_account.current_balance.add(outgoing.amount)
             )
@@ -61,4 +69,3 @@ class DeleteTransferHandler:
             await self.uow.commit()
 
         return True
-
