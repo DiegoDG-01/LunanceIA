@@ -49,18 +49,30 @@ class SQLAlchemyInstallmentChargeRepository(InstallmentChargeRepository):
             await self.db.refresh(model)
         return [self._model_to_entity(model) for model in models]
 
-    async def get_by_uuid(self, uuid: str) -> Optional[InstallmentCharge]:
+    async def get_by_uuid(
+        self, uuid: str, *, for_update: bool = False
+    ) -> Optional[InstallmentCharge]:
         stmt = select(InstallmentChargeModel).where(InstallmentChargeModel.uuid == uuid)
+
+        if for_update:
+            stmt = stmt.with_for_update()
+
         result = await self.db.execute(stmt)
         model = result.scalar_one_or_none()
         return self._model_to_entity(model) if model else None
 
-    async def get_by_purchase_id(self, purchase_id: int) -> List[InstallmentCharge]:
+    async def get_by_purchase_id(
+        self, purchase_id: int, *, for_update: bool = False
+    ) -> List[InstallmentCharge]:
         stmt = (
             select(InstallmentChargeModel)
             .where(InstallmentChargeModel.installment_purchase_id == purchase_id)
             .order_by(InstallmentChargeModel.installment_number)
         )
+
+        if for_update:
+            stmt = stmt.with_for_update()
+
         result = await self.db.execute(stmt)
         models = result.scalars().all()
         return [self._model_to_entity(model) for model in models]

@@ -333,7 +333,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             TransactionModel.user_id == user_id,
         )
         result = await self.db.execute(stmt)
-        return result.rowcount >= 0
+        return result.rowcount == len(transaction_ids)
 
     async def get_total_by_type(
         self,

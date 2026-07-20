@@ -58,6 +58,13 @@ class InstallmentChargeNotFoundError(NotFoundError):
         super().__init__(f"Cargo de compra a plazos con ID {charge_uuid} no encontrado")
 
 
+class InstallmentChargeAlreadyPaidError(BusinessRuleError):
+    """Cargo de compra a plazos ya pagado."""
+
+    def __init__(self, charge_uuid: str):
+        super().__init__(f"El cargo de compra a plazos {charge_uuid} ya fue pagado")
+
+
 class AccountInactiveError(BusinessRuleError):
     """Cuenta inactiva."""
 

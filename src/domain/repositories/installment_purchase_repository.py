@@ -10,11 +10,15 @@ class InstallmentPurchaseRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_id(self, purchase_id: int) -> Optional[InstallmentPurchase]:
+    async def get_by_id(
+        self, purchase_id: int, *, for_update: bool = False
+    ) -> Optional[InstallmentPurchase]:
         pass
 
     @abstractmethod
-    async def get_by_uuid(self, uuid: str, user_id) -> Optional[InstallmentPurchase]:
+    async def get_by_uuid(
+        self, uuid: str, user_id, *, for_update: bool = False
+    ) -> Optional[InstallmentPurchase]:
         pass
 
     @abstractmethod
