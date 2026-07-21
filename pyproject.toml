@@ -20,7 +20,7 @@ dependencies = [
     "bcrypt==5.0.0",
     "google-genai==2.4.0",
     "email-validator==2.3.0",
-    "pillow==12.2.0",
+    "pillow==12.3.0",
     "apscheduler==3.11.2",
     "pytz==2026.2",
     "google-auth==2.53.0",
