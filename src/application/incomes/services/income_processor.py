@@ -91,6 +91,10 @@ class IncomeProcessor:
     async def _create_deposit(
         self, income: RecurringIncome, payment_date: date
     ) -> bool:
+        # TODO(multi-instancia): al escalar a >1 worker/réplica, hacer este
+        # depósito atómico por unidad (UoW + commit por depósito), re-verificar
+        # la idempotencia después de bloquear la cuenta y capturar el
+        # IntegrityError de uq_income_deposit_date como backstop.
         existing = await self.income_deposit_repository.get_by_income_and_date(
             recurring_income_id=cast(int, income.id), deposit_date=payment_date
         )
@@ -98,7 +102,9 @@ class IncomeProcessor:
             logger.info(f"Deposit already exists for {income.name} on {payment_date}")
             return False
 
-        account = await self.account_repository.get_by_id(income.account_id)
+        account = await self.account_repository.get_by_id(
+            income.account_id, for_update=True
+        )
         if not account:
             raise AccountNotFoundError(str(income.account_id))
 
