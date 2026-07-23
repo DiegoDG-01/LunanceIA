@@ -3,7 +3,17 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import String, DateTime, ForeignKey, Enum, DECIMAL, Text, Date, CHAR
+from sqlalchemy import (
+    String,
+    DateTime,
+    ForeignKey,
+    Enum,
+    DECIMAL,
+    Text,
+    Date,
+    CHAR,
+    UniqueConstraint,
+)
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -57,4 +67,10 @@ class SubscriptionChargeModel(Base):
     )
     processing_date: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "subscription_id", "charge_date", name="uq_subscription_charge_date"
+        ),
     )

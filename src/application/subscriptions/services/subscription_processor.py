@@ -118,9 +118,15 @@ class SubscriptionProcessor:
     async def _create_transaction_from_subscription(
         self, subscription: Subscription
     ) -> Transaction:
+        # TODO(multi-instancia): al escalar a >1 worker/réplica, hacer este
+        # cargo atómico por unidad (UoW + commit por cargo), re-verificar la
+        # idempotencia después de bloquear la cuenta y capturar el
+        # IntegrityError de uq_subscription_charge_date como backstop.
         today = date.today()
 
-        account = await self.account_repository.get_by_id(subscription.account_id)
+        account = await self.account_repository.get_by_id(
+            subscription.account_id, for_update=True
+        )
         if account is None:
             raise AccountNotFoundError(str(subscription.account_id))
 
