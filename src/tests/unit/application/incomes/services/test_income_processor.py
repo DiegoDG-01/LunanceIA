@@ -1,6 +1,6 @@
 """Unit tests for IncomeProcessor."""
 
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 
@@ -109,6 +109,9 @@ class TestIncomeProcessor:
 
         assert created == 1
         assert account.current_balance.amount == Decimal("6000.00")
+        mocks["account_repo"].get_by_id.assert_awaited_once_with(
+            income.account_id, for_update=True
+        )
         mocks["account_repo"].update.assert_called_once_with(account)
         mocks["income_repo"].update.assert_called_once_with(income)
         assert income.next_payment_date > TODAY
@@ -175,9 +178,7 @@ class TestIncomeProcessor:
         assert updated_deposit.deposit_date == TODAY
 
     async def test_notification_sent_once_even_with_catch_up(self, processor, mocks):
-        income = make_income(
-            frequency=Frequency.BIWEEKLY, start_date=date(2026, 7, 1)
-        )
+        income = make_income(frequency=Frequency.BIWEEKLY, start_date=date(2026, 7, 1))
 
         created = await processor._process_income(income, TODAY)
 
@@ -202,12 +203,12 @@ class TestIncomeProcessor:
         healthy.id = 2
         healthy.uuid = "healthy-2"
 
-        mocks["income_repo"].get_due_incomes = AsyncMock(
-            return_value=[broken, healthy]
-        )
+        mocks["income_repo"].get_due_incomes = AsyncMock(return_value=[broken, healthy])
         account = make_account()
         mocks["account_repo"].get_by_id = AsyncMock(
-            side_effect=lambda account_id: None if account_id == 20 else account
+            side_effect=lambda account_id, *, for_update=False: (
+                None if account_id == 20 else account
+            )
         )
         broken.account_id = 20
         healthy.account_id = 21

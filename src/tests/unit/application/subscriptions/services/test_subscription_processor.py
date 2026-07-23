@@ -110,6 +110,9 @@ class TestSubscriptionProcessor:
         mocks["charge_repo"].update.assert_called_once_with(mock_charge)
         mocks["account_repo"].update.assert_called_once_with(account)
         assert account.current_balance.amount == Decimal("801.00")
+        mocks["account_repo"].get_by_id.assert_awaited_once_with(
+            sub.account_id, for_update=True
+        )
 
     async def test_create_transaction_account_not_found(self, processor, mocks):
         sub = MagicMock(spec=Subscription)

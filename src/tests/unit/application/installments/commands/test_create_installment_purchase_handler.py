@@ -134,6 +134,9 @@ class TestCreateInstallmentPurchaseHandler:
         # 50000 - 24000 = 26000 (crédito disponible restante)
         assert account.current_balance.amount == Decimal("26000.00")
         mocks["account_repo"].update.assert_called_once_with(account)
+        mocks["account_repo"].get_by_uuid_and_user_id.assert_awaited_once_with(
+            account_uuid="acc-uuid-1", user_id=1, for_update=True
+        )
 
     @pytest.mark.asyncio
     async def test_generates_correct_number_of_charges(self, handler, mocks):
