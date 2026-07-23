@@ -2,7 +2,7 @@
 
 import pytest
 import httpx
-from ..conftest import AuthTokens, MOCK_USER_ID
+from ..conftest import AuthTokens
 from infrastructure.database.models.account import AccountModel
 from infrastructure.database.models.user import UserModel
 from domain.objects.enums import AccountType
