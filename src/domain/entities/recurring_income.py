@@ -2,30 +2,10 @@ from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from typing import Optional
 
-from dateutil.relativedelta import relativedelta
-
 from domain.objects.enums import Frequency
+from domain.objects.frequency import next_occurrence
 from domain.objects.money import Money
 from shared.exceptions.domain import InvalidIncomeDateRangeError
-from shared.utils.date import days_in_month
-
-_FREQUENCY_DELTAS = {
-    Frequency.DAILY: relativedelta(days=1),
-    Frequency.WEEKLY: relativedelta(weeks=1),
-    Frequency.BIWEEKLY: relativedelta(weeks=2),
-    Frequency.MONTHLY: relativedelta(months=1),
-    Frequency.BIMONTHLY: relativedelta(months=2),
-    Frequency.QUARTERLY: relativedelta(months=3),
-    Frequency.SEMI_ANNUAL: relativedelta(months=6),
-    Frequency.ANNUAL: relativedelta(years=1),
-}
-_MONTH_BASED = {
-    Frequency.MONTHLY,
-    Frequency.BIMONTHLY,
-    Frequency.QUARTERLY,
-    Frequency.SEMI_ANNUAL,
-    Frequency.ANNUAL,
-}
 
 
 @dataclass
@@ -90,11 +70,9 @@ class RecurringIncome:
         return self.next_payment_date <= as_of_date
 
     def advance_next_payment(self) -> None:
-        advanced = self.next_payment_date + _FREQUENCY_DELTAS[self.frequency]
-        if self.frequency in _MONTH_BASED:
-            day = min(self.start_date.day, days_in_month(advanced.year, advanced.month))
-            advanced = advanced.replace(day=day)
-        self.next_payment_date = advanced
+        self.next_payment_date = next_occurrence(
+            self.next_payment_date, self.frequency, self.start_date.day
+        )
 
     def deactivate(self) -> None:
         self.is_active = False
