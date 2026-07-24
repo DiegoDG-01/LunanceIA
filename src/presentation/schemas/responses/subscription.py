@@ -18,6 +18,7 @@ class SubscriptionResponse(BaseModel):
     service_url: Optional[str]
     start_date: date
     end_date: Optional[date]
+    next_charge_date: date
     is_active: bool
 
 

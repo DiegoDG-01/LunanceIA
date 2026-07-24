@@ -39,6 +39,7 @@ class SubscriptionModel(Base):
     start_date: Mapped[date] = mapped_column(Date, index=True)
     end_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     billing_day: Mapped[Optional[int]] = mapped_column(nullable=True)
+    next_charge_date: Mapped[date] = mapped_column(Date, index=True)
     is_active: Mapped[bool] = mapped_column(default=True, index=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     service_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)

@@ -1,4 +1,5 @@
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
+from datetime import date
 from typing import cast
 
 from domain.objects.money import Money
@@ -14,6 +15,7 @@ from shared.exceptions.domain import (
     SubscriptionNotFoundError,
     CategoryNotFoundError,
     AccountNotFoundError,
+    InvalidSubscriptionDateRangeError,
 )
 
 
@@ -63,16 +65,44 @@ class UpdateSubscriptionHandler:
 
             subscription.account_id = cast(int, account.id)
 
-        for key, value in asdict(dto).items():
-            if value is not None:
-                if key == "amount":
-                    setattr(
-                        subscription,
-                        key,
-                        Money(value, currency=subscription.amount.currency),
-                    )
-                else:
-                    setattr(subscription, key, value)
+        schedule_changed = False
+
+        if dto.category_id is not None:
+            subscription.category_id = dto.category_id
+        if dto.name is not None:
+            subscription.name = dto.name
+        if dto.amount is not None:
+            subscription.amount = Money(
+                dto.amount, currency=subscription.amount.currency
+            )
+        if dto.frequency is not None:
+            subscription.frequency = dto.frequency
+            schedule_changed = True
+        if dto.start_date is not None:
+            subscription.start_date = dto.start_date
+            schedule_changed = True
+        if dto.end_date is not None:
+            subscription.end_date = dto.end_date
+        if dto.billing_day is not None:
+            subscription.billing_day = dto.billing_day
+            schedule_changed = True
+        if dto.is_active is not None:
+            subscription.is_active = dto.is_active
+        if dto.description is not None:
+            subscription.description = dto.description
+        if dto.service_url is not None:
+            subscription.service_url = dto.service_url
+
+        if (
+            subscription.end_date is not None
+            and subscription.end_date < subscription.start_date
+        ):
+            raise InvalidSubscriptionDateRangeError(
+                str(subscription.start_date), str(subscription.end_date)
+            )
+
+        if schedule_changed:
+            subscription.reschedule(date.today())
 
         async with self.uow:
             updated_subscription = await self.subscription_repository.update(

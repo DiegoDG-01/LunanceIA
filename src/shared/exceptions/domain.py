@@ -374,3 +374,12 @@ class IncomeDepositNotFoundError(NotFoundError):
 
     def __init__(self, deposit_uuid: str):
         super().__init__(f"Depósito con ID {deposit_uuid} no encontrado")
+
+
+class InvalidSubscriptionDateRangeError(ValidationError):
+    """Rango de fechas de suscripción inválido."""
+
+    def __init__(self, start_date: str, end_date: str):
+        super().__init__(
+            f"La fecha de fin ({end_date}) no puede ser anterior a la de inicio ({start_date})"
+        )

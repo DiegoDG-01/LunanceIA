@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List
+from datetime import date
 
 from domain.entities.subscription import Subscription
 
@@ -56,11 +57,15 @@ class SubscriptionRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_active_subscriptions(self) -> List[Subscription]:
-        """Get all active subscriptions"""
-        pass
+    # async def get_active_subscriptions(self) -> List[Subscription]:
+    #     """Get all active subscriptions"""
+    #     pass
 
     @abstractmethod
     async def switch_status(self, subscription: Subscription) -> Subscription:
         """Switch subscription status"""
+        pass
+
+    @abstractmethod
+    async def get_due_subscriptions(self, as_of: date) -> List[Subscription]:
         pass

@@ -50,6 +50,7 @@ class SubscriptionResponseDTO:
     start_date: date
     end_date: Optional[date]
     billing_day: Optional[int]
+    next_charge_date: date
     is_active: bool
     description: Optional[str]
     service_url: Optional[str]
@@ -75,6 +76,7 @@ class SubscriptionResponseDTO:
             start_date=subscription.start_date,
             end_date=subscription.end_date,
             billing_day=subscription.billing_day,
+            next_charge_date=subscription.next_charge_date,
             is_active=subscription.is_active,
             description=subscription.description,
             service_url=subscription.service_url,

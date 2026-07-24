@@ -1,4 +1,5 @@
 from datetime import date
+
 import logging
 from typing import cast
 
@@ -19,6 +20,8 @@ from shared.exceptions.domain import AccountNotFoundError
 
 logger = logging.getLogger(__name__)
 
+MAX_CATCHUP_PERIODS = 60
+
 
 class SubscriptionProcessor:
     def __init__(
@@ -37,6 +40,7 @@ class SubscriptionProcessor:
 
     async def process_due_subscriptions(self) -> dict:
         logger.info("Processing due subscriptions")
+        today = date.today()
 
         stats = {
             "processed": 0,
@@ -46,35 +50,18 @@ class SubscriptionProcessor:
         }
 
         try:
-            active_subscriptions = (
-                await self.subscription_repository.get_active_subscriptions()
+            due_subscriptions = (
+                await self.subscription_repository.get_due_subscriptions(today)
             )
 
-            for subscription in active_subscriptions:
+            for subscription in due_subscriptions:
                 stats["processed"] += 1
 
                 try:
-                    if await self._should_generate_transaction(subscription):
-                        await self._create_transaction_from_subscription(subscription)
-                        stats["created"] += 1
-                        notification = Notification.create_new(
-                            user_id=subscription.user_id,
-                            title=f"Subscription: {subscription.name}",
-                            message="Your subscription payment has been processed.",
-                            type=NotificationType.PUSH,
-                            is_read=False,
-                        )
-                        await self.notification_repo.create(notification)
-
-                        logger.debug(
-                            f"Transaction created for subscription {subscription.uuid}"
-                        )
-                    else:
+                    created = await self._process_subscription(subscription, today)
+                    stats["created"] += created
+                    if created == 0:
                         stats["skipped"] += 1
-                        logger.debug(
-                            f"Transaction skipped for subscription {subscription.uuid}"
-                        )
-
                 except Exception as e:
                     logger.error(
                         f"Error processing due subscription {subscription.uuid}: {e}",
@@ -83,7 +70,6 @@ class SubscriptionProcessor:
                     stats["failed"] += 1
 
             logger.info(f"Processed {stats['processed']} subscriptions")
-
         except Exception as e:
             logger.error(f"Error processing due subscriptions: {e}", exc_info=True)
             stats["failed"] = 1
@@ -91,38 +77,53 @@ class SubscriptionProcessor:
 
         return stats
 
-    async def _should_generate_transaction(self, subscription: Subscription) -> bool:
-        today = date.today()
+    async def _process_subscription(
+        self, subscription: Subscription, today: date
+    ) -> int:
+        created = 0
+        guard = 0
 
-        if subscription.end_date and subscription.end_date < today:
-            return False
-
-        if subscription.billing_day != today.day:
-            return False
-
-        existing_charge = (
-            await self.subscription_charge_repository.get_by_subscription_and_month(
-                subscription_id=cast(int, subscription.id),
-                year=today.year,
-                month=today.month,
+        while subscription.is_due(today) and guard < MAX_CATCHUP_PERIODS:
+            charged = await self._create_charge(
+                subscription, subscription.next_charge_date
             )
-        )
+            if charged:
+                created += 1
+            subscription.advance_next_charge()
+            guard += 1
 
-        if existing_charge:
-            logger.debug(
-                f"Charge already exists for subscription {subscription.uuid} in {today.year}-{today.month}"
+        await self.subscription_repository.update(subscription)
+
+        if created > 0:
+            notification = Notification.create_new(
+                user_id=subscription.user_id,
+                title=f"Subscription: {subscription.name}",
+                message="Your subscription payment has been processed.",
+                type=NotificationType.PUSH,
+                is_read=False,
             )
-            return False
-        return True
+            await self.notification_repo.create(notification)
 
-    async def _create_transaction_from_subscription(
-        self, subscription: Subscription
-    ) -> Transaction:
+        return created
+
+    async def _create_charge(
+        self, subscription: Subscription, charge_date: date
+    ) -> bool:
         # TODO(multi-instancia): al escalar a >1 worker/réplica, hacer este
         # cargo atómico por unidad (UoW + commit por cargo), re-verificar la
         # idempotencia después de bloquear la cuenta y capturar el
         # IntegrityError de uq_subscription_charge_date como backstop.
-        today = date.today()
+        existing = (
+            await self.subscription_charge_repository.get_by_subscription_and_date(
+                subscription_id=cast(int, subscription.id),
+                charge_date=charge_date,
+            )
+        )
+        if existing:
+            logger.info(
+                f"Charge already exists for subscription {subscription.uuid} on {charge_date}"
+            )
+            return False
 
         account = await self.account_repository.get_by_id(
             subscription.account_id, for_update=True
@@ -135,10 +136,9 @@ class SubscriptionProcessor:
 
         charge = SubscriptionCharge.create_pending(
             subscription_id=cast(int, subscription.id),
-            charge_date=today,
+            charge_date=charge_date,
             amount=subscription.amount,
         )
-
         save_charge = await self.subscription_charge_repository.create(charge)
 
         transaction = Transaction.create_new(
@@ -148,13 +148,13 @@ class SubscriptionProcessor:
             amount=subscription.amount,
             transaction_type=TransactionType.EXPENSE,
             description=f"Subscription: {subscription.name}",
-            transaction_date=today,
+            transaction_date=charge_date,
         )
-
         created_transaction = await self.transaction_repository.create(transaction)
 
         await self.account_repository.update(account)
+
         save_charge.mark_as_paid(cast(int, created_transaction.id))
         await self.subscription_charge_repository.update(save_charge)
 
-        return created_transaction
+        return True
