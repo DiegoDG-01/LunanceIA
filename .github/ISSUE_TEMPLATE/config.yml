@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Reportar una vulnerabilidad de seguridad
+    url: https://github.com/DiegoDG-01/LunanceIA/security/advisories/new
+    about: NO abras un issue público para fallos de seguridad. Usa el reporte privado descrito en SECURITY.md.
+  - name: 💬 Preguntas y dudas de uso
+    url: https://github.com/DiegoDG-01/LunanceIA/discussions
+    about: Para preguntas generales, ideas y soporte, usa Discussions en vez de un issue.
+  - name: ⚖️ Licencia, uso comercial o marca
+    url: https://github.com/DiegoDG-01/LunanceIA/blob/master/README.md#-licencia
+    about: El proyecto es source-available (PolyForm Noncommercial). Para uso comercial escribe a contacto@diegodg.com.mx
