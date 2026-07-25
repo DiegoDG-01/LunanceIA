@@ -4,6 +4,7 @@
 
 ## 📋 Tabla de Contenidos
 
+- [Licencia y CLA](#licencia-y-cla)
 - [Código de Conducta](#código-de-conducta)
 - [Configuración del Entorno](#configuración-del-entorno)
 - [Flujo de Contribución](#flujo-de-contribución)
@@ -11,6 +12,50 @@
 - [Testing](#testing)
 - [Documentación](#documentación)
 - [Tipos de Contribuciones](#tipos-de-contribuciones)
+
+## ⚖️ Licencia y CLA
+
+Lunance IA es un proyecto **source-available**, no open source: el código está publicado bajo la [PolyForm Noncommercial License 1.0.0](../LICENSE), que permite usarlo, modificarlo y redistribuirlo **con fines no comerciales**. El uso comercial requiere permiso por escrito del titular.
+
+### CLA obligatorio antes del merge
+
+Toda contribución requiere que aceptes el [Contributor License Agreement](../CONTRIBUTOR_LICENSE_AGREEMENT.md). **Ningún PR se mergea sin esa aceptación.** En resumen:
+
+- **Conservas el copyright** de tu contribución; no cedes la propiedad.
+- Concedes al titular una licencia que le permite distribuir tu aporte bajo la licencia no comercial actual **y bajo licencias comerciales futuras**, incluido un eventual producto SaaS.
+- Declaras que tienes derecho a enviar ese código.
+
+Lee el texto completo antes de aceptarlo — este resumen no lo sustituye.
+
+**Cómo aceptarlo:** marca la casilla del CLA en la plantilla de Pull Request, o incluye esta línea en la descripción del PR:
+
+```
+He leído y acepto el Contributor License Agreement (CONTRIBUTOR_LICENSE_AGREEMENT.md).
+```
+
+Tu aceptación cubre esa contribución y las siguientes que envíes.
+
+### Código de terceros
+
+**No envíes código con copyright ajeno.** Esto incluye fragmentos copiados de otros repositorios, de respuestas de Stack Overflow, de tutoriales o de cursos, aunque sean cortos.
+
+Si necesitas incorporar material de terceros:
+
+1. Márcalo con `[Third-Party]` en el título del PR.
+2. Indica origen, autor y licencia completa.
+3. Espera aprobación explícita antes de continuar.
+
+Ten en cuenta también que:
+
+- Si trabajas por cuenta ajena y tu contrato atribuye a tu empleador los derechos sobre lo que produces, necesitas su autorización.
+- Si usas asistentes de IA para generar código, sigues siendo responsable de que el resultado sea apto para enviarse bajo el CLA.
+- Nunca incluyas secretos, credenciales ni datos personales reales.
+
+### Otros documentos relevantes
+
+- [NOTICE](../NOTICE) — aviso de copyright que debe acompañar a las redistribuciones
+- [TRADEMARKS.md](../TRADEMARKS.md) — uso del nombre y el logotipo "Lunance"
+- [SECURITY.md](../SECURITY.md) — reporte privado de vulnerabilidades
 
 ## 📜 Código de Conducta
 
@@ -20,6 +65,8 @@ Al participar en este proyecto, te comprometes a mantener un ambiente respetuoso
 - ✅ **Inclusión**: Acepta diferentes perspectivas y experiencias
 - ✅ **Constructividad**: Ofrece críticas constructivas y útiles
 - ❌ **No toleramos**: Lenguaje ofensivo, acoso o discriminación
+
+📄 El texto completo, junto con el alcance, las medidas de aplicación y cómo reportar un incidente, está en [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
 
 ## 🛠️ Configuración del Entorno
 
@@ -134,8 +181,9 @@ Closes #123"
    ```
 
 2. **Crear PR** siguiendo el template
-3. **Esperar revisión** del equipo
-4. **Aplicar feedback** si es necesario
+3. **Aceptar el CLA** marcando la casilla correspondiente en el template — sin esto el PR no se puede mergear
+4. **Esperar revisión** del equipo
+5. **Aplicar feedback** si es necesario
 
 ## 🎨 Estándares de Código
 
@@ -410,6 +458,7 @@ if account.account_type == AccountType.CREDIT:
 - [ ] ✅ Commits atómicos y descriptivos
 - [ ] ✅ No incluye información sensible
 - [ ] ✅ Sigue convenciones del proyecto
+- [ ] ✅ CLA aceptado y contribución libre de copyright de terceros
 
 ## 🚀 Deployment y Release
 
@@ -431,7 +480,8 @@ if account.account_type == AccountType.CREDIT:
 
 - 💬 **GitHub Discussions**: Para preguntas generales
 - 🐛 **GitHub Issues**: Para reportar bugs o solicitar features
-- 📧 **Email**: [tu-email@ejemplo.com] para temas sensibles
+- 🔒 **Vulnerabilidades**: Nunca en un issue público — sigue [SECURITY.md](../SECURITY.md)
+- ⚖️ **Licencia, CLA o uso comercial**: contacto@diegodg.com.mx
 - 📖 **Documentación**: Revisa [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ---

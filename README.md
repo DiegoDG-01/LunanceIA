@@ -302,15 +302,44 @@ source .venv/bin/activate  # Linux/macOS
 4. Push a la rama (`git push origin feature/AmazingFeature`)
 5. Abre un Pull Request
 
+> ⚖️ **CLA obligatorio**: antes de mergear cualquier PR necesitamos que aceptes el [Contributor License Agreement](CONTRIBUTOR_LICENSE_AGREEMENT.md). Conservas el copyright de tu aporte; nos concedes permiso para distribuirlo bajo la licencia no comercial y bajo licencias comerciales futuras.
+
 > 📋 **Guía Completa**: Para configuración del entorno, estándares de código, testing y flujo de desarrollo, consulta [CONTRIBUTING.md](docs/CONTRIBUTING.md)
+
+Al participar aceptas el [Código de Conducta](CODE_OF_CONDUCT.md).
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+Lunance IA es **source-available**, no open source. El código está publicado bajo la [PolyForm Noncommercial License 1.0.0](LICENSE).
+
+> ℹ️ El código es visible, forkeable y modificable, pero la restricción de uso comercial hace que **no cumpla la [Open Source Definition](https://opensource.org/osd)**. Por favor no lo describas como "open source".
+
+**Lo que puedes hacer sin pedir permiso** — cualquier propósito no comercial:
+
+- Uso personal, estudio, investigación, experimentación y testing
+- Proyectos de aficionado y desarrollo amateur
+- Modificar el código, crear obras derivadas y publicar forks
+- Uso por organizaciones benéficas, instituciones educativas, organismos públicos de investigación, salud, seguridad o medio ambiente
+
+**Lo que requiere permiso previo y por escrito** — cualquier uso comercial, incluyendo:
+
+- Ofrecer Lunance IA (o un derivado) como producto o servicio SaaS
+- Uso interno en una empresa como parte de su operación
+- Reventa, distribución de pago o soporte comercial
+
+Si tu caso encaja en el segundo grupo o no tienes claro dónde cae, escribe a **contacto@diegodg.com.mx** antes de desplegar.
+
+Si redistribuyes el proyecto, conserva los archivos [LICENSE](LICENSE) y [NOTICE](NOTICE) tal como están.
+
+> Required Notice: Copyright 2026 Diego DG (https://github.com/DiegoDG-01/LunanceIA)
+
+El nombre y el logotipo **"Lunance"** no se licencian con el código: consulta [TRADEMARKS.md](TRADEMARKS.md) antes de usarlos en tu propio proyecto.
 
 ## 🐛 Reporte de Problemas
 
 Si encuentras algún problema o tienes sugerencias, por favor crea un issue en el repositorio.
+
+> 🔒 **¿Es una vulnerabilidad de seguridad?** No abras un issue público. Sigue el procedimiento de reporte privado descrito en [SECURITY.md](SECURITY.md).
 
 ---
 
