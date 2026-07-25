@@ -1,0 +1,30 @@
+Lunance IA
+==========
+
+Required Notice: Copyright 2026 Diego DG (https://github.com/DiegoDG-01/LunanceIA)
+
+Este software se distribuye bajo la PolyForm Noncommercial License 1.0.0.
+El texto completo de la licencia está en el archivo LICENSE de este
+repositorio y en https://polyformproject.org/licenses/noncommercial/1.0.0
+
+La sección "Notices" de esa licencia exige que quien reciba una copia de
+cualquier parte de este software reciba también una copia de los términos
+(o su URL) y de toda línea que comience con "Required Notice:". Si
+redistribuyes este software, con o sin cambios, conserva este archivo.
+
+Este aviso cubre el código original de Lunance IA. Las dependencias de
+terceros declaradas en pyproject.toml conservan sus propias licencias y
+avisos de copyright.
+
+Uso comercial
+-------------
+
+La PolyForm Noncommercial License 1.0.0 solo autoriza usos no comerciales.
+Cualquier uso comercial requiere permiso previo y por escrito del titular
+de los derechos. Contacto: contacto@diegodg.com.mx
+
+Marcas
+------
+
+"Lunance" y su logotipo no se licencian bajo la PolyForm Noncommercial
+License. Ver TRADEMARKS.md

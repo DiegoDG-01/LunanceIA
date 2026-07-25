@@ -1,8 +1,15 @@
 [project]
 name = "lunance"
 version = "0.1.0"
-description = "Add your description here"
+description = "API REST de finanzas personales construida con FastAPI y Clean Architecture"
+readme = "README.md"
 requires-python = ">=3.13"
+license = "PolyForm-Noncommercial-1.0.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [
+    { name = "Diego DG", email = "contacto@diegodg.com.mx" },
+]
+keywords = ["fastapi", "finanzas", "clean-architecture", "ddd", "cqrs"]
 dependencies = [
     "aiomysql==0.3.2",
     "alembic==1.18.4",
@@ -35,6 +42,11 @@ dependencies = [
     "python-dateutil>=2.9.0.post0",
     "numpy==2.4.6",
 ]
+
+[project.urls]
+Repository = "https://github.com/DiegoDG-01/LunanceIA"
+Documentation = "https://github.com/DiegoDG-01/LunanceIA/tree/master/docs"
+Issues = "https://github.com/DiegoDG-01/LunanceIA/issues"
 
 [dependency-groups]
 test = [
