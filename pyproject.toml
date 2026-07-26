@@ -1,6 +1,6 @@
 [project]
 name = "lunance"
-version = "0.1.0"
+version = "1.0.0"
 description = "API REST de finanzas personales construida con FastAPI y Clean Architecture"
 readme = "README.md"
 requires-python = ">=3.13"
