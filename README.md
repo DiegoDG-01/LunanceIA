@@ -54,6 +54,8 @@ Lunance IA integra un motor de cálculo de alto rendimiento escrito en **Rust** 
 
 > 🧪 **Estado del Proyecto**: La implementación completa del motor de Rust está en proceso (Beta).
 
+> 🔧 **Se compila e instala aparte** (`uv pip install ./fincore`) y no está en `uv.lock`, por lo que `uv sync` lo desinstala. Ver [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md#-fincore-desaparece-después-de-uv-sync).
+
 ### Development Tools
 - **Package Manager**: uv (gestor moderno de paquetes Python)
 - **Code Quality**: Ruff 0.14+ (linting & formatting)
@@ -134,7 +136,17 @@ uv sync
 pip install -e .
 ```
 
-3. **Configurar MySQL**
+3. **Compilar el motor Rust** (necesario para las proyecciones de inversión)
+```bash
+# Requiere el toolchain de Rust: https://rustup.rs
+uv pip install ./fincore
+```
+
+> ⚠️ `fincore` no forma parte de `uv.lock`, así que **cada `uv sync` lo desinstala**.
+> Vuelve a ejecutar el comando de arriba, o usa `uv sync --inexact` para conservarlo.
+> El porqué y las alternativas están en [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md#-fincore-desaparece-después-de-uv-sync).
+
+4. **Configurar MySQL**
 ```bash
 # Levantar MySQL con Docker
 docker run --name lunance-mysql \
@@ -146,7 +158,7 @@ docker run --name lunance-mysql \
   -d mysql:8.0
 ```
 
-4. **Configurar variables de entorno**
+5. **Configurar variables de entorno**
 ```bash
 cp .env.example .env
 # Editar .env para desarrollo local:
@@ -154,7 +166,7 @@ cp .env.example .env
 # - ENVIRONMENT=DEV (importante para CORS y logs de desarrollo)
 ```
 
-5. **Ejecutar migraciones y iniciar servidor**
+6. **Ejecutar migraciones y iniciar servidor**
 ```bash
 alembic upgrade head
 uvicorn src.main:app --reload
@@ -311,6 +323,8 @@ source .venv/bin/activate  # Linux/macOS
 > ⚖️ **CLA obligatorio**: antes de mergear cualquier PR necesitamos que aceptes el [Contributor License Agreement](CONTRIBUTOR_LICENSE_AGREEMENT.md). Conservas el copyright de tu aporte; nos concedes permiso para distribuirlo bajo la licencia no comercial y bajo licencias comerciales futuras.
 
 > 📋 **Guía Completa**: Para configuración del entorno, estándares de código, testing y flujo de desarrollo, consulta [CONTRIBUTING.md](docs/CONTRIBUTING.md)
+
+> 🛠️ **¿Algo no funciona?**: Problemas conocidos del entorno de desarrollo y sus soluciones en [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 Al participar aceptas el [Código de Conducta](CODE_OF_CONDUCT.md).
 
