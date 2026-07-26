@@ -166,3 +166,6 @@ cython_debug/
 
 # Rust Core
  fincore/target/
+
+# Config local de cargo (target-dir fuera de iCloud), no versionada
+fincore/.cargo/
