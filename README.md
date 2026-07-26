@@ -2,6 +2,12 @@
 
 Lunance IA es una API REST completa para la gestión de finanzas personales construida con **Clean Architecture + Domain-Driven Design** usando FastAPI y Python. Implementa un backend empresarial robusto con separación clara de responsabilidades, patrones CQRS, y arquitectura hexagonal para el seguimiento de ingresos, gastos, presupuestos, suscripciones, metas de ahorro y recordatorios financieros.
 
+> ### ℹ️ Este repositorio contiene únicamente el backend
+>
+> Aquí encontrarás la API REST y el servidor MCP. **La aplicación cliente (frontend) no forma parte de este repositorio y todavía no se ha publicado**: su liberación está prevista, pero **sin fecha estimada**.
+>
+> Puedes usar la API por tu cuenta desde cualquier cliente HTTP, con la colección de Bruno incluida en `http/` o con la documentación interactiva que expone la propia API en `/docs`. Consulta [API_USAGE.md](docs/API_USAGE.md) para empezar.
+
 ## 🚀 Características Principales
 
 ### 💰 Gestión Financiera Completa
