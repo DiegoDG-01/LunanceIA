@@ -6,7 +6,7 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 >
 > Aquí encontrarás la API REST y el servidor MCP. **La aplicación cliente (frontend) no forma parte de este repositorio y todavía no se ha publicado**: su liberación está prevista, pero **sin fecha estimada**.
 >
-> Puedes usar la API por tu cuenta desde cualquier cliente HTTP, con la colección de Bruno incluida en `http/` o con la documentación interactiva que expone la propia API en `/docs`. Consulta [API_USAGE.md](docs/API_USAGE.md) para empezar.
+> Puedes usar la API por tu cuenta desde cualquier cliente HTTP, con la colección de Bruno incluida en `http/` o con la documentación interactiva en `/docs` (disponible solo cuando `ENVIRONMENT` no es `PROD`). Consulta [API_USAGE.md](docs/API_USAGE.md) para empezar.
 
 ## 🚀 Características Principales
 
@@ -25,9 +25,9 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 - **Servidor MCP**: Expone la API como herramientas para agentes/LLM (consultar y registrar finanzas en lenguaje natural), autenticado por API Key con permisos por scope. Ver [MCP.md](docs/MCP.md)
 
 ### 🔐 Seguridad y Autenticación
-- **Auth0 Integration**: Autenticación empresarial con Auth0
-- **JWT Tokens**: Validación de tokens mediante Auth0
-- **Autenticación OAuth2**: Estándar de la industria para APIs
+- **Autenticación propia**: Registro y login con usuario y contraseña, sin depender de proveedores externos
+- **JWT Tokens**: La API emite y valida sus propios tokens (HS256); contraseñas hasheadas con bcrypt
+- **Refresh tokens rotativos**: Se almacenan solo como hash SHA-256 y se revocan al cerrar sesión
 - **API Keys**: Acceso programático con autenticación dual (JWT o `X-API-Key`) y permisos por scope; las keys se guardan hasheadas (SHA-256) y nunca permiten editar ni eliminar
 
 ### 🎯 Organización y Personalización
@@ -43,7 +43,7 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 - **Performance Engine**: Rust (fincore) con PyO3
 - **Base de Datos**: MySQL con SQLAlchemy 2.0+ ORM
 - **Migraciones**: Alembic 1.16+
-- **Autenticación**: Auth0 + JWT (python-jose 3.5+)
+- **Autenticación**: JWT propio (python-jose 3.5+)
 - **Validación**: Pydantic 2.11+ con soporte de email
 - **Seguridad**: bcrypt 4.3+ + Rate Limiting (fastapi-advanced-rate-limiter 2.1+)
 - **IA**: Google Gemini API (google-genai 1.22+) + pydantic-ai-slim 1.72+ (agentes estructurados)
@@ -167,7 +167,7 @@ uvicorn src.main:app --reload
 La API REST de Lunance IA v2 utiliza autenticación JWT y sigue los principios de Clean Architecture.
 
 ### Endpoints Principales
-- 🔐 **Autenticación**: `/api/v2/auth/` (me, logout) - Login/Register via Auth0
+- 🔐 **Autenticación**: `/api/v2/auth/` (register, login, refresh, logout, me)
 - 💳 **Cuentas**: `/api/v2/account/` (CRUD completo + activación/desactivación)
 - 💰 **Transacciones**: `/api/v2/transaction/` (CRUD completo)
 - 🔄 **Suscripciones**: `/api/v2/subscription/` (CRUD completo + cargos + activación)
@@ -219,9 +219,9 @@ Lunance IA utiliza **Clean Architecture + Domain-Driven Design** para garantizar
 
 ## 🔒 Seguridad
 
-- **Auth0**: Autenticación y autorización empresarial
-- **JWT Tokens**: Validación de tokens emitidos por Auth0
-- **OAuth2**: Flujo estándar de autenticación
+- **Autenticación propia**: Usuario y contraseña, con contraseñas hasheadas mediante bcrypt
+- **JWT Tokens**: Access tokens HS256 firmados por la API, con refresh tokens rotativos guardados como hash
+- **Rate limiting de autenticación**: Límites por endpoint y por IP ante intentos fallidos
 - **Validación robusta**: Schemas Pydantic en todos los endpoints
 - **CORS Configurado**: Según entorno (PROD: dominio específico, DEV: abierto)
 - **Rate Limiting**: Protección contra abuso con límites específicos por endpoint

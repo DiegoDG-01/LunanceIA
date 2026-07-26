@@ -40,7 +40,7 @@ graph TD
         DB[SQLAlchemy Models]
         SQLRepo[SQLAlchemy Repositories]
         ExtServices["External Services - AI Agents (pydantic-ai + Gemini)"]
-        Security[Auth0 / JWT Security]
+        Security[JWT Security]
     end
 
     %% Dependencies
@@ -90,7 +90,6 @@ graph TD
     end
 
     subgraph ExternalSvc["🌐 Servicios Externos"]
-        Auth0[Auth0\nIdentity Provider]
         Gemini[Google Gemini AI\nExtracción de recibos]
         GrafanaCloud["Grafana Cloud\nLoki — Logs estructurados"]
         NetData[NetData\nMétricas de servidor]
@@ -111,7 +110,6 @@ graph TD
 
     %% Comunicación interna
     Docker_API -->|Puerto 3306, IP restringida| MySQL
-    Docker_API -->|OAuth2 / JWT RS256| Auth0
     Docker_API -->|REST API| Gemini
     Docker_API -->|HTTP push| GrafanaCloud
 
@@ -143,7 +141,7 @@ graph TD
 | **MCP Container** | Docker (FastMCP, streamable-http) | Contenedor que expone la API como herramientas para agentes/LLM en `mcp.lunance.app` (puerto 8001). Actúa como **proxy**: reenvía cada llamada a la API por la red interna de Docker (`http://api:8000`) inyectando la `X-API-Key` del usuario y respetando sus scopes; no accede a la BD. Ver [MCP.md](MCP.md) |
 | **Base de Datos** | MySQL en IONOS VPS 2 | Solo acepta conexiones desde la IP del VPS 1 (puerto 3306) y SSH |
 | **Backups de BD** | Cloudflare R2 (S3-compatible) | Dockploy ejecuta dumps programados de MySQL y los sube a un bucket de R2, manteniendo las copias fuera de los VPS |
-| **Autenticación** | Auth0 | Proveedor de identidad; la API valida JWTs emitidos por Auth0 |
+| **Autenticación** | Propia (JWT HS256) | La API emite y valida sus propios tokens; no hay proveedor de identidad externo |
 | **IA** | Google Gemini + pydantic-ai | Análisis de imágenes (recibos/tickets) y asesoría de gastos mediante agentes estructurados |
 | **Logs** | Grafana Cloud (Loki) | Ingesta de logs estructurados desde la API |
 | **Métricas** | NetData | Métricas de infraestructura de ambos VPS |
@@ -252,7 +250,7 @@ classDiagram
     class User {
         +String id
         +String email
-        +sync_from_auth0()
+        +is_active
     }
 
     class Account {
@@ -412,7 +410,7 @@ application/
 │   └── queries/
 │       ├── __init__.py
 │       └── get_banks.py
-├── auth/                     # Feature: Autenticación (Auth0)
+├── auth/                     # Feature: Autenticación (JWT propio)
 │   ├── __init__.py
 │   └── commands/
 │       ├── __init__.py
@@ -1052,13 +1050,17 @@ def translate_validation_message(
 
 ## 🔒 Seguridad y Autenticación
 
-### Auth0 Integration
+### Autenticación propia
 
-Lunance IA utiliza **Auth0** como proveedor de identidad:
+Lunance IA gestiona la identidad por sí misma, sin proveedor externo:
 
-- **Login/Register**: Manejados directamente por Auth0
-- **Token Validation**: La API valida tokens JWT emitidos por Auth0
-- **User Sync**: Los usuarios se sincronizan automáticamente al primer acceso
+- **Registro y login**: `POST /api/v2/auth/register` y `POST /api/v2/auth/login`, con usuario y contraseña
+- **Contraseñas**: Hasheadas con `bcrypt`; se exige mayúscula, minúscula, dígito y carácter especial (mínimo 8 caracteres)
+- **Access token**: JWT firmado con `SECRET_KEY` (HS256), con claims `sub` (UUID del usuario) e `iss: "lunance"`
+- **Refresh token**: Firmado con una clave distinta (`SECRET_KEY_REFRESH`), persistido **solo como hash SHA-256** y **rotado en cada renovación**
+- **Logout**: Revoca el refresh token en base de datos
+
+> **Legado:** `validate_auth0_user()` sigue presente en `presentation/dependencies/auth_deps.py` como camino alternativo cuando el token no lleva `iss: "lunance"`. El flujo activo es el propio; las variables `AUTH0_DOMAIN` y `AUTH0_AUDIENCE` continúan siendo obligatorias en `settings.py` únicamente por esa dependencia.
 
 ### Configuración CORS Basada en Entorno
 
@@ -1089,22 +1091,21 @@ from jose import jwt, JWTError
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     """
-    Valida el token JWT emitido por Auth0.
+    Valida el token JWT emitido por la propia API.
 
     El token contiene:
-    - sub: ID del usuario en Auth0
-    - email: Email del usuario
-    - iat: Timestamp de emisión
+    - sub: UUID del usuario
+    - iss: "lunance" (distingue los tokens propios)
+    - iat / exp: Emisión y expiración
     """
     try:
         payload = jwt.decode(
             token,
-            settings.AUTH0_PUBLIC_KEY,
-            algorithms=["RS256"],
-            audience=settings.AUTH0_AUDIENCE
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM]  # HS256
         )
-        user_id = payload.get("sub")
-        if user_id is None:
+        user_uuid = payload.get("sub")
+        if user_uuid is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         return payload
     except JWTError:
@@ -1191,7 +1192,7 @@ sequenceDiagram
     CF->>Traefik: Proxy (TLS terminado)
     Traefik->>MW: HTTP Request
     MW->>MW: Asigna Correlation ID<br/>Logging de request
-    MW->>Auth: Valida JWT (Auth0 RS256)
+    MW->>Auth: Valida JWT (HS256, iss lunance)
     Auth->>Endpoint: current_user inyectado
     Endpoint->>Endpoint: Valida Schema Pydantic
     Endpoint->>Handler: Command / Query

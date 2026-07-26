@@ -13,38 +13,107 @@ Esta guía te mostrará cómo usar la API REST de Lunance IA v2, incluyendo aute
 - [Límites y Paginación](#límites-y-paginación)
 - [IA - Análisis y Asesoría](#-ia---apiv2ai)
 
-## 🔐 Autenticación con Auth0
+## 🔐 Autenticación JWT
 
-La API utiliza **Auth0** para autenticación. Los tokens JWT son emitidos por Auth0 y validados por la API.
+La API gestiona la autenticación **por sí misma**, con usuario y contraseña. Emite y valida sus propios tokens JWT: no depende de ningún proveedor de identidad externo.
 
 ### Flujo de Autenticación
 
-1. **Login/Register**: Se realiza directamente con Auth0 (frontend)
-2. **Token JWT**: Auth0 emite un access token
-3. **API Requests**: Incluir el token en el header `Authorization`
+1. **Registro**: `POST /api/v2/auth/register` con usuario y contraseña
+2. **Login**: `POST /api/v2/auth/login` devuelve un *access token* y un *refresh token*
+3. **API Requests**: incluir el access token en el header `Authorization`
+4. **Renovación**: `POST /api/v2/auth/refresh` cuando el access token caduca
+5. **Cierre de sesión**: `POST /api/v2/auth/logout` revoca el refresh token
+
+### Características de los tokens
+
+| | Access token | Refresh token |
+|---|---|---|
+| Algoritmo | HS256 | HS256 |
+| Firmado con | `SECRET_KEY` | `SECRET_KEY_REFRESH` |
+| Vigencia | `ACCESS_TOKEN_EXPIRE_MINUTES` (60 min por defecto) | `REFRESH_TOKEN_EXPIRE_DAYS` (7 días por defecto) |
+| Se envía en | Header `Authorization: Bearer` | Cuerpo de `/refresh` y `/logout` |
+| Almacenado en servidor | No | Sí, **solo su hash SHA-256** |
+
+El access token lleva las claims `sub` (UUID del usuario), `iss: "lunance"`, `iat` y `exp`. El refresh token **rota en cada uso**: `/refresh` devuelve uno nuevo y guarda su hash.
+
+### Registro
+
+```bash
+curl -X POST "http://localhost:8000/api/v2/auth/register" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "username": "juanperez",
+       "password": "MiClave123!"
+     }'
+```
+
+**Respuesta:** `200 OK`
+```json
+{
+  "user_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "juanperez",
+  "message": "Usuario registrado exitosamente"
+}
+```
+
+> **Requisitos de la contraseña**: mínimo 8 caracteres, con al menos una mayúscula, una minúscula, un dígito y un carácter especial (`!@#$%^&*(),.?":{}|<>`). Se almacena con `bcrypt`. Si no los cumple, la API responde `400 VALIDATION_ERROR` y el detalle incluye códigos como `PASSWORD_TOO_SHORT` o `PASSWORD_MISSING_UPPERCASE`.
+
+### Login
+
+```bash
+curl -X POST "http://localhost:8000/api/v2/auth/login" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "username": "juanperez",
+       "password": "MiClave123!"
+     }'
+```
+
+**Respuesta:**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer"
+}
+```
+
+Credenciales incorrectas devuelven `401 AUTH_INVALID_CREDENTIALS`; una cuenta desactivada devuelve `401 AUTH_USER_INACTIVE`.
 
 ### Usar Token en Requests
 
-Incluye el token de Auth0 en el header `Authorization` de todos los requests autenticados:
+Incluye el access token en el header `Authorization` de todos los requests autenticados:
 
 ```bash
 curl -X GET "http://localhost:8000/api/v2/account/" \
-     -H "Authorization: Bearer <auth0_access_token>"
+     -H "Authorization: Bearer <access_token>"
 ```
+
+### Renovar el Token
+
+```bash
+curl -X POST "http://localhost:8000/api/v2/auth/refresh" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "refresh_token": "<refresh_token>"
+     }'
+```
+
+**Respuesta:** un par nuevo de tokens. Descarta el refresh token anterior: ya no sirve.
 
 ### Obtener Información del Usuario
 
 ```bash
 curl -X GET "http://localhost:8000/api/v2/auth/me" \
-     -H "Authorization: Bearer <auth0_access_token>"
+     -H "Authorization: Bearer <access_token>"
 ```
 
 **Respuesta:**
 ```json
 {
   "user_uuid": "550e8400-e29b-41d4-a716-446655440000",
-  "name": "Juan Pérez",
-  "email": "juan@ejemplo.com",
+  "username": "juanperez",
   "is_active": true
 }
 ```
@@ -53,12 +122,13 @@ curl -X GET "http://localhost:8000/api/v2/auth/me" \
 
 ```bash
 curl -X POST "http://localhost:8000/api/v2/auth/logout" \
-     -H "Authorization: Bearer <auth0_access_token>" \
      -H "Content-Type: application/json" \
      -d '{
        "refresh_token": "<refresh_token>"
      }'
 ```
+
+Revoca ese refresh token en el servidor. El access token que ya tengas seguirá siendo válido hasta que expire por su cuenta.
 
 ## 🔑 Autenticación con API Keys
 
@@ -119,7 +189,79 @@ Si la key no tiene el scope requerido, la API responde `403 Forbidden`. Si es in
 
 ### 🔐 Autenticación - `/api/v2/auth/`
 
-> **Nota**: Login y registro se manejan directamente con Auth0. La API solo expone endpoints para obtener información del usuario y cerrar sesión.
+> **Nota**: la API gestiona el registro y el login por sí misma. Ver [Autenticación JWT](#-autenticación-jwt) para el detalle del flujo y de los tokens.
+
+#### Registro
+```bash
+POST /api/v2/auth/register
+```
+
+**Request:**
+```json
+{
+  "username": "juanperez",
+  "password": "MiClave123!"
+}
+```
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `username` | string | ✅ | 1–100 caracteres, único |
+| `password` | string | ✅ | Mínimo 8 caracteres, con mayúscula, minúscula, dígito y carácter especial |
+
+**Response:**
+```json
+{
+  "user_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "juanperez",
+  "message": "Usuario registrado exitosamente"
+}
+```
+
+Si el nombre de usuario ya existe, responde `400 VALIDATION_ERROR`.
+
+#### Login
+```bash
+POST /api/v2/auth/login
+```
+
+**Request:**
+```json
+{
+  "username": "juanperez",
+  "password": "MiClave123!"
+}
+```
+
+**Response:**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer"
+}
+```
+
+#### Renovar Token
+```bash
+POST /api/v2/auth/refresh
+```
+
+**Request:**
+```json
+{
+  "refresh_token": "<refresh_token>"
+}
+```
+
+**Response:** un par nuevo de tokens. El refresh token anterior queda invalidado.
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer"
+}
+```
 
 #### Obtener Información del Usuario
 ```bash
@@ -130,8 +272,7 @@ GET /api/v2/auth/me
 ```json
 {
   "user_uuid": "550e8400-e29b-41d4-a716-446655440000",
-  "name": "Juan Pérez",
-  "email": "juan@ejemplo.com",
+  "username": "juanperez",
   "is_active": true
 }
 ```
@@ -727,14 +868,27 @@ Retorna el catálogo de bancos disponibles.
 
 ## 💡 Ejemplos de Uso
 
-### Flujo Completo con Auth0
+### Flujo Completo desde Cero
 
 ```bash
-# 1. Obtener token de Auth0 (desde tu aplicación frontend)
-# El login/registro se maneja directamente con Auth0
+# 1. Registrar el usuario
+curl -X POST "http://localhost:8000/api/v2/auth/register" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "username": "juanperez",
+       "password": "MiClave123!"
+     }'
 
-# 2. Guardar el token de Auth0
-export ACCESS_TOKEN="<auth0_access_token>"
+# 2. Iniciar sesión y guardar los tokens
+RESPONSE=$(curl -s -X POST "http://localhost:8000/api/v2/auth/login" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "username": "juanperez",
+       "password": "MiClave123!"
+     }')
+
+export ACCESS_TOKEN=$(echo "$RESPONSE" | jq -r .access_token)
+export REFRESH_TOKEN=$(echo "$RESPONSE" | jq -r .refresh_token)
 
 # 3. Verificar usuario autenticado
 curl -X GET "http://localhost:8000/api/v2/auth/me" \
@@ -926,10 +1080,13 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 
 | Endpoint | Límite | Razón |
 |----------|--------|-------|
-| `GET /auth/me` | **100 requests/minuto** | Lectura de perfil frecuente |
+| `POST /auth/register` | **5 requests/hora** | Evita el alta masiva de cuentas |
+| `POST /auth/login` | **10 requests/minuto** | Frena los ataques de fuerza bruta |
+| `POST /auth/refresh` | **20 requests/minuto** | Renovación de sesión |
 | `POST /auth/logout` | **10 requests/minuto** | Operación normal |
+| `GET /auth/me` | **100 requests/minuto** | Lectura de perfil frecuente |
 
-> **Nota**: Login y registro se manejan a través de Auth0, no tienen rate limiting en esta API.
+> **Nota**: además de estos límites por endpoint, los intentos de autenticación fallidos se limitan por IP. Superarlos devuelve `429` aunque las credenciales acaben siendo correctas.
 
 #### Endpoints de Cuentas
 
@@ -1116,11 +1273,32 @@ class LunanceClient:
     def __init__(self, base_url="http://localhost:8000", token=None):
         self.base_url = base_url
         self.token = token
+        self.refresh_token = None
         self.client = httpx.AsyncClient()
 
-    def set_token(self, auth0_token: str):
-        """Configura el token de Auth0 obtenido desde el frontend."""
-        self.token = auth0_token
+    async def login(self, username: str, password: str):
+        """Inicia sesión y guarda el access token para las siguientes llamadas."""
+        response = await self.client.post(
+            f"{self.base_url}/api/v2/auth/login",
+            json={"username": username, "password": password}
+        )
+        response.raise_for_status()
+        data = response.json()
+        self.token = data["access_token"]
+        self.refresh_token = data["refresh_token"]
+        return data
+
+    async def refresh(self):
+        """Renueva el par de tokens. El refresh token anterior queda invalidado."""
+        response = await self.client.post(
+            f"{self.base_url}/api/v2/auth/refresh",
+            json={"refresh_token": self.refresh_token}
+        )
+        response.raise_for_status()
+        data = response.json()
+        self.token = data["access_token"]
+        self.refresh_token = data["refresh_token"]
+        return data
 
     async def get_me(self):
         headers = {"Authorization": f"Bearer {self.token}"}
@@ -1140,7 +1318,7 @@ class LunanceClient:
 
 # Uso
 client = LunanceClient()
-client.set_token("<auth0_access_token>")
+await client.login("juanperez", "MiClave123!")
 user = await client.get_me()
 accounts = await client.get_accounts()
 ```

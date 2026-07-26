@@ -114,6 +114,13 @@ pytest
 # API Configuration
 ENVIRONMENT=DEV  # DEV para desarrollo, PROD para producción
 
+# JWT Configuration (la API firma sus propios tokens)
+SECRET_KEY=una_clave_larga_y_aleatoria
+SECRET_KEY_REFRESH=otra_clave_distinta_y_aleatoria
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
 # Database Connection Details
 DB_HOST=localhost  # localhost para desarrollo local
 DB_PORT=3306
@@ -121,15 +128,18 @@ DB_NAME=lunance
 DB_USER=luna
 DB_PASSWORD=luna_root
 
-# Auth0 Configuration
-AUTH0_DOMAIN=tu_dominio.auth0.com
-AUTH0_AUDIENCE=tu_api_audience
-AUTH0_CLIENT_ID=tu_client_id
+# AI Settings (agentes de imagen y asesoría de gastos)
+AI_PROVIDER=google-gla
+AI_MODEL_ID=gemini-2.5-flash
+AI_API_KEY=tu_clave_api
 
-# GEMINI Configuration (para procesamiento de imágenes)
-GEMINI_MODEL_ID=gemini-2.5-flash
-GEMINI_API_KEY=tu_clave_api_gemini
+# Auth0 (legado: el flujo activo es el JWT propio, pero settings.py
+# sigue exigiendo estas dos variables para arrancar)
+AUTH0_DOMAIN=placeholder.auth0.com
+AUTH0_AUDIENCE=placeholder
 ```
+
+> Ninguna de estas variables tiene valor por defecto salvo las de JWT: si falta `SECRET_KEY`, `SECRET_KEY_REFRESH`, alguna `DB_*`, `AI_PROVIDER`, `AI_MODEL_ID`, `AUTH0_DOMAIN` o `AUTH0_AUDIENCE`, la aplicación no arranca. Consulta [`.env.example`](../.env.example) para la lista completa, incluidas las opciones de logging.
 
 **Nota sobre ENVIRONMENT:**
 - **DEV**: Activa CORS abierto (`*`), logging detallado con stack traces
