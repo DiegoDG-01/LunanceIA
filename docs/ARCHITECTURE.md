@@ -52,9 +52,11 @@ graph TD
     Presentation -.-> Infrastructure
 ```
 
-## 🏗️ Arquitectura de Infraestructura
+## 🏗️ Arquitectura de Infraestructura (referencia)
 
-Vista completa del sistema desplegado en producción, incluyendo todos los servicios y su comunicación.
+> ⚠️ **No describe un sistema en funcionamiento.** El despliegue público de Lunance IA fue retirado: `lunance.app` queda como landing page y los servicios de API y MCP ya no están disponibles. Esta sección se conserva como **arquitectura de referencia**: documenta cómo estuvo montado el sistema y sirve de guía a quien quiera autohospedarlo. Los nombres de host aparecen solo a título ilustrativo.
+
+Vista del sistema tal y como estuvo desplegado, incluyendo todos los servicios y su comunicación.
 
 ```mermaid
 graph TD
@@ -149,9 +151,11 @@ graph TD
 
 ---
 
-## 🚀 Pipeline CI/CD
+## 🚀 Pipeline CI/CD (referencia)
 
-Todo el pipeline corre en un **GitHub Actions self-hosted** ejecutado en un **Mac Mini local**, que actúa como runner y orquestador del deploy.
+> ⚠️ Igual que la sección anterior, describe el pipeline **tal y como estuvo operando**. GitHub Actions está desactivado en este repositorio y no hay despliegue automático activo. Los workflows se conservan en `.github/workflows/` como referencia.
+
+El pipeline corría sobre un **runner self-hosted de GitHub Actions** en un **Mac Mini local**, que actuaba como runner y orquestador del deploy.
 
 ```mermaid
 sequenceDiagram
@@ -1068,12 +1072,18 @@ El sistema configura CORS dinámicamente según el entorno (src/main.py):
 
 ```python
 if settings.ENVIRONMENT.upper() == "PROD":
-    origins = ["https://lunance.app"]  # Dominio específico en producción
-elif settings.ENVIRONMENT.upper() == "DEV":
-    origins = ["*"]  # Abierto en desarrollo
+    origins = [                       # Lista fija de dominios permitidos
+        "https://preview.lunance.app",
+        "https://api.lunance.app",
+        "https://lunance.app",
+    ]
+elif settings.ENVIRONMENT.upper() in ["DEV", "TEST"]:
+    origins = [settings.FRONTEND_URL]  # Un solo origen, desde el entorno
 else:
     raise ValueError("Invalid environment")
 ```
+
+> Si autohospedas el proyecto, sustituye esa lista por tus propios dominios: está fijada en el código, no se lee del entorno.
 
 ### Rate Limiting
 
