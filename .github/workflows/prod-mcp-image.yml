@@ -31,7 +31,7 @@
               type=sha,prefix=mcp-prod-
 
         - name: Build and Push
-          uses: docker/build-push-action@v5
+          uses: docker/build-push-action@v7
           with:
             context: .
             file: Dockerfile.mcp                   # el Dockerfile renombrado
