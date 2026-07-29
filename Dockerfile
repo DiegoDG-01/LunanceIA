@@ -1,5 +1,5 @@
 # ---- Stage 1: Compile Rust financial core ----
-FROM python:3.13-alpine AS rust-builder
+FROM python:3.14-alpine AS rust-builder
 
 RUN apk add --no-cache curl gcc musl-dev patchelf libgcc
 
@@ -25,7 +25,7 @@ RUN --mount=type=cache,target=/build/fincore/target,id=lunance-cargo-cache \
 
 
 # ---- Stage 2: Final production image ----
-FROM python:3.13-alpine
+FROM python:3.14-alpine
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
