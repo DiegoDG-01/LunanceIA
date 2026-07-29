@@ -18,6 +18,7 @@ from infrastructure.database.repositories.sqlalchemy_transaction_repository impo
 from application.subscriptions.services.subscription_processor import (
     SubscriptionProcessor,
 )
+from application.incomes.services.income_processor import IncomeProcessor
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
 )
@@ -30,6 +31,13 @@ from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
 from application.investments.commands.generate_daily_yields import (
     GenerateDailyYieldCommand,
     GenerateDailyYieldHandler,
+)
+
+from infrastructure.database.repositories.sqlalchemy_income_deposit_repository import (
+    SQLAlchemyIncomeDepositRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_recurring_income_repository import (
+    SQLAlchemyRecurringIncomeRepository,
 )
 
 
@@ -46,12 +54,14 @@ async def process_subscriptions_job():
             charge_repo = SQLAlchemySubscriptionChargeRepository(db)
             transaction_repo = SQLAlchemyTransactionRepository(db)
             notification_repo = SQLAlchemyNotificationRepository(db)
+            account_repo = SQLAlchemyAccountRepository(db)
 
             processor = SubscriptionProcessor(
                 subscription_repository=sub_repo,
                 subscription_charge_repository=charge_repo,
                 transaction_repository=transaction_repo,
                 notification_repo=notification_repo,
+                account_repository=account_repo,
             )
 
             stats = await processor.process_due_subscriptions()
@@ -95,3 +105,35 @@ async def process_investment_yield_job():
         except Exception as e:
             await db.rollback()
             logger.error(f"Error processing investment yield job: {e}")
+
+
+async def process_recurring_income_job():
+    """Process due incomes - runs in the existing event loop"""
+    logger.info(f"Processing recurring income job at {datetime.now(timezone.utc)}")
+
+    async with AsyncSessionLocal() as db:
+        try:
+            recurring_income_repo = SQLAlchemyRecurringIncomeRepository(db)
+            deposit_repo = SQLAlchemyIncomeDepositRepository(db)
+            transaction_repo = SQLAlchemyTransactionRepository(db)
+            account_repo = SQLAlchemyAccountRepository(db)
+            notification_repo = SQLAlchemyNotificationRepository(db)
+
+            processor = IncomeProcessor(
+                recurring_income_repository=recurring_income_repo,
+                income_deposit_repository=deposit_repo,
+                transaction_repository=transaction_repo,
+                account_repository=account_repo,
+                notification_repository=notification_repo,
+            )
+
+            stats = await processor.process_due_incomes()
+            await db.commit()
+
+            logger.info(
+                f"Job finished at {datetime.now(timezone.utc)} with stats: {stats}"
+            )
+
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Error processing recurring income job: {e}")

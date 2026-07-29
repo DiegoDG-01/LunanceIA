@@ -56,3 +56,7 @@ coverage.xml
 .ruff_cache/
 .pre-commit-config.yaml
 README.md
+
+# Rust core: artefactos de build y overrides locales de cargo
+fincore/target/
+fincore/.cargo/

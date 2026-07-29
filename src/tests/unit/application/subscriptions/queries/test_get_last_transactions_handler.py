@@ -44,6 +44,7 @@ class TestGetLastTransactionsHandler:
             start_date=date(2025, 1, 1),
             end_date=None,
             billing_day=1,
+            next_charge_date=date(2025, 1, 1),
             is_active=True,
             description=None,
             service_url=None,

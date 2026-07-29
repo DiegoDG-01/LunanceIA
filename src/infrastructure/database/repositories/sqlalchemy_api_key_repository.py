@@ -77,6 +77,18 @@ class SQLAlchemyAPIKeyRepository(APIKeyRepository):
             return True
         return False
 
+    async def delete(self, uuid: str, user_id: int) -> bool:
+        stmt = select(APIKeyModel).where(
+            APIKeyModel.uuid == uuid, APIKeyModel.user_id == user_id
+        )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
+        if model:
+            await self.db.delete(model)
+            await self.db.flush()
+            return True
+        return False
+
     async def touch_last_used(self, api_key_id: int) -> None:
         stmt = (
             update(APIKeyModel)

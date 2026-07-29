@@ -63,49 +63,53 @@ class CreateTransactionHandler:
         if not user or not user.is_active:
             raise UserNotFoundError()
 
-        account = await self.account_repository.get_by_uuid_and_user_id(
-            dto.account_uuid, dto.user_id
-        )
-        if not account:
-            raise AccountNotFoundError(account_uuid=dto.account_uuid)
-
-        transaction = Transaction.create_new(
-            user_id=cast(int, user.id),
-            account_id=cast(int, account.id),
-            category_id=dto.category_id,
-            transaction_type=dto.transaction_type,
-            amount=money,
-            transaction_date=transaction_date,
-            description=dto.description,
-            notes=dto.notes,
-        )
-
-        if transaction.is_expense():
-            new_balance = account.current_balance.subtract(money)
-        elif transaction.is_income():
-            if account.account_type is AccountType.INVESTMENT:
-                settings = await self.investment_settings_repository.get_by_account_id(
-                    account_id=cast(int, account.id)
-                )
-                if not settings:
-                    raise InvestmentSettingsNotFoundError(transaction.transaction_type)
-
-                updated_settings = dataclasses.replace(
-                    settings,
-                    base_principal=(
-                        settings.base_principal or account.current_balance.amount
-                    )
-                    + money.amount,
-                )
-                await self.investment_settings_repository.update(
-                    account_id=cast(int, account.id), settings=updated_settings
-                )
-
-            new_balance = account.current_balance.add(money)
-        else:
-            raise InvalidTransactionTypeError(transaction.transaction_type)
-
         async with self.uow:
+            account = await self.account_repository.get_by_uuid_and_user_id(
+                dto.account_uuid, dto.user_id, for_update=True
+            )
+            if not account:
+                raise AccountNotFoundError(account_uuid=dto.account_uuid)
+
+            transaction = Transaction.create_new(
+                user_id=cast(int, user.id),
+                account_id=cast(int, account.id),
+                category_id=dto.category_id,
+                transaction_type=dto.transaction_type,
+                amount=money,
+                transaction_date=transaction_date,
+                description=dto.description,
+                notes=dto.notes,
+            )
+
+            if transaction.is_expense():
+                new_balance = account.current_balance.subtract(money)
+            elif transaction.is_income():
+                if account.account_type is AccountType.INVESTMENT:
+                    settings = (
+                        await self.investment_settings_repository.get_by_account_id(
+                            account_id=cast(int, account.id)
+                        )
+                    )
+                    if not settings:
+                        raise InvestmentSettingsNotFoundError(
+                            transaction.transaction_type
+                        )
+
+                    updated_settings = dataclasses.replace(
+                        settings,
+                        base_principal=(
+                            settings.base_principal or account.current_balance.amount
+                        )
+                        + money.amount,
+                    )
+                    await self.investment_settings_repository.update(
+                        account_id=cast(int, account.id), settings=updated_settings
+                    )
+
+                new_balance = account.current_balance.add(money)
+            else:
+                raise InvalidTransactionTypeError(transaction.transaction_type)
+
             account.update_balance(new_balance)
 
             await self.account_repository.update(account)

@@ -36,18 +36,27 @@ DB_NAME=lunance
 DB_USER=luna
 DB_PASSWORD=luna_root
 
-# Auth0 Configuration
-AUTH0_DOMAIN=tu_dominio.auth0.com
-AUTH0_AUDIENCE=tu_api_audience
+# JWT Configuration (la API firma sus propios tokens)
+SECRET_KEY=una_clave_larga_y_aleatoria
+SECRET_KEY_REFRESH=otra_clave_distinta_y_aleatoria
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+REFRESH_TOKEN_EXPIRE_DAYS=7
 
-# GEMINI Configuration (para procesamiento de imágenes)
-GEMINI_MODEL_ID=gemini-2.5-flash
-GEMINI_API_KEY=tu_clave_api_gemini
+# AI Settings (agentes de imagen y asesoría de gastos)
+AI_PROVIDER=google-gla
+AI_MODEL_ID=gemini-2.5-flash
+AI_API_KEY=tu_clave_api
+
+# Auth0 (legado: el flujo activo es el JWT propio, pero settings.py
+# sigue exigiendo estas dos variables para arrancar)
+AUTH0_DOMAIN=placeholder.auth0.com
+AUTH0_AUDIENCE=placeholder
 ```
 
 **Configuración de ENVIRONMENT:**
-- **PROD**: Para producción - CORS restrictivo, logging optimizado
-- **DEV**: Para desarrollo - CORS abierto, logging detallado
+- **PROD**: Para producción - CORS con lista cerrada de dominios, logging optimizado
+- **DEV**: Para desarrollo - CORS con `FRONTEND_URL` (un solo origen), logging detallado
 
 ```bash
 # Construir y ejecutar todos los servicios

@@ -1,182 +1,142 @@
-# 🧪 Tests para Lunance API
+# Tests para Lunance IA
 
-Este directorio contiene los tests automatizados para la API de Lunance, convertidos desde los tests HTTP originales a pytest nativo.
+Este directorio contiene los tests automatizados de la API. La suite está escrita con
+`pytest` (9.0+), `pytest-asyncio` (modo `auto`) y `httpx` (cliente ASGI en proceso para
+E2E rápidos, sin tener que levantar uvicorn).
 
-## 📁 Estructura
+## Estructura
 
 ```
 src/tests/
 ├── __init__.py
-├── conftest.py               # Configuración y fixtures de pytest
-├── e2e/                      # Tests end-to-end (API completa)
-│   ├── __init__.py
-│   └── test_auth_api.py      # Tests de autenticación
-├── integration/              # Tests de integración
-│   ├── __init__.py
-│   └── test_auth_integration.py
-└── unit/                     # Tests unitarios
-    ├── __init__.py
-    └── test_auth_commands.py
+├── conftest.py                 # Fixtures globales: BD en memoria, usuario mock, auth dual
+├── e2e/                        # Tests end-to-end (HTTP in-process)
+│   ├── test_account_api.py
+│   ├── test_ai_api.py
+│   ├── test_api_key_api.py
+│   ├── test_auth_api.py
+│   ├── test_bank_api.py
+│   ├── test_budget_api.py
+│   ├── test_category_api.py
+│   ├── test_dashboard_api.py
+│   ├── test_edge_cases.py
+│   ├── test_goal_api.py
+│   ├── test_income_api.py
+│   ├── test_installment_api.py
+│   ├── test_investment_yield_api.py
+│   ├── test_notification_api.py
+│   ├── test_security_headers.py
+│   ├── test_subscription_api.py
+│   ├── test_transaction_api.py
+│   └── test_transfer_api.py
+├── integration/                # Tests de integración (BD real opcional)
+│   ├── test_mysql_account_row_lock.py   # Requiere MYSQL_TEST_DATABASE_URL
+│   └── test_real_app.py
+└── unit/                       # Tests unitarios (sin red, sin BD)
+    ├── test_account_repository_lock.py
+    ├── test_auth_commands.py
+    ├── test_auth_deps.py
+    ├── application/            # Handlers / processors
+    └── domain/                 # Value objects y entidades
 ```
 
-## 🚀 Ejecución de Tests
+## Ejecución
 
-### Instalación de dependencias
+### Dependencias
+
 ```bash
-# Instalar dependencias de desarrollo con uv
-uv pip install -e ".[dev]"
-
-# O con pip tradicional
-pip install -e ".[dev]"
+uv sync --frozen --all-groups
+uv pip install ./fincore    # necesario para tests que tocan proyecciones
 ```
 
-### Ejecutar tests con pytest
+### Suites
+
 ```bash
-# Tests E2E (disponibles y recomendados)
-pytest src/tests/e2e/ -v
+# Toda la suite
+pytest
 
-# Solo tests de autenticación (completos)
-pytest src/tests/e2e/test_auth_api.py -v
+# Por carpeta
+pytest src/tests/e2e/        -v
+pytest src/tests/integration/ -v
+pytest src/tests/unit/        -v
 
-# Con marcadores específicos
-pytest -m "auth" -v
-pytest -m "e2e" -v
+# Por marcador
+pytest -m e2e        -v
+pytest -m integration -v
+pytest -m unit       -v
+pytest -m auth       -v
+pytest -m api        -v
 
-# Test específico
+# Por test específico
 pytest src/tests/e2e/test_auth_api.py::TestAPIConnectivity -v
-
-# Test de flujo completo
 pytest src/tests/e2e/test_auth_api.py::TestCompleteAuthFlow -v
 
-# Con output detallado para debugging
-pytest src/tests/e2e/ -v -s
+# Con cobertura
+pytest --cov=src --cov-report=html
 ```
 
-### ⚠️ Tests en desarrollo
+### Requisitos según el tipo de test
+
+| Suite | API levantada | MySQL | Notas |
+|---|---|---|---|
+| `unit/` | No | No | Todo en memoria; ideal para CI rápido y para `git commit`. |
+| `integration/` | No | Solo `test_mysql_account_row_lock.py` (lee `MYSQL_TEST_DATABASE_URL`) | El resto usa SQLite en memoria, igual que los E2E. |
+| `e2e/` | No (in-process con `httpx.ASGITransport`) | No (SQLite en memoria) | El `conftest.py` levanta el `FastAPI` app y sobrescribe `get_db` y las dependencias de auth. |
+
+> Los E2E de este repo **no** lanzan la API contra `http://127.0.0.1:8000`: hablan
+> con la app por ASGI dentro del mismo proceso, usando SQLite. Eso permite que la
+> suite entera corra en CI en segundos sin necesidad de un MySQL real.
+> Si quieres reproducir el flujo "real" con la API ya levantada, el script
+> `scripts/verify_transaction_lock.py` sirve como ejemplo de cliente HTTP externo.
+
+### Variables de entorno de apoyo
+
 ```bash
-# Tests unitarios (en desarrollo)
-# pytest src/tests/unit/ -v
+# Solo necesarias para tests que apunten a un MySQL real (integration/test_mysql_*)
+export MYSQL_TEST_DATABASE_URL="mysql+aiomysql://luna:luna_root@localhost:3306/lunance_test"
 
-# Tests de integración (en desarrollo) 
-# pytest src/tests/integration/ -v
-
-# Coverage (no disponible actualmente)
-# pytest src/tests/ --cov=src --cov-report=html
-```
-
-## 📋 Tests Incluidos
-
-### 🔐 Tests de Autenticación (`test_auth_api.py`)
-
-> **Nota**: Con la migración a Auth0, el flujo de autenticación ha cambiado. Login y registro se manejan directamente con Auth0.
-
-#### 1. **Conectividad API**
-- ✅ API está corriendo y accesible
-- ✅ Endpoints de auth están disponibles
-
-#### 2. **Perfil de Usuario** (`/auth/me`)
-- ✅ Obtener información con token Auth0 válido
-- ✅ Error sin token de autorización
-- ✅ Error con token inválido
-
-#### 3. **Cierre de Sesión** (`/auth/logout`)
-- ✅ Logout exitoso
-- ✅ Verificación de token revocado
-
-## 🔧 Configuración
-
-### Fixtures Disponibles
-- `http_client`: Cliente HTTP async para hacer requests
-- `auth_tokens`: Container para tokens de autenticación
-- `test_user_data`: Datos de usuario para tests
-- `debug_user_data`: Datos de usuario para debugging
-- `flow_user_data`: Datos para test de flujo completo
-
-### Variables de Entorno
-```bash
-# Base URL de la API (opcional, por defecto localhost:8000)
-export TEST_API_BASE_URL="http://localhost:8000/api/v2"
-
-# Timeout para requests (opcional, por defecto 30s)
+# Para clientes HTTP externos (no usados por la suite por defecto)
+export TEST_API_BASE_URL="http://127.0.0.1:8000/api/v2"
 export TEST_TIMEOUT=30
 ```
 
-## 📊 Reportes
+## Cobertura por área
 
-### Tests E2E Disponibles
+| Área | Suite | Cobertura |
+|---|---|---|
+| Auth (JWT propio, dual auth API Key) | `e2e/test_auth_api.py`, `unit/test_auth_commands.py`, `unit/test_auth_deps.py` | Registro, login, refresh, logout, `/auth/me`, scopes, Auth0 fallback (legado). |
+| Cuentas, transacciones, transferencias, suscripciones, presupuestos, metas, MSI, ingresos, dashboard, IA, bancos, categorías, API keys, notificaciones, edge cases, security headers | `e2e/test_*.py` | CRUD completo, enforcement de scopes, validaciones, race conditions. |
+| Dominio (Money, Bank, RecurringIncome, IncomeDeposit) | `unit/domain/` | Value objects y entidades puras. |
+| Handlers de aplicación (suscripciones, ingresos, MSI, cuentas, transactions) | `unit/application/` | Procesadores y casos de uso. |
+| Locking pesimista (`SELECT ... FOR UPDATE`) | `unit/test_account_repository_lock.py`, `integration/test_mysql_account_row_lock.py` | Emisión de `FOR UPDATE` y verificación contra un MySQL real (cuando `MYSQL_TEST_DATABASE_URL` está definido). |
+
+## Debugging
+
 ```bash
-# Ejecutar todos los tests E2E con reporte detallado
-pytest src/tests/e2e/ -v
+# Output completo con prints
+pytest src/tests/e2e/test_auth_api.py -v -s
 
-# Ver resumen de tests
-pytest src/tests/e2e/ --tb=short
-
-# Solo mostrar tests que fallan
+# Solo fallos, sin traceback
 pytest src/tests/e2e/ --tb=no -q
+
+# Parar en el primer fallo
+pytest -x
+
+# Repetir el último fallo
+pytest --lf
+
+# Cobertura en HTML
+pytest --cov=src --cov-report=html && open htmlcov/index.html
 ```
 
-### ⚠️ Coverage (en desarrollo)
-El sistema de coverage no está completamente configurado. Los tests E2E validan funcionalidad end-to-end pero no miden cobertura de código fuente debido a que hacen llamadas HTTP externas.
+## Convenciones
 
-**Estado actual:**
-- ✅ **E2E Tests**: Tests de autenticación funcionando (requieren Auth0)
-- ⚠️ **Coverage**: Limitado (tests HTTP externos)
-- 🚧 **Integration Tests**: En desarrollo
-- 🚧 **Unit Tests**: En desarrollo
-
-## 🚀 Requisitos Previos
-
-### Para Tests E2E (Recomendado)
-1. **API corriendo**: La API debe estar ejecutándose en `http://127.0.0.1:8000`
-   ```bash
-   uvicorn src.main:app --reload --port 8000
-   ```
-2. **Base de datos**: Debe estar configurada y migraciones aplicadas
-3. **Dependencias**: `uv pip install -e ".[dev]"`
-
-### Para Tests de Integración/Unitarios
-1. **Dependencias de desarrollo**: `uv pip install -e ".[dev]"`
-2. **Variables de entorno** (para tests de integración)
-
-## 📝 Notas
-
-### ✅ Tests E2E (Disponibles)
-- Tests que validan la funcionalidad de autenticación con Auth0
-- Tests **independientes** que pueden ejecutarse en cualquier orden
-- Validan funcionalidad **end-to-end** de endpoints de auth
-- Requieren **token Auth0 válido** para tests autenticados
-- No requieren configuración compleja de código fuente
-
-### 🚧 Tests de Integración (En desarrollo)
-- Importarían y ejecutarían código real de la aplicación
-- Requerirían configuración de entorno completa
-- Proporcionarían coverage del código fuente
-
-### 🚧 Tests Unitarios (En desarrollo)
-- Probarían funciones y componentes específicos
-- No requerirían servidor corriendo
-- Ideales para desarrollo y refactoring
-
-## 🐛 Debugging
-
-```bash
-# Debugging detallado
-pytest src/tests/e2e/test_auth_api.py::TestUserAuthentication::test_login_success -v -s
-
-# Ver todos los logs
-pytest src/tests/e2e/ -v -s --tb=long
-
-# Solo un test específico
-pytest src/tests/e2e/test_auth_api.py::TestCompleteAuthFlow::test_complete_flow_register_to_logout -v -s
-```
-
-La opción `-s` permite ver prints y logs durante la ejecución.
-
-## 🔄 Migración desde Simple Test.http
-
-Los tests pytest han sido convertidos desde `Simple Test.http` manteniendo:
-- ✅ Misma funcionalidad de validación
-- ✅ Mismos casos de prueba
-- ✅ Mismos datos de test
-- ✅ Compatibilidad con CI/CD
-- ✅ Reportes automáticos
+- Los archivos siguen el patrón `test_*.py`, las clases `Test*` y las funciones `test_*`
+  (forzado por `pytest.ini`).
+- Los markers `e2e`, `integration`, `unit`, `auth`, `api`, `slow` están registrados en
+  `pyproject.toml` y `pytest.ini`.
+- Para añadir un nuevo E2E, replica el patrón de `test_auth_api.py`: hereda de una
+  clase `Test*` con `async def test_*` (no hace falta `@pytest.mark.asyncio`, está en
+  modo `auto`).
+- Para tests que necesiten un usuario distinto al `MOCK_USER_ID`, crea un fixture que
+  inserte otra fila en `users` antes del request.

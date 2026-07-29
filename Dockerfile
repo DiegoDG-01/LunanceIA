@@ -8,6 +8,11 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 WORKDIR /build/fincore
 
+# Fija el directorio de build: la variable de entorno gana sobre cualquier
+# build.target-dir de un .cargo/config.toml, así que un override local del
+# desarrollador no puede desviar el wheel fuera de la ruta que espera el COPY.
+ENV CARGO_TARGET_DIR=/build/fincore/target
+
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-cache-dir maturin[patchelf]
 

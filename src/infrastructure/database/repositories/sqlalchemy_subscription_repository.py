@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, desc, select
 from typing import Optional, List
+from datetime import date
 
 from domain.entities.subscription import Subscription
 from domain.repositories.subscription_repository import SubscriptionRepository
@@ -32,6 +33,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
             description=model.description,
             service_url=model.service_url,
             creation_date=model.creation_date,
+            next_charge_date=model.next_charge_date,
         )
 
     @staticmethod
@@ -51,6 +53,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
             description=entity.description,
             service_url=entity.service_url,
             creation_date=entity.creation_date,
+            next_charge_date=entity.next_charge_date,
         )
 
     async def create(self, subscription: Subscription) -> Subscription:
@@ -82,6 +85,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
         model.is_active = subscription.is_active
         model.description = subscription.description
         model.service_url = subscription.service_url
+        model.next_charge_date = subscription.next_charge_date
 
         await self.db.flush()
         await self.db.refresh(model)
@@ -169,8 +173,18 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
 
         return [self._model_to_entity(subscription) for subscription in results]
 
-    async def get_active_subscriptions(self) -> List[Subscription]:
-        stmt = select(SubscriptionModel).where(SubscriptionModel.is_active)
+    # async def get_active_subscriptions(self) -> List[Subscription]:
+    #     stmt = select(SubscriptionModel).where(SubscriptionModel.is_active)
+    #     result = await self.db.execute(stmt)
+    #     results = result.scalars().all()
+    #
+    #     return [self._model_to_entity(subscription) for subscription in results]
+
+    async def get_due_subscriptions(self, as_of: date) -> List[Subscription]:
+        stmt = select(SubscriptionModel).where(
+            SubscriptionModel.is_active,
+            SubscriptionModel.next_charge_date <= as_of,
+        )
         result = await self.db.execute(stmt)
         results = result.scalars().all()
 

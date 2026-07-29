@@ -1,0 +1,83 @@
+name: 🐛 Reporte de bug
+description: Informa de un comportamiento incorrecto en la API
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por reportar. Antes de continuar:
+
+        - 🔒 **¿Es un problema de seguridad?** No sigas aquí. Usa el [reporte privado](https://github.com/DiegoDG-01/LunanceIA/security/advisories/new) descrito en [SECURITY.md](https://github.com/DiegoDG-01/LunanceIA/blob/master/SECURITY.md).
+        - 🔍 Revisa que no exista ya un issue abierto para lo mismo.
+        - 🔑 **No pegues credenciales, tokens ni datos financieros reales** en este formulario.
+
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción del bug
+      description: Qué ocurre y en qué se diferencia de lo esperado.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduccion
+    attributes:
+      label: Pasos para reproducir
+      description: Incluye la petición HTTP (método, ruta, cuerpo) si aplica. Anonimiza los datos.
+      placeholder: |
+        1. POST /api/v2/account/ con { ... }
+        2. GET /api/v2/account/{id}
+        3. El balance devuelto es ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Comportamiento esperado
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs o traza del error
+      description: Se formatea automáticamente como código. Elimina cualquier dato sensible.
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: Versión o commit
+      placeholder: "v7.1.1 / e50c965"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: entorno
+    attributes:
+      label: Entorno
+      options:
+        - Local (uvicorn)
+        - Docker / docker-compose
+        - Despliegue propio en servidor
+        - Otro
+    validations:
+      required: true
+
+  - type: textarea
+    id: contexto
+    attributes:
+      label: Contexto adicional
+      description: Versión de Python y MySQL, configuración relevante, capturas.
+
+  - type: checkboxes
+    id: confirmaciones
+    attributes:
+      label: Confirmaciones
+      options:
+        - label: He verificado que no es un problema de seguridad que deba reportarse en privado.
+          required: true
+        - label: No he incluido credenciales, tokens ni datos personales reales.
+          required: true

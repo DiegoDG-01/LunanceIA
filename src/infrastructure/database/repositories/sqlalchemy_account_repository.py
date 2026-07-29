@@ -67,8 +67,14 @@ class SQLAlchemyAccountRepository(AccountRepository):
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    async def get_by_id(self, account_id: int) -> Optional[Account]:
+    async def get_by_id(
+        self, account_id: int, for_update: bool = False
+    ) -> Optional[Account]:
         stmt = select(AccountModel).where(AccountModel.id == account_id)
+
+        if for_update:
+            stmt = stmt.with_for_update()
+
         result = await self.db.execute(stmt)
         model = result.scalar_one_or_none()
         if model is None:
@@ -82,7 +88,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         return [self._model_to_entity(model) for model in models]
 
     async def get_by_uuid_and_user_id(
-        self, account_uuid: str, user_id: int
+        self, account_uuid: str, user_id: int, *, for_update: bool = False
     ) -> Optional[Account]:
         stmt = select(AccountModel).where(
             and_(
@@ -90,6 +96,10 @@ class SQLAlchemyAccountRepository(AccountRepository):
                 AccountModel.user_id == user_id,
             )
         )
+
+        if for_update:
+            stmt = stmt.with_for_update()
+
         result = await self.db.execute(stmt)
         model = result.scalar_one_or_none()
         if model is None:

@@ -52,6 +52,17 @@ from presentation.dependencies.subscription_deps import (
     get_last_transactions_handler,
 )
 
+# Recurring income handlers
+from presentation.dependencies.recurring_income_deps import (
+    get_create_recurring_income_handler,
+    get_update_recurring_income_handler,
+    get_delete_recurring_income_handler,
+    get_state_recurring_income_handler,
+    get_recurring_incomes_handler,
+    get_recurring_income_by_id_handler,
+    get_income_deposits_handler,
+)
+
 # Category handlers
 from presentation.dependencies.category_deps import get_categories_handler
 
@@ -140,6 +151,14 @@ __all__ = [
     "get_subscription_charges_handler",
     "get_delete_subscription_handler",
     "get_last_transactions_handler",
+    # Recurring income handlers
+    "get_create_recurring_income_handler",
+    "get_update_recurring_income_handler",
+    "get_delete_recurring_income_handler",
+    "get_state_recurring_income_handler",
+    "get_recurring_incomes_handler",
+    "get_recurring_income_by_id_handler",
+    "get_income_deposits_handler",
     # Category
     "get_categories_handler",
     # Dashboard

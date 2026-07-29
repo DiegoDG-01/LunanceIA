@@ -1,0 +1,55 @@
+name: ✨ Propuesta de funcionalidad
+description: Sugiere una mejora o una nueva capacidad
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por la propuesta. Ten en cuenta que Lunance IA es un proyecto **source-available** mantenido por una sola persona: no todas las ideas encajan en la hoja de ruta, y abrir un issue no garantiza que se implemente.
+
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema que resuelve
+      description: Qué necesidad real cubre. Evita describir directamente la solución.
+      placeholder: "Como usuario, no puedo ... y eso hace que ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solucion
+    attributes:
+      label: Solución propuesta
+      description: Cómo debería comportarse. Si implica endpoints nuevos, descríbelos.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Alternativas consideradas
+      description: Otros enfoques que descartaste y por qué.
+
+  - type: dropdown
+    id: capa
+    attributes:
+      label: Capa afectada (si la conoces)
+      description: Ver la arquitectura en docs/ARCHITECTURE.md
+      multiple: true
+      options:
+        - Dominio
+        - Aplicación (comandos/queries)
+        - Infraestructura (repositorios, servicios externos)
+        - Presentación (endpoints, schemas)
+        - Servidor MCP
+        - Agentes IA
+        - Tareas programadas
+        - No lo sé
+
+  - type: checkboxes
+    id: contribucion
+    attributes:
+      label: ¿Te gustaría implementarlo?
+      options:
+        - label: Estoy dispuesto a abrir un PR y acepto el [Contributor License Agreement](https://github.com/DiegoDG-01/LunanceIA/blob/master/CONTRIBUTOR_LICENSE_AGREEMENT.md).

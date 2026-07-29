@@ -13,7 +13,7 @@ from domain.entities.user import User
 from application.dto.transaction_dto import CreateTransactionDTO
 from presentation.schemas.responses.transaction import TransactionResponse
 from presentation.schemas.requests.transaction import CreateTransactionRequest
-from presentation.dependencies.auth_deps import get_current_active_user, require_scope
+from presentation.dependencies.auth_deps import require_scope
 from presentation.dependencies import (
     get_create_transaction_handler,
     get_transactions_handler,
@@ -144,7 +144,7 @@ async def update_transaction(
     request: Request,
     transaction_uuid: str,
     update_request: UpdateTransactionRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.TRANSACTIONS_WRITE.value)),
     handler: UpdateTransactionCommandHandler = Depends(get_update_transaction_handler),
 ):
     enforce_rate_limit(limiter_15_per_minute, request)
@@ -168,7 +168,7 @@ async def update_transaction(
 async def delete_transaction(
     request: Request,
     transaction_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.TRANSACTIONS_WRITE.value)),
     handler: DeleteTransactionHandler = Depends(get_delete_transaction_handler),
 ):
     """

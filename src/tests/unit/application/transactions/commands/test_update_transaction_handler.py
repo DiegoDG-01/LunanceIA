@@ -108,7 +108,6 @@ class TestUpdateTransactionCommandHandler:
     async def test_update_reverses_and_reapplies_expense(self, handler, mocks):
         tx = self._make_transaction(TransactionType.EXPENSE, "200.00")
         account = self._make_account("800.00")
-        response_dto = self._make_response_dto()
 
         mocks["transaction_repo"].get_by_uuid_and_user_id = AsyncMock(return_value=tx)
         mocks["account_repo"].get_by_id = AsyncMock(return_value=account)

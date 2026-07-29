@@ -5,7 +5,6 @@ from domain.entities.api_key import APIKey
 
 
 class APIKeyRepository(ABC):
-
     @abstractmethod
     async def create(self, api_key: APIKey) -> APIKey:
         pass
@@ -20,6 +19,11 @@ class APIKeyRepository(ABC):
 
     @abstractmethod
     async def revoke(self, uuid: str, user_id: int) -> bool:
+        pass
+
+    @abstractmethod
+    async def delete(self, uuid: str, user_id: int) -> bool:
+        """Permanently delete an API key with ownership validation."""
         pass
 
     @abstractmethod

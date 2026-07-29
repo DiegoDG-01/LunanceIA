@@ -1,5 +1,7 @@
 # 🏗️ Arquitectura Técnica - Lunance IA
 
+> ⚠️ **Nota de contexto** — Las secciones `🏗️ Arquitectura de Infraestructura` y `🚀 Pipeline CI/CD` describen el sistema **tal y como estuvo desplegado** antes de retirar la operativa pública (`lunance.app` queda solo como landing page). Se conservan como **arquitectura de referencia** para quien quiera autohospedar el proyecto. Los nombres de host y proveedores (IONOS, Cloudflare, Dockploy, etc.) son ilustrativos: el backend es totalmente portable y se puede levantar con `docker compose up` sobre cualquier host con MySQL y Redis.
+
 ## Introducción
 
 Este documento describe la arquitectura técnica detallada de Lunance IA, incluyendo la estructura interna de cada capa, patrones de diseño implementados, y las decisiones arquitectónicas tomadas para construir un sistema robusto y escalable.
@@ -39,8 +41,8 @@ graph TD
     subgraph Infrastructure ["🔧 Capa de Infraestructura (src/infrastructure/)"]
         DB[SQLAlchemy Models]
         SQLRepo[SQLAlchemy Repositories]
-        ExtServices["External Services - AI Agents (pydantic-ai + Gemini)"]
-        Security[Auth0 / JWT Security]
+        ExtServices["External Services - AI Agents (pydantic-ai multi-proveedor)"]
+        Security[JWT Security]
     end
 
     %% Dependencies
@@ -52,9 +54,11 @@ graph TD
     Presentation -.-> Infrastructure
 ```
 
-## 🏗️ Arquitectura de Infraestructura
+## 🏗️ Arquitectura de Infraestructura (referencia)
 
-Vista completa del sistema desplegado en producción, incluyendo todos los servicios y su comunicación.
+> ⚠️ **No describe un sistema en funcionamiento.** El despliegue público de Lunance IA fue retirado: `lunance.app` queda como landing page y los servicios de API y MCP ya no están disponibles. Esta sección se conserva como **arquitectura de referencia**: documenta cómo estuvo montado el sistema y sirve de guía a quien quiera autohospedarlo. Los nombres de host aparecen solo a título ilustrativo.
+
+Vista del sistema tal y como estuvo desplegado, incluyendo todos los servicios y su comunicación.
 
 ```mermaid
 graph TD
@@ -90,7 +94,6 @@ graph TD
     end
 
     subgraph ExternalSvc["🌐 Servicios Externos"]
-        Auth0[Auth0\nIdentity Provider]
         Gemini[Google Gemini AI\nExtracción de recibos]
         GrafanaCloud["Grafana Cloud\nLoki — Logs estructurados"]
         NetData[NetData\nMétricas de servidor]
@@ -111,7 +114,6 @@ graph TD
 
     %% Comunicación interna
     Docker_API -->|Puerto 3306, IP restringida| MySQL
-    Docker_API -->|OAuth2 / JWT RS256| Auth0
     Docker_API -->|REST API| Gemini
     Docker_API -->|HTTP push| GrafanaCloud
 
@@ -143,17 +145,19 @@ graph TD
 | **MCP Container** | Docker (FastMCP, streamable-http) | Contenedor que expone la API como herramientas para agentes/LLM en `mcp.lunance.app` (puerto 8001). Actúa como **proxy**: reenvía cada llamada a la API por la red interna de Docker (`http://api:8000`) inyectando la `X-API-Key` del usuario y respetando sus scopes; no accede a la BD. Ver [MCP.md](MCP.md) |
 | **Base de Datos** | MySQL en IONOS VPS 2 | Solo acepta conexiones desde la IP del VPS 1 (puerto 3306) y SSH |
 | **Backups de BD** | Cloudflare R2 (S3-compatible) | Dockploy ejecuta dumps programados de MySQL y los sube a un bucket de R2, manteniendo las copias fuera de los VPS |
-| **Autenticación** | Auth0 | Proveedor de identidad; la API valida JWTs emitidos por Auth0 |
-| **IA** | Google Gemini + pydantic-ai | Análisis de imágenes (recibos/tickets) y asesoría de gastos mediante agentes estructurados |
+| **Autenticación** | Propia (JWT HS256) | La API emite y valida sus propios tokens; no hay proveedor de identidad externo |
+| **IA** | pydantic-ai multi-proveedor | Análisis de imágenes (recibos/tickets) y asesoría de gastos mediante agentes estructurados. Proveedor configurable vía `model_factory`: Google Gemini por defecto, con alternativas vía API compatible con OpenAI (Ollama, DeepSeek) |
 | **Logs** | Grafana Cloud (Loki) | Ingesta de logs estructurados desde la API |
 | **Métricas** | NetData | Métricas de infraestructura de ambos VPS |
 | **Orquestador** | Dockploy (Mac Mini) | Gestiona el ciclo de vida de los contenedores en los VPS de IONOS |
 
 ---
 
-## 🚀 Pipeline CI/CD
+## 🚀 Pipeline CI/CD (referencia)
 
-Todo el pipeline corre en un **GitHub Actions self-hosted** ejecutado en un **Mac Mini local**, que actúa como runner y orquestador del deploy.
+> ⚠️ Igual que la sección anterior, describe el pipeline **tal y como estuvo operando**. GitHub Actions está desactivado en este repositorio y no hay despliegue automático activo. Los workflows se conservan en `.github/workflows/` como referencia.
+
+El pipeline corría sobre un **runner self-hosted de GitHub Actions** en un **Mac Mini local**, que actuaba como runner y orquestador del deploy.
 
 ```mermaid
 sequenceDiagram
@@ -230,8 +234,8 @@ sequenceDiagram
 | **API & Routing** | FastAPI (Rápido desarrollo) | - |
 | **Persistencia** | SQLAlchemy (Async MySQL) | - |
 | **Lógica de Negocio** | CQRS, Reglas de Dominio | - |
-| **Cálculos Financieros** | Orquestación | **Rendimientos, Proyecciones** |
-| **Simulaciones** | - | **Monte Carlo, Escenarios** |
+| **Cálculos Financieros** | Orquestación | **Proyecciones de inversión** (`calculate_projections`, única función exportada hoy) |
+| **Simulaciones** | - | *Roadmap futuro (no implementado): Monte Carlo, Escenarios* |
 | **Validación Tipos** | Pydantic | **Tipado fuerte y memoria segura** |
 
 ### 🛠️ Integración Técnica
@@ -252,7 +256,7 @@ classDiagram
     class User {
         +String id
         +String email
-        +sync_from_auth0()
+        +is_active
     }
 
     class Account {
@@ -290,10 +294,19 @@ domain/
 ├── entities/                          # Entidades de negocio con identidad
 │   ├── __init__.py
 │   ├── account.py                    # Entidad Account con reglas de negocio
+│   ├── api_key.py                    # Entidad APIKey (acceso programático vía X-API-Key)
 │   ├── bank.py                       # Entidad Bank (metadatos bancarios)
+│   ├── budget.py                     # Entidad Budget (presupuestos por categoría)
 │   ├── category.py                   # Entidad Category (clasificación de transacciones)
 │   ├── dashboard.py                  # Entidad Dashboard (resumen financiero agregado)
+│   ├── income_deposit.py             # Entidad IncomeDeposit (depósitos de ingresos)
+│   ├── installment_charge.py         # Entidad InstallmentCharge (cargos de compras a plazos)
+│   ├── installment_purchase.py       # Entidad InstallmentPurchase (compras a meses/plazos)
 │   ├── investment_yield.py           # Entidad InvestmentYield (rendimientos diarios)
+│   ├── notification.py               # Entidad Notification (notificaciones al usuario)
+│   ├── recurring_income.py           # Entidad RecurringIncome (ingresos recurrentes)
+│   ├── refresh_token.py              # Entidad RefreshToken (tokens de refresco persistidos)
+│   ├── saving_goal.py                # Entidad SavingGoal (metas de ahorro)
 │   ├── subscription.py              # Entidad Subscription (pagos recurrentes)
 │   ├── subscription_charge.py       # Entidad SubscriptionCharge (cargos individuales)
 │   ├── transaction.py               # Entidad Transaction con cálculos
@@ -302,21 +315,31 @@ domain/
 │   ├── __init__.py
 │   ├── credit_card_settings.py      # Configuración de tarjetas de crédito
 │   ├── enums.py                     # Enumeraciones de negocio (AccountType, InterestType, etc.)
+│   ├── frequency.py                 # Frecuencias y cálculo de ocurrencias (recurrencias)
 │   ├── investment_settings.py       # Configuración de inversiones (tasa, tipo interés, base_principal)
 │   └── money.py                     # Value Object Money con validaciones
 ├── repositories/                     # Interfaces abstractas para persistencia
 │   ├── __init__.py
 │   ├── account_repository.py        # Interface para operaciones de Account
+│   ├── api_key_repository.py        # Interface para operaciones de APIKey
 │   ├── auth_token_repository.py     # Interface para tokens JWT/refresh
 │   ├── bank_repository.py           # Interface para operaciones de Bank
+│   ├── budget_repository.py         # Interface para operaciones de Budget
 │   ├── category_repository.py       # Interface para operaciones de Category
 │   ├── credit_card_repository.py    # Interface para configuración de tarjetas de crédito
 │   ├── dashboard_repository.py      # Interface para datos agregados del dashboard
+│   ├── income_deposit_repository.py # Interface para depósitos de ingresos
+│   ├── installment_charge_repository.py # Interface para cargos de compras a plazos
+│   ├── installment_purchase_repository.py # Interface para compras a plazos
 │   ├── investment_card_repository.py # Interface para configuración de inversiones
 │   ├── investment_yield_repository.py # Interface para rendimientos de inversión
+│   ├── notification_repository.py   # Interface para notificaciones
+│   ├── recurring_income_repository.py # Interface para ingresos recurrentes
+│   ├── saving_goal_repository.py    # Interface para metas de ahorro
 │   ├── subscription_charge_repository.py # Interface para cargos de suscripción
 │   ├── subscription_repository.py   # Interface para operaciones de Subscription
 │   ├── transaction_repository.py    # Interface para operaciones de Transaction
+│   ├── unit_of_work.py              # Interface del patrón Unit of Work (AbstractUnitOfWork)
 │   └── user_repository.py          # Interface para operaciones de User
 └── services/                        # Servicios de dominio
     ├── __init__.py
@@ -328,7 +351,7 @@ domain/
 - **Reglas de negocio centralizadas**: Todas las validaciones en un lugar
 - **Inmutabilidad**: Value Objects son inmutables por diseño
 - **Interfaces puras**: Contratos sin implementación específica
-- **13 repositorios abstractos**: Contratos completos para cada agregado
+- **20 repositorios abstractos + Unit of Work**: Contratos completos para cada agregado, más `AbstractUnitOfWork` para transacciones atómicas
 
 ### ⚡ Capa de Aplicación (`src/application/`)
 
@@ -350,7 +373,7 @@ sequenceDiagram
     Note over D: Aplica Reglas de Negocio
     D-->>A: Entity Instance
 
-    A->>I: repository.save(entity)
+    A->>I: repository.create(entity)
     I->>I: Convertir a Model SQLAlchemy
     I-->>A: Saved Entity
 
@@ -366,12 +389,14 @@ application/
 │   │   ├── __init__.py
 │   │   ├── create_account.py      # Crear cuenta (+ settings de crédito/inversión)
 │   │   ├── update_account.py      # Actualizar cuenta
+│   │   ├── update_account_settings.py # Actualizar settings de crédito/inversión
 │   │   ├── delete_account.py      # Eliminar cuenta
 │   │   └── state_account.py       # Cambiar estado de cuenta
 │   └── queries/              # Operaciones de lectura de cuentas
 │       ├── __init__.py
 │       ├── get_account_by_id.py   # Consultar cuenta por ID
-│       └── get_user_accounts.py   # Consultar cuentas de usuario
+│       ├── get_user_accounts.py   # Consultar cuentas de usuario
+│       └── get_account_activity.py # Consultar actividad reciente de la cuenta
 ├── transactions/             # Feature: Gestión de transacciones
 │   ├── __init__.py
 │   ├── commands/             # Operaciones de escritura de transacciones
@@ -395,9 +420,76 @@ application/
 │   │   ├── __init__.py
 │   │   ├── get_subscriptions.py
 │   │   ├── get_subscriptions_by_id.py
-│   │   └── get_subscription_charges.py  # Historial de cargos
+│   │   ├── get_subscription_charges.py  # Historial de cargos
+│   │   └── get_last_transactions.py     # Últimas transacciones de suscripciones
 │   └── services/
 │       └── subscription_processor.py    # Procesamiento automático de suscripciones
+├── budgets/                  # Feature: Gestión de presupuestos
+│   ├── __init__.py
+│   ├── commands/
+│   │   ├── __init__.py
+│   │   ├── create_budget.py
+│   │   ├── update_budget.py
+│   │   ├── delete_budget.py
+│   │   └── state_budget.py          # Activar/desactivar presupuesto
+│   └── queries/
+│       ├── __init__.py
+│       ├── get_budgets.py
+│       ├── get_budget_by_id.py
+│       └── get_budget_progress.py   # Progreso de gasto vs presupuesto
+├── goals/                    # Feature: Metas de ahorro
+│   ├── __init__.py
+│   ├── commands/
+│   │   ├── __init__.py
+│   │   ├── create_saving_goal.py
+│   │   ├── update_saving_goal.py
+│   │   ├── delete_saving_goal.py
+│   │   └── state_saving_goal.py     # Activar/desactivar meta
+│   └── queries/
+│       ├── __init__.py
+│       ├── get_saving_goals.py
+│       └── get_saving_goal_by_id.py
+├── incomes/                  # Feature: Ingresos recurrentes
+│   ├── __init__.py
+│   ├── commands/
+│   │   ├── __init__.py
+│   │   ├── create_recurring_income.py
+│   │   ├── update_recurring_income.py
+│   │   ├── delete_recurring_income.py
+│   │   └── state_recurring_income.py
+│   ├── queries/
+│   │   ├── __init__.py
+│   │   ├── get_recurring_incomes.py
+│   │   ├── get_recurring_income_by_id.py
+│   │   └── get_income_deposits.py   # Historial de depósitos
+│   └── services/
+│       ├── __init__.py
+│       └── income_processor.py      # Procesamiento automático de ingresos
+├── installments/             # Feature: Compras a plazos/meses
+│   ├── __init__.py
+│   ├── commands/
+│   │   ├── __init__.py
+│   │   ├── create_installment_purchase.py
+│   │   ├── update_installment_purchase.py
+│   │   ├── delete_installment_purchase.py
+│   │   └── pay_installment_charge.py  # Pagar cargo individual
+│   └── queries/
+│       ├── __init__.py
+│       └── get_installment_purchases.py
+├── transfers/                # Feature: Transferencias entre cuentas
+│   ├── __init__.py
+│   ├── commands/
+│   │   ├── __init__.py
+│   │   ├── create_transfer.py
+│   │   └── delete_transfer.py
+│   └── queries/
+│       ├── __init__.py
+│       └── get_transactions.py      # Historial de transferencias
+├── notifications/            # Feature: Notificaciones al usuario
+│   ├── __init__.py
+│   └── queries/
+│       ├── __init__.py
+│       └── get_and_clear_notifications.py  # Obtener y limpiar notificaciones
 ├── investments/              # Feature: Gestión de rendimientos de inversión
 │   ├── __init__.py
 │   ├── commands/
@@ -412,7 +504,7 @@ application/
 │   └── queries/
 │       ├── __init__.py
 │       └── get_banks.py
-├── auth/                     # Feature: Autenticación (Auth0)
+├── auth/                     # Feature: Autenticación (JWT propio)
 │   ├── __init__.py
 │   └── commands/
 │       ├── __init__.py
@@ -420,6 +512,16 @@ application/
 │       ├── logout.py         # Cerrar sesión
 │       ├── refresh_token.py  # Renovar token
 │       └── register.py       # Registro de usuario
+├── api_keys/                 # Feature: API keys (acceso programático / MCP)
+│   ├── __init__.py
+│   ├── commands/
+│   │   ├── __init__.py
+│   │   ├── create_api_key.py
+│   │   ├── delete_api_key.py
+│   │   └── revoke_api_key.py
+│   └── queries/
+│       ├── __init__.py
+│       └── list_api_keys.py
 ├── categories/               # Feature: Gestión de categorías
 │   ├── __init__.py
 │   └── queries/
@@ -443,14 +545,20 @@ application/
 ├── dto/                      # Data Transfer Objects (compartidos)
 │   ├── __init__.py
 │   ├── account_dto.py
+│   ├── api_key_dto.py
 │   ├── bank_dto.py
+│   ├── budget_dto.py
 │   ├── category_dto.py
+│   ├── installment_dto.py
 │   ├── investment_yield_dto.py
+│   ├── recurring_income_dto.py
+│   ├── saving_goal_dto.py
 │   ├── subscription_dto.py
 │   └── transaction_dto.py
 └── interfaces/               # Interfaces de aplicación
     ├── ai_agent.py           # Contrato del agente IA (AIAgentInterface)
-    └── auth_service.py       # Contrato del servicio de autenticación (AuthService)
+    ├── auth_service.py       # Contrato del servicio de tokens de autenticación (AuthTokenServiceInterface)
+    └── uploaded_file.py      # Contrato de archivo subido (UploadedFileInterface)
 ```
 
 #### Características de Aplicación:
@@ -460,8 +568,8 @@ application/
 - **Handlers**: Cada comando/consulta tiene su handler específico
 - **Services**: Lógica de aplicación compleja (ej. `SubscriptionProcessor` para procesamiento automático)
 - **Scheduled Jobs**: `GenerateDailyYieldHandler` para cálculo diario de rendimientos
-- **Agentes IA**: `AnalyzeImageHandler` y `GetExpenseAdvisorHandler` encapsulan la lógica de análisis con Gemini
-- **Interfaces**: `AIAgentInterface` y `AuthService` desacoplan la aplicación de las implementaciones concretas de infraestructura
+- **Agentes IA**: `AnalyzeImageHandler` y `GetExpenseAdvisorHandler` encapsulan la lógica de análisis con agentes IA (pydantic-ai)
+- **Interfaces**: `AIAgentInterface` y `AuthTokenServiceInterface` desacoplan la aplicación de las implementaciones concretas de infraestructura
 - **Nomenclatura limpia**: Los nombres de archivos no repiten "command" o "query" ya que la carpeta provee el contexto
 
 ### 🔧 Capa de Infraestructura (`src/infrastructure/`)
@@ -476,12 +584,16 @@ infrastructure/
 │   ├── models/               # Modelos de base de datos (SQLAlchemy ORM)
 │   │   ├── __init__.py
 │   │   ├── account.py        # Modelo Account
+│   │   ├── api_key.py        # Modelo APIKey
 │   │   ├── bank.py           # Modelo Bank
 │   │   ├── budget.py         # Modelo Budget
 │   │   ├── category.py       # Modelo Category
 │   │   ├── credit_card.py    # Modelo CreditCard (settings)
+│   │   ├── installment.py    # Modelos InstallmentPurchase e InstallmentCharge
 │   │   ├── investment_account.py  # Modelo InvestmentCard (settings)
 │   │   ├── investment_yield.py    # Modelo InvestmentYield (rendimientos)
+│   │   ├── notifications.py  # Modelo Notification
+│   │   ├── recurring_income.py # Modelos RecurringIncome e IncomeDeposit
 │   │   ├── refresh_token.py  # Modelo RefreshToken
 │   │   ├── reminder.py       # Modelo Reminder
 │   │   ├── saving_goal.py    # Modelo SavingGoal
@@ -492,27 +604,44 @@ infrastructure/
 │   └── repositories/         # Implementaciones concretas de repositorios
 │       ├── __init__.py
 │       ├── sqlalchemy_account_repository.py
+│       ├── sqlalchemy_api_key_repository.py
 │       ├── sqlalchemy_auth_token_repository.py
 │       ├── sqlalchemy_bank_repository.py
+│       ├── sqlalchemy_budget_repository.py
 │       ├── sqlalchemy_category_repository.py
 │       ├── sqlalchemy_credit_card_repository.py
 │       ├── sqlalchemy_dashboard_repository.py
+│       ├── sqlalchemy_income_deposit_repository.py
+│       ├── sqlalchemy_installment_charge_repository.py
+│       ├── sqlalchemy_installment_purchase_repository.py
 │       ├── sqlalchemy_investment_card_repository.py
 │       ├── sqlalchemy_investment_yield_repository.py
+│       ├── sqlalchemy_notification_repository.py
+│       ├── sqlalchemy_recurring_income_repository.py
+│       ├── sqlalchemy_saving_goal_repository.py
 │       ├── sqlalchemy_subscription_charge_repository.py
 │       ├── sqlalchemy_subscription_repository.py
 │       ├── sqlalchemy_transaction_repository.py
+│       ├── sqlalchemy_unit_of_work.py   # Unit of Work (transacciones atómicas)
 │       └── sqlalchemy_user_repository.py
 ├── external_services/         # Integraciones con servicios externos
 │   ├── __init__.py
-│   └── gemini.py             # Cliente para Google Gemini AI (extracción de recibos)
+│   └── agents/               # Agentes IA estructurados (pydantic-ai)
+│       ├── __init__.py
+│       ├── image.py          # Agente de análisis de imágenes (recibos/tickets)
+│       ├── expense.py        # Agente asesor de gastos del mes
+│       └── model_factory.py  # Factory multi-proveedor (Google Gemini; Ollama y DeepSeek vía API compatible con OpenAI)
 ├── security/                 # Servicios de seguridad
 │   ├── __init__.py
-│   └── auth_service.py       # Autenticación JWT y manejo de tokens
+│   ├── jwt_service.py        # JWTService: emisión y validación de tokens JWT
+│   └── api_key_service.py    # APIKeyService: emisión y validación de API keys
 ├── scheduler/                # Tareas programadas
 │   ├── __init__.py
-│   ├── jobs.py               # Definición de jobs (suscripciones, rendimientos)
+│   ├── jobs.py               # Definición de jobs (suscripciones, rendimientos, ingresos recurrentes)
 │   └── service.py            # SchedulerService (APScheduler wrapper)
+├── rate_limiting/            # Rate limiting por endpoint
+│   ├── __init__.py
+│   └── limiters.py           # Limiters FixedWindow predefinidos y helper enforce_rate_limit
 ├── logging/                  # Sistema de logging estructurado
 │   ├── __init__.py
 │   ├── context.py            # Request correlation IDs
@@ -529,8 +658,8 @@ infrastructure/
 ```
 
 #### Características de Infraestructura:
-- **Implementaciones concretas**: 13 repositorios SQLAlchemy implementando interfaces del dominio
-- **Adaptadores**: Para servicios externos (Google Gemini AI)
+- **Implementaciones concretas**: 20 repositorios SQLAlchemy + Unit of Work implementando interfaces del dominio
+- **Adaptadores**: Para servicios externos (agentes IA con pydantic-ai multi-proveedor)
 - **Scheduler**: APScheduler con AsyncIOScheduler para jobs diarios
 - **Logging estructurado**: Correlation IDs, filtros personalizados, integración Grafana Loki
 - **Configuración**: Variables de entorno con pydantic-settings
@@ -547,33 +676,53 @@ presentation/
 │       ├── __init__.py
 │       ├── endpoints/             # Endpoints específicos por dominio
 │       │   ├── __init__.py
-│       │   ├── auth.py            # Autenticación (me, logout)
+│       │   ├── auth.py            # Autenticación (register, login, refresh, logout, me)
 │       │   ├── account.py         # CRUD cuentas + activación/desactivación
-│       │   ├── transaction.py     # CRUD transacciones + creación desde imagen (IA)
+│       │   ├── transaction.py     # CRUD transacciones
+│       │   ├── transfer.py        # Transferencias entre cuentas
 │       │   ├── subscription.py    # CRUD suscripciones + cargos + activación
+│       │   ├── budget.py          # CRUD presupuestos + progreso
+│       │   ├── goals.py           # CRUD metas de ahorro + activación
+│       │   ├── income.py          # CRUD ingresos recurrentes + depósitos
+│       │   ├── installment.py     # Compras a plazos + pago de cargos
+│       │   ├── notification.py    # Notificaciones del usuario
 │       │   ├── investment_yield.py # Rendimientos y proyecciones de inversión
 │       │   ├── bank.py            # Catálogo de bancos
 │       │   ├── category.py        # Catálogo de categorías
-│       │   └── dashboard.py       # Resumen financiero
+│       │   ├── dashboard.py       # Resumen financiero
+│       │   ├── api_key.py         # Gestión de API keys (crear, listar, revocar)
+│       │   └── ai.py              # Análisis IA (POST /analyze/image, asesor de gastos)
 │       └── router.py             # Router principal que agrupa endpoints
 ├── schemas/                      # Schemas Pydantic para validación
 │   ├── requests/                 # DTOs de entrada (requests)
 │   │   ├── __init__.py
 │   │   ├── auth.py              # Schemas para requests de auth
 │   │   ├── account.py           # Schemas para requests de cuenta
+│   │   ├── api_key.py           # Schemas para requests de API keys
+│   │   ├── budget.py            # Schemas para requests de presupuesto
+│   │   ├── installment.py       # Schemas para requests de compras a plazos
+│   │   ├── recurring_income.py  # Schemas para requests de ingresos recurrentes
+│   │   ├── saving_goal.py       # Schemas para requests de metas de ahorro
 │   │   ├── subscription.py     # Schemas para requests de suscripción
-│   │   └── transaction.py      # Schemas para requests de transacción
+│   │   ├── transaction.py      # Schemas para requests de transacción
+│   │   └── transfer.py         # Schemas para requests de transferencia
 │   └── responses/                # DTOs de salida (responses)
 │       ├── __init__.py
 │       ├── auth.py              # Schemas para responses de auth
 │       ├── account.py           # Schemas para responses de cuenta
+│       ├── api_key.py           # Schemas para responses de API keys
 │       ├── bank.py              # Schemas para responses de banco
+│       ├── budget.py            # Schemas para responses de presupuesto
 │       ├── category.py          # Schemas para responses de categoría
 │       ├── error.py             # Schema estandarizado de errores
-│       ├── gemini.py            # Schemas para responses de Gemini AI
+│       ├── installment.py       # Schemas para responses de compras a plazos
 │       ├── investment_yield.py  # Schemas para rendimientos/proyecciones
+│       ├── notification.py      # Schemas para responses de notificaciones
+│       ├── recurring_income.py  # Schemas para responses de ingresos recurrentes
+│       ├── saving_goal.py       # Schemas para responses de metas de ahorro
 │       ├── subscription.py      # Schemas para responses de suscripción
-│       └── transaction.py       # Schemas para responses de transacción
+│       ├── transaction.py       # Schemas para responses de transacción
+│       └── transfer.py          # Schemas para responses de transferencia
 ├── dependencies/                 # Inyección de dependencias FastAPI
 │   ├── __init__.py
 │   ├── auth_deps.py             # Dependencias de autenticación (JWT, usuario activo)
@@ -582,11 +731,24 @@ presentation/
 │   ├── services.py              # Factories de servicios
 │   ├── account_deps.py          # Factories de handlers de cuentas
 │   ├── transaction_deps.py      # Factories de handlers de transacciones
+│   ├── transfer_deps.py         # Factories de handlers de transferencias
 │   ├── subscription_deps.py     # Factories de handlers de suscripciones
+│   ├── budget_deps.py           # Factories de handlers de presupuestos
+│   ├── saving_goal_deps.py      # Factories de handlers de metas de ahorro
+│   ├── recurring_income_deps.py # Factories de handlers de ingresos recurrentes
+│   ├── installment_deps.py      # Factories de handlers de compras a plazos
+│   ├── notification_deps.py     # Factories de handlers de notificaciones
 │   ├── investment_yield_deps.py # Factories de handlers de inversiones
 │   ├── bank_deps.py             # Factories de handlers de bancos
 │   ├── category_deps.py         # Factories de handlers de categorías
-│   └── dashboard_deps.py        # Factories de handlers de dashboard
+│   ├── dashboard_deps.py        # Factories de handlers de dashboard
+│   ├── api_key_deps.py          # Factories de handlers de API keys
+│   └── ai_deps.py               # Factories de handlers de agentes IA
+├── mcp/                          # Servidor MCP (Model Context Protocol)
+│   ├── __init__.py
+│   ├── server.py                # Servidor FastMCP (streamable-http, proxy hacia la API)
+│   ├── client.py                # Cliente HTTP interno hacia la API (inyecta X-API-Key)
+│   └── config.py                # Configuración del servidor MCP
 └── middleware/                   # Middleware HTTP
     ├── __init__.py
     ├── exception_handler.py     # Manejador global de excepciones estandarizado
@@ -594,7 +756,7 @@ presentation/
 ```
 
 #### Características de Presentación:
-- **API REST**: 8 módulos de endpoints organizados por dominio
+- **API REST**: 16 módulos de endpoints organizados por dominio
 - **Validación**: Schemas Pydantic para entrada y salida
 - **Dependency Injection**: Sistema granular de DI de FastAPI (un archivo por feature)
 - **Rate Limiting**: Protección por endpoint con fastapi-advanced-rate-limiter (FixedWindowRateLimiter)
@@ -618,14 +780,13 @@ shared/
 │   ├── error_messages.py   # ⚠️ DEPRECADO - usar validation_messages.py
 │   └── validation_messages.py # Mensajes de validación y traducción
 ├── i18n/                   # Internacionalización
-│   ├── __init__.py
 │   └── messages.py         # Sistema de traducción de mensajes (es/en)
 ├── utils/                  # Utilidades generales
 │   ├── __init__.py
 │   ├── money.py           # Utilidades para manejo monetario
 │   ├── date.py            # Utilidades para fechas
 │   ├── language.py        # Detección de idioma del usuario (Accept-Language)
-│   ├── prompts.py         # Prompts para Google Gemini AI
+│   ├── prompts.py         # Prompts para los agentes IA (análisis de imagen, asesor de gastos)
 │   └── validations.py     # Funciones de validación comunes
 └── validators/             # Validadores de negocio
     ├── __init__.py
@@ -638,20 +799,15 @@ Estrategia de testing por capas.
 
 ```
 tests/
-├── conftest.py             # Configuración global de pytest
-├── test_settings.py        # Configuración específica para tests
+├── conftest.py             # Configuración global de pytest y fixtures compartidos
 ├── TEST.md                 # Documentación de testing
-├── fixtures/               # Fixtures reutilizables
-│   ├── __init__.py
-│   ├── database.py         # Fixtures de base de datos
-│   ├── users.py           # Fixtures de usuarios
-│   └── accounts.py        # Fixtures de cuentas
 ├── unit/                  # Pruebas unitarias (sin dependencias externas)
 │   ├── domain/            # Tests de la capa de dominio
-│   ├── application/       # Tests de casos de uso
-│   └── infrastructure/    # Tests de implementaciones
+│   └── application/       # Tests de casos de uso
 ├── integration/           # Pruebas de integración (con BD)
-└── e2e/                   # Pruebas end-to-end (flujos completos)
+├── e2e/                   # Pruebas end-to-end (flujos completos vía API)
+└── stress/                # Pruebas de carga con Locust
+    └── locustfile.py      # Definición de escenarios de carga
 ```
 
 ## 🔄 Patrones de Diseño Implementados
@@ -725,7 +881,7 @@ class CreateAccountCommand:
     initial_balance: Decimal = Decimal('0.00')
 
 # Handler del comando
-class CreateAccountCommandHandler:
+class CreateAccountHandler:
     def __init__(self, account_repo: AccountRepository):
         self._account_repo = account_repo
 
@@ -741,7 +897,7 @@ class GetUserAccountsQuery:
     include_inactive: bool = False
 
 # Handler de la consulta
-class GetUserAccountsQueryHandler:
+class GetUserAccountsHandler:
     def __init__(self, account_repo: AccountRepository):
         self._account_repo = account_repo
 
@@ -753,11 +909,11 @@ class GetUserAccountsQueryHandler:
 # presentation/api/v2/endpoints/account.py
 from application.accounts.commands.create_account import (
     CreateAccountCommand,
-    CreateAccountCommandHandler
+    CreateAccountHandler
 )
 from application.accounts.queries.get_user_accounts import (
     GetUserAccountsQuery,
-    GetUserAccountsQueryHandler
+    GetUserAccountsHandler
 )
 ```
 
@@ -771,31 +927,50 @@ from abc import ABC, abstractmethod
 
 class AccountRepository(ABC):
     @abstractmethod
-    async def save(self, account: Account) -> Account:
+    async def create(self, account: Account) -> Account:
         pass
 
     @abstractmethod
-    async def find_by_id(self, account_id: str) -> Optional[Account]:
+    async def get_by_id(self, account_id: int) -> Optional[Account]:
         pass
 
     @abstractmethod
-    async def find_by_user_id(self, user_id: str) -> List[Account]:
+    async def get_by_user_id(self, user_id: int) -> List[Account]:
         pass
 
     @abstractmethod
-    async def delete(self, account_id: str) -> bool:
+    async def delete(self, account: Account) -> bool:
         pass
 
 # Implementación concreta en Infrastructure
 class SQLAlchemyAccountRepository(AccountRepository):
-    def __init__(self, session: AsyncSession):
-        self._session = session
+    def __init__(self, db: AsyncSession):
+        self.db = db
 
-    async def save(self, account: Account) -> Account:
-        db_account = AccountModel.from_entity(account)
-        self._session.add(db_account)
-        await self._session.commit()
-        return db_account.to_entity()
+    @staticmethod
+    def _model_to_entity(model: AccountModel) -> Account:
+        """Convierte un modelo SQLAlchemy a entidad de dominio"""
+        return Account(
+            id=model.id,
+            uuid=model.uuid,
+            user_id=model.user_id,
+            # ... resto de campos
+        )
+
+    @staticmethod
+    def _entity_to_model(entity: Account) -> AccountModel:
+        """Convierte una entidad de dominio a modelo SQLAlchemy"""
+        return AccountModel(
+            user_id=entity.user_id,
+            # ... resto de campos
+        )
+
+    async def create(self, account: Account) -> Account:
+        model = self._entity_to_model(account)
+        self.db.add(model)
+        await self.db.flush()      # El commit lo gestiona el Unit of Work
+        await self.db.refresh(model)
+        return self._model_to_entity(model)
 
     # ... otras implementaciones
 ```
@@ -807,114 +982,131 @@ Objetos inmutables con reglas de negocio:
 ```python
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Optional
+
+from shared.exceptions.domain import (
+    InsufficientFundsError,
+    NegativeAmountError,
+    CurrencyMismatchError,
+)
 
 @dataclass(frozen=True)
 class Money:
+    """Value Object to represent a Money"""
+
     amount: Decimal
     currency: str = "MXN"
 
     def __post_init__(self):
         if self.amount < 0:
-            raise ValueError("Money amount cannot be negative")
-        if not self.currency:
-            raise ValueError("Currency cannot be empty")
+            raise NegativeAmountError(float(self.amount))
 
-    def add(self, other: 'Money') -> 'Money':
+    def add(self, other: "Money") -> "Money":
         if self.currency != other.currency:
-            raise ValueError(f"Cannot add {self.currency} with {other.currency}")
+            raise CurrencyMismatchError(self.currency, other.currency)
         return Money(self.amount + other.amount, self.currency)
 
-    def subtract(self, other: 'Money') -> 'Money':
+    def subtract(self, other: "Money") -> "Money":
         if self.currency != other.currency:
-            raise ValueError(f"Cannot subtract {other.currency} from {self.currency}")
+            raise CurrencyMismatchError(self.currency, other.currency)
         result_amount = self.amount - other.amount
         if result_amount < 0:
-            raise ValueError("Subtraction would result in negative amount")
+            raise InsufficientFundsError(
+                required_amount=float(other.amount),
+                available_amount=float(self.amount),
+            )
         return Money(result_amount, self.currency)
 
-    def multiply(self, factor: Decimal) -> 'Money':
-        return Money(self.amount * factor, self.currency)
-
-    def is_zero(self) -> bool:
-        return self.amount == Decimal('0')
-
-    def __str__(self) -> str:
-        return f"${self.amount:,.2f} {self.currency}"
+    def __str__(self):
+        return f"{self.amount:.2f} {self.currency}"
 ```
+
+> Las operaciones lanzan **excepciones de dominio** (`NegativeAmountError`, `CurrencyMismatchError`, `InsufficientFundsError`), no `ValueError`: así el exception handler las traduce a códigos de error estandarizados.
 
 ### 5. Domain Entities
 
 Entidades con identidad y comportamiento:
 
 ```python
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Optional
-import uuid
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from decimal import Decimal
+from typing import Optional, cast
 
 @dataclass
 class Account:
-    user_id: str
+    id: Optional[int]              # ID autoincremental (None hasta persistir)
+    uuid: Optional[str]            # UUID público expuesto por la API
+    user_id: int
+    bank_id: int
     name: str
     account_type: AccountType
-    balance: Money
-    bank: Optional[str] = None
-    is_active: bool = True
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: Optional[datetime] = None
+    current_balance: Money
+    is_active: bool
+    creation_date: datetime
+    credit_card_settings: Optional[CreditCardSettings] = None
+    investment_settings: Optional[InvestmentCardSettings] = None
 
     @classmethod
     def create_new(
         cls,
-        user_id: str,
+        user_id: int,
+        bank_id: int,
         name: str,
         account_type: AccountType,
-        bank: Optional[str] = None,
-        initial_balance: Money = Money(Decimal('0'))
-    ) -> 'Account':
+        initial_balance: Optional[Money] = None,
+    ) -> "Account":
         """Factory method para crear nueva cuenta"""
-        if not user_id:
-            raise ValueError("User ID is required")
-        if not name.strip():
-            raise ValueError("Account name cannot be empty")
+        if initial_balance is None:
+            initial_balance = Money(Decimal(0), "MXN")
 
         return cls(
+            id=None,
+            uuid=None,
             user_id=user_id,
-            name=name.strip(),
+            bank_id=bank_id,
+            name=name,
             account_type=account_type,
-            balance=initial_balance,
-            bank=bank
+            current_balance=initial_balance,
+            is_active=True,
+            creation_date=datetime.now(timezone.utc),
         )
-
-    def update_balance(self, new_balance: Money) -> None:
-        """Actualiza el balance con validaciones de negocio"""
-        if new_balance.currency != self.balance.currency:
-            raise ValueError("Cannot change account currency")
-
-        self.balance = new_balance
-        self.updated_at = datetime.utcnow()
 
     def deactivate(self) -> None:
         """Desactiva la cuenta"""
-        if not self.balance.is_zero():
-            raise ValueError("Cannot deactivate account with non-zero balance")
-
         self.is_active = False
-        self.updated_at = datetime.utcnow()
+
+    def activate(self) -> None:
+        """Reactiva la cuenta"""
+        self.is_active = True
+
+    def update_balance(self, new_balance: Money) -> None:
+        """Actualiza el balance con validaciones de negocio"""
+        if new_balance.currency != self.current_balance.currency:
+            raise InvalidBalanceUpdateError(
+                "Currencies must be the same to update balance"
+            )
+        if not self.is_active:
+            raise AccountInactiveError(cast(int, self.id))
+        if new_balance.amount < 0 and self.account_type != AccountType.CREDIT_CARD:
+            # Solo las tarjetas de crédito pueden tener balance negativo
+            raise InvalidBalanceUpdateError(self.account_type)
+        self.current_balance = new_balance
 
     def can_withdraw(self, amount: Money) -> bool:
         """Verifica si se puede retirar el monto especificado"""
-        if amount.currency != self.balance.currency:
-            return False
+        return self.current_balance.amount >= amount.amount
+```
 
-        # Lógica específica por tipo de cuenta
-        if self.account_type == AccountType.CREDIT:
-            # Las cuentas de crédito tienen lógica diferente
-            return True
+### 6. Unit of Work
 
-        return self.balance.amount >= amount.amount
+Coordinación de transacciones atómicas entre múltiples repositorios. La interfaz `AbstractUnitOfWork` vive en el dominio (`domain/repositories/unit_of_work.py`) y su implementación `SQLAlchemyUnitOfWork` en infraestructura. Los handlers la usan como context manager: los repositorios hacen `flush()` y el `commit()` (o `rollback()` en caso de error) se ejecuta al salir del bloque:
+
+```python
+# En un command handler
+async with self.uow:
+    saved_account = await self.account_repository.create(account)
+    await self.credit_card_settings_repository.create(saved_account.id, settings)
+    await self.uow.commit()  # Confirmación atómica de todas las operaciones
 ```
 
 ## 🛡️ Sistema de Manejo de Excepciones
@@ -970,23 +1162,32 @@ Cada excepción se mapea automáticamente a:
 - **HTTP Status Code**: Código HTTP apropiado (400, 401, 404, 409, 422, 500, etc.)
 - **Mensaje traducido**: Según el idioma del usuario
 
-Ejemplo en src/presentation/middleware/exception_handler.py:54:
+El mapeo se define en el diccionario `EXCEPTION_MAP` (no en una cadena if/elif) y se resuelve en `map_exception_to_error_code()` (src/presentation/middleware/exception_handler.py):
 
 ```python
-def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
+# Diccionario de mapeo: excepción -> (error_code, HTTP status)
+EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     # Autenticación (401)
-    if isinstance(exc, InvalidCredentialsError):
-        return "AUTH_INVALID_CREDENTIALS", 401
-
+    InvalidCredentialsError: ("AUTH_INVALID_CREDENTIALS", 401),
     # Recursos no encontrados (404)
-    elif isinstance(exc, AccountNotFoundError):
-        return "NOT_FOUND_ACCOUNT", 404
-
+    AccountNotFoundError: ("NOT_FOUND_ACCOUNT", 404),
     # Conflictos de negocio (409)
-    elif isinstance(exc, EmailAlreadyExistsError):
-        return "BUSINESS_EMAIL_EXISTS", 409
-
+    EmailAlreadyExistsError: ("BUSINESS_EMAIL_EXISTS", 409),
     # ... más mapeos
+}
+
+def map_exception_to_error_code(exc: Exception) -> tuple[str, int]:
+    exc_type = type(exc)
+
+    if exc_type in EXCEPTION_MAP:
+        return EXCEPTION_MAP[exc_type]
+
+    # Fallback: búsqueda por isinstance (soporta herencia)
+    for error_class, response in EXCEPTION_MAP.items():
+        if isinstance(exc, error_class):
+            return response
+
+    return "INTERNAL_SERVER_ERROR", 500
 ```
 
 ### Logging Basado en Entorno
@@ -1052,13 +1253,17 @@ def translate_validation_message(
 
 ## 🔒 Seguridad y Autenticación
 
-### Auth0 Integration
+### Autenticación propia
 
-Lunance IA utiliza **Auth0** como proveedor de identidad:
+Lunance IA gestiona la identidad por sí misma, sin proveedor externo:
 
-- **Login/Register**: Manejados directamente por Auth0
-- **Token Validation**: La API valida tokens JWT emitidos por Auth0
-- **User Sync**: Los usuarios se sincronizan automáticamente al primer acceso
+- **Registro y login**: `POST /api/v2/auth/register` y `POST /api/v2/auth/login`, con usuario y contraseña
+- **Contraseñas**: Hasheadas con `bcrypt`; se exige mayúscula, minúscula, dígito y carácter especial (mínimo 8 caracteres)
+- **Access token**: JWT firmado con `SECRET_KEY` (HS256), con claims `sub` (UUID del usuario) e `iss: "lunance"`
+- **Refresh token**: Firmado con una clave distinta (`SECRET_KEY_REFRESH`), persistido **solo como hash SHA-256** y **rotado en cada renovación**
+- **Logout**: Revoca el refresh token en base de datos
+
+> **Legado:** `validate_auth0_user()` sigue presente en `presentation/dependencies/auth_deps.py` como camino alternativo cuando el token no lleva `iss: "lunance"`. El flujo activo es el propio; las variables `AUTH0_DOMAIN` y `AUTH0_AUDIENCE` continúan siendo obligatorias en `settings.py` únicamente por esa dependencia.
 
 ### Configuración CORS Basada en Entorno
 
@@ -1066,12 +1271,22 @@ El sistema configura CORS dinámicamente según el entorno (src/main.py):
 
 ```python
 if settings.ENVIRONMENT.upper() == "PROD":
-    origins = ["https://lunance.app"]  # Dominio específico en producción
-elif settings.ENVIRONMENT.upper() == "DEV":
-    origins = ["*"]  # Abierto en desarrollo
+    origins = [                       # Lista fija de dominios permitidos
+        "https://preview.lunance.app",
+        "https://api.lunance.app",
+        "https://lunance.app",
+    ]
+elif settings.ENVIRONMENT.upper() in ["DEV", "TEST"]:
+    origins = [settings.FRONTEND_URL]  # Un solo origen, desde el entorno
 else:
     raise ValueError("Invalid environment")
 ```
+
+> Si autohospedas el proyecto, sustituye esa lista por tus propios dominios: está fijada en el código, no se lee del entorno.
+
+### Security Headers
+
+Todas las respuestas incluyen cabeceras de seguridad (CSP, HSTS, X-Frame-Options, etc.) aplicadas con el paquete `secure` mediante un middleware en `src/main.py` (`Secure.with_default_headers()`).
 
 ### Rate Limiting
 
@@ -1089,22 +1304,21 @@ from jose import jwt, JWTError
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     """
-    Valida el token JWT emitido por Auth0.
+    Valida el token JWT emitido por la propia API.
 
     El token contiene:
-    - sub: ID del usuario en Auth0
-    - email: Email del usuario
-    - iat: Timestamp de emisión
+    - sub: UUID del usuario
+    - iss: "lunance" (distingue los tokens propios)
+    - iat / exp: Emisión y expiración
     """
     try:
         payload = jwt.decode(
             token,
-            settings.AUTH0_PUBLIC_KEY,
-            algorithms=["RS256"],
-            audience=settings.AUTH0_AUDIENCE
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM]  # HS256
         )
-        user_id = payload.get("sub")
-        if user_id is None:
+        user_uuid = payload.get("sub")
+        if user_uuid is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         return payload
     except JWTError:
@@ -1137,7 +1351,7 @@ class TestMoney:
         money1 = Money(Decimal('100'), 'USD')
         money2 = Money(Decimal('50'), 'EUR')
 
-        with pytest.raises(ValueError, match="Cannot add USD with EUR"):
+        with pytest.raises(CurrencyMismatchError):
             money1.add(money2)
 ```
 
@@ -1191,7 +1405,7 @@ sequenceDiagram
     CF->>Traefik: Proxy (TLS terminado)
     Traefik->>MW: HTTP Request
     MW->>MW: Asigna Correlation ID<br/>Logging de request
-    MW->>Auth: Valida JWT (Auth0 RS256)
+    MW->>Auth: Valida JWT (HS256, iss lunance)
     Auth->>Endpoint: current_user inyectado
     Endpoint->>Endpoint: Valida Schema Pydantic
     Endpoint->>Handler: Command / Query

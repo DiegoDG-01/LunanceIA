@@ -2,6 +2,7 @@ import uuid as uuid_lib
 from dataclasses import dataclass
 from datetime import date
 from typing import cast
+from datetime import datetime, timezone
 
 from domain.entities.transaction import Transaction
 from domain.objects.enums import TransactionType, AccountType
@@ -48,60 +49,75 @@ class CreateTransferHandler:
         if not user or not user.is_active:
             raise UserNotFoundError()
 
-        source = await self.account_repository.get_by_uuid_and_user_id(
-            dto.source_account_uuid, dto.user_id
-        )
-        if not source:
-            raise AccountNotFoundError(account_uuid=dto.source_account_uuid)
-
-        if source.account_type == AccountType.CREDIT_CARD:
-            raise TransferAccountTypeNotAllowedError(source.account_type.value)
-
-        destination = await self.account_repository.get_by_uuid_and_user_id(
-            dto.destination_account_uuid, dto.user_id
-        )
-        if not destination:
-            raise AccountNotFoundError(account_uuid=dto.destination_account_uuid)
-
-        money = Money(dto.amount, dto.currency)
-        transfer_date = dto.transfer_date or date.today()
-
-        if not source.can_withdraw(money):
-            raise InsufficientFundsError(
-                required_amount=float(dto.amount),
-                available_amount=float(source.current_balance.amount),
+        async with self.uow:
+            # TODO: reemplazar las vistas previas y bloqueos individuales por una
+            # consulta batch que resuelva ambos UUID, ordene por account.id y aplique FOR UPDATE.
+            source_preview = await self.account_repository.get_by_uuid_and_user_id(
+                dto.source_account_uuid, dto.user_id
+            )
+            destination_preview = await self.account_repository.get_by_uuid_and_user_id(
+                dto.destination_account_uuid, dto.user_id
             )
 
-        shared_transfer_uuid = str(uuid_lib.uuid4())
+            if not source_preview:
+                raise AccountNotFoundError(dto.source_account_uuid)
+            if not destination_preview:
+                raise AccountNotFoundError(dto.destination_account_uuid)
 
-        outgoing = Transaction.create_new(
-            user_id=cast(int, user.id),
-            account_id=cast(int, source.id),
-            category_id=None,
-            transaction_type=TransactionType.TRANSFER,
-            amount=money,
-            transaction_date=transfer_date,
-            description=dto.description or f"Transferencia a {destination.name}",
-            notes=dto.notes,
-        )
-        outgoing.transfer_uuid = shared_transfer_uuid
+            locked_accounts = {}
+            for account_id in sorted({source_preview.id, destination_preview.id}):
+                account = await self.account_repository.get_by_id(
+                    account_id=account_id, for_update=True
+                )
+                if not account or account.user_id != dto.user_id:
+                    raise AccountNotFoundError(str(account_id))
 
-        incoming = Transaction.create_new(
-            user_id=cast(int, user.id),
-            account_id=cast(int, destination.id),
-            category_id=None,
-            transaction_type=TransactionType.TRANSFER,
-            amount=money,
-            transaction_date=transfer_date,
-            description=dto.description or f"Transferencia desde {source.name}",
-            notes=dto.notes,
-        )
-        incoming.transfer_uuid = shared_transfer_uuid
+                locked_accounts[account_id] = account
 
-        source_new_balance = source.current_balance.subtract(money)
-        destination_new_balance = destination.current_balance.add(money)
+            source = locked_accounts[source_preview.id]
+            destination = locked_accounts[destination_preview.id]
 
-        async with self.uow:
+            if source.account_type == AccountType.CREDIT_CARD:
+                raise TransferAccountTypeNotAllowedError(source.account_type.value)
+
+            money = Money(dto.amount, dto.currency)
+            transfer_date = dto.transfer_date or date.today()
+
+            if not source.can_withdraw(money):
+                raise InsufficientFundsError(
+                    required_amount=float(dto.amount),
+                    available_amount=float(source.current_balance.amount),
+                )
+
+            shared_transfer_uuid = str(uuid_lib.uuid4())
+
+            outgoing = Transaction.create_new(
+                user_id=cast(int, user.id),
+                account_id=cast(int, source.id),
+                category_id=None,
+                transaction_type=TransactionType.TRANSFER,
+                amount=money,
+                transaction_date=transfer_date,
+                description=dto.description or f"Transferencia a {destination.name}",
+                notes=dto.notes,
+            )
+            outgoing.transfer_uuid = shared_transfer_uuid
+
+            incoming = Transaction.create_new(
+                user_id=cast(int, user.id),
+                account_id=cast(int, destination.id),
+                category_id=None,
+                transaction_type=TransactionType.TRANSFER,
+                amount=money,
+                transaction_date=transfer_date,
+                description=dto.description or f"Transferencia desde {source.name}",
+                notes=dto.notes,
+            )
+            incoming.transfer_uuid = shared_transfer_uuid
+
+            source_new_balance = source.current_balance.subtract(money)
+            destination_new_balance = destination.current_balance.add(money)
+
             source.update_balance(source_new_balance)
             destination.update_balance(destination_new_balance)
 
@@ -112,8 +128,6 @@ class CreateTransferHandler:
             await self.transaction_repository.create(incoming)
 
             await self.uow.commit()
-
-        from datetime import datetime, timezone
 
         return TransferResponseDTO(
             transfer_uuid=shared_transfer_uuid,
