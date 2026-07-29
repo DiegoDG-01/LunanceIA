@@ -15,7 +15,7 @@ Esta guía te mostrará cómo usar la API REST de Lunance IA v2, incluyendo aute
 
 ## 🔐 Autenticación JWT
 
-La API gestiona la autenticación **por sí misma**, con usuario y contraseña. Emite y valida sus propios tokens JWT: no depende de ningún proveedor de identidad externo.
+La API gestiona la autenticación **por sí misma**, con usuario y contraseña. Emite y valida sus propios tokens JWT: ese es el flujo principal. Existe además un *fallback* legado que acepta tokens de Auth0 (`validate_auth0_user`), por lo que las variables `AUTH0_DOMAIN` y `AUTH0_AUDIENCE` siguen siendo **obligatorias** en la configuración.
 
 ### Flujo de Autenticación
 
@@ -31,7 +31,7 @@ La API gestiona la autenticación **por sí misma**, con usuario y contraseña. 
 |---|---|---|
 | Algoritmo | HS256 | HS256 |
 | Firmado con | `SECRET_KEY` | `SECRET_KEY_REFRESH` |
-| Vigencia | `ACCESS_TOKEN_EXPIRE_MINUTES` (60 min por defecto) | `REFRESH_TOKEN_EXPIRE_DAYS` (7 días por defecto) |
+| Vigencia | `ACCESS_TOKEN_EXPIRE_MINUTES` (60 min por defecto en `settings.py` y `.env.example`) | `REFRESH_TOKEN_EXPIRE_DAYS` (7 días por defecto) |
 | Se envía en | Header `Authorization: Bearer` | Cuerpo de `/refresh` y `/logout` |
 | Almacenado en servidor | No | Sí, **solo su hash SHA-256** |
 
@@ -140,35 +140,38 @@ Además del JWT (usuarios humanos), la API soporta **API keys** para acceso prog
 |---|---|---|
 | Para | Usuario en la app | Acceso programático / integraciones |
 | Alcance | Acceso completo | Limitado por **scopes** |
-| Puede editar / eliminar | Sí | **No** (solo lectura y creación) |
+| Puede editar / eliminar | Sí | **Sí**, si la key tiene el scope `<recurso>:write` |
 
-Los endpoints aceptan **ambos** métodos (autenticación dual): si llega `X-API-Key` se usa esa vía; si no, se valida el JWT. Un usuario por JWT siempre tiene acceso completo; una API key solo puede hacer lo que sus scopes permitan.
+Los endpoints de recursos (cuentas, transacciones, categorías, dashboard, suscripciones, inversiones, bancos, ingresos, presupuestos, metas, plazos y transferencias) aceptan **ambos** métodos (autenticación dual): si llega `X-API-Key` se usa esa vía; si no, se valida el JWT. Un usuario por JWT siempre tiene acceso completo; una API key solo puede hacer lo que sus scopes permitan. En cambio, `/ai/*`, `/notifications`, `/auth/*` y `/api-keys/*` son **solo JWT**.
 
 ### Scopes disponibles
 
 | Scope | Permite |
 |-------|---------|
 | `transactions:read` | Listar y ver transacciones |
-| `transactions:write` | Crear transacciones |
+| `transactions:write` | Crear, editar y eliminar transacciones |
 | `accounts:read` | Listar / ver cuentas y su actividad |
-| `accounts:write` | Crear cuentas |
+| `accounts:write` | Crear, editar, activar/desactivar y eliminar cuentas |
 | `categories:read` | Listar categorías |
 | `dashboard:read` | Ver el dashboard financiero |
 | `budgets:read` | Listar / ver presupuestos y su progreso |
-| `budgets:write` | Crear presupuestos |
+| `budgets:write` | Crear, editar, activar/desactivar y eliminar presupuestos |
 | `goals:read` | Listar / ver metas de ahorro |
-| `goals:write` | Crear metas de ahorro |
+| `goals:write` | Crear, editar, activar/desactivar y eliminar metas de ahorro |
 | `investments:read` | Ver rendimientos y proyecciones de inversión |
 | `subscriptions:read` | Listar / ver suscripciones y sus cargos |
-| `subscriptions:write` | Crear suscripciones |
+| `subscriptions:write` | Crear, editar, activar/desactivar y eliminar suscripciones |
 | `installments:read` | Listar compras a plazos (MSI) |
-| `installments:write` | Crear compras a plazos (MSI) |
-| `transfers:write` | Crear transferencias entre cuentas |
+| `installments:write` | Crear, pagar, editar y eliminar compras a plazos (MSI) |
+| `transfers:write` | Crear y eliminar transferencias entre cuentas |
 | `banks:read` | Ver el catálogo de bancos |
+| `incomes:read` | Listar / ver ingresos recurrentes y sus depósitos |
+| `incomes:write` | Crear, editar, activar/desactivar y eliminar ingresos recurrentes |
 
-> No existen scopes de edición ni eliminación **a propósito**: una API key solo puede
-> **leer y crear**, nunca modificar ni borrar datos. `transfers` solo tiene `:write`
-> (crear); las transferencias se consultan dentro de las transacciones.
+> El scope `:write` de cada recurso habilita **crear, editar y eliminar** en ese
+> recurso (el chequeo solo verifica la presencia del scope); una key que solo tenga
+> `:read` no puede modificar nada. `transfers` solo tiene `:write` (crear y eliminar);
+> las transferencias se consultan dentro de las transacciones.
 
 > 🤖 **Uso vía MCP:** estos scopes son la base del servidor MCP que expone la API a
 > agentes/LLM. Para ejecutarlo, sus herramientas y cómo probarlo, consulta
@@ -183,7 +186,7 @@ curl -X GET "http://localhost:8000/api/v2/transaction/" \
 
 Si la key no tiene el scope requerido, la API responde `403 Forbidden`. Si es inválida, fue revocada o expiró, responde `401 Unauthorized`.
 
-> La gestión de keys (crear / listar / revocar) se hace **con JWT**, no con API key. Ver [API Keys](#-api-keys---apiv2api-keys) en la sección de endpoints.
+> La gestión de keys (crear / listar / revocar / eliminar) se hace **con JWT**, no con API key. Ver [API Keys](#-api-keys---apiv2api-keys) en la sección de endpoints.
 
 ## 🌐 Endpoints Principales
 
@@ -355,10 +358,19 @@ GET /api/v2/api-keys/
 
 #### Revocar API Key
 ```bash
+PATCH /api/v2/api-keys/{api_key_uuid}/revoke/
+```
+
+Desactiva la key **sin borrarla**: deja de autenticar, pero se conserva en el listado para auditoría.
+
+**Response:** `204 No Content` si se revocó; `404 Not Found` si no existe o no pertenece al usuario.
+
+#### Eliminar API Key
+```bash
 DELETE /api/v2/api-keys/{api_key_uuid}/
 ```
 
-**Response:** `204 No Content` si se revocó; `404 Not Found` si no existe o no pertenece al usuario. La revocación es permanente (la key queda inactiva).
+**Response:** `204 No Content` si se eliminó; `404 Not Found` si no existe o no pertenece al usuario. El borrado es **permanente**: la key desaparece del listado.
 
 ### 💳 Cuentas - `/api/v2/account/`
 
@@ -367,35 +379,45 @@ DELETE /api/v2/api-keys/{api_key_uuid}/
 GET /api/v2/account/
 ```
 
-**Response:**
+**Query Parameters:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `only_active` | bool | Solo cuentas activas (default: false) |
+| `limit` | int | Máximo de resultados (default: 50, max: 150) |
+| `offset` | int | Offset para paginación (default: 0) |
+
+**Response:** `total` indica el número de cuentas devueltas en la respuesta.
 ```json
 {
   "accounts": [
     {
-      "id": "123",
+      "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
       "name": "Cuenta de Ahorros BBVA",
       "account_type": "SAVINGS",
-      "bank": "BBVA",
-      "balance": {
-        "amount": 15500.75,
-        "currency": "MXN"
-      },
+      "bank_id": 1,
+      "bank_name": "BBVA México",
+      "bank_code": "BBVA",
+      "current_balance": 15500.75,
+      "currency": "MXN",
       "is_active": true,
-      "created_at": "2024-01-15T10:30:00Z"
+      "credit_card_settings": null,
+      "investment_settings": null
     },
     {
-      "id": "124",
+      "account_uuid": "660e8400-e29b-41d4-a716-446655440001",
       "name": "Tarjeta de Crédito Banamex",
-      "account_type": "CREDIT",
-      "bank": "Banamex",
-      "balance": {
-        "amount": -2500.00,
-        "currency": "MXN"
-      },
+      "account_type": "CREDIT_CARD",
+      "bank_id": 2,
+      "bank_name": "Banamex",
+      "bank_code": "BANAMEX",
+      "current_balance": -2500.00,
+      "currency": "MXN",
       "is_active": true,
-      "created_at": "2024-02-01T14:22:00Z"
+      "credit_card_settings": null,
+      "investment_settings": null
     }
-  ]
+  ],
+  "total": 2
 }
 ```
 
@@ -404,78 +426,76 @@ GET /api/v2/account/
 POST /api/v2/account/
 ```
 
-**Request:**
+**Request:** `bank_id` es el ID del banco del catálogo (`GET /api/v2/bank/`). Opcionales: `currency` (default `MXN`), `is_active`, `credit_card_settings` (solo `CREDIT_CARD`) e `investment_settings` (solo `INVESTMENT`).
 ```json
 {
   "name": "Mi Cuenta de Ahorros",
   "account_type": "SAVINGS",
-  "bank": "BBVA",
+  "bank_id": 1,
   "initial_balance": 1000.00
 }
 ```
 
-**Response:**
+**Response:** `201 Created`
 ```json
 {
-  "id": "125",
+  "account_uuid": "770e8400-e29b-41d4-a716-446655440002",
   "name": "Mi Cuenta de Ahorros",
   "account_type": "SAVINGS",
-  "bank": "BBVA",
-  "balance": {
-    "amount": 1000.00,
-    "currency": "MXN"
-  },
+  "bank_id": 1,
+  "bank_name": "BBVA México",
+  "bank_code": "BBVA",
+  "current_balance": 1000.00,
+  "currency": "MXN",
   "is_active": true,
-  "created_at": "2024-07-03T16:45:00Z"
+  "credit_card_settings": null,
+  "investment_settings": null
 }
 ```
 
-#### Obtener Cuenta por ID
+#### Obtener Cuenta por UUID
 ```bash
-GET /api/v2/account/{account_id}
+GET /api/v2/account/{account_uuid}
 ```
 
 **Response:**
 ```json
 {
-  "id": "123",
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
   "name": "Cuenta de Ahorros BBVA",
   "account_type": "SAVINGS",
-  "bank": "BBVA",
-  "balance": {
-    "amount": 15500.75,
-    "currency": "MXN"
-  },
+  "bank_id": 1,
+  "bank_name": "BBVA México",
+  "bank_code": "BBVA",
+  "current_balance": 15500.75,
+  "currency": "MXN",
   "is_active": true,
-  "created_at": "2024-01-15T10:30:00Z",
-  "updated_at": "2024-06-30T09:15:00Z"
+  "credit_card_settings": null,
+  "investment_settings": null
 }
 ```
 
 #### Actualizar Cuenta
 ```bash
-PUT /api/v2/account/{account_id}
+PATCH /api/v2/account/{account_uuid}/
 ```
 
-**Request:**
+**Request:** todos los campos son opcionales (`name`, `bank_id`, `current_balance`, `credit_card_settings`, `investment_settings`).
 ```json
 {
   "name": "Cuenta Principal BBVA",
-  "bank": "BBVA Bancomer"
+  "bank_id": 1
 }
 ```
+
+**Response:** Misma estructura que obtener cuenta por UUID.
 
 #### Eliminar Cuenta
 ```bash
-DELETE /api/v2/account/{account_id}
+DELETE /api/v2/account/{account_uuid}/
 ```
 
-**Response:**
-```json
-{
-  "message": "Cuenta eliminada exitosamente"
-}
-```
+**Response:** `204 No Content` (sin cuerpo).
 
 #### Activar/Desactivar Cuenta
 ```bash
@@ -484,11 +504,20 @@ PATCH /api/v2/account/{account_uuid}/status/
 
 Alterna el estado activo/inactivo de la cuenta.
 
-**Response:** Misma estructura que obtener cuenta por ID.
+**Response:** Misma estructura que obtener cuenta por UUID.
+
+#### Actividad Reciente de una Cuenta
+```bash
+GET /api/v2/account/{account_uuid}/activity
+```
+
+Retorna los movimientos recientes de la cuenta. Requiere scope `accounts:read`.
+
+**Response:** lista de movimientos con `name` (nombre de la cuenta), `transaction_type` (`INCOME`, `EXPENSE` o `TRANSFER`), `category_name`, `amount` y `transaction_date`.
 
 ### 💰 Transacciones - `/api/v2/transaction/`
 
-> **Acceso por API key:** lectura requiere scope `transactions:read` y la creación `transactions:write`. `PUT` y `DELETE` son **solo JWT** (no accesibles con API key).
+> **Acceso por API key:** lectura requiere scope `transactions:read`; crear (`POST`), editar (`PUT`) y eliminar (`DELETE`) requieren `transactions:write`.
 
 #### Listar Transacciones
 ```bash
@@ -502,7 +531,7 @@ GET /api/v2/transaction/
 | `limit` | int | Máximo de resultados (default: 100, max: 1000) |
 | `start_date` | date | Filtrar desde esta fecha |
 | `end_date` | date | Filtrar hasta esta fecha |
-| `transaction_type` | string | Tipo: `INCOME` o `EXPENSE` |
+| `transaction_type` | string | Tipo: `INCOME`, `EXPENSE` o `TRANSFER` |
 | `category_id` | int | ID de categoría |
 | `account_uuid` | string | UUID de la cuenta |
 
@@ -511,6 +540,7 @@ GET /api/v2/transaction/
 [
   {
     "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "transfer_uuid": null,
     "category": "Alimentación",
     "transaction_type": "EXPENSE",
     "amount": 250.50,
@@ -520,14 +550,14 @@ GET /api/v2/transaction/
     "creation_date": "2024-12-14T10:30:00Z",
     "account_name": "Cuenta Principal",
     "account_type": "CHECKING",
-    "account_bank": "BBVA"
+    "account_uuid": "660e8400-e29b-41d4-a716-446655440001"
   }
 ]
 ```
 
 #### Obtener Transacción por UUID
 ```bash
-GET /api/v2/transaction/{transaction_uuid}
+GET /api/v2/transaction/{transaction_uuid}/
 ```
 
 #### Crear Transacción
@@ -591,6 +621,7 @@ GET /api/v2/category/
     {
       "id": 1,
       "name": "Alimentación",
+      "type": "EXPENSE",
       "description": "Gastos de comida y supermercado",
       "color": "#FF5733",
       "icon": "food",
@@ -617,6 +648,15 @@ Retorna un resumen del estado financiero del usuario.
 GET /api/v2/subscription/
 ```
 
+**Query Parameters:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `account_uuid` | string | Filtrar por UUID de la cuenta |
+| `category_id` | int | Filtrar por ID de categoría |
+| `active_only` | bool | Solo suscripciones activas (default: false) |
+| `limit` | int | Máximo de resultados (default: 100, max: 1000) |
+| `offset` | int | Offset para paginación (default: 0) |
+
 **Response:**
 ```json
 [
@@ -633,6 +673,7 @@ GET /api/v2/subscription/
     "service_url": "https://netflix.com",
     "start_date": "2024-01-01",
     "end_date": null,
+    "next_charge_date": "2024-07-15",
     "is_active": true
   }
 ]
@@ -666,11 +707,11 @@ POST /api/v2/subscription/
 }
 ```
 
-**Frecuencias disponibles:** `DAILY`, `WEEKLY`, `MONTHLY`, `QUARTERLY`, `ANNUAL`
+**Frecuencias disponibles:** `DAILY`, `WEEKLY`, `BIWEEKLY`, `MONTHLY`, `BIMONTHLY`, `QUARTERLY`, `SEMI_ANNUAL`, `ANNUAL`
 
 #### Actualizar Suscripción
 ```bash
-PUT /api/v2/subscription/{subscription_uuid}/
+PATCH /api/v2/subscription/{subscription_uuid}/
 ```
 
 **Request:** (todos los campos son opcionales excepto `account_uuid`)
@@ -721,6 +762,15 @@ Retorna el historial de cargos generados automáticamente para las suscripciones
   }
 ]
 ```
+
+#### Últimos Cargos de una Suscripción
+```bash
+GET /api/v2/subscription/{subscription_uuid}/transactions/
+```
+
+Retorna los últimos cargos generados por una suscripción. Requiere scope `subscriptions:read`.
+
+**Response:** lista con `name` (nombre de la suscripción), `account_name`, `amount` y `charge_date` de cada cargo.
 
 ### 📈 Inversiones - `/api/v2/investments/`
 
@@ -787,7 +837,7 @@ POST /api/v2/ai/analyze/image
 
 Usa Google Gemini para extraer datos estructurados de una imagen de recibo o ticket. Detecta automáticamente si es una transacción o una suscripción.
 
-**Límite de rate:** 2 requests por día por IP.
+**Límite de rate:** 1 request por día por IP.
 
 **Request:** `multipart/form-data`
 - `file`: Archivo de imagen (PNG, JPG, etc.)
@@ -837,7 +887,7 @@ Analiza las transacciones del mes actual del usuario y genera recomendaciones pe
 }
 ```
 
-> **Nota**: Si no hay transacciones registradas en el mes actual, el endpoint retorna `404` con código `NOT_FOUND_TRANSACTION_ACTIVITY`.
+> **Nota**: Si no hay transacciones registradas en el mes actual, el endpoint retorna `404` con código `NOT_FOUND_ACTIVITY`.
 
 ### 🏦 Bancos - `/api/v2/bank/`
 
@@ -847,6 +897,11 @@ GET /api/v2/bank/
 ```
 
 Retorna el catálogo de bancos disponibles.
+
+**Query Parameters:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `only_active` | bool | Solo bancos activos (default: true) |
 
 **Response:**
 ```json
@@ -865,6 +920,327 @@ Retorna el catálogo de bancos disponibles.
   "total": 1
 }
 ```
+
+### 💵 Ingresos Recurrentes - `/api/v2/incomes/`
+
+Gestiona ingresos recurrentes (nómina, renta, etc.). La lectura requiere scope `incomes:read`; crear, editar y eliminar requieren `incomes:write`.
+
+#### Listar Ingresos
+```bash
+GET /api/v2/incomes/
+```
+
+**Query Parameters:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `account_uuid` | string | Filtrar por UUID de la cuenta |
+| `category_id` | int | Filtrar por ID de categoría |
+| `active_only` | bool | Solo ingresos activos (default: false) |
+| `limit` | int | Máximo de resultados (default: 100, max: 1000) |
+| `offset` | int | Offset para paginación (default: 0) |
+
+**Response:** lista de ingresos con `uuid`, `name`, `account_uuid`, `account_name`, `category_name`, `frequency`, `amount`, `currency`, `start_date`, `end_date`, `next_payment_date`, `is_active`, `description` y `creation_date`.
+
+#### Obtener Ingreso por UUID
+```bash
+GET /api/v2/incomes/{income_uuid}/
+```
+
+**Response:** Misma estructura que un elemento individual del listado.
+
+#### Listar Depósitos de un Ingreso
+```bash
+GET /api/v2/incomes/{income_uuid}/deposits/
+```
+
+Historial de depósitos generados automáticamente por el ingreso recurrente. Acepta `limit` y `offset`.
+
+**Response:** lista con `uuid`, `deposit_date`, `amount`, `currency`, `status` y `transaction_uuid` de cada depósito.
+
+#### Crear Ingreso
+```bash
+POST /api/v2/incomes/
+```
+
+**Request:**
+```json
+{
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "category_id": 3,
+  "name": "Nómina Empresa X",
+  "amount": 15000.00,
+  "frequency": "BIWEEKLY",
+  "start_date": "2026-08-01",
+  "end_date": null,
+  "next_payment_date": null,
+  "description": "Pago quincenal de nómina"
+}
+```
+
+Campos opcionales: `end_date`, `next_payment_date` (default: `start_date`) y `description`. Las frecuencias son las mismas que en suscripciones.
+
+**Response:** `201 Created` con la misma estructura del listado.
+
+#### Actualizar Ingreso
+```bash
+PATCH /api/v2/incomes/{income_uuid}/
+```
+
+**Request:** todos los campos son opcionales (`account_uuid`, `name`, `amount`, `frequency`, `start_date`, `end_date`, `next_payment_date`, `is_active`, `description`, `category_id`).
+
+#### Activar/Desactivar Ingreso
+```bash
+PATCH /api/v2/incomes/{income_uuid}/activate/
+```
+
+Alterna el estado activo/inactivo del ingreso.
+
+#### Eliminar Ingreso
+```bash
+DELETE /api/v2/incomes/{income_uuid}/
+```
+
+**Response:** `204 No Content`
+
+### 🎯 Presupuestos - `/api/v2/budgets/`
+
+La lectura requiere scope `budgets:read`; crear, editar y eliminar requieren `budgets:write`.
+
+#### Listar Presupuestos
+```bash
+GET /api/v2/budgets/
+```
+
+**Query Parameters:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `active_only` | bool | Solo presupuestos activos (default: false) |
+| `category_id` | int | Filtrar por categoría |
+
+**Response:** lista con `uuid`, `name`, `category_id`, `category_name`, `limit_amount`, `period`, `start_date`, `end_date`, `is_active`, `alert_percentage` y `creation_date`.
+
+#### Obtener Presupuesto por UUID
+```bash
+GET /api/v2/budgets/{budget_uuid}/
+```
+
+#### Progreso de un Presupuesto
+```bash
+GET /api/v2/budgets/{budget_uuid}/progress/
+```
+
+Progreso del presupuesto en el periodo actual.
+
+**Response:** `uuid`, `name`, `category_id`, `category_name`, `limit_amount`, `spent_amount`, `remaining_amount`, `percentage_used`, `alert_percentage`, `is_alert_triggered`, `is_limit_exceeded`, `period`, `period_start`, `period_end` e `is_active`.
+
+#### Crear Presupuesto
+```bash
+POST /api/v2/budgets/
+```
+
+**Request:**
+```json
+{
+  "name": "Comida mensual",
+  "limit_amount": 5000.00,
+  "period": "mensual",
+  "start_date": "2025-05-01",
+  "category_id": 1,
+  "end_date": null,
+  "alert_percentage": 80
+}
+```
+
+`category_id` es opcional (si se omite, aplica a todas las categorías) y `alert_percentage` es opcional (default 80, rango 1-100). Periodos disponibles: `semanal`, `quincenal`, `mensual`, `trimestral`, `anual`.
+
+**Response:** `201 Created`
+
+#### Actualizar Presupuesto
+```bash
+PATCH /api/v2/budgets/{budget_uuid}/
+```
+
+**Request:** todos los campos son opcionales (`name`, `limit_amount`, `period`, `start_date`, `end_date`, `alert_percentage`, `category_id`).
+
+#### Activar/Desactivar Presupuesto
+```bash
+PATCH /api/v2/budgets/{budget_uuid}/activate/
+```
+
+Alterna el estado activo/inactivo del presupuesto.
+
+#### Eliminar Presupuesto
+```bash
+DELETE /api/v2/budgets/{budget_uuid}/
+```
+
+**Response:** `204 No Content`
+
+### 🏆 Metas de Ahorro - `/api/v2/goals/`
+
+La lectura requiere scope `goals:read`; crear, editar y eliminar requieren `goals:write`.
+
+#### Listar Metas
+```bash
+GET /api/v2/goals/
+```
+
+**Query Parameters:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `active_only` | bool | Solo metas activas (default: false) |
+
+**Response:** lista con `uuid`, `account_uuid`, `account_name`, `name`, `target_amount`, `current_amount`, `progress_percentage`, `target_date`, `description`, `is_active`, `completion_date` y `creation_date`.
+
+#### Obtener Meta por UUID
+```bash
+GET /api/v2/goals/{goal_uuid}/
+```
+
+#### Crear Meta
+```bash
+POST /api/v2/goals/
+```
+
+**Request:**
+```json
+{
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Viaje a Japón",
+  "target_amount": 50000.00,
+  "target_date": "2027-01-01",
+  "description": "Ahorro para vacaciones"
+}
+```
+
+`target_date` y `description` son opcionales.
+
+**Response:** `201 Created`
+
+#### Actualizar Meta
+```bash
+PUT /api/v2/goals/{goal_uuid}/
+```
+
+**Request:** todos los campos son opcionales (`name`, `target_amount`, `target_date`, `description`).
+
+#### Activar/Desactivar Meta
+```bash
+PATCH /api/v2/goals/{goal_uuid}/activate/
+```
+
+Alterna el estado activo/inactivo de la meta.
+
+#### Eliminar Meta
+```bash
+DELETE /api/v2/goals/{goal_uuid}/
+```
+
+**Response:** `204 No Content`
+
+### 🛒 Compras a Plazos (MSI) - `/api/v2/installments/`
+
+La lectura requiere scope `installments:read`; crear, pagar, editar y eliminar requieren `installments:write`.
+
+#### Listar Compras a Plazos
+```bash
+GET /api/v2/installments/
+```
+
+**Response:** lista de compras con `uuid`, `account_uuid`, `category_id`, `description`, `total_amount`, `num_installments`, `installment_type` (`NO_INTEREST` o `WITH_INTEREST`), `annual_interest_rate`, `monthly_payment`, `purchase_date`, `notes`, `is_active`, `creation_date` y `charges` (cada cargo con `uuid`, `installment_number`, `amount`, `due_date`, `paid` y `paid_at`).
+
+#### Crear Compra a Plazos
+```bash
+POST /api/v2/installments/
+```
+
+**Request:**
+```json
+{
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "category_id": 10,
+  "description": "Laptop a 12 meses",
+  "total_amount": 24000.00,
+  "num_installments": 12,
+  "installment_type": "NO_INTEREST",
+  "annual_interest_rate": 0,
+  "purchase_date": "2026-07-15",
+  "notes": null
+}
+```
+
+`num_installments` admite valores de 2 a 48; `annual_interest_rate` es 0 si es a meses sin intereses.
+
+#### Pagar un Cargo
+```bash
+POST /api/v2/installments/{charge_uuid}/pay/
+```
+
+**Request:**
+```json
+{
+  "payment_date": "2026-08-15"
+}
+```
+
+**Response:** el cargo actualizado (`uuid`, `installment_number`, `amount`, `due_date`, `paid`, `paid_at`).
+
+#### Actualizar Compra a Plazos
+```bash
+PATCH /api/v2/installments/{purchase_uuid}/
+```
+
+**Request:** todos los campos son opcionales (`description`, `notes`, `category_id`).
+
+#### Eliminar Compra a Plazos
+```bash
+DELETE /api/v2/installments/{purchase_uuid}/
+```
+
+**Response:** `204 No Content`
+
+### 🔁 Transferencias - `/api/v2/transfers/`
+
+Requieren scope `transfers:write` (crear y eliminar). Las transferencias se consultan dentro de las transacciones.
+
+#### Crear Transferencia
+```bash
+POST /api/v2/transfers/
+```
+
+**Request:**
+```json
+{
+  "source_account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "destination_account_uuid": "660e8400-e29b-41d4-a716-446655440001",
+  "amount": 1000.00,
+  "description": "Ahorro mensual",
+  "notes": null,
+  "transfer_date": "2026-07-28"
+}
+```
+
+`description`, `notes` y `transfer_date` son opcionales.
+
+**Response:** `201 Created` con `transfer_uuid`, `amount`, `transfer_date`, `description`, `source_account_name`, `source_account_uuid`, `destination_account_name`, `destination_account_uuid` y `creation_date`.
+
+#### Eliminar Transferencia
+```bash
+DELETE /api/v2/transfers/{transfer_uuid}/
+```
+
+**Response:** `204 No Content`
+
+### 🔔 Notificaciones - `/api/v2/notifications/`
+
+#### Obtener y Limpiar Notificaciones
+```bash
+GET /api/v2/notifications/
+```
+
+Retorna las notificaciones pendientes del usuario y las limpia (una vez leídas, desaparecen). **Solo JWT** (no accesible con API key). Límite: 5 requests/minuto.
+
+**Response:** lista con `id`, `title`, `message`, `type` (`sms`, `email` o `push`) y `created_at`.
 
 ## 💡 Ejemplos de Uso
 
@@ -901,7 +1277,7 @@ curl -X POST "http://localhost:8000/api/v2/account/" \
      -d '{
        "name": "Cuenta Principal",
        "account_type": "CHECKING",
-       "bank": "Santander",
+       "bank_id": 1,
        "initial_balance": 5000.00
      }'
 
@@ -920,7 +1296,7 @@ curl -X POST "http://localhost:8000/api/v2/account/" \
      -d '{
        "name": "Ahorro para Vacaciones",
        "account_type": "SAVINGS",
-       "bank": "BBVA",
+       "bank_id": 1,
        "initial_balance": 2000.00
      }'
 
@@ -931,12 +1307,12 @@ curl -X POST "http://localhost:8000/api/v2/account/" \
      -d '{
        "name": "Inversiones GBM",
        "account_type": "INVESTMENT",
-       "bank": "GBM",
+       "bank_id": 5,
        "initial_balance": 10000.00
      }'
 
 # Actualizar nombre de cuenta
-curl -X PUT "http://localhost:8000/api/v2/account/123" \
+curl -X PATCH "http://localhost:8000/api/v2/account/550e8400-e29b-41d4-a716-446655440000/" \
      -H "Authorization: Bearer $ACCESS_TOKEN" \
      -H "Content-Type: application/json" \
      -d '{
@@ -975,7 +1351,7 @@ La API retorna errores en un formato estándar con soporte de internacionalizaci
 
 **Otros códigos de autenticación:**
 - `AUTH_USER_INACTIVE`: Usuario inactivo
-- `UNAUTHORIZED`: Token inválido o faltante
+- `JWT_VALIDATION_ERROR`: Token JWT inválido, expirado o mal formado
 
 ### Errores de Validación (422)
 
@@ -1029,13 +1405,22 @@ La API retorna errores en un formato estándar con soporte de internacionalizaci
 - `BUSINESS_EMAIL_EXISTS` (409): Email ya registrado
 - `BUSINESS_ACCOUNT_HAS_TRANSACTIONS` (409): Cuenta tiene transacciones
 - `BUSINESS_RULE_VIOLATION` (400): Violación de regla de negocio genérica
-- `INSUFFICIENT_FUNDS` (400): Fondos insuficientes
+- `INSUFFICIENT_FUNDS` (422): Fondos insuficientes
 
 ### Rate Limit Exceeded (429)
 
 ```json
 {
-  "detail": "Rate limit exceeded: 100 per 1 minute"
+  "error_code": "RATE_LIMIT_EXCEEDED",
+  "message": "Límite de solicitudes excedido",
+  "details": [
+    {
+      "loc": ["rate_limit"],
+      "msg": "Rate limit exceeded: 100 per 1 minute",
+      "type": "rate_limit_exceeded",
+      "input": null
+    }
+  ]
 }
 ```
 
@@ -1094,9 +1479,11 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 |----------|--------|
 | `GET /account/` | **50 requests/minuto** |
 | `POST /account/` | **50 requests/minuto** |
-| `GET /account/{id}` | **50 requests/minuto** |
-| `PUT /account/{id}` | **50 requests/minuto** |
-| `DELETE /account/{id}` | **50 requests/minuto** |
+| `GET /account/{uuid}` | **50 requests/minuto** |
+| `GET /account/{uuid}/activity` | **50 requests/minuto** |
+| `PATCH /account/{uuid}/` | **50 requests/minuto** |
+| `PATCH /account/{uuid}/status/` | **50 requests/minuto** |
+| `DELETE /account/{uuid}/` | **50 requests/minuto** |
 
 #### Endpoints de Transacciones
 
@@ -1104,7 +1491,7 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 |----------|--------|------|
 | `GET /transaction/` | **50 requests/minuto** | Listado con filtros |
 | `POST /transaction/` | **20 requests/minuto** | Creación manual |
-| `GET /transaction/{uuid}` | **50 requests/minuto** | Detalle de transacción |
+| `GET /transaction/{uuid}/` | **50 requests/minuto** | Detalle de transacción |
 | `PUT /transaction/{uuid}/` | **15 requests/minuto** | Actualización |
 | `DELETE /transaction/{uuid}/` | **10 requests/minuto** | Eliminación |
 
@@ -1120,9 +1507,10 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 |----------|--------|------|
 | `GET /subscription/` | **50 requests/minuto** | Listado |
 | `GET /subscription/charges/` | **50 requests/minuto** | Historial de cargos |
-| `GET /subscription/{uuid}/` | **50 requests/minuto** | Detalle |
+| `GET /subscription/{uuid}/` | Sin límite específico | Detalle |
+| `GET /subscription/{uuid}/transactions/` | **20 requests/minuto** | Últimos cargos |
 | `POST /subscription/` | **20 requests/minuto** | Creación |
-| `PUT /subscription/{uuid}/` | **20 requests/minuto** | Actualización |
+| `PATCH /subscription/{uuid}/` | **20 requests/minuto** | Actualización |
 | `PATCH /subscription/{uuid}/activate/` | **5 requests/minuto** | Activar/desactivar |
 | `DELETE /subscription/{uuid}/` | **5 requests/minuto** | Eliminación |
 
@@ -1137,7 +1525,7 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 
 | Endpoint | Límite | Nota |
 |----------|--------|------|
-| `POST /ai/analyze/image` | **2 requests/día** | Análisis de imagen con Gemini |
+| `POST /ai/analyze/image` | **1 request/día** | Análisis de imagen con Gemini |
 | `GET /ai/expense_advisor` | **1 request/día** | Análisis de gastos del mes |
 
 #### Endpoints de Bancos
@@ -1152,6 +1540,73 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 |----------|--------|
 | `GET /dashboard/` | **10 requests/minuto** |
 
+#### Endpoints de Ingresos
+
+| Endpoint | Límite | Nota |
+|----------|--------|------|
+| `GET /incomes/` | **50 requests/minuto** | Listado |
+| `GET /incomes/{uuid}/` | **50 requests/minuto** | Detalle |
+| `GET /incomes/{uuid}/deposits/` | **20 requests/minuto** | Historial de depósitos |
+| `POST /incomes/` | **20 requests/minuto** | Creación |
+| `PATCH /incomes/{uuid}/` | **20 requests/minuto** | Actualización |
+| `PATCH /incomes/{uuid}/activate/` | **5 requests/minuto** | Activar/desactivar |
+| `DELETE /incomes/{uuid}/` | **5 requests/minuto** | Eliminación |
+
+#### Endpoints de Presupuestos
+
+| Endpoint | Límite | Nota |
+|----------|--------|------|
+| `GET /budgets/` | **50 requests/minuto** | Listado |
+| `GET /budgets/{uuid}/` | **50 requests/minuto** | Detalle |
+| `GET /budgets/{uuid}/progress/` | **50 requests/minuto** | Progreso del periodo actual |
+| `POST /budgets/` | **20 requests/minuto** | Creación |
+| `PATCH /budgets/{uuid}/` | **20 requests/minuto** | Actualización |
+| `PATCH /budgets/{uuid}/activate/` | **5 requests/minuto** | Activar/desactivar |
+| `DELETE /budgets/{uuid}/` | **5 requests/minuto** | Eliminación |
+
+#### Endpoints de Metas de Ahorro
+
+| Endpoint | Límite | Nota |
+|----------|--------|------|
+| `GET /goals/` | **50 requests/minuto** | Listado |
+| `GET /goals/{uuid}/` | **50 requests/minuto** | Detalle |
+| `POST /goals/` | **20 requests/minuto** | Creación |
+| `PUT /goals/{uuid}/` | **20 requests/minuto** | Actualización |
+| `PATCH /goals/{uuid}/activate/` | **5 requests/minuto** | Activar/desactivar |
+| `DELETE /goals/{uuid}/` | **5 requests/minuto** | Eliminación |
+
+#### Endpoints de Compras a Plazos
+
+| Endpoint | Límite | Nota |
+|----------|--------|------|
+| `GET /installments/` | **50 requests/minuto** | Listado |
+| `POST /installments/` | **20 requests/minuto** | Creación |
+| `POST /installments/{charge_uuid}/pay/` | **20 requests/minuto** | Pago de cargo |
+| `PATCH /installments/{purchase_uuid}/` | **20 requests/minuto** | Actualización |
+| `DELETE /installments/{purchase_uuid}/` | **20 requests/minuto** | Eliminación |
+
+#### Endpoints de Transferencias
+
+| Endpoint | Límite | Nota |
+|----------|--------|------|
+| `POST /transfers/` | **20 requests/minuto** | Creación |
+| `DELETE /transfers/{transfer_uuid}/` | **10 requests/minuto** | Eliminación |
+
+#### Endpoints de Notificaciones
+
+| Endpoint | Límite | Nota |
+|----------|--------|------|
+| `GET /notifications/` | **5 requests/minuto** | Obtiene y limpia notificaciones |
+
+#### Endpoints de API Keys
+
+| Endpoint | Límite | Nota |
+|----------|--------|------|
+| `POST /api-keys/` | **10 requests/minuto** | Creación |
+| `GET /api-keys/` | **50 requests/minuto** | Listado |
+| `PATCH /api-keys/{uuid}/revoke/` | **10 requests/minuto** | Revocación |
+| `DELETE /api-keys/{uuid}/` | **10 requests/minuto** | Eliminación |
+
 #### Endpoints Generales
 
 | Endpoint | Límite |
@@ -1162,7 +1617,7 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 ### ⚠️ Consideraciones Importantes
 
 **Para Desarrollo y Testing:**
-- Los endpoints de IA (`/ai/analyze/image` y `/ai/expense_advisor`) tienen límites diarios muy bajos (2/día y 1/día respectivamente)
+- Los endpoints de IA (`/ai/analyze/image` y `/ai/expense_advisor`) tienen límites diarios muy bajos (1 request/día cada uno)
 - Los límites se aplican por IP, por lo que múltiples ejecuciones de tests desde la misma máquina se acumularán
 - **Recomendación**: El rate limiting se deshabilita automáticamente cuando `ENVIRONMENT=TEST`, úsalo en tests
 
@@ -1171,7 +1626,16 @@ Cuando se excede el rate limit, recibirás un error `429 Too Many Requests` con 
 
 ```json
 {
-  "detail": "Rate limit exceeded: 5 per 1 hour"
+  "error_code": "RATE_LIMIT_EXCEEDED",
+  "message": "Límite de solicitudes excedido",
+  "details": [
+    {
+      "loc": ["rate_limit"],
+      "msg": "Rate limit exceeded: 5 per 1 hour",
+      "type": "rate_limit_exceeded",
+      "input": null
+    }
+  ]
 }
 ```
 
@@ -1181,24 +1645,15 @@ La respuesta incluye los siguientes headers:
 
 > **Nota**: Los límites expresados en días (p. ej. endpoints `/ai/`) muestran `per 1 day` en el mensaje.
 
-### Paginación (Próximamente)
+### Paginación
 
-Los endpoints que retornan listas soportarán paginación:
+Los endpoints de listado soportan paginación por `limit`/`offset` (transacciones usa `skip`/`limit`):
 
 ```bash
-GET /api/v2/account/?page=1&size=20
+GET /api/v2/account/?limit=20&offset=0
 ```
 
-**Response con paginación:**
-```json
-{
-  "items": [...],
-  "total": 150,
-  "page": 1,
-  "size": 20,
-  "pages": 8
-}
-```
+Algunas respuestas de listado (cuentas, categorías y bancos) incluyen además el campo `total` con el número de elementos devueltos en la respuesta.
 
 ## 🔧 Herramientas Recomendadas
 
@@ -1325,7 +1780,7 @@ accounts = await client.get_accounts()
 
 ## 📚 Documentación
 
-> **Nota**: Swagger UI y ReDoc están deshabilitados por defecto en la configuración actual. Usa esta guía y la colección de Bruno como referencia principal para la API.
+> **Nota**: Swagger UI (`/docs`) y ReDoc (`/redoc`) están **habilitados** cuando `ENVIRONMENT != "PROD"`; en producción se deshabilitan (junto con `/openapi.json`). En producción, usa esta guía y la colección de Bruno como referencia principal para la API.
 
 ---
 

@@ -78,7 +78,7 @@ Si ejecutas Lunance IA por tu cuenta:
 
 - Nunca subas tu `.env` al control de versiones; parte de `.env.example`.
 - Genera tus propias claves y secretos: no reutilices los valores de ejemplo de la documentación.
-- Ejecuta con `ENVIRONMENT=PROD` en producción — `DEV` habilita CORS abierto y trazas detalladas en los errores.
+- Ejecuta con `ENVIRONMENT=PROD` en producción — `DEV`/`TEST` habilita CORS para un único `FRONTEND_URL` y trazas detalladas en los errores.
 - Sirve siempre la API tras TLS.
 - Restringe el acceso de red a MySQL y Redis; no los expongas a Internet.
 - Mantén las dependencias al día (`uv sync`) y revisa los avisos de Dependabot.

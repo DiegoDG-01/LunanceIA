@@ -81,8 +81,8 @@ Al participar en este proyecto, te comprometes a mantener un ambiente respetuoso
 
 ```bash
 # 1. Fork y clonar el repositorio
-git clone https://github.com/tu-usuario/lunance.git
-cd lunance
+git clone https://github.com/DiegoDG-01/LunanceIA.git
+cd LunanceIA
 
 # 2. Crear rama de desarrollo
 git checkout -b feature/mi-nueva-funcionalidad
@@ -94,17 +94,20 @@ uv sync
 source .venv/bin/activate  # Linux/macOS
 # .venv\Scripts\activate    # Windows
 
-# 5. Configurar variables de entorno
+# 5. Compilar e instalar el motor Rust (proyecciones de inversión)
+uv pip install ./fincore
+
+# 6. Configurar variables de entorno
 cp .env.example .env
 # Editar .env con tus credenciales
 
-# 6. Aplicar migraciones
+# 7. Aplicar migraciones
 alembic upgrade head
 
-# 7. Instalar pre-commit hooks
+# 8. Instalar pre-commit hooks
 pre-commit install
 
-# 8. Verificar que todo funcione
+# 9. Verificar que todo funcione
 pytest
 ```
 
@@ -137,13 +140,18 @@ AI_API_KEY=tu_clave_api
 # sigue exigiendo estas dos variables para arrancar)
 AUTH0_DOMAIN=placeholder.auth0.com
 AUTH0_AUDIENCE=placeholder
+
+# Logging (opcional, los valores por defecto están en settings.py)
+LOG_PROVIDER=console
+LOG_LEVEL=INFO
+LOG_FORMAT=text
 ```
 
-> Ninguna de estas variables tiene valor por defecto salvo las de JWT: si falta `SECRET_KEY`, `SECRET_KEY_REFRESH`, alguna `DB_*`, `AI_PROVIDER`, `AI_MODEL_ID`, `AUTH0_DOMAIN` o `AUTH0_AUDIENCE`, la aplicación no arranca. Consulta [`.env.example`](../.env.example) para la lista completa, incluidas las opciones de logging.
+> Ninguna de estas variables tiene valor por defecto en `settings.py` salvo `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS`, `ENVIRONMENT`, `FRONTEND_URL`, `BANXICO_TOKEN` y los defaults de DB: si falta `SECRET_KEY`, `SECRET_KEY_REFRESH`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `AI_PROVIDER`, `AI_MODEL_ID`, `AUTH0_DOMAIN` o `AUTH0_AUDIENCE`, la aplicación no arranca. Consulta [`.env.example`](../.env.example) para la lista completa, incluidas las opciones de logging y Grafana Loki.
 
 **Nota sobre ENVIRONMENT:**
-- **DEV**: Activa CORS abierto (`*`), logging detallado con stack traces
-- **PROD**: CORS restrictivo (dominio específico), logging básico sin detalles sensibles
+- **DEV / TEST**: CORS permite únicamente el `FRONTEND_URL` definido en `.env`; logging detallado con stack traces
+- **PROD**: CORS con lista cerrada de dominios (`preview.lunance.app`, `api.lunance.app`, `lunance.app` — ajústala en `src/main.py` si autohospedas), logging básico sin detalles sensibles
 
 ## 🔄 Flujo de Contribución
 
@@ -335,31 +343,38 @@ async def test_create_account_endpoint(client, auth_headers):
 
 ### Cobertura Requerida
 
-- **Mínimo**: 80% de cobertura general
+- **Mínimo orientativo**: 80% de cobertura general
 - **Dominio**: 95% de cobertura (lógica de negocio crítica)
 - **Endpoints**: 90% de cobertura (rutas principales)
+
+> La cobertura se calcula con `pytest --cov=src` (configurada en `pyproject.toml`). El estado real se refleja en el badge de Codecov del repositorio cuando esté configurado. Por ahora es **orientativa**: si tu cambio añade un flujo financiero, prioriza tests que cubran la lógica de dominio y los caminos de error.
 
 ### Comandos de Testing
 
 ```bash
-# Ejecutar todos los tests
+# Ejecutar todos los tests (los paths se toman de pyproject.toml)
 pytest
 
 # Con cobertura
 pytest --cov=src --cov-report=html
 
 # Solo tests unitarios
-pytest tests/unit/
+pytest src/tests/unit/
 
 # Solo tests de integración
-pytest tests/integration/
+pytest src/tests/integration/
+
+# Solo tests E2E (requieren la API levantada en :8000)
+pytest src/tests/e2e/
 
 # Test específico
-pytest tests/unit/domain/test_money_value_object.py::test_money_addition
+pytest src/tests/unit/domain/test_money_value_object.py::test_money_addition
 
 # Con output detallado
 pytest -v -s
 ```
+
+> Los E2E se ejecutan contra una API en `http://127.0.0.1:8000` (configurable con `TEST_API_BASE_URL`). Con `ENVIRONMENT=TEST` el rate limiting queda deshabilitado, recomendado para CI.
 
 ## 📚 Documentación
 
@@ -478,13 +493,18 @@ if account.account_type == AccountType.CREDIT:
 - **MINOR** (v1.1.0): Nueva funcionalidad compatible
 - **PATCH** (v1.0.1): Bug fixes compatibles
 
+La versión visible para el usuario se mantiene en `pyproject.toml` y `src/main.py`; cualquier PR que cambie comportamiento público debe actualizar ambos.
+
 ### Branch Strategy
 
-- **main**: Código en producción
-- **develop**: Integración de nuevas features
-- **feature/**: Desarrollo de funcionalidades
-- **bugfix/**: Corrección de bugs
-- **hotfix/**: Fixes urgentes para producción
+- **master**: Código estable, fuente de los releases.
+- **stage**: Entorno de staging; dispara la build de la imagen `stage` y el deploy de pruebas.
+- **dev**: Rama de integración; Dependabot y los PRs de funcionalidades apuntan aquí por defecto.
+- **feature/**: Desarrollo de funcionalidades.
+- **bugfix/**: Corrección de bugs.
+- **hotfix/**: Fixes urgentes para producción (ramas desde `master`).
+
+Los workflows de CI/CD viven en `.github/workflows/`. **En este repositorio están configurados para correr en un runner self-hosted**; los contribuidores externos no necesitan ejecutarlos para que un PR sea aceptable — basta con que `ruff check` y `pytest` pasen localmente.
 
 ## ❓ ¿Necesitas Ayuda?
 

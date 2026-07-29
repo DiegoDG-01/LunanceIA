@@ -3,17 +3,29 @@
 ## Requisitos
 
 - Python 3.13+
-- Locust instalado (`uv sync` para instalar dependencias de desarrollo)
-- Token JWT válido de Auth0
+- Locust instalado (`uv sync --group dev` para incluirlo)
+- Token JWT válido emitido por la API (login o registro en `/api/v2/auth/login`)
 
-## Obtener Token de Auth0
+## Obtener Token de la API
 
-1. Inicia sesión en la aplicación cliente o usa la API de Auth0 directamente
-2. Copia el `access_token` del response de autenticación
+1. Crea un usuario o inicia sesión con la API:
+   ```bash
+   curl -s -X POST http://localhost:8000/api/v2/auth/register \
+     -H "Content-Type: application/json" \
+     -d '{"username": "loadtest", "password": "MiClave123!"}'
+
+   curl -s -X POST http://localhost:8000/api/v2/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"username": "loadtest", "password": "MiClave123!"}'
+   ```
+2. Copia el `access_token` del JSON de respuesta.
 3. Expórtalo como variable de entorno:
    ```bash
    export LOCUST_AUTH_TOKEN="eyJhbGciOi..."
    ```
+
+> Los tokens de Auth0 ya no son el flujo activo (la API ahora firma sus propios
+> JWT), pero el `locustfile.py` acepta cualquier JWT Bearer válido.
 
 ## Ejecución
 

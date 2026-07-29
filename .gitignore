@@ -163,6 +163,13 @@ cython_debug/
 .idea/
 
 .claude/
+.codex/
+.cursor/
+.junie/
+
+# Configuraciones de asistentes de IA (archivos sueltos raíz, no carpetas)
+CLAUDE.md
+GEMINI.md
 
 # Rust Core
  fincore/target/

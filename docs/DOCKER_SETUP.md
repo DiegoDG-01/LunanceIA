@@ -55,8 +55,8 @@ AUTH0_AUDIENCE=placeholder
 ```
 
 **Configuración de ENVIRONMENT:**
-- **PROD**: Para producción - CORS restrictivo, logging optimizado
-- **DEV**: Para desarrollo - CORS abierto, logging detallado
+- **PROD**: Para producción - CORS con lista cerrada de dominios, logging optimizado
+- **DEV**: Para desarrollo - CORS con `FRONTEND_URL` (un solo origen), logging detallado
 
 ```bash
 # Construir y ejecutar todos los servicios

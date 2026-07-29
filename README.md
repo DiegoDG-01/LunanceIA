@@ -39,15 +39,19 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 ## 🛠️ Stack Tecnológico
 
 ### Core Technologies
-- **Framework**: FastAPI 0.115+
-- **Performance Engine**: Rust (fincore) con PyO3
-- **Base de Datos**: MySQL con SQLAlchemy 2.0+ ORM
-- **Migraciones**: Alembic 1.16+
-- **Autenticación**: JWT propio (python-jose 3.5+)
-- **Validación**: Pydantic 2.11+ con soporte de email
-- **Seguridad**: bcrypt 4.3+ + Rate Limiting (fastapi-advanced-rate-limiter 2.1+)
-- **IA**: Google Gemini API (google-genai 1.22+) + pydantic-ai-slim 1.72+ (agentes estructurados)
-- **Procesamiento de Imágenes**: Pillow 12.0+
+- **Framework**: FastAPI 0.140+
+- **Performance Engine**: Rust (fincore) con PyO3 + Maturin
+- **Base de Datos**: MySQL con SQLAlchemy 2.0+ (aiomysql / pymysql)
+- **Migraciones**: Alembic 1.18+
+- **Autenticación**: JWT propio HS256 (python-jose 3.5+) + Refresh tokens hasheados
+- **Validación**: Pydantic 2.13+ con `pydantic-settings` 2.14+
+- **Hashing de contraseñas**: bcrypt 5.0+
+- **Rate Limiting**: fastapi-advanced-rate-limiter 2.1+ (con Redis 7.4+)
+- **IA**: pydantic-ai-slim 2.16+ con extras `[google, openai]` (Google Gemini 2.x por defecto, compatible con OpenAI/Ollama vía `AI_BASE_URL`)
+- **Procesamiento de Imágenes**: Pillow 12.3+
+- **Cabeceras de seguridad**: `secure` 1.0+
+- **Tareas programadas**: APScheduler 3.11+ (suscripciones, ingresos, rendimientos)
+- **Internacionalización**: i18n propio (es/en)
 
 ### 🦀 Motor de Cálculo Rust (Beta)
 Lunance IA integra un motor de cálculo de alto rendimiento escrito en **Rust** para operaciones financieras críticas como proyecciones de inversión y simulaciones complejas. Este motor se comunica de forma transparente con Python, proporcionando lo mejor de ambos mundos: la agilidad de FastAPI y la potencia de Rust.
@@ -59,7 +63,10 @@ Lunance IA integra un motor de cálculo de alto rendimiento escrito en **Rust** 
 ### Development Tools
 - **Package Manager**: uv (gestor moderno de paquetes Python)
 - **Code Quality**: Ruff 0.14+ (linting & formatting)
-- **Testing**: pytest 8.4+ + pytest-asyncio + httpx
+- **Testing**: pytest 9.0+ + pytest-asyncio 1.3+ + pytest-cov 7.1+ + httpx 0.28+
+- **Type checking**: Pyrefly 0.57+
+- **Compilación Rust**: Maturin 1.12+ (en grupo `[dev]`)
+- **Pruebas de carga**: Locust 2.32+ (en grupo `[dev]`)
 - **Pre-commit**: Hooks automáticos de calidad de código
 
 ## 📁 Estructura del Proyecto
@@ -90,8 +97,8 @@ Tienes dos opciones para ejecutar Lunance IA:
 
 1. **Clonar el repositorio**
 ```bash
-git clone <repository-url>
-cd Lunance
+git clone https://github.com/DiegoDG-01/LunanceIA.git
+cd LunanceIA
 ```
 
 2. **Configurar variables de entorno**
@@ -123,8 +130,8 @@ docker-compose up --build -d
 
 1. **Clonar el repositorio**
 ```bash
-git clone <repository-url>
-cd Lunance
+git clone https://github.com/DiegoDG-01/LunanceIA.git
+cd LunanceIA
 ```
 
 2. **Instalar dependencias**
@@ -164,6 +171,9 @@ cp .env.example .env
 # Editar .env para desarrollo local:
 # - DB_HOST=localhost
 # - ENVIRONMENT=DEV (importante para CORS y logs de desarrollo)
+# - AUTH0_DOMAIN y AUTH0_AUDIENCE: la app exige estas variables por
+#   compatibilidad con el fallback legado, pero el flujo activo es JWT propio.
+#   Puedes rellenarlas con cualquier valor no vacío si no usas Auth0.
 ```
 
 6. **Ejecutar migraciones y iniciar servidor**
@@ -235,7 +245,7 @@ Lunance IA utiliza **Clean Architecture + Domain-Driven Design** para garantizar
 - **JWT Tokens**: Access tokens HS256 firmados por la API, con refresh tokens rotativos guardados como hash
 - **Rate limiting de autenticación**: Límites por endpoint y por IP ante intentos fallidos
 - **Validación robusta**: Schemas Pydantic en todos los endpoints
-- **CORS Configurado**: Según entorno (PROD: dominio específico, DEV: abierto)
+- **CORS Configurado**: Según entorno (PROD: lista cerrada de dominios, DEV/TEST: `FRONTEND_URL`)
 - **Rate Limiting**: Protección contra abuso con límites específicos por endpoint
 - **Manejo de Excepciones Robusto**: Sistema estandarizado de respuestas de error
 - **Internacionalización (i18n)**: Mensajes de error en español e inglés
@@ -257,22 +267,25 @@ ruff check src/ --fix
 
 ### Testing
 ```bash
-# Tests E2E (valida API completa)
+# Toda la suite (unit + integration + e2e)
+pytest
+
+# Solo E2E (requieren la API levantada)
 pytest src/tests/e2e/ -v
 
-# Test específico de autenticación
-pytest src/tests/e2e/test_auth_api.py -v
+# Solo unitarios (no necesitan MySQL/Redis ni la API levantada)
+pytest src/tests/unit/ -v
 
-# Tests con output detallado para debugging
-pytest src/tests/e2e/ -v -s
+# Con cobertura
+pytest --cov=src --cov-report=html
 ```
 
 **Estado actual:**
-- ✅ **E2E Tests**: Tests de autenticación funcionando
-- 🚧 **Unit/Integration Tests**: En desarrollo
-- ⚠️ **Coverage**: Limitado (tests HTTP externos)
+- ✅ **E2E**: cobertura de auth, account, transaction, subscription, investment, budget, goal, transfer, installment, income, dashboard, ai, api-key, bank, category, security headers y edge cases.
+- ✅ **Unit + Integration**: lógica de dominio (Money, Bank, RecurringIncome, IncomeDeposit), handlers de suscripciones, ingresos e instalaciones, lock de fila en MySQL, auth (commands + dependencies).
+- 🧪 **Pyrefly** está configurado como type checker (`uv run pyrefly check`).
 
-> 🧪 **Documentación Completa de Tests**: Para configuración, comandos específicos y debugging, consulta [TEST USAGE](src/tests/TEST.md)
+> 🧪 **Documentación Completa de Tests**: Para configuración, comandos específicos y debugging, consulta [TEST.md](src/tests/TEST.md)
 
 ### Base de Datos
 ```bash
