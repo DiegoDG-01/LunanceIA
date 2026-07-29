@@ -1,0 +1,50 @@
+version: 2
+updates:
+  # Dependencias de Python gestionadas con uv
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Mexico_City"
+    open-pull-requests-limit: 5
+    target-branch: "dev"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    groups:
+      # Agrupa parches y menores para no inundar de PRs;
+      # las mayores llegan por separado para revisarlas con calma.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Acciones de GitHub usadas en los workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    target-branch: "dev"
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "chore(ci)"
+
+  # Imágenes base de los Dockerfile
+  - package-ecosystem: "docker"
+    directories:
+      - "/"
+    schedule:
+      interval: "monthly"
+    target-branch: "dev"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore(docker)"

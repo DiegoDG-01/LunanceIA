@@ -41,6 +41,7 @@ from shared.exceptions.domain import (
     InsufficientFundsError,
     SubscriptionNotFoundError,
     InstallmentChargeNotFoundError,
+    InstallmentChargeAlreadyPaidError,
     InvestmentSettingsNotFoundError,
     CreditCardSettingsNotFoundError,
     InvalidAccountSettingsError,
@@ -96,6 +97,7 @@ EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     EmailAlreadyExistsError: ("BUSINESS_EMAIL_EXISTS", 409),
     AccountHasBalanceError: ("BUSINESS_ACCOUNT_HAS_BALANCE", 409),
     AccountHasTransactionsError: ("BUSINESS_ACCOUNT_HAS_TRANSACTIONS", 409),
+    InstallmentChargeAlreadyPaidError: ("INSTALLMENT_CHARGE_ALREADY_PAID", 409),
     InvalidAccountSettingsError: ("INVALID_ACCOUNT_SETTINGS", 409),
     # --- Errores de Validación y Reglas de Negocio (400 / 422) ---
     InsufficientFundsError: ("INSUFFICIENT_FUNDS", 422),

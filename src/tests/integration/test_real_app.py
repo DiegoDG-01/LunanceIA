@@ -2,8 +2,6 @@
 
 import pytest
 from fastapi.testclient import TestClient
-import os
-from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 # Mock the database and external dependencies
@@ -39,7 +37,7 @@ def test_client(mock_dependencies):
         # Try to import the real app
         from main import app
         return TestClient(app)
-    except Exception as e:
+    except Exception:
         # If import fails, create minimal app
         from fastapi import FastAPI
 

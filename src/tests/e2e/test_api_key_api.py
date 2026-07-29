@@ -121,8 +121,9 @@ class TestAPIKeyLifecycle:
         assert response.status_code == 200
 
         # Revocar
-        response = await http_client.delete(
-            f"/api-keys/{created['uuid']}/", headers=auth_tokens.get_auth_headers()
+        response = await http_client.patch(
+            f"/api-keys/{created['uuid']}/revoke/",
+            headers=auth_tokens.get_auth_headers(),
         )
         assert response.status_code == 204
 
@@ -140,6 +141,36 @@ class TestAPIKeyLifecycle:
         assert response.status_code == 401
 
     async def test_revoke_unknown_key_returns_404(self, http_client, auth_tokens):
+        response = await http_client.patch(
+            "/api-keys/00000000-0000-0000-0000-000000000000/revoke/",
+            headers=auth_tokens.get_auth_headers(),
+        )
+        assert response.status_code == 404
+
+    async def test_deleted_key_disappears_and_stops_authenticating(
+        self, http_client, auth_tokens
+    ):
+        """DELETE elimina permanentemente: fuera del listado y sin acceso."""
+        created = await self._create_key(http_client, auth_tokens)
+
+        response = await http_client.delete(
+            f"/api-keys/{created['uuid']}/", headers=auth_tokens.get_auth_headers()
+        )
+        assert response.status_code == 204
+
+        # Desaparece del listado (a diferencia del revoke, que la conserva)
+        response = await http_client.get(
+            "/api-keys/", headers=auth_tokens.get_auth_headers()
+        )
+        assert all(k["uuid"] != created["uuid"] for k in response.json())
+
+        # La key ya no autentica
+        response = await http_client.get(
+            "/transaction/", headers={"X-API-Key": created["raw_key"]}
+        )
+        assert response.status_code == 401
+
+    async def test_delete_unknown_key_returns_404(self, http_client, auth_tokens):
         response = await http_client.delete(
             "/api-keys/00000000-0000-0000-0000-000000000000/",
             headers=auth_tokens.get_auth_headers(),
@@ -310,9 +341,7 @@ class TestAPIKeyLifecycle:
         # existe, así que el handler responde 404 — no un rechazo por permisos.
         assert response.status_code != 403
 
-    async def test_accounts_write_scope_creates_account(
-        self, http_client, auth_tokens
-    ):
+    async def test_accounts_write_scope_creates_account(self, http_client, auth_tokens):
         created = await self._create_key(
             http_client, auth_tokens, scopes=["accounts:write"]
         )

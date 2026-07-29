@@ -41,28 +41,32 @@ class DeleteInstallmentPurchaseHandler:
         self.uow = uow
 
     async def handle(self, command: DeleteInstallmentPurchaseCommand):
-        purchase = await self.installment_purchase_repository.get_by_uuid(
-            uuid=command.purchase_uuid, user_id=command.user_id
-        )
-        if not purchase:
-            raise InstallmentPurchaseNotFoundError(purchase_uuid=command.purchase_uuid)
-
-        account = await self.account_repository.get_by_id(purchase.account_id)
-        if not account:
-            raise AccountNotFoundError(account_uuid=str(purchase.account_id))
-
-        charges = await self.installment_charge_repository.get_by_purchase_id(
-            purchase_id=cast(int, purchase.id)
-        )
-
-        paid_total = Decimal("0")
-        transactions_ids_to_delete = []
-        for charge in charges:
-            if charge.paid and charge.transaction_id is not None:
-                paid_total += charge.amount
-                transactions_ids_to_delete.append(charge.transaction_id)
-
         async with self.uow:
+            purchase = await self.installment_purchase_repository.get_by_uuid(
+                uuid=command.purchase_uuid, user_id=command.user_id, for_update=True
+            )
+            if not purchase:
+                raise InstallmentPurchaseNotFoundError(
+                    purchase_uuid=command.purchase_uuid
+                )
+
+            account = await self.account_repository.get_by_id(
+                purchase.account_id, for_update=True
+            )
+            if not account:
+                raise AccountNotFoundError(account_uuid=str(purchase.account_id))
+
+            charges = await self.installment_charge_repository.get_by_purchase_id(
+                purchase_id=cast(int, purchase.id), for_update=True
+            )
+
+            paid_total = Decimal("0")
+            transactions_ids_to_delete = []
+            for charge in charges:
+                if charge.paid and charge.transaction_id is not None:
+                    paid_total += charge.amount
+                    transactions_ids_to_delete.append(charge.transaction_id)
+
             net_restore = purchase.total_amount.amount - paid_total
             new_balance = account.current_balance.add(Money(net_restore))
             account.update_balance(new_balance)

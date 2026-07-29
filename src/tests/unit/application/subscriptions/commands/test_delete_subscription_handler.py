@@ -37,7 +37,7 @@ class TestDeleteSubscriptionHandler:
             id=1, uuid="sub-uuid-1", user_id=1, account_id=10, category_id=1,
             name="Netflix", amount=Money(Decimal("199.00")),
             frequency=Frequency.MONTHLY, start_date=date.today(),
-            end_date=None, billing_day=1, is_active=True,
+            end_date=None, billing_day=1, next_charge_date=date.today(), is_active=True,
             description=None, service_url=None, creation_date=datetime.now(timezone.utc),
         )
 

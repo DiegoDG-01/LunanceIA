@@ -61,21 +61,31 @@ class SQLAlchemyInstallmentPurchaseRepository(InstallmentPurchaseRepository):
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    async def get_by_id(self, purchase_id: int) -> Optional[InstallmentPurchase]:
+    async def get_by_id(
+        self, purchase_id: int, *, for_update: bool = False
+    ) -> Optional[InstallmentPurchase]:
         stmt = select(InstallmentPurchaseModel).where(
             InstallmentPurchaseModel.id == purchase_id
         )
+
+        if for_update:
+            stmt = stmt.with_for_update()
+
         result = await self.db.execute(stmt)
         model = result.scalar_one_or_none()
         return self._model_to_entity(model) if model else None
 
     async def get_by_uuid(
-        self, uuid: str, user_id: int
+        self, uuid: str, user_id: int, *, for_update: bool = False
     ) -> Optional[InstallmentPurchase]:
         stmt = select(InstallmentPurchaseModel).where(
             InstallmentPurchaseModel.uuid == uuid,
             InstallmentPurchaseModel.user_id == user_id,
         )
+
+        if for_update:
+            stmt = stmt.with_for_update()
+
         result = await self.db.execute(stmt)
         model = result.scalar_one_or_none()
         return self._model_to_entity(model) if model else None

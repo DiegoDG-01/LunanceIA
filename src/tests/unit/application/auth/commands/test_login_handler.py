@@ -1,6 +1,5 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
-from datetime import timedelta
 
 from application.auth.commands.login import LoginCommand, LoginHandler, LoginResponse
 from application.interfaces.auth_service import AuthConfig

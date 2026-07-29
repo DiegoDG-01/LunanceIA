@@ -148,6 +148,7 @@ HTTP_CODES_ERRORS = {
         "BUSINESS_EMAIL_EXISTS": "El email ya está registrado",
         "BUSINESS_ACCOUNT_HAS_BALANCE": "La cuenta tiene saldo pendiente",
         "BUSINESS_ACCOUNT_HAS_TRANSACTIONS": "La cuenta tiene transacciones asociadas",
+        "INSTALLMENT_CHARGE_ALREADY_PAID": "El cargo de la compra a plazos ya fue pagado",
         "INVALID_ACCOUNT_SETTINGS": "Los datos adicionales para configurar tu cuenta no son los correctos",
         # Códigos específicos de Lunance - Validaciones y reglas de negocio
         "VALIDATION_ERROR": "Error de validación",
@@ -201,6 +202,7 @@ HTTP_CODES_ERRORS = {
         "BUSINESS_EMAIL_EXISTS": "Email already registered",
         "BUSINESS_ACCOUNT_HAS_BALANCE": "Account has pending balance",
         "BUSINESS_ACCOUNT_HAS_TRANSACTIONS": "Account has associated transactions",
+        "INSTALLMENT_CHARGE_ALREADY_PAID": "The installment charge has already been paid",
         "INVALID_ACCOUNT_SETTINGS": "The additional information you provided to set up your account is incorrect",
         # Códigos específicos de Lunance - Validaciones y reglas de negocio
         "VALIDATION_ERROR": "Validation error",

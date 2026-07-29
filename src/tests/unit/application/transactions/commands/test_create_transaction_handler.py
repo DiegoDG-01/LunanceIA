@@ -1,6 +1,9 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
-from application.transactions.commands.create_transaction import CreateTransactionCommand, CreateTransactionHandler
+from application.transactions.commands.create_transaction import (
+    CreateTransactionCommand,
+    CreateTransactionHandler,
+)
 from application.dto.transaction_dto import CreateTransactionDTO
 from domain.entities.user import User
 from domain.entities.account import Account
@@ -8,9 +11,14 @@ from domain.entities.transaction import Transaction
 from domain.entities.category import Category
 from domain.objects.money import Money
 from domain.objects.enums import TransactionType, AccountType
-from shared.exceptions.domain import UserNotFoundError, AccountNotFoundError, InsufficientFundsError
+from shared.exceptions.domain import (
+    UserNotFoundError,
+    AccountNotFoundError,
+    InsufficientFundsError,
+)
 from decimal import Decimal
 from datetime import date, datetime, timezone
+
 
 @pytest.mark.unit
 class TestCreateTransactionHandler:
@@ -48,7 +56,14 @@ class TestCreateTransactionHandler:
         # 1. Setup
         user_id = 1
         account_uuid = "acc-123"
-        mock_user = User(id=user_id, uuid="u-1", auth0_id="a-1", name="Test", email="t@t.com", is_active=True)
+        mock_user = User(
+            id=user_id,
+            uuid="u-1",
+            auth0_id="a-1",
+            name="Test",
+            email="t@t.com",
+            is_active=True,
+        )
         mock_account = Account(
             id=10,
             uuid=account_uuid,
@@ -58,12 +73,14 @@ class TestCreateTransactionHandler:
             current_balance=Money(Decimal("1000.00")),
             bank_id=1,
             is_active=True,
-            creation_date=datetime.now(timezone.utc)
+            creation_date=datetime.now(timezone.utc),
         )
         mock_category = Category(id=1, name="Food", type="EXPENSE")
 
         mocks["user_repo"].get_by_id = AsyncMock(return_value=mock_user)
-        mocks["account_repo"].get_by_uuid_and_user_id = AsyncMock(return_value=mock_account)
+        mocks["account_repo"].get_by_uuid_and_user_id = AsyncMock(
+            return_value=mock_account
+        )
         mocks["category_repo"].get_by_id = AsyncMock(return_value=mock_category)
         mocks["account_repo"].update = AsyncMock()
 
@@ -79,7 +96,7 @@ class TestCreateTransactionHandler:
             transaction_date=date.today(),
             description="Lunch",
             notes="",
-            creation_date=datetime.now(timezone.utc)
+            creation_date=datetime.now(timezone.utc),
         )
 
         mocks["transaction_repo"].create = AsyncMock(return_value=saved_tx)
@@ -92,7 +109,7 @@ class TestCreateTransactionHandler:
             transaction_type=TransactionType.EXPENSE,
             amount=Decimal("200.00"),
             currency="MXN",
-            description="Lunch"
+            description="Lunch",
         )
         command = CreateTransactionCommand(dto=dto)
         result = await handler.handle(command)
@@ -101,6 +118,11 @@ class TestCreateTransactionHandler:
         assert result.amount == 200.00
         # Verify account balance was updated: 1000 - 200 = 800
         assert mock_account.current_balance.amount == Decimal("800.00")
+        mocks["account_repo"].get_by_uuid_and_user_id.assert_awaited_once_with(
+            account_uuid,
+            user_id,
+            for_update=True,
+        )
         mocks["account_repo"].update.assert_called_once_with(mock_account)
         mocks["transaction_repo"].create.assert_called_once()
 
@@ -109,7 +131,14 @@ class TestCreateTransactionHandler:
         # 1. Setup
         user_id = 1
         account_uuid = "acc-123"
-        mock_user = User(id=user_id, uuid="u-1", auth0_id="a-1", name="Test", email="t@t.com", is_active=True)
+        mock_user = User(
+            id=user_id,
+            uuid="u-1",
+            auth0_id="a-1",
+            name="Test",
+            email="t@t.com",
+            is_active=True,
+        )
         mock_account = Account(
             id=10,
             uuid=account_uuid,
@@ -119,11 +148,13 @@ class TestCreateTransactionHandler:
             current_balance=Money(Decimal("1000.00")),
             bank_id=1,
             is_active=True,
-            creation_date=datetime.now(timezone.utc)
+            creation_date=datetime.now(timezone.utc),
         )
 
         mocks["user_repo"].get_by_id = AsyncMock(return_value=mock_user)
-        mocks["account_repo"].get_by_uuid_and_user_id = AsyncMock(return_value=mock_account)
+        mocks["account_repo"].get_by_uuid_and_user_id = AsyncMock(
+            return_value=mock_account
+        )
         mocks["account_repo"].update = AsyncMock()
 
         saved_tx = Transaction(
@@ -136,11 +167,13 @@ class TestCreateTransactionHandler:
             amount=Money(Decimal("500.00")),
             transaction_date=date.today(),
             description="Salary",
-            creation_date=datetime.now(timezone.utc)
+            creation_date=datetime.now(timezone.utc),
         )
 
         mocks["transaction_repo"].create = AsyncMock(return_value=saved_tx)
-        mocks["category_repo"].get_by_id = AsyncMock(return_value=Category(id=2, name="Job", type="INCOME"))
+        mocks["category_repo"].get_by_id = AsyncMock(
+            return_value=Category(id=2, name="Job", type="INCOME")
+        )
 
         # 2. Execute
         dto = CreateTransactionDTO(
@@ -150,7 +183,7 @@ class TestCreateTransactionHandler:
             transaction_type=TransactionType.INCOME,
             amount=Decimal("500.00"),
             currency="MXN",
-            description="Salary"
+            description="Salary",
         )
         await handler.handle(CreateTransactionCommand(dto=dto))
 
@@ -161,20 +194,39 @@ class TestCreateTransactionHandler:
     async def test_insufficient_funds_fails(self, handler, mocks):
         # 1. Setup account with only 50.00
         user_id = 1
-        mock_user = User(id=user_id, uuid="u-1", auth0_id="a-1", name="T", email="t@t.com", is_active=True)
+        mock_user = User(
+            id=user_id,
+            uuid="u-1",
+            auth0_id="a-1",
+            name="T",
+            email="t@t.com",
+            is_active=True,
+        )
         mock_account = Account(
-            id=10, uuid="acc", user_id=user_id, name="B", account_type=AccountType.CASH,
+            id=10,
+            uuid="acc",
+            user_id=user_id,
+            name="B",
+            account_type=AccountType.CASH,
             current_balance=Money(Decimal("50.00")),
-            bank_id=1, is_active=True, creation_date=datetime.now(timezone.utc)
+            bank_id=1,
+            is_active=True,
+            creation_date=datetime.now(timezone.utc),
         )
 
         mocks["user_repo"].get_by_id = AsyncMock(return_value=mock_user)
-        mocks["account_repo"].get_by_uuid_and_user_id = AsyncMock(return_value=mock_account)
+        mocks["account_repo"].get_by_uuid_and_user_id = AsyncMock(
+            return_value=mock_account
+        )
 
         # 2. Execute trying to spend 100.00
         dto = CreateTransactionDTO(
-            user_id=user_id, account_uuid="acc", category_id=1,
-            transaction_type=TransactionType.EXPENSE, amount=Decimal("100.00"), currency="MXN"
+            user_id=user_id,
+            account_uuid="acc",
+            category_id=1,
+            transaction_type=TransactionType.EXPENSE,
+            amount=Decimal("100.00"),
+            currency="MXN",
         )
 
         with pytest.raises(InsufficientFundsError):
@@ -187,18 +239,32 @@ class TestCreateTransactionHandler:
     @pytest.mark.asyncio
     async def test_user_not_found_fails(self, handler, mocks):
         mocks["user_repo"].get_by_id = AsyncMock(return_value=None)
-        dto = CreateTransactionDTO(user_id=99, account_uuid="any", category_id=1, amount=Decimal("10"), transaction_type=TransactionType.EXPENSE)
+        dto = CreateTransactionDTO(
+            user_id=99,
+            account_uuid="any",
+            category_id=1,
+            amount=Decimal("10"),
+            transaction_type=TransactionType.EXPENSE,
+        )
 
         with pytest.raises(UserNotFoundError):
             await handler.handle(CreateTransactionCommand(dto=dto))
 
     @pytest.mark.asyncio
     async def test_account_not_found_fails(self, handler, mocks):
-        mock_user = User(id=1, uuid="u-1", auth0_id="a-1", name="T", email="t@t.com", is_active=True)
+        mock_user = User(
+            id=1, uuid="u-1", auth0_id="a-1", name="T", email="t@t.com", is_active=True
+        )
         mocks["user_repo"].get_by_id = AsyncMock(return_value=mock_user)
         mocks["account_repo"].get_by_uuid_and_user_id = AsyncMock(return_value=None)
 
-        dto = CreateTransactionDTO(user_id=1, account_uuid="fake", category_id=1, amount=Decimal("10"), transaction_type=TransactionType.EXPENSE)
+        dto = CreateTransactionDTO(
+            user_id=1,
+            account_uuid="fake",
+            category_id=1,
+            amount=Decimal("10"),
+            transaction_type=TransactionType.EXPENSE,
+        )
 
         with pytest.raises(AccountNotFoundError):
             await handler.handle(CreateTransactionCommand(dto=dto))

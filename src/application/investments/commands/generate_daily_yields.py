@@ -46,6 +46,15 @@ class GenerateDailyYieldHandler:
         skipped = 0
         errors = 0
 
+        # TODO(H-BUG-01): este flujo aún tiene el lost-update de saldo: las
+        # cuentas se cargan aquí sin lock y el loop calcula sobre esos objetos
+        # obsoletos. Fix: re-obtener cada cuenta dentro del loop con
+        # get_by_id(for_update=True) y calcular/actualizar el saldo sobre el
+        # objeto re-obtenido; los investment_settings deben seguir saliendo
+        # del objeto pre-cargado porque get_by_id no hace join con settings.
+        # Multi-instancia: la idempotencia ya tiene backstop en DB
+        # (uq_account__yield_date); al escalar, considerar UoW/commit por
+        # cuenta para acortar los locks.
         accounts = await self.account_repository.get_active_investment_accounts()
 
         async with self.uow:

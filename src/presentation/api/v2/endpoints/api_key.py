@@ -12,6 +12,10 @@ from application.api_keys.commands.revoke_api_key import (
     RevokeAPIKeyCommand,
     RevokeAPIKeyHandler,
 )
+from application.api_keys.commands.delete_api_key import (
+    DeleteAPIKeyCommand,
+    DeleteAPIKeyHandler,
+)
 from application.api_keys.queries.list_api_keys import (
     ListAPIKeysQuery,
     ListAPIKeysHandler,
@@ -26,6 +30,7 @@ from presentation.dependencies.api_key_deps import (
     get_create_api_key_handler,
     get_list_api_keys_handler,
     get_revoke_api_key_handler,
+    get_delete_api_key_handler,
 )
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,
@@ -36,7 +41,9 @@ from infrastructure.rate_limiting.limiters import (
 router = APIRouter()
 
 
-@router.post("/", response_model=APIKeyCreatedResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/", response_model=APIKeyCreatedResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_api_key(
     request: Request,
     api_key_request: CreateAPIKeyRequest,
@@ -71,20 +78,42 @@ async def list_api_keys(
     return [APIKeyResponse(**key.__dict__) for key in keys]
 
 
-@router.delete("/{api_key_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
+@router.patch("/{api_key_uuid}/revoke/", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_api_key(
     request: Request,
     api_key_uuid: str,
     current_user: User = Depends(get_current_active_user),
     handler: RevokeAPIKeyHandler = Depends(get_revoke_api_key_handler),
 ):
-    """Revoca (desactiva) una API key del usuario. 204 si revoca, 404 si no existe o no es suya."""
+    """Revoca (desactiva) una API key del usuario sin borrarla: deja de autenticar
+    pero se conserva en el listado para auditoría. 204 si revoca, 404 si no existe
+    o no es suya."""
     enforce_rate_limit(limiter_10_per_minute, request)
 
     command = RevokeAPIKeyCommand(uuid=api_key_uuid, user_id=cast(int, current_user.id))
     revoked = await handler.handle(command)
 
     if not revoked:
+        raise HTTPException(status_code=404, detail="API key not found")
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete("/{api_key_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_api_key(
+    request: Request,
+    api_key_uuid: str,
+    current_user: User = Depends(get_current_active_user),
+    handler: DeleteAPIKeyHandler = Depends(get_delete_api_key_handler),
+):
+    """Elimina permanentemente una API key del usuario (desaparece del listado).
+    204 si elimina, 404 si no existe o no es suya."""
+    enforce_rate_limit(limiter_10_per_minute, request)
+
+    command = DeleteAPIKeyCommand(uuid=api_key_uuid, user_id=cast(int, current_user.id))
+    deleted = await handler.handle(command)
+
+    if not deleted:
         raise HTTPException(status_code=404, detail="API key not found")
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

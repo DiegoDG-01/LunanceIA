@@ -538,5 +538,505 @@ async def create_transfer(
     return await request_api("POST", "/transfers", get_api_key(ctx), json=body)
 
 
+@mcp.tool()
+async def list_incomes(
+    ctx: Context,
+    account_uuid: str | None = None,
+    category_id: int | None = None,
+    active_only: bool = False,
+    limit: int = 100,
+    offset: int = 0,
+) -> str:
+    """Lista los ingresos recurrentes del usuario (nómina, renta, etc.), con
+    filtros opcionales por cuenta, categoría o estado. Úsala para responder
+    cuánto ingresa recurrentemente o cuándo es su próximo pago."""
+    params = {
+        k: v
+        for k, v in {
+            "account_uuid": account_uuid,
+            "category_id": category_id,
+            "active_only": active_only,
+            "limit": limit,
+            "offset": offset,
+        }.items()
+        if v is not None
+    }
+    return await request_api("GET", "/incomes", get_api_key(ctx), params=params)
+
+
+@mcp.tool()
+async def create_income(
+    ctx: Context,
+    account_uuid: str,
+    category_id: int,
+    name: str,
+    amount: float,
+    frequency: str,
+    start_date: str,
+    end_date: str | None = None,
+    next_payment_date: str | None = None,
+    description: str | None = None,
+) -> str:
+    """Crea un ingreso recurrente (nómina, renta, pensión). frequency acepta:
+    DAILY, WEEKLY, BIWEEKLY, MONTHLY, BIMONTHLY, QUARTERLY, SEMI_ANNUAL,
+    ANNUAL. Las fechas van en formato YYYY-MM-DD."""
+    body = {
+        k: v
+        for k, v in {
+            "account_uuid": account_uuid,
+            "category_id": category_id,
+            "name": name,
+            "amount": amount,
+            "frequency": frequency,
+            "start_date": start_date,
+            "end_date": end_date,
+            "next_payment_date": next_payment_date,
+            "description": description,
+        }.items()
+        if v is not None
+    }
+    return await request_api("POST", "/incomes", get_api_key(ctx), json=body)
+
+
+@mcp.tool()
+async def get_income_deposits(
+    ctx: Context, income_uuid: str, limit: int = 100, offset: int = 0
+) -> str:
+    """Historial de depósitos generados por un ingreso recurrente (cuándo y
+    cuánto se ha depositado)."""
+    try:
+        UUID(income_uuid)
+    except ValueError:
+        return "El 'income_uuid' no tiene un formato válido."
+    return await request_api(
+        "GET",
+        f"/incomes/{income_uuid}/deposits/",
+        get_api_key(ctx),
+        params={"limit": limit, "offset": offset},
+    )
+
+
+def _validate_uuid(value: str, field: str) -> str | None:
+    """Devuelve un mensaje de error si el uuid no es válido, None si lo es."""
+    try:
+        UUID(value)
+        return None
+    except ValueError:
+        return f"El '{field}' no tiene un formato válido."
+
+
+# ── Transactions ──────────────────────────────────────────────
+
+
+@mcp.tool()
+async def update_transaction(
+    ctx: Context,
+    transaction_uuid: str,
+    description: str | None = None,
+    notes: str | None = None,
+    category_id: int | None = None,
+    transaction_type: str | None = None,
+    amount: float | None = None,
+    transaction_date: str | None = None,
+    account_uuid: str | None = None,
+) -> str:
+    """Actualiza una transacción existente. Solo envía los campos a cambiar.
+    transaction_type acepta INCOME o EXPENSE; fechas en YYYY-MM-DD."""
+    if error := _validate_uuid(transaction_uuid, "transaction_uuid"):
+        return error
+    body = {
+        k: v
+        for k, v in {
+            "description": description,
+            "notes": notes,
+            "category_id": category_id,
+            "transaction_type": transaction_type,
+            "amount": amount,
+            "transaction_date": transaction_date,
+            "account_uuid": account_uuid,
+        }.items()
+        if v is not None
+    }
+    return await request_api(
+        "PUT", f"/transaction/{transaction_uuid}/", get_api_key(ctx), json=body
+    )
+
+
+@mcp.tool()
+async def delete_transaction(ctx: Context, transaction_uuid: str) -> str:
+    """Elimina una transacción por su UUID. Esta acción es permanente y
+    revierte su efecto en el balance de la cuenta. Pide confirmación explícita
+    del usuario antes de ejecutar.
+    """
+    if error := _validate_uuid(transaction_uuid, "transaction_uuid"):
+        return error
+    return await request_api(
+        "DELETE", f"/transaction/{transaction_uuid}/", get_api_key(ctx)
+    )
+
+
+# ── Accounts ──────────────────────────────────────────────────
+
+
+@mcp.tool()
+async def update_account(
+    ctx: Context,
+    account_uuid: str,
+    name: str | None = None,
+    bank_id: int | None = None,
+    current_balance: float | None = None,
+) -> str:
+    """Actualiza una cuenta (nombre, banco o balance). Solo envía los campos
+    a cambiar."""
+    if error := _validate_uuid(account_uuid, "account_uuid"):
+        return error
+    body = {
+        k: v
+        for k, v in {
+            "name": name,
+            "bank_id": bank_id,
+            "current_balance": current_balance,
+        }.items()
+        if v is not None
+    }
+    return await request_api(
+        "PATCH", f"/account/{account_uuid}/", get_api_key(ctx), json=body
+    )
+
+
+@mcp.tool()
+async def set_account_status(ctx: Context, account_uuid: str, is_active: bool) -> str:
+    """Activa o desactiva una cuenta."""
+    if error := _validate_uuid(account_uuid, "account_uuid"):
+        return error
+    return await request_api(
+        "PATCH",
+        f"/account/{account_uuid}/status/",
+        get_api_key(ctx),
+        json={"is_active": is_active},
+    )
+
+
+@mcp.tool()
+async def delete_account(ctx: Context, account_uuid: str) -> str:
+    """Elimina una cuenta por su UUID. Esta acción es permanente; falla si la
+    cuenta tiene balance o transacciones asociadas. Pide confirmación explícita
+    del usuario antes de ejecutar.
+    """
+    if error := _validate_uuid(account_uuid, "account_uuid"):
+        return error
+    return await request_api("DELETE", f"/account/{account_uuid}/", get_api_key(ctx))
+
+
+# ── Budgets ───────────────────────────────────────────────────
+
+
+@mcp.tool()
+async def update_budget(
+    ctx: Context,
+    budget_uuid: str,
+    name: str | None = None,
+    limit_amount: float | None = None,
+    period: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    alert_percentage: int | None = None,
+    category_id: int | None = None,
+) -> str:
+    """Actualiza un presupuesto. Solo envía los campos a cambiar. period
+    acepta: semanal, quincenal, mensual, trimestral, anual."""
+    if error := _validate_uuid(budget_uuid, "budget_uuid"):
+        return error
+    body = {
+        k: v
+        for k, v in {
+            "name": name,
+            "limit_amount": limit_amount,
+            "period": period,
+            "start_date": start_date,
+            "end_date": end_date,
+            "alert_percentage": alert_percentage,
+            "category_id": category_id,
+        }.items()
+        if v is not None
+    }
+    return await request_api(
+        "PATCH", f"/budgets/{budget_uuid}/", get_api_key(ctx), json=body
+    )
+
+
+@mcp.tool()
+async def toggle_budget(ctx: Context, budget_uuid: str) -> str:
+    """Pausa o reactiva un presupuesto (invierte su estado actual)."""
+    if error := _validate_uuid(budget_uuid, "budget_uuid"):
+        return error
+    return await request_api(
+        "PATCH", f"/budgets/{budget_uuid}/activate/", get_api_key(ctx)
+    )
+
+
+@mcp.tool()
+async def delete_budget(ctx: Context, budget_uuid: str) -> str:
+    """Elimina un presupuesto por su UUID. Esta acción es permanente. Pide confirmación explícita
+    del usuario antes de ejecutar.
+    """
+    if error := _validate_uuid(budget_uuid, "budget_uuid"):
+        return error
+    return await request_api("DELETE", f"/budgets/{budget_uuid}/", get_api_key(ctx))
+
+
+# ── Goals ─────────────────────────────────────────────────────
+
+
+@mcp.tool()
+async def update_goal(
+    ctx: Context,
+    goal_uuid: str,
+    name: str | None = None,
+    target_amount: float | None = None,
+    target_date: str | None = None,
+    description: str | None = None,
+) -> str:
+    """Actualiza una meta de ahorro. Solo envía los campos a cambiar."""
+    if error := _validate_uuid(goal_uuid, "goal_uuid"):
+        return error
+    body = {
+        k: v
+        for k, v in {
+            "name": name,
+            "target_amount": target_amount,
+            "target_date": target_date,
+            "description": description,
+        }.items()
+        if v is not None
+    }
+    return await request_api("PUT", f"/goals/{goal_uuid}/", get_api_key(ctx), json=body)
+
+
+@mcp.tool()
+async def toggle_goal(ctx: Context, goal_uuid: str) -> str:
+    """Pausa o reactiva una meta de ahorro (invierte su estado actual)."""
+    if error := _validate_uuid(goal_uuid, "goal_uuid"):
+        return error
+    return await request_api("PATCH", f"/goals/{goal_uuid}/activate/", get_api_key(ctx))
+
+
+@mcp.tool()
+async def delete_goal(ctx: Context, goal_uuid: str) -> str:
+    """Elimina una meta de ahorro por su UUID. Esta acción es permanente. Pide confirmación explícita
+    del usuario antes de ejecutar.
+    """
+    if error := _validate_uuid(goal_uuid, "goal_uuid"):
+        return error
+    return await request_api("DELETE", f"/goals/{goal_uuid}/", get_api_key(ctx))
+
+
+# ── Subscriptions ─────────────────────────────────────────────
+
+
+@mcp.tool()
+async def update_subscription(
+    ctx: Context,
+    subscription_uuid: str,
+    account_uuid: str,
+    name: str | None = None,
+    amount: float | None = None,
+    frequency: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    billing_day: int | None = None,
+    is_active: bool | None = None,
+    description: str | None = None,
+    service_url: str | None = None,
+    category_id: int | None = None,
+) -> str:
+    """Actualiza una suscripción. account_uuid es obligatorio; el resto solo
+    si cambia. frequency acepta: DAILY, WEEKLY, BIWEEKLY, MONTHLY, BIMONTHLY,
+    QUARTERLY, SEMI_ANNUAL, ANNUAL."""
+    if error := _validate_uuid(subscription_uuid, "subscription_uuid"):
+        return error
+    body = {
+        k: v
+        for k, v in {
+            "account_uuid": account_uuid,
+            "name": name,
+            "amount": amount,
+            "frequency": frequency,
+            "start_date": start_date,
+            "end_date": end_date,
+            "billing_day": billing_day,
+            "is_active": is_active,
+            "description": description,
+            "service_url": service_url,
+            "category_id": category_id,
+        }.items()
+        if v is not None
+    }
+    return await request_api(
+        "PATCH", f"/subscription/{subscription_uuid}/", get_api_key(ctx), json=body
+    )
+
+
+@mcp.tool()
+async def toggle_subscription(ctx: Context, subscription_uuid: str) -> str:
+    """Pausa o reactiva una suscripción (invierte su estado actual). Una
+    suscripción pausada no genera cargos automáticos."""
+    if error := _validate_uuid(subscription_uuid, "subscription_uuid"):
+        return error
+    return await request_api(
+        "PATCH", f"/subscription/{subscription_uuid}/activate/", get_api_key(ctx)
+    )
+
+
+@mcp.tool()
+async def delete_subscription(ctx: Context, subscription_uuid: str) -> str:
+    """Elimina una suscripción por su UUID. Esta acción es permanente y borra
+    su historial de cargos (las transacciones ya generadas se conservan). Pide confirmación explícita
+    del usuario antes de ejecutar.
+    """
+    if error := _validate_uuid(subscription_uuid, "subscription_uuid"):
+        return error
+    return await request_api(
+        "DELETE", f"/subscription/{subscription_uuid}/", get_api_key(ctx)
+    )
+
+
+# ── Recurring incomes ─────────────────────────────────────────
+
+
+@mcp.tool()
+async def update_income(
+    ctx: Context,
+    income_uuid: str,
+    account_uuid: str | None = None,
+    name: str | None = None,
+    amount: float | None = None,
+    frequency: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    next_payment_date: str | None = None,
+    is_active: bool | None = None,
+    description: str | None = None,
+    category_id: int | None = None,
+) -> str:
+    """Actualiza un ingreso recurrente. Solo envía los campos a cambiar.
+    frequency acepta: DAILY, WEEKLY, BIWEEKLY, MONTHLY, BIMONTHLY, QUARTERLY,
+    SEMI_ANNUAL, ANNUAL. Fechas en YYYY-MM-DD."""
+    if error := _validate_uuid(income_uuid, "income_uuid"):
+        return error
+    body = {
+        k: v
+        for k, v in {
+            "account_uuid": account_uuid,
+            "name": name,
+            "amount": amount,
+            "frequency": frequency,
+            "start_date": start_date,
+            "end_date": end_date,
+            "next_payment_date": next_payment_date,
+            "is_active": is_active,
+            "description": description,
+            "category_id": category_id,
+        }.items()
+        if v is not None
+    }
+    return await request_api(
+        "PATCH", f"/incomes/{income_uuid}/", get_api_key(ctx), json=body
+    )
+
+
+@mcp.tool()
+async def toggle_income(ctx: Context, income_uuid: str) -> str:
+    """Pausa o reactiva un ingreso recurrente (invierte su estado actual). Un
+    ingreso pausado no genera depósitos automáticos."""
+    if error := _validate_uuid(income_uuid, "income_uuid"):
+        return error
+    return await request_api(
+        "PATCH", f"/incomes/{income_uuid}/activate/", get_api_key(ctx)
+    )
+
+
+@mcp.tool()
+async def delete_income(ctx: Context, income_uuid: str) -> str:
+    """Elimina un ingreso recurrente por su UUID. Esta acción es permanente y
+    borra su historial de depósitos (las transacciones generadas se
+    conservan). Pide confirmación explícita
+    del usuario antes de ejecutar.
+    """
+    if error := _validate_uuid(income_uuid, "income_uuid"):
+        return error
+    return await request_api("DELETE", f"/incomes/{income_uuid}/", get_api_key(ctx))
+
+
+# ── Installments ──────────────────────────────────────────────
+
+
+@mcp.tool()
+async def update_installment(
+    ctx: Context,
+    purchase_uuid: str,
+    description: str | None = None,
+    notes: str | None = None,
+    category_id: int | None = None,
+) -> str:
+    """Actualiza la descripción, notas o categoría de una compra a meses."""
+    if error := _validate_uuid(purchase_uuid, "purchase_uuid"):
+        return error
+    body = {
+        k: v
+        for k, v in {
+            "description": description,
+            "notes": notes,
+            "category_id": category_id,
+        }.items()
+        if v is not None
+    }
+    return await request_api(
+        "PATCH", f"/installments/{purchase_uuid}/", get_api_key(ctx), json=body
+    )
+
+
+@mcp.tool()
+async def pay_installment_charge(
+    ctx: Context, charge_uuid: str, payment_date: str
+) -> str:
+    """Paga una cuota específica de una compra a meses. Crea la transacción y
+    descuenta el balance de la cuenta. payment_date en YYYY-MM-DD."""
+    if error := _validate_uuid(charge_uuid, "charge_uuid"):
+        return error
+    return await request_api(
+        "POST",
+        f"/installments/{charge_uuid}/pay/",
+        get_api_key(ctx),
+        json={"payment_date": payment_date},
+    )
+
+
+@mcp.tool()
+async def delete_installment(ctx: Context, purchase_uuid: str) -> str:
+    """Elimina una compra a meses por su UUID. Esta acción es permanente. Pide confirmación explícita
+    del usuario antes de ejecutar.
+    """
+    if error := _validate_uuid(purchase_uuid, "purchase_uuid"):
+        return error
+    return await request_api(
+        "DELETE", f"/installments/{purchase_uuid}/", get_api_key(ctx)
+    )
+
+
+# ── Transfers ─────────────────────────────────────────────────
+
+
+@mcp.tool()
+async def delete_transfer(ctx: Context, transfer_uuid: str) -> str:
+    """Elimina una transferencia por su UUID y revierte los balances de las
+    cuentas involucradas. Esta acción es permanente. Pide confirmación explícita
+    del usuario antes de ejecutar.
+    """
+    if error := _validate_uuid(transfer_uuid, "transfer_uuid"):
+        return error
+    return await request_api("DELETE", f"/transfers/{transfer_uuid}/", get_api_key(ctx))
+
+
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")

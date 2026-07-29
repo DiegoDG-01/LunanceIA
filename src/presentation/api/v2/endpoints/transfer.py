@@ -16,7 +16,7 @@ from infrastructure.rate_limiting.limiters import limiter_10_per_minute
 from application.dto.transaction_dto import CreateTransferDTO
 from domain.entities.user import User
 from domain.objects.enums import APIKeyScope
-from presentation.dependencies.auth_deps import get_current_active_user, require_scope
+from presentation.dependencies.auth_deps import require_scope
 from presentation.dependencies.transfer_deps import get_create_transfer_handler
 from presentation.schemas.requests.transfer import CreateTransferRequest
 from presentation.schemas.responses.transfer import TransferResponse
@@ -54,7 +54,7 @@ async def create_transfer(
 async def delete_transfer(
     request: Request,
     transfer_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.TRANSFERS_WRITE.value)),
     handler: DeleteTransferHandler = Depends(get_delete_transfer_handler),
 ):
     enforce_rate_limit(limiter_10_per_minute, request)

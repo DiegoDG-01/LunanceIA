@@ -4,6 +4,7 @@
 
 ## 📋 Tabla de Contenidos
 
+- [Licencia y CLA](#licencia-y-cla)
 - [Código de Conducta](#código-de-conducta)
 - [Configuración del Entorno](#configuración-del-entorno)
 - [Flujo de Contribución](#flujo-de-contribución)
@@ -11,6 +12,50 @@
 - [Testing](#testing)
 - [Documentación](#documentación)
 - [Tipos de Contribuciones](#tipos-de-contribuciones)
+
+## ⚖️ Licencia y CLA
+
+Lunance IA es un proyecto **source-available**, no open source: el código está publicado bajo la [PolyForm Noncommercial License 1.0.0](../LICENSE), que permite usarlo, modificarlo y redistribuirlo **con fines no comerciales**. El uso comercial requiere permiso por escrito del titular.
+
+### CLA obligatorio antes del merge
+
+Toda contribución requiere que aceptes el [Contributor License Agreement](../CONTRIBUTOR_LICENSE_AGREEMENT.md). **Ningún PR se mergea sin esa aceptación.** En resumen:
+
+- **Conservas el copyright** de tu contribución; no cedes la propiedad.
+- Concedes al titular una licencia que le permite distribuir tu aporte bajo la licencia no comercial actual **y bajo licencias comerciales futuras**, incluido un eventual producto SaaS.
+- Declaras que tienes derecho a enviar ese código.
+
+Lee el texto completo antes de aceptarlo — este resumen no lo sustituye.
+
+**Cómo aceptarlo:** marca la casilla del CLA en la plantilla de Pull Request, o incluye esta línea en la descripción del PR:
+
+```
+He leído y acepto el Contributor License Agreement (CONTRIBUTOR_LICENSE_AGREEMENT.md).
+```
+
+Tu aceptación cubre esa contribución y las siguientes que envíes.
+
+### Código de terceros
+
+**No envíes código con copyright ajeno.** Esto incluye fragmentos copiados de otros repositorios, de respuestas de Stack Overflow, de tutoriales o de cursos, aunque sean cortos.
+
+Si necesitas incorporar material de terceros:
+
+1. Márcalo con `[Third-Party]` en el título del PR.
+2. Indica origen, autor y licencia completa.
+3. Espera aprobación explícita antes de continuar.
+
+Ten en cuenta también que:
+
+- Si trabajas por cuenta ajena y tu contrato atribuye a tu empleador los derechos sobre lo que produces, necesitas su autorización.
+- Si usas asistentes de IA para generar código, sigues siendo responsable de que el resultado sea apto para enviarse bajo el CLA.
+- Nunca incluyas secretos, credenciales ni datos personales reales.
+
+### Otros documentos relevantes
+
+- [NOTICE](../NOTICE) — aviso de copyright que debe acompañar a las redistribuciones
+- [TRADEMARKS.md](../TRADEMARKS.md) — uso del nombre y el logotipo "Lunance"
+- [SECURITY.md](../SECURITY.md) — reporte privado de vulnerabilidades
 
 ## 📜 Código de Conducta
 
@@ -20,6 +65,8 @@ Al participar en este proyecto, te comprometes a mantener un ambiente respetuoso
 - ✅ **Inclusión**: Acepta diferentes perspectivas y experiencias
 - ✅ **Constructividad**: Ofrece críticas constructivas y útiles
 - ❌ **No toleramos**: Lenguaje ofensivo, acoso o discriminación
+
+📄 El texto completo, junto con el alcance, las medidas de aplicación y cómo reportar un incidente, está en [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
 
 ## 🛠️ Configuración del Entorno
 
@@ -34,8 +81,8 @@ Al participar en este proyecto, te comprometes a mantener un ambiente respetuoso
 
 ```bash
 # 1. Fork y clonar el repositorio
-git clone https://github.com/tu-usuario/lunance.git
-cd lunance
+git clone https://github.com/DiegoDG-01/LunanceIA.git
+cd LunanceIA
 
 # 2. Crear rama de desarrollo
 git checkout -b feature/mi-nueva-funcionalidad
@@ -47,17 +94,20 @@ uv sync
 source .venv/bin/activate  # Linux/macOS
 # .venv\Scripts\activate    # Windows
 
-# 5. Configurar variables de entorno
+# 5. Compilar e instalar el motor Rust (proyecciones de inversión)
+uv pip install ./fincore
+
+# 6. Configurar variables de entorno
 cp .env.example .env
 # Editar .env con tus credenciales
 
-# 6. Aplicar migraciones
+# 7. Aplicar migraciones
 alembic upgrade head
 
-# 7. Instalar pre-commit hooks
+# 8. Instalar pre-commit hooks
 pre-commit install
 
-# 8. Verificar que todo funcione
+# 9. Verificar que todo funcione
 pytest
 ```
 
@@ -67,6 +117,13 @@ pytest
 # API Configuration
 ENVIRONMENT=DEV  # DEV para desarrollo, PROD para producción
 
+# JWT Configuration (la API firma sus propios tokens)
+SECRET_KEY=una_clave_larga_y_aleatoria
+SECRET_KEY_REFRESH=otra_clave_distinta_y_aleatoria
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
 # Database Connection Details
 DB_HOST=localhost  # localhost para desarrollo local
 DB_PORT=3306
@@ -74,19 +131,27 @@ DB_NAME=lunance
 DB_USER=luna
 DB_PASSWORD=luna_root
 
-# Auth0 Configuration
-AUTH0_DOMAIN=tu_dominio.auth0.com
-AUTH0_AUDIENCE=tu_api_audience
-AUTH0_CLIENT_ID=tu_client_id
+# AI Settings (agentes de imagen y asesoría de gastos)
+AI_PROVIDER=google-gla
+AI_MODEL_ID=gemini-2.5-flash
+AI_API_KEY=tu_clave_api
 
-# GEMINI Configuration (para procesamiento de imágenes)
-GEMINI_MODEL_ID=gemini-2.5-flash
-GEMINI_API_KEY=tu_clave_api_gemini
+# Auth0 (legado: el flujo activo es el JWT propio, pero settings.py
+# sigue exigiendo estas dos variables para arrancar)
+AUTH0_DOMAIN=placeholder.auth0.com
+AUTH0_AUDIENCE=placeholder
+
+# Logging (opcional, los valores por defecto están en settings.py)
+LOG_PROVIDER=console
+LOG_LEVEL=INFO
+LOG_FORMAT=text
 ```
 
+> Ninguna de estas variables tiene valor por defecto en `settings.py` salvo `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS`, `ENVIRONMENT`, `FRONTEND_URL`, `BANXICO_TOKEN` y los defaults de DB: si falta `SECRET_KEY`, `SECRET_KEY_REFRESH`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `AI_PROVIDER`, `AI_MODEL_ID`, `AUTH0_DOMAIN` o `AUTH0_AUDIENCE`, la aplicación no arranca. Consulta [`.env.example`](../.env.example) para la lista completa, incluidas las opciones de logging y Grafana Loki.
+
 **Nota sobre ENVIRONMENT:**
-- **DEV**: Activa CORS abierto (`*`), logging detallado con stack traces
-- **PROD**: CORS restrictivo (dominio específico), logging básico sin detalles sensibles
+- **DEV / TEST**: CORS permite únicamente el `FRONTEND_URL` definido en `.env`; logging detallado con stack traces
+- **PROD**: CORS con lista cerrada de dominios (`preview.lunance.app`, `api.lunance.app`, `lunance.app` — ajústala en `src/main.py` si autohospedas), logging básico sin detalles sensibles
 
 ## 🔄 Flujo de Contribución
 
@@ -134,8 +199,9 @@ Closes #123"
    ```
 
 2. **Crear PR** siguiendo el template
-3. **Esperar revisión** del equipo
-4. **Aplicar feedback** si es necesario
+3. **Aceptar el CLA** marcando la casilla correspondiente en el template — sin esto el PR no se puede mergear
+4. **Esperar revisión** del equipo
+5. **Aplicar feedback** si es necesario
 
 ## 🎨 Estándares de Código
 
@@ -277,31 +343,38 @@ async def test_create_account_endpoint(client, auth_headers):
 
 ### Cobertura Requerida
 
-- **Mínimo**: 80% de cobertura general
+- **Mínimo orientativo**: 80% de cobertura general
 - **Dominio**: 95% de cobertura (lógica de negocio crítica)
 - **Endpoints**: 90% de cobertura (rutas principales)
+
+> La cobertura se calcula con `pytest --cov=src` (configurada en `pyproject.toml`). El estado real se refleja en el badge de Codecov del repositorio cuando esté configurado. Por ahora es **orientativa**: si tu cambio añade un flujo financiero, prioriza tests que cubran la lógica de dominio y los caminos de error.
 
 ### Comandos de Testing
 
 ```bash
-# Ejecutar todos los tests
+# Ejecutar todos los tests (los paths se toman de pyproject.toml)
 pytest
 
 # Con cobertura
 pytest --cov=src --cov-report=html
 
 # Solo tests unitarios
-pytest tests/unit/
+pytest src/tests/unit/
 
 # Solo tests de integración
-pytest tests/integration/
+pytest src/tests/integration/
+
+# Solo tests E2E (requieren la API levantada en :8000)
+pytest src/tests/e2e/
 
 # Test específico
-pytest tests/unit/domain/test_money_value_object.py::test_money_addition
+pytest src/tests/unit/domain/test_money_value_object.py::test_money_addition
 
 # Con output detallado
 pytest -v -s
 ```
+
+> Los E2E se ejecutan contra una API en `http://127.0.0.1:8000` (configurable con `TEST_API_BASE_URL`). Con `ENVIRONMENT=TEST` el rate limiting queda deshabilitado, recomendado para CI.
 
 ## 📚 Documentación
 
@@ -410,6 +483,7 @@ if account.account_type == AccountType.CREDIT:
 - [ ] ✅ Commits atómicos y descriptivos
 - [ ] ✅ No incluye información sensible
 - [ ] ✅ Sigue convenciones del proyecto
+- [ ] ✅ CLA aceptado y contribución libre de copyright de terceros
 
 ## 🚀 Deployment y Release
 
@@ -419,19 +493,25 @@ if account.account_type == AccountType.CREDIT:
 - **MINOR** (v1.1.0): Nueva funcionalidad compatible
 - **PATCH** (v1.0.1): Bug fixes compatibles
 
+La versión visible para el usuario se mantiene en `pyproject.toml` y `src/main.py`; cualquier PR que cambie comportamiento público debe actualizar ambos.
+
 ### Branch Strategy
 
-- **main**: Código en producción
-- **develop**: Integración de nuevas features
-- **feature/**: Desarrollo de funcionalidades
-- **bugfix/**: Corrección de bugs
-- **hotfix/**: Fixes urgentes para producción
+- **master**: Código estable, fuente de los releases.
+- **stage**: Entorno de staging; dispara la build de la imagen `stage` y el deploy de pruebas.
+- **dev**: Rama de integración; Dependabot y los PRs de funcionalidades apuntan aquí por defecto.
+- **feature/**: Desarrollo de funcionalidades.
+- **bugfix/**: Corrección de bugs.
+- **hotfix/**: Fixes urgentes para producción (ramas desde `master`).
+
+Los workflows de CI/CD viven en `.github/workflows/`. **En este repositorio están configurados para correr en un runner self-hosted**; los contribuidores externos no necesitan ejecutarlos para que un PR sea aceptable — basta con que `ruff check` y `pytest` pasen localmente.
 
 ## ❓ ¿Necesitas Ayuda?
 
 - 💬 **GitHub Discussions**: Para preguntas generales
 - 🐛 **GitHub Issues**: Para reportar bugs o solicitar features
-- 📧 **Email**: [tu-email@ejemplo.com] para temas sensibles
+- 🔒 **Vulnerabilidades**: Nunca en un issue público — sigue [SECURITY.md](../SECURITY.md)
+- ⚖️ **Licencia, CLA o uso comercial**: contacto@diegodg.com.mx
 - 📖 **Documentación**: Revisa [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ---

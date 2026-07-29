@@ -36,7 +36,6 @@ from infrastructure.rate_limiting.limiters import (
     limiter_50_per_minute,
     limiter_20_per_minute,
 )
-from presentation.dependencies import get_current_active_user
 from presentation.dependencies.auth_deps import require_scope
 from presentation.schemas.requests.installment import (
     CreateInstallmentPurchaseRequest,
@@ -103,7 +102,7 @@ async def pay_installment_charge(
     request: Request,
     charge_uuid: str,
     body: PayInstallmentChargeRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.INSTALLMENTS_WRITE.value)),
     handler: PayInstallmentChargeHandler = Depends(get_pay_installment_charge_handler),
 ):
     enforce_rate_limit(limiter_20_per_minute, request)
@@ -120,7 +119,7 @@ async def pay_installment_charge(
 async def delete_installment_purchase(
     request: Request,
     purchase_uuid: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.INSTALLMENTS_WRITE.value)),
     handler: DeleteInstallmentPurchaseHandler = Depends(get_delete_installment_handler),
 ):
     enforce_rate_limit(limiter_20_per_minute, request)
@@ -135,7 +134,7 @@ async def update_installment_purchase(
     request: Request,
     purchase_uuid: str,
     body: UpdateInstallmentPurchaseRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_scope(APIKeyScope.INSTALLMENTS_WRITE.value)),
     handler: UpdateInstallmentPurchaseHandler = Depends(get_update_installment_handler),
 ):
     enforce_rate_limit(limiter_20_per_minute, request)

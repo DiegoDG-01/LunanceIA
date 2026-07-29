@@ -16,6 +16,7 @@ from .investment_yield import InvestmentYieldModel
 from .notifications import NotificationModel
 from .installment import InstallmentPurchaseModel, InstallmentChargeModel
 from .api_key import APIKeyModel
+from .recurring_income import RecurringIncomeModel, IncomeDepositModel
 
 __all__ = [
     "BudgetModel",
@@ -37,4 +38,6 @@ __all__ = [
     "InstallmentPurchaseModel",
     "InstallmentChargeModel",
     "APIKeyModel",
+    "RecurringIncomeModel",
+    "IncomeDepositModel",
 ]
