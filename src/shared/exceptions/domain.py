@@ -142,11 +142,6 @@ class InvalidCurrencyError(ValidationError):
         super().__init__(f"Moneda inválida: {currency}")
 
 
-class InvestmentSettingsNotFoundError(NotFoundError):
-    def __init__(self, investment_uuid: str):
-        super().__init__(f"Investment con UUID {investment_uuid} no encontrada")
-
-
 class CreditCardSettingsNotFoundError(NotFoundError):
     def __init__(self, credit_card_uuid: str):
         super().__init__(f"Credit Card Setting para {credit_card_uuid} no encontrada")
@@ -229,11 +224,6 @@ class InvalidInvestmentRateError(ValidationError):
 class InvalidPenaltyPercentageError(ValidationError):
     def __init__(self, penalty_percentage: str):
         super().__init__(f"Penalty percentage invalido: {penalty_percentage}")
-
-
-class InvalidInvestmentTypeError(ValidationError):
-    def __init__(self, investment_type: str):
-        super().__init__(f"Investment type invalido: {investment_type}")
 
 
 class InvalidBillingCycleDayError(ValidationError):

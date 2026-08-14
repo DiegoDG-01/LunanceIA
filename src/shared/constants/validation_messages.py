@@ -143,7 +143,6 @@ HTTP_CODES_ERRORS = {
         "NOT_FOUND_CATEGORY": "Categoría no encontrada",
         "NOT_FOUND_SUBSCRIPTION": "Suscripción no encontrada",
         "NOT_FOUND_ACTIVITY": "No se encontró ningún movimiento",
-        "INVESTMENT_SETTINGS_NOT_FOUND": "Configuración de cuenta no encontrada",
         # Códigos específicos de Lunance - Conflictos de negocio
         "BUSINESS_EMAIL_EXISTS": "El email ya está registrado",
         "BUSINESS_ACCOUNT_HAS_BALANCE": "La cuenta tiene saldo pendiente",
@@ -162,7 +161,6 @@ HTTP_CODES_ERRORS = {
         "INSUFFICIENT_FUNDS": "Fondos insuficientes",
         "VALIDATION_INVALID_INVESTMENT_RATE": "La tasa de inversión debe ser no negativa",
         "VALIDATION_INVALID_PENALTY_PERCENTAGE": "El porcentaje de penalización debe estar entre 0 y 100",
-        "VALIDATION_INVALID_INVESTMENT_TYPE": "Tipo de inversión inválido",
         "VALIDATION_INVALID_BILLING_CYCLE_DAY": "El día de ciclo de facturación debe estar entre 1 y 31",
         "VALIDATION_INVALID_PAYMENT_DUE_DAY": "El día de vencimiento de pago debe estar entre 1 y  31",
         "VALIDATION_INVALID_CREDIT_LIMIT": "El límite de crédito debe ser positivo",
@@ -195,7 +193,6 @@ HTTP_CODES_ERRORS = {
         "NOT_FOUND_TRANSACTION": "Transaction not found",
         "NOT_FOUND_CATEGORY": "Category not found",
         "NOT_FOUND_SUBSCRIPTION": "Subscription not found",
-        "INVESTMENT_SETTINGS_NOT_FOUND": "Account settings not found",
         "NOT_FOUND_ACTIVITY": "No movement was found",
         # Códigos específicos de Lunance - Conflictos de negocio
         "INVALID_CREDENTIALS": "Invalid credentials",
@@ -216,7 +213,6 @@ HTTP_CODES_ERRORS = {
         "INSUFFICIENT_FUNDS": "Insufficient funds",
         "VALIDATION_INVALID_INVESTMENT_RATE": "Interest rate must be non negative",
         "VALIDATION_INVALID_PENALTY_PERCENTAGE": "Early withdrawal penalty must be between 0 and 100",
-        "VALIDATION_INVALID_INVESTMENT_TYPE": "Invalid investment type",
         "VALIDATION_INVALID_BILLING_CYCLE_DAY": "Billing cycle day must be between 1 and 31",
         "VALIDATION_INVALID_PAYMENT_DUE_DAY": "Payment due day must be between 1 and 31",
         "VALIDATION_INVALID_CREDIT_LIMIT": "Credit limit must be positive",

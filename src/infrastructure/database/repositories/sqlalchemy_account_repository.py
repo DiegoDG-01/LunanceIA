@@ -6,10 +6,8 @@ from domain.entities.account import Account
 from domain.repositories.account_repository import AccountRepository
 from domain.objects.money import Money
 from domain.objects.credit_card_settings import CreditCardSettings
-from domain.objects.investment_settings import InvestmentCardSettings
 from infrastructure.database.models import (
     CreditCardSettingsModel,
-    InvestmentCardSettingsModel,
     BankModel,
 )
 from infrastructure.database.models.account import AccountModel
@@ -113,16 +111,11 @@ class SQLAlchemyAccountRepository(AccountRepository):
                 AccountModel,
                 BankModel,
                 CreditCardSettingsModel,
-                InvestmentCardSettingsModel,
             )
             .outerjoin(BankModel, AccountModel.bank_id == BankModel.id)
             .outerjoin(
                 CreditCardSettingsModel,
                 AccountModel.id == CreditCardSettingsModel.account_id,
-            )
-            .outerjoin(
-                InvestmentCardSettingsModel,
-                AccountModel.id == InvestmentCardSettingsModel.account_id,
             )
             .where(AccountModel.user_id == user_id)
             .limit(limit)
@@ -132,7 +125,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         rows = result.all()
 
         accounts = []
-        for account_model, bank_model, cc_model, inv_model in rows:
+        for account_model, bank_model, cc_model in rows:
             account = self._model_to_entity(account_model)
             if bank_model:
                 account.bank_code = bank_model.code
@@ -146,16 +139,6 @@ class SQLAlchemyAccountRepository(AccountRepository):
                     minimum_payment_percentage=cc_model.minimum_payment_percentage,
                 )
 
-            if inv_model:
-                account.investment_settings = InvestmentCardSettings(
-                    investment_type=inv_model.investment_type,
-                    investment_rate=inv_model.investment_rate,
-                    interest_type=inv_model.interest_type,
-                    lock_period_end_date=inv_model.lock_period_end_date,
-                    maturity_date=inv_model.maturity_date,
-                    early_withdrawal_penalty=inv_model.early_withdrawal_penalty,
-                )
-
             accounts.append(account)
         return accounts
 
@@ -167,16 +150,11 @@ class SQLAlchemyAccountRepository(AccountRepository):
                 AccountModel,
                 BankModel,
                 CreditCardSettingsModel,
-                InvestmentCardSettingsModel,
             )
             .outerjoin(BankModel, AccountModel.bank_id == BankModel.id)
             .outerjoin(
                 CreditCardSettingsModel,
                 AccountModel.id == CreditCardSettingsModel.account_id,
-            )
-            .outerjoin(
-                InvestmentCardSettingsModel,
-                AccountModel.id == InvestmentCardSettingsModel.account_id,
             )
             .where(
                 and_(
@@ -191,7 +169,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         rows = result.all()
 
         accounts = []
-        for account_model, bank_model, cc_model, inv_model in rows:
+        for account_model, bank_model, cc_model in rows:
             account = self._model_to_entity(account_model)
 
             if bank_model:
@@ -204,17 +182,6 @@ class SQLAlchemyAccountRepository(AccountRepository):
                     payment_due_day=cc_model.payment_due_day,
                     credit_limit=cc_model.credit_limit,
                     minimum_payment_percentage=cc_model.minimum_payment_percentage,
-                )
-
-            if inv_model:
-                account.investment_settings = InvestmentCardSettings(
-                    investment_type=inv_model.investment_type,
-                    investment_rate=inv_model.investment_rate,
-                    interest_type=inv_model.interest_type,
-                    lock_period_end_date=inv_model.lock_period_end_date,
-                    maturity_date=inv_model.maturity_date,
-                    early_withdrawal_penalty=inv_model.early_withdrawal_penalty,
-                    base_principal=inv_model.base_principal,
                 )
 
             accounts.append(account)
@@ -264,16 +231,11 @@ class SQLAlchemyAccountRepository(AccountRepository):
             select(
                 AccountModel,
                 CreditCardSettingsModel,
-                InvestmentCardSettingsModel,
                 BankModel,
             )
             .outerjoin(
                 CreditCardSettingsModel,
                 AccountModel.id == CreditCardSettingsModel.account_id,
-            )
-            .outerjoin(
-                InvestmentCardSettingsModel,
-                AccountModel.id == InvestmentCardSettingsModel.account_id,
             )
             .outerjoin(
                 BankModel,
@@ -287,7 +249,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
         if not row:
             return None
 
-        account_model, cc_settings_model, inv_settings_model, bank_model = row
+        account_model, cc_settings_model, bank_model = row
 
         account = self._model_to_entity(account_model)
 
@@ -297,17 +259,6 @@ class SQLAlchemyAccountRepository(AccountRepository):
                 payment_due_day=cc_settings_model.payment_due_day,
                 credit_limit=cc_settings_model.credit_limit,
                 minimum_payment_percentage=cc_settings_model.minimum_payment_percentage,
-            )
-
-        if inv_settings_model:
-            account.investment_settings = InvestmentCardSettings(
-                investment_type=inv_settings_model.investment_type,
-                investment_rate=inv_settings_model.investment_rate,
-                interest_type=inv_settings_model.interest_type,
-                lock_period_end_date=inv_settings_model.lock_period_end_date,
-                maturity_date=inv_settings_model.maturity_date,
-                early_withdrawal_penalty=inv_settings_model.early_withdrawal_penalty,
-                base_principal=inv_settings_model.base_principal,
             )
 
         account.bank_name = bank_model.name

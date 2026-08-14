@@ -37,7 +37,6 @@ class TestGetUserAccountsHandler:
         account.bank_name = "BBVA"
         account.bank_code = "BBV"
         account.credit_card_settings = None
-        account.investment_settings = None
         return account
 
     @pytest.mark.asyncio

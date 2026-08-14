@@ -10,7 +10,6 @@ from .user import UserModel
 from .account import AccountModel
 from .saving_goal import SavingGoalModel
 from .credit_card import CreditCardSettingsModel
-from .investment_account import InvestmentCardSettingsModel
 from .bank import BankModel
 from .investment_yield import InvestmentYieldModel
 from .investment_position import InvestmentPositionModel
@@ -32,7 +31,6 @@ __all__ = [
     "AccountModel",
     "SavingGoalModel",
     "CreditCardSettingsModel",
-    "InvestmentCardSettingsModel",
     "BankModel",
     "InvestmentYieldModel",
     "InvestmentPositionModel",
