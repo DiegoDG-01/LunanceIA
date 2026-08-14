@@ -22,6 +22,7 @@ def get_create_transfer_handler(
 ) -> CreateTransferHandler:
     return CreateTransferHandler(user_repo, account_repo, transaction_repo, uow)
 
+
 def get_delete_transfer_handler(
     transaction_repo: TransactionRepository = Depends(get_transaction_repository),
     account_repo: AccountRepository = Depends(get_account_repository),
