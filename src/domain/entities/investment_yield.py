@@ -18,6 +18,7 @@ class InvestmentYield:
     annual_rate: Decimal  # Taza anual usada (snapshot del dia)
     interest_type: InterestType
     created_at: Optional[datetime] = None
+    position_id: Optional[int] = None  # Apartado que generó el rendimiento
 
     @classmethod
     def create_new(
@@ -29,6 +30,7 @@ class InvestmentYield:
         cumulative_balance: Decimal,
         annual_rate: Decimal,
         interest_type: InterestType,
+        position_id: Optional[int] = None,
     ) -> "InvestmentYield":
         return cls(
             id=None,
@@ -41,4 +43,5 @@ class InvestmentYield:
             annual_rate=annual_rate,
             interest_type=interest_type,
             created_at=None,
+            position_id=position_id,
         )

@@ -383,3 +383,74 @@ class InvalidSubscriptionDateRangeError(ValidationError):
         super().__init__(
             f"La fecha de fin ({end_date}) no puede ser anterior a la de inicio ({start_date})"
         )
+
+
+# Investment Position Exceptions
+class InvestmentPositionNotFoundError(NotFoundError):
+    """Apartado de inversión no encontrado."""
+
+    def __init__(self, position_uuid: str):
+        super().__init__(f"Apartado de inversión con ID {position_uuid} no encontrado")
+
+
+class InvestmentPositionNotActiveError(BusinessRuleError):
+    """Apartado de inversión no activo."""
+
+    def __init__(self, position_uuid: str, status: str):
+        super().__init__(
+            f"El apartado {position_uuid} no admite esta operación (estado: {status})"
+        )
+
+
+class InvestmentPositionLockedError(BusinessRuleError):
+    """Apartado de inversión bloqueado por periodo de permanencia."""
+
+    def __init__(self, position_uuid: str, lock_period_end_date: str):
+        super().__init__(
+            f"El apartado {position_uuid} está bloqueado hasta {lock_period_end_date}"
+        )
+
+
+class FixedTermDepositNotAllowedError(BusinessRuleError):
+    """Depósito no permitido en apartado a plazo fijo."""
+
+    def __init__(self, position_uuid: str):
+        super().__init__(
+            f"El apartado {position_uuid} es a plazo fijo y no admite depósitos después de creado"
+        )
+
+
+class FixedTermWithdrawalNotAllowedError(BusinessRuleError):
+    """Retiro parcial no permitido en apartado a plazo fijo."""
+
+    def __init__(self, position_uuid: str):
+        super().__init__(
+            f"El apartado {position_uuid} es a plazo fijo y no admite retiros parciales; debe liquidarse por completo"
+        )
+
+
+class InvalidFixedTermConfigError(ValidationError):
+    """Configuración de plazo fijo inválida."""
+
+    def __init__(self):
+        super().__init__(
+            "Un apartado a plazo fijo requiere 'term_days' o 'maturity_date'"
+        )
+
+
+class InvestmentPositionNotMaturedError(BusinessRuleError):
+    """Apartado de inversión aún no vencido."""
+
+    def __init__(self, position_uuid: str, maturity_date: str):
+        super().__init__(
+            f"El apartado {position_uuid} aún no vence (vencimiento: {maturity_date})"
+        )
+
+
+class PositionAccountTypeNotAllowedError(BusinessRuleError):
+    """Tipo de cuenta no admite apartados de inversión."""
+
+    def __init__(self, account_type: str):
+        super().__init__(
+            f"Las cuentas de tipo {account_type} no admiten apartados de inversión"
+        )

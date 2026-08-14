@@ -50,6 +50,11 @@ class TransactionModel(Base):
     category_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("categories.id"), nullable=True
     )
+    position_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("investment_positions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     transfer_uuid: Mapped[Optional[str]] = mapped_column(
         CHAR(36), nullable=True, index=True
     )

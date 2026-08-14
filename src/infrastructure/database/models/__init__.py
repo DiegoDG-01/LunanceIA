@@ -13,6 +13,7 @@ from .credit_card import CreditCardSettingsModel
 from .investment_account import InvestmentCardSettingsModel
 from .bank import BankModel
 from .investment_yield import InvestmentYieldModel
+from .investment_position import InvestmentPositionModel
 from .notifications import NotificationModel
 from .installment import InstallmentPurchaseModel, InstallmentChargeModel
 from .api_key import APIKeyModel
@@ -34,6 +35,7 @@ __all__ = [
     "InvestmentCardSettingsModel",
     "BankModel",
     "InvestmentYieldModel",
+    "InvestmentPositionModel",
     "NotificationModel",
     "InstallmentPurchaseModel",
     "InstallmentChargeModel",

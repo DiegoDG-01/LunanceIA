@@ -21,6 +21,7 @@ class Transaction:
     tags: Optional[List[int]] = None
     creation_date: Optional[datetime] = None
     transfer_uuid: Optional[str] = None
+    position_id: Optional[int] = None
 
     @classmethod
     def create_new(
@@ -57,6 +58,9 @@ class Transaction:
 
     def is_expense(self):
         return self.transaction_type == TransactionType.EXPENSE
+
+    def is_transfer(self):
+        return self.transaction_type == TransactionType.TRANSFER
 
     def update_description(self, new_description: str):
         self.description = new_description

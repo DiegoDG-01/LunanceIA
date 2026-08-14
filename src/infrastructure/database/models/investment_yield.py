@@ -1,6 +1,7 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Optional
 
 from sqlalchemy import (
     ForeignKey,
@@ -26,6 +27,11 @@ class InvestmentYieldModel(Base):
     account_id: Mapped[int] = mapped_column(
         ForeignKey("accounts.id", ondelete="CASCADE"), index=True
     )
+    position_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("investment_positions.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     uuid: Mapped[str] = mapped_column(
         CHAR(36), unique=True, index=True, default=lambda: str(uuid.uuid4())
     )
@@ -40,6 +46,6 @@ class InvestmentYieldModel(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("account_id", "yield_date", name="uq_account__yield_date"),
+        UniqueConstraint("position_id", "yield_date", name="uq_position__yield_date"),
         Index("idx_yield_date", "yield_date"),
     )

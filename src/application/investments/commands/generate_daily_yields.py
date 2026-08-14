@@ -4,17 +4,15 @@ from datetime import date
 from decimal import Decimal
 from typing import cast
 
-from domain.objects.enums import InterestType
+from domain.objects.enums import InterestType, PositionStatus
 from domain.objects.money import Money
 from domain.entities.investment_yield import InvestmentYield
-from domain.repositories.account_repository import AccountRepository
+from domain.repositories.investment_position_repository import (
+    InvestmentPositionRepository,
+)
 from domain.repositories.investment_yield_repository import InvestmentYieldRepository
-from domain.repositories.notification_repository import NotificationRepository
-from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.utils.date import get_year_day_basis
-from domain.entities.transaction import Transaction, TransactionType
-from domain.entities.notification import Notification, NotificationType
 
 
 logger = logging.getLogger(__name__)
@@ -26,18 +24,23 @@ class GenerateDailyYieldCommand:
 
 
 class GenerateDailyYieldHandler:
+    """Genera el rendimiento diario de cada apartado de inversión activo.
+
+    El rendimiento no toca el saldo disponible de la cuenta: a la vista
+    capitaliza dentro del apartado y a plazo fijo se acumula hasta el
+    vencimiento. Por eso este job ya no crea transacciones; el dinero
+    aparece como transacción cuando cruza al disponible (liquidación o
+    vencimiento).
+    """
+
     def __init__(
         self,
-        account_repository: AccountRepository,
+        position_repository: InvestmentPositionRepository,
         investment_yield_repository: InvestmentYieldRepository,
-        transaction_repository: TransactionRepository,
-        notification_repository: NotificationRepository,
         uow: AbstractUnitOfWork,
     ):
-        self.account_repository = account_repository
+        self.position_repository = position_repository
         self.investment_yield_repository = investment_yield_repository
-        self.transaction_repository = transaction_repository
-        self.notification_repository = notification_repository
         self.uow = uow
 
     async def handle(self, command: GenerateDailyYieldCommand) -> dict:
@@ -46,108 +49,78 @@ class GenerateDailyYieldHandler:
         skipped = 0
         errors = 0
 
-        # TODO(H-BUG-01): este flujo aún tiene el lost-update de saldo: las
-        # cuentas se cargan aquí sin lock y el loop calcula sobre esos objetos
-        # obsoletos. Fix: re-obtener cada cuenta dentro del loop con
-        # get_by_id(for_update=True) y calcular/actualizar el saldo sobre el
-        # objeto re-obtenido; los investment_settings deben seguir saliendo
-        # del objeto pre-cargado porque get_by_id no hace join con settings.
-        # Multi-instancia: la idempotencia ya tiene backstop en DB
-        # (uq_account__yield_date); al escalar, considerar UoW/commit por
-        # cuenta para acortar los locks.
-        accounts = await self.account_repository.get_active_investment_accounts()
+        previews = await self.position_repository.get_active_positions()
 
         async with self.uow:
-            for account in accounts:
+            for preview in previews:
                 try:
-                    if not account.investment_settings:
-                        errors += 1
-                        continue
-
-                    if (
-                        account.investment_settings.maturity_date
-                        and today > account.investment_settings.maturity_date
-                    ):
+                    # Un plazo vencido deja de rendir; el job de vencimientos
+                    # decide qué hacer con él (el día del vencimiento sí rinde).
+                    if preview.maturity_date and today > preview.maturity_date:
                         skipped += 1
                         continue
 
-                    # Idempotency: Does today's performance already exist?
+                    # Idempotency: Does today's yield already exist?
                     existing = (
-                        await self.investment_yield_repository.get_by_account_and_date(
-                            account_id=cast(int, account.id), yield_date=today
+                        await self.investment_yield_repository.get_by_position_and_date(
+                            position_id=cast(int, preview.id), yield_date=today
                         )
                     )
                     if existing:
                         skipped += 1
                         continue
 
-                    annual_rate = account.investment_settings.investment_rate
+                    # Re-obtener con lock para no pisar depósitos/retiros
+                    # concurrentes calculando sobre un objeto obsoleto.
+                    position = await self.position_repository.get_by_id(
+                        position_id=cast(int, preview.id), for_update=True
+                    )
+                    if not position or position.status != PositionStatus.ACTIVE:
+                        skipped += 1
+                        continue
+
+                    annual_rate = position.annual_rate
                     year_basis = Decimal(get_year_day_basis(today))
 
-                    if (
-                        account.investment_settings.interest_type
-                        == InterestType.COMPOUND
-                    ):
-                        principal = account.current_balance.amount
+                    if position.interest_type == InterestType.COMPOUND:
+                        principal = position.total_value.amount
                         daily_rate = (1 + annual_rate / Decimal(100)) ** (
                             Decimal(1) / year_basis
                         ) - Decimal(1)
                     else:
-                        principal = (
-                            account.investment_settings.base_principal
-                            or account.current_balance.amount
-                        )
+                        principal = position.base_principal or position.balance.amount
                         daily_rate = annual_rate / Decimal(100) / year_basis
 
                     yield_amount = (principal * daily_rate).quantize(Decimal("0.01"))
-                    cumulative_balance = account.current_balance.amount + yield_amount
-                    yield_transaction = Transaction.create_new(
-                        user_id=account.user_id,
-                        account_id=account.id,
-                        # TODO: Change harcoded category ID for better abstraction
-                        category_id=4,
-                        transaction_type=TransactionType.INCOME,
-                        amount=Money(
-                            amount=yield_amount,
-                            currency=account.current_balance.currency,
-                        ),
-                        description=f"Daily yield for {account.name}",
-                        transaction_date=today,
+
+                    if yield_amount <= 0:
+                        skipped += 1
+                        continue
+
+                    position.accrue_yield(
+                        Money(yield_amount, position.balance.currency)
                     )
                     yield_record = InvestmentYield.create_new(
-                        account_id=cast(int, account.id),
+                        account_id=position.account_id,
+                        position_id=cast(int, position.id),
                         yield_date=today,
                         principal_amount=principal,
                         yield_amount=yield_amount,
-                        cumulative_balance=cumulative_balance,
+                        cumulative_balance=position.total_value.amount,
                         annual_rate=annual_rate,
-                        interest_type=account.investment_settings.interest_type,
+                        interest_type=position.interest_type,
                     )
-                    new_balance = Money(
-                        amount=cumulative_balance,
-                        currency=account.current_balance.currency,
-                    )
-                    notification = Notification.create_new(
-                        user_id=account.user_id,
-                        title=f"Daily yield for {account.name}",
-                        message=f"Your daily yield of {yield_amount} has been generated and your new balance is {new_balance.amount} for {account.name}.",
-                        type=NotificationType.PUSH,
-                        is_read=False,
-                    )
-                    account.update_balance(new_balance)
 
-                    await self.account_repository.update(account)
-                    await self.transaction_repository.create(yield_transaction)
+                    await self.position_repository.update(position)
                     await self.investment_yield_repository.create(yield_record)
-                    await self.notification_repository.create(notification)
 
                     processed += 1
-                    logger.info(f"generated daily yield for account {account.id}")
+                    logger.info(f"generated daily yield for position {position.id}")
 
                 except Exception as e:
                     errors += 1
                     logger.error(
-                        f"failed to generate daily yield for account {account.id}: {e}",
+                        f"failed to generate daily yield for position {preview.id}: {e}",
                         exc_info=True,
                     )
 

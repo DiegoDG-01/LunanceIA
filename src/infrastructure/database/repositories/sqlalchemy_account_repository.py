@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, select
 
 from domain.entities.account import Account
-from domain.objects.enums import AccountType
 from domain.repositories.account_repository import AccountRepository
 from domain.objects.money import Money
 from domain.objects.credit_card_settings import CreditCardSettings
@@ -315,39 +314,3 @@ class SQLAlchemyAccountRepository(AccountRepository):
         account.bank_code = bank_model.code
 
         return account
-
-    async def get_active_investment_accounts(self) -> List[Account]:
-        stmt = (
-            select(AccountModel, InvestmentCardSettingsModel)
-            .outerjoin(
-                InvestmentCardSettingsModel,
-                AccountModel.id == InvestmentCardSettingsModel.account_id,
-            )
-            .where(
-                and_(
-                    AccountModel.type == AccountType.INVESTMENT,
-                    AccountModel.is_active,
-                    InvestmentCardSettingsModel.investment_type == "fixed_term",
-                )
-            )
-        )
-        result = await self.db.execute(stmt)
-        rows = result.all()
-
-        accounts = []
-        for account_model, inv_model in rows:
-            account = self._model_to_entity(account_model)
-
-            if inv_model:
-                account.investment_settings = InvestmentCardSettings(
-                    investment_type=inv_model.investment_type,
-                    investment_rate=inv_model.investment_rate,
-                    interest_type=inv_model.interest_type,
-                    lock_period_end_date=inv_model.lock_period_end_date,
-                    maturity_date=inv_model.maturity_date,
-                    early_withdrawal_penalty=inv_model.early_withdrawal_penalty,
-                    base_principal=inv_model.base_principal,
-                )
-                accounts.append(account)
-
-        return accounts

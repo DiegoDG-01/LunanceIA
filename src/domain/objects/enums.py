@@ -86,6 +86,23 @@ class InstallmentType(str, Enum):
     WITH_INTEREST = "WITH_INTEREST"
 
 
+class PositionType(str, Enum):
+    ON_DEMAND = "ON_DEMAND"
+    FIXED_TERM = "FIXED_TERM"
+
+
+class PositionStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    MATURED = "MATURED"
+    LIQUIDATED = "LIQUIDATED"
+
+
+class MaturityAction(str, Enum):
+    AUTO_RENEW = "AUTO_RENEW"
+    LIQUIDATE = "LIQUIDATE"
+    HOLD = "HOLD"
+
+
 class APIKeyScope(str, Enum):
     TRANSACTIONS_READ = "transactions:read"
     TRANSACTIONS_WRITE = "transactions:write"
@@ -97,6 +114,7 @@ class APIKeyScope(str, Enum):
     GOALS_READ = "goals:read"
     GOALS_WRITE = "goals:write"
     INVESTMENTS_READ = "investments:read"
+    INVESTMENTS_WRITE = "investments:write"
     ACCOUNTS_WRITE = "accounts:write"
     SUBSCRIPTIONS_READ = "subscriptions:read"
     SUBSCRIPTIONS_WRITE = "subscriptions:write"

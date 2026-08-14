@@ -1,251 +1,176 @@
+"""Unit tests for GenerateDailyYieldHandler (position-based engine)."""
+
 import pytest
+from dataclasses import replace
 from unittest.mock import MagicMock, AsyncMock
-from datetime import date, datetime, timezone
-from typing import Optional
+from datetime import date, timedelta
 from decimal import Decimal
 
 from application.investments.commands.generate_daily_yields import (
     GenerateDailyYieldCommand,
     GenerateDailyYieldHandler,
 )
-from domain.entities.account import Account
-from domain.entities.investment_yield import InvestmentYield
-from domain.objects.enums import AccountType, InterestType
-from domain.objects.investment_settings import InvestmentCardSettings
+from domain.entities.investment_position import InvestmentPosition
+from domain.objects.enums import InterestType, PositionType
 from domain.objects.money import Money
+from shared.utils.date import get_year_day_basis
+
+TARGET_DATE = date(2026, 2, 27)
+
+
+def make_position(**overrides) -> InvestmentPosition:
+    defaults = {
+        "account_id": 1,
+        "name": "Cajita",
+        "position_type": PositionType.ON_DEMAND,
+        "initial_balance": Money(Decimal("10000.00")),
+        "annual_rate": Decimal("10.00"),
+        "start_date": date(2026, 1, 1),
+    }
+    defaults.update(overrides)
+    position = InvestmentPosition.create_new(**defaults)
+    return replace(position, id=5, uuid="pos-1")
+
+
+def expected_compound_yield(principal: Decimal, rate: Decimal) -> Decimal:
+    year_basis = Decimal(get_year_day_basis(TARGET_DATE))
+    daily_rate = (1 + rate / Decimal(100)) ** (Decimal(1) / year_basis) - Decimal(1)
+    return (principal * daily_rate).quantize(Decimal("0.01"))
+
+
+def expected_simple_yield(principal: Decimal, rate: Decimal) -> Decimal:
+    year_basis = Decimal(get_year_day_basis(TARGET_DATE))
+    return (principal * (rate / Decimal(100) / year_basis)).quantize(Decimal("0.01"))
 
 
 @pytest.mark.unit
 class TestGenerateDailyYieldHandler:
-    @pytest.fixture
-    def mocks(self):
+    def _build(self, positions):
         uow = MagicMock()
         uow.__aenter__ = AsyncMock(return_value=uow)
         uow.__aexit__ = AsyncMock(return_value=False)
         uow.commit = AsyncMock()
         uow.rollback = AsyncMock()
-        notification_repo = MagicMock()
-        notification_repo.create = AsyncMock()
-        return {
-            "account_repo": MagicMock(),
-            "investment_yield_repo": MagicMock(),
-            "transaction_repo": MagicMock(),
-            "notification_repo": notification_repo,
-            "uow": uow,
-        }
 
-    @pytest.fixture
-    def handler(self, mocks):
-        return GenerateDailyYieldHandler(
-            mocks["account_repo"],
-            mocks["investment_yield_repo"],
-            mocks["transaction_repo"],
-            mocks["notification_repo"],
-            mocks["uow"],
+        position_repo = MagicMock()
+        position_repo.get_active_positions = AsyncMock(return_value=positions)
+        by_id = {p.id: p for p in positions}
+        position_repo.get_by_id = AsyncMock(
+            side_effect=lambda position_id, for_update=False: by_id.get(position_id)
         )
+        position_repo.update = AsyncMock(side_effect=lambda p: p)
 
-    def _make_account(
-        self, id: int = 10, balance: str = "10000.00"
-    ) -> Account:
-        return Account(
-            id=id,
-            uuid=f"acc-{id}",
-            user_id=1,
-            name="Investment",
-            account_type=AccountType.INVESTMENT,
-            current_balance=Money(Decimal(balance)),
-            bank_id=1,
-            is_active=True,
-            creation_date=datetime.now(timezone.utc),
-        )
+        yield_repo = MagicMock()
+        yield_repo.get_by_position_and_date = AsyncMock(return_value=None)
+        yield_repo.create = AsyncMock(side_effect=lambda r: r)
 
-    def _make_settings(
-        self,
-        rate: str = "10.00",
-        interest_type: InterestType = InterestType.COMPOUND,
-        investment_type: str = "fixed_term",
-        maturity_date: Optional[date] = None,
-        base_principal: Optional[str] = None,
-    ) -> InvestmentCardSettings:
-        return InvestmentCardSettings(
-            investment_type=investment_type,
-            investment_rate=Decimal(rate),
-            interest_type=interest_type,
-            maturity_date=maturity_date,
-            base_principal=Decimal(base_principal) if base_principal else None,
-        )
+        handler = GenerateDailyYieldHandler(position_repo, yield_repo, uow)
+        return handler, position_repo, yield_repo, uow
 
     @pytest.mark.asyncio
-    async def test_processes_compound_interest_account(self, handler, mocks):
-        account = self._make_account(balance="10000.00")
-        account.investment_settings = self._make_settings("10.00", InterestType.COMPOUND)
-        target_date = date(2026, 2, 27)
+    async def test_on_demand_compound_capitalizes_into_balance(self):
+        position = make_position()
+        handler, position_repo, yield_repo, uow = self._build([position])
+        expected = expected_compound_yield(Decimal("10000.00"), Decimal("10.00"))
 
-        mocks["account_repo"].get_active_investment_accounts = AsyncMock(
-            return_value=[account]
-        )
-        mocks["investment_yield_repo"].get_by_account_and_date = AsyncMock(
-            return_value=None
-        )
-        mocks["investment_yield_repo"].create = AsyncMock()
-        mocks["transaction_repo"].create = AsyncMock()
-        mocks["account_repo"].update = AsyncMock()
+        stats = await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
 
-        command = GenerateDailyYieldCommand(target_date=target_date)
-        result = await handler.handle(command)
+        assert stats == {"processed": 1, "skipped": 0, "errors": 0}
+        assert position.balance.amount == Decimal("10000.00") + expected
+        assert position.accrued_yield.amount == Decimal(0)
 
-        assert result["processed"] == 1
-        assert result["skipped"] == 0
-        assert result["errors"] == 0
-        mocks["investment_yield_repo"].create.assert_called_once()
-        mocks["account_repo"].update.assert_called_once()
-
-        created_yield = mocks["investment_yield_repo"].create.call_args[0][0]
-        assert created_yield.yield_amount > Decimal("0")
-        assert created_yield.annual_rate == Decimal("10.00")
-        assert created_yield.interest_type == InterestType.COMPOUND
+        record = yield_repo.create.call_args.args[0]
+        assert record.position_id == 5
+        assert record.account_id == 1
+        assert record.yield_amount == expected
+        assert record.cumulative_balance == position.balance.amount
+        uow.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_processes_simple_interest_with_base_principal(self, handler, mocks):
-        account = self._make_account(balance="10500.00")
-        account.investment_settings = self._make_settings(
-            "10.00", InterestType.SIMPLE, base_principal="10000.00"
-        )
-        target_date = date(2026, 2, 27)
+    async def test_fixed_term_accrues_apart_and_compounds_over_total(self):
+        position = make_position(position_type=PositionType.FIXED_TERM, term_days=365)
+        position.accrued_yield = Money(Decimal("100.00"))
+        handler, _, yield_repo, _ = self._build([position])
+        expected = expected_compound_yield(Decimal("10100.00"), Decimal("10.00"))
 
-        mocks["account_repo"].get_active_investment_accounts = AsyncMock(
-            return_value=[account]
-        )
-        mocks["investment_yield_repo"].get_by_account_and_date = AsyncMock(
-            return_value=None
-        )
-        mocks["investment_yield_repo"].create = AsyncMock()
-        mocks["transaction_repo"].create = AsyncMock()
-        mocks["account_repo"].update = AsyncMock()
+        await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
 
-        command = GenerateDailyYieldCommand(target_date=target_date)
-        result = await handler.handle(command)
+        assert position.balance.amount == Decimal("10000.00")
+        assert position.accrued_yield.amount == Decimal("100.00") + expected
 
-        assert result["processed"] == 1
-        created_yield = mocks["investment_yield_repo"].create.call_args[0][0]
-        # Simple interest uses base_principal (10000), not current balance (10500)
-        assert created_yield.principal_amount == Decimal("10000.00")
-        assert created_yield.interest_type == InterestType.SIMPLE
+        record = yield_repo.create.call_args.args[0]
+        assert record.principal_amount == Decimal("10100.00")
 
     @pytest.mark.asyncio
-    async def test_errors_account_without_settings(self, handler, mocks):
-        account = self._make_account()
-        account.investment_settings = None
+    async def test_simple_interest_uses_base_principal(self):
+        position = make_position(interest_type=InterestType.SIMPLE)
+        position.accrue_yield(Money(Decimal("500.00")))  # capital base sigue en 10000
+        handler, _, yield_repo, _ = self._build([position])
+        expected = expected_simple_yield(Decimal("10000.00"), Decimal("10.00"))
 
-        mocks["account_repo"].get_active_investment_accounts = AsyncMock(
-            return_value=[account]
-        )
+        await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
 
-        command = GenerateDailyYieldCommand(target_date=date(2026, 2, 27))
-        result = await handler.handle(command)
-
-        assert result["processed"] == 0
-        assert result["errors"] == 1
-        mocks["investment_yield_repo"].create.assert_not_called()
+        record = yield_repo.create.call_args.args[0]
+        assert record.principal_amount == Decimal("10000.00")
+        assert record.yield_amount == expected
 
     @pytest.mark.asyncio
-    async def test_skips_past_maturity_date(self, handler, mocks):
-        account = self._make_account()
-        account.investment_settings = self._make_settings(maturity_date=date(2026, 1, 1))
+    async def test_existing_yield_for_date_is_skipped(self):
+        position = make_position()
+        handler, position_repo, yield_repo, _ = self._build([position])
+        yield_repo.get_by_position_and_date = AsyncMock(return_value=MagicMock())
 
-        mocks["account_repo"].get_active_investment_accounts = AsyncMock(
-            return_value=[account]
-        )
+        stats = await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
 
-        command = GenerateDailyYieldCommand(target_date=date(2026, 2, 27))
-        result = await handler.handle(command)
-
-        assert result["processed"] == 0
-        assert result["skipped"] == 1
+        assert stats == {"processed": 0, "skipped": 1, "errors": 0}
+        position_repo.update.assert_not_awaited()
+        yield_repo.create.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_idempotency_skips_existing_yield(self, handler, mocks):
-        account = self._make_account()
-        account.investment_settings = self._make_settings()
-        existing_yield = InvestmentYield(
-            id=1,
-            uuid="y-1",
-            account_id=10,
-            yield_date=date(2026, 2, 27),
-            principal_amount=Decimal("10000.00"),
-            yield_amount=Decimal("2.74"),
-            cumulative_balance=Decimal("10002.74"),
-            annual_rate=Decimal("10.00"),
-            interest_type=InterestType.COMPOUND,
+    async def test_matured_fixed_term_is_skipped(self):
+        position = make_position(
+            position_type=PositionType.FIXED_TERM,
+            term_days=30,
+            start_date=TARGET_DATE - timedelta(days=60),
         )
+        handler, _, yield_repo, _ = self._build([position])
 
-        mocks["account_repo"].get_active_investment_accounts = AsyncMock(
-            return_value=[account]
-        )
-        mocks["investment_yield_repo"].get_by_account_and_date = AsyncMock(
-            return_value=existing_yield
-        )
+        stats = await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
 
-        command = GenerateDailyYieldCommand(target_date=date(2026, 2, 27))
-        result = await handler.handle(command)
-
-        assert result["processed"] == 0
-        assert result["skipped"] == 1
-        mocks["investment_yield_repo"].create.assert_not_called()
+        assert stats == {"processed": 0, "skipped": 1, "errors": 0}
+        yield_repo.create.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_no_active_accounts_returns_zeros(self, handler, mocks):
-        mocks["account_repo"].get_active_investment_accounts = AsyncMock(
-            return_value=[]
+    async def test_yields_on_maturity_date_itself(self):
+        position = make_position(
+            position_type=PositionType.FIXED_TERM,
+            term_days=30,
+            start_date=TARGET_DATE - timedelta(days=30),
         )
+        handler, _, yield_repo, _ = self._build([position])
 
-        command = GenerateDailyYieldCommand(target_date=date(2026, 2, 27))
-        result = await handler.handle(command)
+        stats = await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
 
-        assert result == {"processed": 0, "skipped": 0, "errors": 0}
+        assert stats == {"processed": 1, "skipped": 0, "errors": 0}
 
     @pytest.mark.asyncio
-    async def test_error_in_one_account_continues_processing(self, handler, mocks):
-        account_ok = self._make_account(id=10, balance="10000.00")
-        account_ok.investment_settings = self._make_settings()
-        account_bad = self._make_account(id=20, balance="5000.00")
-        account_bad.investment_settings = self._make_settings()
+    async def test_zero_yield_is_skipped(self):
+        position = make_position(annual_rate=Decimal("0.00"))
+        handler, position_repo, yield_repo, _ = self._build([position])
 
-        mocks["account_repo"].get_active_investment_accounts = AsyncMock(
-            return_value=[account_bad, account_ok]
-        )
-        # account_bad (id=20) triggers a DB error, account_ok (id=10) returns None
-        mocks["investment_yield_repo"].get_by_account_and_date = AsyncMock(
-            side_effect=[Exception("DB error"), None]
-        )
-        mocks["investment_yield_repo"].create = AsyncMock()
-        mocks["transaction_repo"].create = AsyncMock()
-        mocks["account_repo"].update = AsyncMock()
+        stats = await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
 
-        command = GenerateDailyYieldCommand(target_date=date(2026, 2, 27))
-        result = await handler.handle(command)
-
-        assert result["processed"] == 1
-        assert result["errors"] == 1
+        assert stats == {"processed": 0, "skipped": 1, "errors": 0}
+        yield_repo.create.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_balance_updated_after_yield(self, handler, mocks):
-        account = self._make_account(balance="10000.00")
-        account.investment_settings = self._make_settings("10.00", InterestType.COMPOUND)
+    async def test_error_in_one_position_does_not_stop_others(self):
+        failing = make_position()
+        healthy = replace(make_position(), id=6, uuid="pos-2")
+        handler, position_repo, yield_repo, uow = self._build([failing, healthy])
+        yield_repo.create = AsyncMock(side_effect=[Exception("db error"), MagicMock()])
 
-        mocks["account_repo"].get_active_investment_accounts = AsyncMock(
-            return_value=[account]
-        )
-        mocks["investment_yield_repo"].get_by_account_and_date = AsyncMock(
-            return_value=None
-        )
-        mocks["investment_yield_repo"].create = AsyncMock()
-        mocks["transaction_repo"].create = AsyncMock()
-        mocks["account_repo"].update = AsyncMock()
+        stats = await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
 
-        command = GenerateDailyYieldCommand(target_date=date(2026, 2, 27))
-        await handler.handle(command)
-
-        # Account balance should have been updated to include the yield
-        assert account.current_balance.amount > Decimal("10000.00")
-        mocks["account_repo"].update.assert_called_once_with(account)
+        assert stats == {"processed": 1, "skipped": 0, "errors": 1}
+        uow.commit.assert_awaited_once()
