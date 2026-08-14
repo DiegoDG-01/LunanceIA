@@ -28,8 +28,9 @@ class ProjectionDayResponse(BaseModel):
 class InvestmentProjectionResponse(BaseModel):
     account_uuid: str
     current_balance: Decimal
-    annual_rate: Decimal
-    interest_type: InterestType
+    # Solo se llenan cuando la cuenta tiene un único apartado activo
+    annual_rate: Optional[Decimal]
+    interest_type: Optional[InterestType]
     maturity_date: Optional[date]
     projected_final_balance: Optional[Decimal]
     daily_projections: List[ProjectionDayResponse]

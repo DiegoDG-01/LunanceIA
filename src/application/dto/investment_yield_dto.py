@@ -43,8 +43,10 @@ class ProjectionDayDTO:
 class InvestmentProjectionResponseDTO:
     account_uuid: str
     current_balance: Decimal
-    annual_rate: Decimal
-    interest_type: InterestType
+    # Con varios apartados por cuenta no hay una sola tasa/tipo de interés:
+    # estos campos solo se llenan cuando la cuenta tiene un único apartado.
+    annual_rate: Optional[Decimal]
+    interest_type: Optional[InterestType]
     maturity_date: Optional[date]
     projected_final_balance: Optional[Decimal]
     daily_projections: List[ProjectionDayDTO]

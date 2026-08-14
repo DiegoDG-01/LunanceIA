@@ -2,35 +2,22 @@ import logging
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import Optional, cast
+from typing import List, Optional, Tuple, cast
 
-from domain.objects.enums import InterestType
+from domain.entities.investment_position import InvestmentPosition
+from domain.objects.enums import PositionStatus
 from domain.repositories.account_repository import AccountRepository
-from domain.repositories.investment_card_repository import (
-    InvestmentCardSettingsRepository,
+from domain.repositories.investment_position_repository import (
+    InvestmentPositionRepository,
 )
 from application.dto.investment_yield_dto import (
     InvestmentProjectionResponseDTO,
     ProjectionDayDTO,
 )
-from shared.exceptions.domain import (
-    AccountNotFoundError,
-    FinancialEngineNotAvailableError,
-    BusinessRuleError,
-    ValidationError,
-)
+from application.investments.queries.get_position_projections import project_position
+from shared.exceptions.domain import AccountNotFoundError
 
 logger = logging.getLogger(__name__)
-
-try:
-    from fincore import calculate_projections  # type: ignore[import]
-    from fincore import FinCoreError, FCInvalidDecimalError  # type: ignore[import]
-except ImportError:
-    logger.critical(
-        "The 'fincore' financial engine is not available. "
-        "The application will not be able to calculate projections."
-    )
-    raise FinancialEngineNotAvailableError()
 
 
 @dataclass
@@ -42,13 +29,20 @@ class GetInvestmentProjectionsQuery:
 
 
 class GetInvestmentProjectionsHandler:
+    """Proyección agregada de una cuenta: suma día a día las proyecciones de
+    todos sus apartados activos.
+
+    Un plazo fijo se proyecta solo hasta su vencimiento y después contribuye
+    con su valor final sin crecer (conservador: no se asume renovación).
+    """
+
     def __init__(
         self,
         account_repository: AccountRepository,
-        investment_card_settings_repository: InvestmentCardSettingsRepository,
+        position_repository: InvestmentPositionRepository,
     ):
         self.account_repository = account_repository
-        self.investment_card_settings_repository = investment_card_settings_repository
+        self.position_repository = position_repository
 
     async def handle(
         self,
@@ -60,87 +54,87 @@ class GetInvestmentProjectionsHandler:
         if not account:
             raise AccountNotFoundError(account_uuid=query.account_uuid)
 
-        settings = await self.investment_card_settings_repository.get_by_account_id(
-            account_id=cast(int, account.id)
-        )
+        positions = [
+            p
+            for p in await self.position_repository.get_by_account_id(
+                account_id=cast(int, account.id)
+            )
+            if p.status == PositionStatus.ACTIVE
+        ]
 
         today = date.today()
-        current_balance = account.current_balance.amount
 
         if query.project_days:
             days = query.project_days
-        elif settings and settings.maturity_date:
-            days = (settings.maturity_date - today).days
         else:
-            days = 365  # Default 1 year
+            days_to_maturity = [
+                (p.maturity_date - today).days
+                for p in positions
+                if p.maturity_date and p.maturity_date > today
+            ]
+            days = max(days_to_maturity) if days_to_maturity else 365
 
         days = min(max(0, days), 3650)  # Limit 10 years
 
-        original_principal = current_balance
-        if settings and settings.interest_type == InterestType.SIMPLE:
-            original_principal = settings.base_principal or current_balance
+        per_position: List[Tuple[InvestmentPosition, List[ProjectionDayDTO]]] = []
+        for position in positions:
+            horizon = days
+            if position.maturity_date:
+                horizon = min(days, max((position.maturity_date - today).days, 0))
+            per_position.append((position, project_position(position, horizon, today)))
 
-        annual_rate = settings.investment_rate if settings else Decimal("0")
-        interest_type = settings.interest_type if settings else InterestType.COMPOUND
+        daily = self._aggregate(per_position)
 
-        try:
-            rust_results = calculate_projections(
-                current_balance=str(current_balance),
-                annual_rate=str(annual_rate),
-                interest_type=interest_type.value,
-                days=days,
-                start_year=today.year,
-                start_month=today.month,
-                start_day=today.day,
-                base_principal=str(original_principal)
-                if interest_type == InterestType.SIMPLE
-                else None,
-            )
-        except FCInvalidDecimalError as e:
-            message, field, type = e.args
-            raise ValidationError(
-                message=message,
-                details=[
-                    {
-                        "loc": ["fc", field],
-                        "msg": message,
-                        "type": type,
-                    }
-                ],
-            )
-        except FinCoreError as e:
-            message, field, type = e.args
-            raise BusinessRuleError(
-                message=message,
-                details=[
-                    {
-                        "loc": ["fc", "business_rule"],
-                        "msg": message,
-                        "type": type,
-                    }
-                ],
-            )
+        current_total = sum((p.total_value.amount for p in positions), start=Decimal(0))
+        projected_final = daily[-1].projected_balance if daily else current_total
 
-        projections = [
-            ProjectionDayDTO(
-                projection_date=date(r.year, r.month, r.day),
-                principal_amount=Decimal(r.principal_amount),
-                yield_amount=Decimal(r.yield_amount),
-                projected_balance=Decimal(r.projected_balance),
-            )
-            for r in rust_results
-        ]
-
-        projected_final = (
-            projections[-1].projected_balance if projections else current_balance
-        )
+        single = positions[0] if len(positions) == 1 else None
 
         return InvestmentProjectionResponseDTO(
             account_uuid=query.account_uuid,
-            current_balance=current_balance,
-            annual_rate=annual_rate,
-            interest_type=interest_type,
-            maturity_date=settings.maturity_date if settings else None,
+            current_balance=current_total,
+            annual_rate=single.annual_rate if single else None,
+            interest_type=single.interest_type if single else None,
+            maturity_date=single.maturity_date if single else None,
             projected_final_balance=projected_final,
-            daily_projections=projections,
+            daily_projections=daily,
         )
+
+    @staticmethod
+    def _aggregate(
+        per_position: List[Tuple[InvestmentPosition, List[ProjectionDayDTO]]],
+    ) -> List[ProjectionDayDTO]:
+        longest = max((results for _, results in per_position), key=len, default=[])
+
+        daily: List[ProjectionDayDTO] = []
+        for i in range(len(longest)):
+            total_principal = Decimal(0)
+            total_yield = Decimal(0)
+            total_balance = Decimal(0)
+
+            for position, results in per_position:
+                if i < len(results):
+                    total_principal += results[i].principal_amount
+                    total_yield += results[i].yield_amount
+                    total_balance += results[i].projected_balance
+                else:
+                    # Después de su vencimiento el apartado ya no crece:
+                    # contribuye con su valor final constante.
+                    flat = (
+                        results[-1].projected_balance
+                        if results
+                        else position.total_value.amount
+                    )
+                    total_principal += flat
+                    total_balance += flat
+
+            daily.append(
+                ProjectionDayDTO(
+                    projection_date=longest[i].projection_date,
+                    principal_amount=total_principal,
+                    yield_amount=total_yield,
+                    projected_balance=total_balance,
+                )
+            )
+
+        return daily
