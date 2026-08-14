@@ -53,7 +53,6 @@ from application.dto.account_dto import (
     CreateAccountDTO,
     UpdateAccountDTO,
     CreditCardSettingsDTO,
-    InvestmentCardSettingsDTO,
 )
 from typing import List, cast
 
@@ -127,16 +126,6 @@ async def create_account(
             minimum_payment_percentage=account_request.credit_card_settings.minimum_payment_percentage,
         )
 
-    inv_settings_dto = None
-    if account_request.investment_settings:
-        inv_settings_dto = InvestmentCardSettingsDTO(
-            investment_type=account_request.investment_settings.investment_type,
-            investment_rate=account_request.investment_settings.investment_rate,
-            lock_period_end_date=account_request.investment_settings.lock_period_end_date,
-            maturity_date=account_request.investment_settings.maturity_date,
-            early_withdrawal_penalty=account_request.investment_settings.early_withdrawal_penalty,
-        )
-
     dto = CreateAccountDTO(
         bank_id=account_request.bank_id,
         user_id=cast(int, current_user.id),
@@ -145,7 +134,6 @@ async def create_account(
         initial_balance=account_request.initial_balance,
         currency=account_request.currency,
         credit_card_settings=cc_settings_dto,
-        investment_settings=inv_settings_dto,
     )
 
     command = CreateAccountCommand(dto=dto)
@@ -172,16 +160,6 @@ async def update_account(
             minimum_payment_percentage=update_request.credit_card_settings.minimum_payment_percentage,
         )
 
-    inv_settings_dto = None
-    if update_request.investment_settings:
-        inv_settings_dto = InvestmentCardSettingsDTO(
-            investment_type=update_request.investment_settings.investment_type,
-            investment_rate=update_request.investment_settings.investment_rate,
-            lock_period_end_date=update_request.investment_settings.lock_period_end_date,
-            maturity_date=update_request.investment_settings.maturity_date,
-            early_withdrawal_penalty=update_request.investment_settings.early_withdrawal_penalty,
-        )
-    """Actualiza una cuenta."""
     dto = UpdateAccountDTO(
         account_uuid=account_uuid,
         user_id=cast(int, current_user.id),
@@ -189,7 +167,6 @@ async def update_account(
         bank_id=update_request.bank_id,
         current_balance=update_request.current_balance,
         credit_card_settings=cc_settings_dto,
-        investment_settings=inv_settings_dto,
     )
 
     command = UpdateAccountCommand(dto=dto)

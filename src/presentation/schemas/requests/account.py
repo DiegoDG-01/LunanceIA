@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from decimal import Decimal
 from typing import Optional
-from datetime import date
 
 from domain.objects.enums import AccountType
 from shared.exceptions.domain import InvalidAccountSettingsError
@@ -13,21 +12,6 @@ class CreditCardSettingsRequest(BaseModel):
     credit_limit: Decimal = Field(..., ge=Decimal("0"), description="Limite de credito")
     minimum_payment_percentage: Decimal = Field(
         ..., ge=Decimal("0"), le=Decimal("100"), description="Porcentaje minimo de pago"
-    )
-
-
-class InvestmentCardSettingsRequest(BaseModel):
-    investment_type: str = Field(..., max_length=50)
-    investment_rate: Decimal = Field(
-        ..., ge=Decimal("0"), description="Tasa de interes"
-    )
-    lock_period_end_date: Optional[date] = Field(None, description="Fecha de bloqueo")
-    maturity_date: Optional[date] = Field(None, description="Fecha de vencimiento")
-    early_withdrawal_penalty: Optional[Decimal] = Field(
-        None,
-        ge=Decimal("0"),
-        le=Decimal("100"),
-        description="Penalidad por retiro temprano",
     )
 
 
@@ -45,7 +29,6 @@ class CreateAccountRequest(BaseModel):
     currency: str = Field("MXN", min_length=3, max_length=3, description="Moneda")
     is_active: bool = Field(True, description="Estado de la cuenta")
     credit_card_settings: Optional[CreditCardSettingsRequest] = None
-    investment_settings: Optional[InvestmentCardSettingsRequest] = None
 
     @field_validator("credit_card_settings")
     @classmethod
@@ -53,15 +36,6 @@ class CreateAccountRequest(BaseModel):
         if v and values.data.get("account_type") != AccountType.CREDIT_CARD:
             raise InvalidAccountSettingsError(
                 "Credit card settings can only be set for credit cards"
-            )
-        return v
-
-    @field_validator("investment_settings")
-    @classmethod
-    def validate_investment_settings(cls, v, values):
-        if v and values.data.get("account_type") != AccountType.INVESTMENT:
-            raise InvalidAccountSettingsError(
-                "Investment settings can only be set for investments"
             )
         return v
 
@@ -77,12 +51,6 @@ class UpdateAccountRequest(BaseModel):
         None, ge=Decimal("0"), description="Balance actual"
     )
     credit_card_settings: Optional[CreditCardSettingsRequest] = None
-    investment_settings: Optional[InvestmentCardSettingsRequest] = None
-
-
-class UpdateAccountSettingsRequest(BaseModel):
-    credit_card_settings: Optional[CreditCardSettingsRequest] = None
-    investment_settings: Optional[InvestmentCardSettingsRequest] = None
 
 
 class AccountActivationRequest(BaseModel):

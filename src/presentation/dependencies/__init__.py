@@ -8,7 +8,6 @@ from presentation.dependencies.repositories import (
     get_subscription_repository,
     get_subscription_charge_repository,
     get_credit_card_settings_repository,
-    get_investment_settings_repository,
     get_auth_token_repository,
     get_dashboard_repository,
     get_budget_repository,
@@ -122,7 +121,6 @@ __all__ = [
     "get_subscription_repository",
     "get_subscription_charge_repository",
     "get_credit_card_settings_repository",
-    "get_investment_settings_repository",
     "get_auth_token_repository",
     "get_dashboard_repository",
     # Services

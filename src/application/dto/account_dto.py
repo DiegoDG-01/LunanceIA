@@ -14,6 +14,9 @@ class CreditCardSettingsDTO:
     minimum_payment_percentage: Decimal
 
 
+# Obsoleto: la configuración de inversión ahora vive por apartado
+# (investment_positions). Se conserva solo para exponer en lectura los
+# settings legados hasta eliminar la tabla investment_card_settings.
 @dataclass
 class InvestmentCardSettingsDTO:
     investment_type: str
@@ -36,7 +39,6 @@ class CreateAccountDTO:
     initial_balance: Decimal = Decimal("0.00")
     currency: str = "MXN"
     credit_card_settings: Optional[CreditCardSettingsDTO] = None
-    investment_settings: Optional[InvestmentCardSettingsDTO] = None
 
 
 @dataclass
@@ -51,7 +53,6 @@ class UpdateAccountDTO:
     name: Optional[str] = None
     current_balance: Optional[Decimal] = None
     credit_card_settings: Optional[CreditCardSettingsDTO] = None
-    investment_settings: Optional[InvestmentCardSettingsDTO] = None
 
 
 @dataclass

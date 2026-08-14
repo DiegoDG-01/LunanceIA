@@ -1,16 +1,11 @@
-import dataclasses
 from dataclasses import dataclass
 from typing import cast
 
 from datetime import date
 
-from domain.objects.enums import AccountType
 from domain.objects.money import Money
 from domain.entities.transaction import Transaction
-from shared.exceptions.domain import (
-    AccountNotFoundError,
-    InvestmentSettingsNotFoundError,
-)
+from shared.exceptions.domain import AccountNotFoundError
 from shared.exceptions.domain import UserNotFoundError
 from domain.repositories.user_repository import UserRepository
 from domain.repositories.account_repository import AccountRepository
@@ -19,9 +14,6 @@ from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.bank_repository import BankRepository
 from application.dto.transaction_dto import CreateTransactionDTO, TransactionResponseDTO
 from shared.exceptions.domain import InvalidTransactionTypeError
-from domain.repositories.investment_card_repository import (
-    InvestmentCardSettingsRepository,
-)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 
 
@@ -42,7 +34,6 @@ class CreateTransactionHandler:
         transaction_repository: TransactionRepository,
         category_repository: CategoryRepository,
         bank_repository: BankRepository,
-        investment_settings_repository: InvestmentCardSettingsRepository,
         uow: AbstractUnitOfWork,
     ):
         self.user_repository = user_repository
@@ -50,7 +41,6 @@ class CreateTransactionHandler:
         self.transaction_repository = transaction_repository
         self.category_repository = category_repository
         self.bank_repository = bank_repository
-        self.investment_settings_repository = investment_settings_repository
         self.uow = uow
 
     async def handle(self, command: CreateTransactionCommand) -> TransactionResponseDTO:
@@ -81,31 +71,12 @@ class CreateTransactionHandler:
                 notes=dto.notes,
             )
 
+            # Los ingresos van al saldo disponible sin importar el tipo de
+            # cuenta; el capital que rinde se maneja por apartado
+            # (investment_positions), no a nivel cuenta.
             if transaction.is_expense():
                 new_balance = account.current_balance.subtract(money)
             elif transaction.is_income():
-                if account.account_type is AccountType.INVESTMENT:
-                    settings = (
-                        await self.investment_settings_repository.get_by_account_id(
-                            account_id=cast(int, account.id)
-                        )
-                    )
-                    if not settings:
-                        raise InvestmentSettingsNotFoundError(
-                            transaction.transaction_type
-                        )
-
-                    updated_settings = dataclasses.replace(
-                        settings,
-                        base_principal=(
-                            settings.base_principal or account.current_balance.amount
-                        )
-                        + money.amount,
-                    )
-                    await self.investment_settings_repository.update(
-                        account_id=cast(int, account.id), settings=updated_settings
-                    )
-
                 new_balance = account.current_balance.add(money)
             else:
                 raise InvalidTransactionTypeError(transaction.transaction_type)

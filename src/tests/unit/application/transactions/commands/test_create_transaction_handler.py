@@ -35,7 +35,6 @@ class TestCreateTransactionHandler:
             "transaction_repo": MagicMock(),
             "category_repo": MagicMock(),
             "bank_repo": bank_repo,
-            "investment_settings_repo": MagicMock(),
             "uow": uow,
         }
 
@@ -47,7 +46,6 @@ class TestCreateTransactionHandler:
             mocks["transaction_repo"],
             mocks["category_repo"],
             mocks["bank_repo"],
-            mocks["investment_settings_repo"],
             mocks["uow"],
         )
 
