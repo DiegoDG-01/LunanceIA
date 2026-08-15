@@ -96,6 +96,10 @@ disponible: las operaciones de **lectura** requieren el scope `:read` del recurs
    scopes que quieras usar.
 3. Dependencias del grupo `mcp` instaladas (ver abajo).
 
+> ⚠️ Las API keys **no se pueden editar** una vez creadas. Si tu key es anterior a los
+> apartados de inversión, no tiene el scope `investments:write` y las herramientas que
+> mueven dinero responderán `403`: genera una key nueva incluyendo ese scope.
+
 ---
 
 ## 🚀 Ejecutar el servidor

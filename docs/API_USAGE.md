@@ -7,6 +7,7 @@ Esta guía te mostrará cómo usar la API REST de Lunance IA v2, incluyendo aute
 - [Autenticación JWT](#autenticación-jwt)
 - [Autenticación con API Keys](#-autenticación-con-api-keys)
 - [Endpoints Principales](#endpoints-principales)
+- [Apartados de Inversión](#-apartados-de-inversión---apiv2positions)
 - [Ejemplos de Uso](#ejemplos-de-uso)
 - [Manejo de Errores](#manejo-de-errores)
 - [Códigos de Estado](#códigos-de-estado)
@@ -158,7 +159,8 @@ Los endpoints de recursos (cuentas, transacciones, categorías, dashboard, suscr
 | `budgets:write` | Crear, editar, activar/desactivar y eliminar presupuestos |
 | `goals:read` | Listar / ver metas de ahorro |
 | `goals:write` | Crear, editar, activar/desactivar y eliminar metas de ahorro |
-| `investments:read` | Ver rendimientos y proyecciones de inversión |
+| `investments:read` | Ver apartados de inversión, rendimientos y proyecciones |
+| `investments:write` | Crear apartados, depositar, retirar y liquidar |
 | `subscriptions:read` | Listar / ver suscripciones y sus cargos |
 | `subscriptions:write` | Crear, editar, activar/desactivar y eliminar suscripciones |
 | `installments:read` | Listar compras a plazos (MSI) |
@@ -400,8 +402,7 @@ GET /api/v2/account/
       "current_balance": 15500.75,
       "currency": "MXN",
       "is_active": true,
-      "credit_card_settings": null,
-      "investment_settings": null
+      "credit_card_settings": null
     },
     {
       "account_uuid": "660e8400-e29b-41d4-a716-446655440001",
@@ -413,8 +414,7 @@ GET /api/v2/account/
       "current_balance": -2500.00,
       "currency": "MXN",
       "is_active": true,
-      "credit_card_settings": null,
-      "investment_settings": null
+      "credit_card_settings": null
     }
   ],
   "total": 2
@@ -426,7 +426,12 @@ GET /api/v2/account/
 POST /api/v2/account/
 ```
 
-**Request:** `bank_id` es el ID del banco del catálogo (`GET /api/v2/bank/`). Opcionales: `currency` (default `MXN`), `is_active`, `credit_card_settings` (solo `CREDIT_CARD`) e `investment_settings` (solo `INVESTMENT`).
+**Request:** `bank_id` es el ID del banco del catálogo (`GET /api/v2/bank/`). Opcionales: `currency` (default `MXN`), `is_active` y `credit_card_settings` (solo `CREDIT_CARD`).
+
+> 💡 El tipo `INVESTMENT` es solo una **etiqueta de organización** (para plataformas
+> como GBM o CetesDirecto): no configura rendimientos. Para que el dinero genere
+> rendimientos, crea un apartado con [`POST /api/v2/positions/`](#-apartados-de-inversión---apiv2positions)
+> en cualquier cuenta que no sea de crédito.
 ```json
 {
   "name": "Mi Cuenta de Ahorros",
@@ -448,8 +453,7 @@ POST /api/v2/account/
   "current_balance": 1000.00,
   "currency": "MXN",
   "is_active": true,
-  "credit_card_settings": null,
-  "investment_settings": null
+  "credit_card_settings": null
 }
 ```
 
@@ -470,8 +474,7 @@ GET /api/v2/account/{account_uuid}
   "current_balance": 15500.75,
   "currency": "MXN",
   "is_active": true,
-  "credit_card_settings": null,
-  "investment_settings": null
+  "credit_card_settings": null
 }
 ```
 
@@ -480,7 +483,7 @@ GET /api/v2/account/{account_uuid}
 PATCH /api/v2/account/{account_uuid}/
 ```
 
-**Request:** todos los campos son opcionales (`name`, `bank_id`, `current_balance`, `credit_card_settings`, `investment_settings`).
+**Request:** todos los campos son opcionales (`name`, `bank_id`, `current_balance`, `credit_card_settings`). Ten en cuenta que `current_balance` es el **saldo disponible**: no incluye el dinero que esté en apartados de inversión.
 ```json
 {
   "name": "Cuenta Principal BBVA",
@@ -772,14 +775,251 @@ Retorna los últimos cargos generados por una suscripción. Requiere scope `subs
 
 **Response:** lista con `name` (nombre de la suscripción), `account_name`, `amount` y `charge_date` de cada cargo.
 
+### 🐷 Apartados de Inversión - `/api/v2/positions/`
+
+Un **apartado** (o "cajita", como en las apps bancarias y SOFIPOs) es una porción de
+dinero **dentro de una cuenta** que genera rendimientos. Una misma cuenta puede tener
+varios apartados con tasas y plazos distintos.
+
+**Las dos reglas que rigen todo:**
+
+1. El `current_balance` de una cuenta es **solo el saldo disponible**. El dinero de los
+   apartados vive aparte; el total de la cuenta es `available_balance + invested_balance`,
+   y lo calcula el endpoint de listado.
+2. **El dinero apartado no se puede gastar ni transferir**, ni siquiera el de apartados a
+   la vista: primero hay que regresarlo al disponible con `withdraw` o `liquidate`. Una
+   transferencia que exceda el disponible falla aunque el total de la cuenta alcance.
+
+**Tipos de apartado (`position_type`):**
+
+| Tipo | Comportamiento |
+|------|----------------|
+| `ON_DEMAND` | A la vista: admite depósitos y retiros parciales en cualquier momento. El rendimiento diario capitaliza directo en su `balance`. |
+| `FIXED_TERM` | Plazo fijo: requiere `term_days` o `maturity_date`, no admite depósitos ni retiros parciales. El rendimiento se acumula en `accrued_yield` y se entrega al vencer. |
+
+**Qué pasa al vencer un plazo (`on_maturity`):**
+
+| Valor | Al llegar la fecha de vencimiento |
+|-------|-----------------------------------|
+| `AUTO_RENEW` | Reinvierte capital + rendimiento por el mismo plazo. |
+| `LIQUIDATE` | Deposita capital + rendimiento en el saldo disponible y cierra el apartado. |
+| `HOLD` (default) | El apartado pasa a `MATURED`, **deja de generar rendimiento** y espera la decisión del usuario. |
+
+#### Crear un Apartado
+```bash
+POST /api/v2/positions/
+```
+
+Mueve `amount` del saldo disponible de la cuenta hacia el apartado nuevo. Funciona en
+cualquier cuenta **excepto tarjetas de crédito**.
+
+**Request:**
+```json
+{
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Plazo 90 días",
+  "position_type": "FIXED_TERM",
+  "amount": 5000.00,
+  "annual_rate": 12.50,
+  "interest_type": "COMPOUND",
+  "term_days": 90,
+  "early_withdrawal_penalty": 10.00,
+  "on_maturity": "HOLD"
+}
+```
+
+| Campo | Requerido | Descripción |
+|-------|-----------|-------------|
+| `account_uuid` | ✅ | Cuenta dueña del apartado |
+| `name` | ✅ | Nombre visible (máx. 100 caracteres) |
+| `position_type` | ✅ | `ON_DEMAND` o `FIXED_TERM` |
+| `amount` | ✅ | Monto a apartar (> 0, sale del disponible) |
+| `annual_rate` | ✅ | Tasa anual en porcentaje (≥ 0) |
+| `interest_type` | ❌ | `SIMPLE` o `COMPOUND` (default `COMPOUND`) |
+| `term_days` | Solo plazo | Días de plazo (alternativa a `maturity_date`) |
+| `maturity_date` | Solo plazo | Fecha de vencimiento `YYYY-MM-DD` |
+| `lock_period_end_date` | ❌ | Antes de esta fecha no se permite liquidar |
+| `early_withdrawal_penalty` | ❌ | % (0-100) que se castiga **solo sobre los rendimientos**; el capital nunca se toca |
+| `on_maturity` | ❌ | `AUTO_RENEW`, `LIQUIDATE` o `HOLD` (default `HOLD`) |
+| `currency` | ❌ | Default `MXN` |
+
+**Response:** `201 Created`
+```json
+{
+  "position_uuid": "770e8400-e29b-41d4-a716-446655440009",
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Plazo 90 días",
+  "position_type": "FIXED_TERM",
+  "status": "ACTIVE",
+  "balance": 5000.00,
+  "accrued_yield": 0.00,
+  "total_value": 5000.00,
+  "currency": "MXN",
+  "annual_rate": 12.50,
+  "interest_type": "COMPOUND",
+  "start_date": "2026-08-14",
+  "on_maturity": "HOLD",
+  "term_days": 90,
+  "lock_period_end_date": null,
+  "maturity_date": "2026-11-12",
+  "early_withdrawal_penalty": 10.00,
+  "created_at": "2026-08-14T18:00:00Z",
+  "account_available_balance": 1200.00
+}
+```
+
+`balance` es el capital, `accrued_yield` el rendimiento acumulado aún no entregado y
+`total_value` la suma de ambos. `account_available_balance` es el disponible que le queda
+a la cuenta después de la operación. Estados posibles (`status`): `ACTIVE`, `MATURED`
+(plazo vencido en espera) y `LIQUIDATED` (cerrado).
+
+#### Listar Apartados de una Cuenta
+```bash
+GET /api/v2/positions/account/{account_uuid}/
+```
+
+**Query Parameters:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `include_liquidated` | bool | Incluir apartados ya cerrados (default: false) |
+
+**Response:**
+```json
+{
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "account_name": "Cuenta SOFIPO",
+  "available_balance": 1200.00,
+  "invested_balance": 5012.34,
+  "total_balance": 6212.34,
+  "currency": "MXN",
+  "positions": [ { "position_uuid": "...", "name": "Plazo 90 días" } ]
+}
+```
+
+> Este es el endpoint que debe alimentar la tarjeta de cuenta en un cliente: trae el
+> disponible, el invertido y el total ya calculados. Los apartados liquidados nunca
+> suman al `invested_balance`.
+
+#### Obtener un Apartado
+```bash
+GET /api/v2/positions/{position_uuid}/
+```
+
+**Response:** misma estructura que la respuesta de creación.
+
+#### Depositar en un Apartado
+```bash
+POST /api/v2/positions/{position_uuid}/deposit/
+```
+
+Mueve dinero del disponible al apartado. **Solo apartados a la vista**; en un plazo fijo
+responde `409`.
+
+**Request:**
+```json
+{ "amount": 500.00 }
+```
+
+**Response:** el apartado actualizado, con el nuevo `account_available_balance`.
+
+#### Retirar de un Apartado
+```bash
+POST /api/v2/positions/{position_uuid}/withdraw/
+```
+
+Regresa dinero del apartado al disponible: es el único camino para poder gastarlo o
+transferirlo. **Solo apartados a la vista** (los plazos fijos se cierran completos con
+`liquidate`).
+
+**Request:**
+```json
+{ "amount": 400.00 }
+```
+
+#### Liquidar un Apartado
+```bash
+POST /api/v2/positions/{position_uuid}/liquidate/
+```
+
+Cierra el apartado por completo y acredita capital + rendimiento al saldo disponible
+(sin cuerpo en el request). Liquidar un plazo fijo **antes de vencer** aplica la
+penalización sobre los rendimientos; si aún corre el `lock_period_end_date`, responde
+`409`.
+
+**Response:**
+```json
+{
+  "position_uuid": "770e8400-e29b-41d4-a716-446655440009",
+  "name": "Plazo 90 días",
+  "payout_amount": 5075.00,
+  "currency": "MXN",
+  "status": "LIQUIDATED",
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "account_available_balance": 6275.00
+}
+```
+
+#### Rendimientos de un Apartado
+```bash
+GET /api/v2/positions/{position_uuid}/yields/
+```
+
+Historial de rendimientos diarios del apartado (`limit` default 365, máx. 1825; `offset`
+para paginar). Misma estructura que los rendimientos por cuenta.
+
+#### Proyecciones de un Apartado
+```bash
+GET /api/v2/positions/{position_uuid}/projections/?days=90
+```
+
+**Response:**
+```json
+{
+  "position_uuid": "770e8400-e29b-41d4-a716-446655440009",
+  "name": "Plazo 90 días",
+  "current_value": 5012.34,
+  "annual_rate": 12.50,
+  "interest_type": "COMPOUND",
+  "maturity_date": "2026-11-12",
+  "projected_final_balance": 5150.00,
+  "daily_projections": [
+    {
+      "projection_date": "2026-08-15",
+      "principal_amount": 5012.34,
+      "yield_amount": 1.61,
+      "projected_balance": 5013.95
+    }
+  ]
+}
+```
+
+Si omites `days`, proyecta hasta el vencimiento (plazo fijo) o 365 días (a la vista). Un
+plazo fijo nunca se proyecta más allá de su fecha de vencimiento.
+
+#### Procesos automáticos
+
+| Job | Hora (UTC) | Qué hace |
+|-----|------------|----------|
+| Rendimientos diarios | 12:00 | Calcula el rendimiento de cada apartado activo. A la vista capitaliza en `balance`; a plazo fijo suma a `accrued_yield`. El día del vencimiento todavía genera rendimiento. |
+| Vencimientos | 12:30 | Ejecuta el `on_maturity` de cada plazo vencido y envía una notificación. |
+
+> El rendimiento diario **no genera transacciones**: solo queda registrado en los yields
+> del apartado. Las transacciones (tipo `TRANSFER`, con el campo `position_id`) se crean
+> cuando el dinero cruza al disponible: apartar, retirar, liquidar o vencer.
+
+---
+
 ### 📈 Inversiones - `/api/v2/investments/`
 
-#### Obtener Rendimientos de una Cuenta de Inversión
+Vista agregada **por cuenta**. Para el detalle de cada apartado usa
+[`/api/v2/positions/`](#-apartados-de-inversión---apiv2positions).
+
+#### Obtener Rendimientos de una Cuenta
 ```bash
 GET /api/v2/investments/{account_id}/yields/
 ```
 
-Retorna el historial de rendimientos diarios generados automáticamente para una cuenta de inversión.
+Retorna el historial de rendimientos diarios de todos los apartados de la cuenta.
 
 **Response:**
 ```json
@@ -798,15 +1038,17 @@ Retorna el historial de rendimientos diarios generados automáticamente para una
 ```
 
 **Tipos de interés:**
-- `SIMPLE`: Usa el `base_principal` (se actualiza con transacciones de ingreso)
-- `COMPOUND`: Usa el balance actual de la cuenta como principal
+- `SIMPLE`: Usa el `base_principal` del apartado (el capital, sin los rendimientos ya generados)
+- `COMPOUND`: Usa el valor total del apartado (capital + rendimiento acumulado)
 
-#### Obtener Proyecciones de Inversión
+#### Obtener Proyecciones de una Cuenta
 ```bash
 GET /api/v2/investments/{account_id}/projections/
 ```
 
-Retorna proyecciones de rendimiento futuro basadas en la configuración actual de la cuenta.
+Suma día a día las proyecciones de todos los apartados activos de la cuenta. Cada plazo
+fijo se proyecta solo hasta su vencimiento y después aporta su valor final sin crecer
+(no se asume renovación).
 
 **Response:**
 ```json
@@ -827,6 +1069,11 @@ Retorna proyecciones de rendimiento futuro basadas en la configuración actual d
   ]
 }
 ```
+
+> `current_balance` aquí es la suma de los apartados activos, no el disponible de la
+> cuenta. `annual_rate`, `interest_type` y `maturity_date` llegan en `null` cuando la
+> cuenta tiene **más de un apartado**, porque en ese caso no existe una sola tasa: pide
+> el detalle apartado por apartado.
 
 ### 🤖 IA - `/api/v2/ai/`
 
@@ -1300,7 +1547,7 @@ curl -X POST "http://localhost:8000/api/v2/account/" \
        "initial_balance": 2000.00
      }'
 
-# Crear cuenta de inversión
+# Crear cuenta de inversión (la etiqueta no genera rendimientos por sí sola)
 curl -X POST "http://localhost:8000/api/v2/account/" \
      -H "Authorization: Bearer $ACCESS_TOKEN" \
      -H "Content-Type: application/json" \
@@ -1310,6 +1557,30 @@ curl -X POST "http://localhost:8000/api/v2/account/" \
        "bank_id": 5,
        "initial_balance": 10000.00
      }'
+
+# Apartar 6,000 de esa cuenta a plazo fijo de 90 días al 12.5%
+curl -X POST "http://localhost:8000/api/v2/positions/" \
+     -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+       "name": "Plazo 90 días",
+       "position_type": "FIXED_TERM",
+       "amount": 6000.00,
+       "annual_rate": 12.50,
+       "term_days": 90,
+       "on_maturity": "AUTO_RENEW"
+     }'
+
+# Ver el disponible, lo invertido y el total de la cuenta
+curl -X GET "http://localhost:8000/api/v2/positions/account/550e8400-e29b-41d4-a716-446655440000/" \
+     -H "Authorization: Bearer $ACCESS_TOKEN"
+
+# Regresar dinero de un apartado a la vista al saldo disponible
+curl -X POST "http://localhost:8000/api/v2/positions/770e8400-e29b-41d4-a716-446655440009/withdraw/" \
+     -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"amount": 1500.00}'
 
 # Actualizar nombre de cuenta
 curl -X PATCH "http://localhost:8000/api/v2/account/550e8400-e29b-41d4-a716-446655440000/" \
@@ -1405,7 +1676,17 @@ La API retorna errores en un formato estándar con soporte de internacionalizaci
 - `BUSINESS_EMAIL_EXISTS` (409): Email ya registrado
 - `BUSINESS_ACCOUNT_HAS_TRANSACTIONS` (409): Cuenta tiene transacciones
 - `BUSINESS_RULE_VIOLATION` (400): Violación de regla de negocio genérica
-- `INSUFFICIENT_FUNDS` (422): Fondos insuficientes
+- `INSUFFICIENT_FUNDS` (422): Fondos insuficientes (en apartados se compara siempre contra el **saldo disponible**, no contra el total de la cuenta)
+
+**Códigos de apartados de inversión:**
+- `NOT_FOUND_INVESTMENT_POSITION` (404): Apartado no encontrado
+- `INVESTMENT_POSITION_NOT_ACTIVE` (409): El apartado ya está liquidado o vencido y no admite la operación
+- `INVESTMENT_POSITION_LOCKED` (409): El plazo aún está en su periodo de permanencia y no puede liquidarse
+- `FIXED_TERM_DEPOSIT_NOT_ALLOWED` (409): Un plazo fijo no admite depósitos después de creado
+- `FIXED_TERM_WITHDRAWAL_NOT_ALLOWED` (409): Un plazo fijo no admite retiros parciales; debe liquidarse completo
+- `INVESTMENT_POSITION_NOT_MATURED` (409): El plazo aún no llega a su vencimiento
+- `POSITION_ACCOUNT_TYPE_NOT_ALLOWED` (409): Las tarjetas de crédito no admiten apartados
+- `VALIDATION_INVALID_FIXED_TERM_CONFIG` (400): Un plazo fijo requiere `term_days` o `maturity_date` válidos
 
 ### Rate Limit Exceeded (429)
 
@@ -1518,8 +1799,21 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 
 | Endpoint | Límite | Nota |
 |----------|--------|------|
-| `GET /investments/{id}/yields/` | **50 requests/minuto** | Rendimientos históricos |
-| `GET /investments/{id}/projections/` | **30 requests/minuto** | Proyecciones |
+| `GET /investments/{id}/yields/` | **50 requests/minuto** | Rendimientos históricos de la cuenta |
+| `GET /investments/{id}/projections/` | **30 requests/minuto** | Proyecciones agregadas de la cuenta |
+
+#### Endpoints de Apartados de Inversión
+
+| Endpoint | Límite | Nota |
+|----------|--------|------|
+| `GET /positions/account/{uuid}/` | **50 requests/minuto** | Listado por cuenta |
+| `GET /positions/{uuid}/` | **50 requests/minuto** | Detalle |
+| `GET /positions/{uuid}/yields/` | **50 requests/minuto** | Rendimientos del apartado |
+| `GET /positions/{uuid}/projections/` | **30 requests/minuto** | Proyecciones del apartado |
+| `POST /positions/` | **20 requests/minuto** | Creación |
+| `POST /positions/{uuid}/deposit/` | **20 requests/minuto** | Apartar dinero |
+| `POST /positions/{uuid}/withdraw/` | **20 requests/minuto** | Regresar al disponible |
+| `POST /positions/{uuid}/liquidate/` | **10 requests/minuto** | Cierre del apartado |
 
 #### Endpoints de IA
 

@@ -53,6 +53,14 @@ from shared.exceptions.domain import (
     InvalidMinimumPaymentError,
     InvalidEmailError,
     InvalidBalanceUpdateError,
+    InvestmentPositionNotFoundError,
+    InvestmentPositionNotActiveError,
+    InvestmentPositionLockedError,
+    InvestmentPositionNotMaturedError,
+    FixedTermDepositNotAllowedError,
+    FixedTermWithdrawalNotAllowedError,
+    InvalidFixedTermConfigError,
+    PositionAccountTypeNotAllowedError,
 )
 from shared.exceptions.application import (
     JWTValidationError,
@@ -87,6 +95,7 @@ EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     InstallmentChargeNotFoundError: ("NOT_FOUND", 404),
     CreditCardSettingsNotFoundError: ("CREDIT_CARD_SETTINGS_NOT_FOUND", 404),
     TransactionNotActivityError: ("NOT_FOUND_ACTIVITY", 404),
+    InvestmentPositionNotFoundError: ("NOT_FOUND_INVESTMENT_POSITION", 404),
     # Fallback para cualquier NotFoundError sin entrada específica
     # (presupuestos, metas de ahorro, compras a plazos, bancos, etc.)
     NotFoundError: ("NOT_FOUND", 404),
@@ -96,6 +105,12 @@ EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     AccountHasTransactionsError: ("BUSINESS_ACCOUNT_HAS_TRANSACTIONS", 409),
     InstallmentChargeAlreadyPaidError: ("INSTALLMENT_CHARGE_ALREADY_PAID", 409),
     InvalidAccountSettingsError: ("INVALID_ACCOUNT_SETTINGS", 409),
+    InvestmentPositionNotActiveError: ("INVESTMENT_POSITION_NOT_ACTIVE", 409),
+    InvestmentPositionLockedError: ("INVESTMENT_POSITION_LOCKED", 409),
+    InvestmentPositionNotMaturedError: ("INVESTMENT_POSITION_NOT_MATURED", 409),
+    FixedTermDepositNotAllowedError: ("FIXED_TERM_DEPOSIT_NOT_ALLOWED", 409),
+    FixedTermWithdrawalNotAllowedError: ("FIXED_TERM_WITHDRAWAL_NOT_ALLOWED", 409),
+    PositionAccountTypeNotAllowedError: ("POSITION_ACCOUNT_TYPE_NOT_ALLOWED", 409),
     # --- Errores de Validación y Reglas de Negocio (400 / 422) ---
     InsufficientFundsError: ("INSUFFICIENT_FUNDS", 422),
     AccountInactiveError: ("BUSINESS_RULE_VIOLATION", 400),
@@ -124,6 +139,7 @@ EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     InvalidMinimumPaymentError: ("VALIDATION_INVALID_MINIMUM_PAYMENT", 400),
     InvalidEmailError: ("VALIDATION_INVALID_EMAIL", 400),
     InvalidBalanceUpdateError: ("VALIDATION_INVALID_BALANCE_UPDATE", 400),
+    InvalidFixedTermConfigError: ("VALIDATION_INVALID_FIXED_TERM_CONFIG", 400),
 }
 
 SENSITIVE_FIELDS = {
