@@ -39,6 +39,7 @@ from application.investments.commands.process_matured_positions import (
     ProcessMaturedPositionsCommand,
     ProcessMaturedPositionsHandler,
 )
+from application.investments.services.position_overflow import PositionOverflowService
 
 from infrastructure.database.repositories.sqlalchemy_income_deposit_repository import (
     SQLAlchemyIncomeDepositRepository,
@@ -90,11 +91,18 @@ async def process_investment_yield_job():
         try:
             position_repo = SQLAlchemyInvestmentPositionRepository(db)
             yield_repo = SQLAlchemyInvestmentYieldRepository(db)
+            account_repo = SQLAlchemyAccountRepository(db)
+            transaction_repo = SQLAlchemyTransactionRepository(db)
 
             uow = SQLAlchemyUnitOfWork(db)
             handler = GenerateDailyYieldHandler(
                 position_repository=position_repo,
                 investment_yield_repository=yield_repo,
+                account_repository=account_repo,
+                transaction_repository=transaction_repo,
+                overflow_service=PositionOverflowService(
+                    position_repository=position_repo
+                ),
                 uow=uow,
             )
 

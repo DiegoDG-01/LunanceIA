@@ -3,19 +3,35 @@
 import pytest
 from dataclasses import replace
 from unittest.mock import MagicMock, AsyncMock
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from application.investments.commands.generate_daily_yields import (
     GenerateDailyYieldCommand,
     GenerateDailyYieldHandler,
 )
+from application.investments.services.position_overflow import PositionOverflowService
+from domain.entities.account import Account
 from domain.entities.investment_position import InvestmentPosition
-from domain.objects.enums import InterestType, PositionType
+from domain.objects.enums import AccountType, InterestType, OverflowAction, PositionType
 from domain.objects.money import Money
 from shared.utils.date import get_year_day_basis
 
 TARGET_DATE = date(2026, 2, 27)
+
+
+def make_account(balance: str = "1000.00") -> Account:
+    return Account(
+        id=1,
+        uuid="acc-1",
+        user_id=1,
+        bank_id=1,
+        name="Cuenta SOFIPO",
+        account_type=AccountType.SAVINGS,
+        current_balance=Money(Decimal(balance)),
+        is_active=True,
+        creation_date=datetime.now(timezone.utc),
+    )
 
 
 def make_position(**overrides) -> InvestmentPosition:
@@ -45,7 +61,7 @@ def expected_simple_yield(principal: Decimal, rate: Decimal) -> Decimal:
 
 @pytest.mark.unit
 class TestGenerateDailyYieldHandler:
-    def _build(self, positions):
+    def _build(self, positions, account=None):
         uow = MagicMock()
         uow.__aenter__ = AsyncMock(return_value=uow)
         uow.__aexit__ = AsyncMock(return_value=False)
@@ -64,7 +80,23 @@ class TestGenerateDailyYieldHandler:
         yield_repo.get_by_position_and_date = AsyncMock(return_value=None)
         yield_repo.create = AsyncMock(side_effect=lambda r: r)
 
-        handler = GenerateDailyYieldHandler(position_repo, yield_repo, uow)
+        account_repo = MagicMock()
+        account_repo.get_by_id = AsyncMock(return_value=account or make_account())
+        account_repo.update = AsyncMock()
+
+        transaction_repo = MagicMock()
+        transaction_repo.create = AsyncMock(side_effect=lambda t: t)
+
+        handler = GenerateDailyYieldHandler(
+            position_repository=position_repo,
+            investment_yield_repository=yield_repo,
+            account_repository=account_repo,
+            transaction_repository=transaction_repo,
+            overflow_service=PositionOverflowService(position_repository=position_repo),
+            uow=uow,
+        )
+        self.account_repo = account_repo
+        self.transaction_repo = transaction_repo
         return handler, position_repo, yield_repo, uow
 
     @pytest.mark.asyncio
@@ -75,7 +107,7 @@ class TestGenerateDailyYieldHandler:
 
         stats = await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
 
-        assert stats == {"processed": 1, "skipped": 0, "errors": 0}
+        assert stats == {"processed": 1, "skipped": 0, "overflowed": 0, "errors": 0}
         assert position.balance.amount == Decimal("10000.00") + expected
         assert position.accrued_yield.amount == Decimal(0)
 
@@ -122,7 +154,7 @@ class TestGenerateDailyYieldHandler:
 
         stats = await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
 
-        assert stats == {"processed": 0, "skipped": 1, "errors": 0}
+        assert stats == {"processed": 0, "skipped": 1, "overflowed": 0, "errors": 0}
         position_repo.update.assert_not_awaited()
         yield_repo.create.assert_not_awaited()
 
@@ -137,7 +169,7 @@ class TestGenerateDailyYieldHandler:
 
         stats = await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
 
-        assert stats == {"processed": 0, "skipped": 1, "errors": 0}
+        assert stats == {"processed": 0, "skipped": 1, "overflowed": 0, "errors": 0}
         yield_repo.create.assert_not_awaited()
 
     @pytest.mark.asyncio
@@ -151,7 +183,7 @@ class TestGenerateDailyYieldHandler:
 
         stats = await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
 
-        assert stats == {"processed": 1, "skipped": 0, "errors": 0}
+        assert stats == {"processed": 1, "skipped": 0, "overflowed": 0, "errors": 0}
 
     @pytest.mark.asyncio
     async def test_zero_yield_is_skipped(self):
@@ -160,7 +192,7 @@ class TestGenerateDailyYieldHandler:
 
         stats = await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
 
-        assert stats == {"processed": 0, "skipped": 1, "errors": 0}
+        assert stats == {"processed": 0, "skipped": 1, "overflowed": 0, "errors": 0}
         yield_repo.create.assert_not_awaited()
 
     @pytest.mark.asyncio
@@ -172,5 +204,76 @@ class TestGenerateDailyYieldHandler:
 
         stats = await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
 
-        assert stats == {"processed": 1, "skipped": 0, "errors": 1}
+        assert stats == {"processed": 1, "skipped": 0, "overflowed": 0, "errors": 1}
         uow.commit.assert_awaited_once()
+
+
+@pytest.mark.unit
+class TestDailyYieldOverflow:
+    """Test a capped position that keeps earning past its cap."""
+
+    def _build(self, positions, account=None):
+        return TestGenerateDailyYieldHandler._build(self, positions, account)
+
+    @pytest.mark.asyncio
+    async def test_full_position_sends_the_whole_yield_to_available(self):
+        position = make_position(max_balance=Decimal("10000.00"))
+        account = make_account("500.00")
+        handler, _, yield_repo, _ = self._build([position], account)
+        expected = expected_compound_yield(Decimal("10000.00"), Decimal("10.00"))
+
+        stats = await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
+
+        assert stats["overflowed"] == 1
+        # El tope no se rebasa ni un día.
+        assert position.balance.amount == Decimal("10000.00")
+        assert account.current_balance.amount == Decimal("500.00") + expected
+
+        movement = self.transaction_repo.create.call_args.args[0]
+        assert movement.amount.amount == expected
+        assert movement.position_id == 5
+        # El histórico guarda lo que ganó, no lo que le quedó.
+        assert yield_repo.create.call_args.args[0].yield_amount == expected
+
+    @pytest.mark.asyncio
+    async def test_yield_below_the_cap_creates_no_transaction(self):
+        position = make_position(max_balance=Decimal("50000.00"))
+        account = make_account("500.00")
+        handler, _, _, _ = self._build([position], account)
+
+        stats = await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
+
+        assert stats["overflowed"] == 0
+        assert account.current_balance.amount == Decimal("500.00")
+        self.transaction_repo.create.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_chain_absorbs_the_yield_without_a_transaction(self):
+        target = replace(make_position(), id=6, uuid="pos-2")
+        position = make_position(
+            max_balance=Decimal("10000.00"),
+            overflow_action=OverflowAction.TO_POSITION,
+            overflow_position_id=6,
+        )
+        account = make_account("500.00")
+        handler, _, _, _ = self._build([position, target], account)
+        expected = expected_compound_yield(Decimal("10000.00"), Decimal("10.00"))
+
+        await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
+
+        assert position.balance.amount == Decimal("10000.00")
+        # El excedente entró al siguiente apartado sin cruzar el disponible.
+        assert target.balance.amount > Decimal("10000.00") + expected
+        assert account.current_balance.amount == Decimal("500.00")
+        self.transaction_repo.create.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_missing_account_counts_as_an_error(self):
+        position = make_position(max_balance=Decimal("10000.00"))
+        handler, _, yield_repo, _ = self._build([position])
+        self.account_repo.get_by_id = AsyncMock(return_value=None)
+
+        stats = await handler.handle(GenerateDailyYieldCommand(TARGET_DATE))
+
+        assert stats == {"processed": 0, "skipped": 0, "overflowed": 0, "errors": 1}
+        yield_repo.create.assert_not_awaited()
