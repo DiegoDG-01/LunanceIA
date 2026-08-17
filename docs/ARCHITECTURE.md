@@ -494,19 +494,22 @@ application/
 │   ├── commands/
 │   │   ├── __init__.py
 │   │   ├── create_position.py           # Crear apartado (mueve dinero del disponible)
+│   │   ├── update_position.py           # Nombre y configuración de tope/desbordamiento
 │   │   ├── deposit_to_position.py       # Disponible -> apartado (solo a la vista)
 │   │   ├── withdraw_from_position.py    # Apartado -> disponible (solo a la vista)
-│   │   ├── liquidate_position.py        # Cerrar apartado y acreditar al disponible
+│   │   ├── liquidate_position.py        # Cerrar apartado, acreditar y reparar cadenas
 │   │   ├── generate_daily_yields.py     # Rendimientos diarios por apartado (scheduled)
 │   │   └── process_matured_positions.py # Vencimientos: renovar/liquidar/pendiente (scheduled)
-│   └── queries/
-│       ├── __init__.py
-│       ├── list_positions.py              # Apartados de una cuenta + disponible/invertido/total
-│       ├── get_position.py                # Detalle de un apartado
-│       ├── get_position_yields.py         # Rendimientos históricos del apartado
-│       ├── get_position_projections.py    # Proyección del apartado (+ helper project_position)
-│       ├── get_investment_yields.py       # Rendimientos históricos de la cuenta
-│       └── get_investment_projections.py  # Proyección agregada de la cuenta
+│   ├── queries/
+│   │   ├── __init__.py
+│   │   ├── list_positions.py              # Apartados de una cuenta + disponible/invertido/total
+│   │   ├── get_position.py                # Detalle de un apartado
+│   │   ├── get_position_yields.py         # Rendimientos históricos del apartado
+│   │   ├── get_position_projections.py    # Proyección del apartado (+ helper project_position)
+│   │   ├── get_investment_yields.py       # Rendimientos históricos de la cuenta
+│   │   └── get_investment_projections.py  # Proyección agregada de la cuenta
+│   └── services/
+│       └── position_overflow.py           # Cadena de desbordamiento: validar destino y repartir excedente
 ├── banks/                    # Feature: Catálogo de bancos
 │   ├── __init__.py
 │   └── queries/
@@ -1127,16 +1130,37 @@ La entidad encapsula las reglas de negocio del apartado:
 
 | Método | Regla que encapsula |
 |--------|---------------------|
-| `accrue_yield()` | A la vista capitaliza en `balance`; a plazo fijo acumula en `accrued_yield` |
-| `deposit()` / `withdraw()` | Solo apartados a la vista; un plazo fijo los rechaza |
+| `accrue_yield()` | A la vista capitaliza en `balance`; a plazo fijo acumula en `accrued_yield`. Devuelve lo que no cupo bajo el tope |
+| `deposit()` / `withdraw()` | Solo apartados a la vista; un plazo fijo los rechaza. `deposit()` devuelve el excedente |
 | `liquidate()` | Devuelve el monto a acreditar; si es anticipada aplica la penalización **solo sobre los rendimientos** (el capital nunca se toca) y rechaza si sigue el periodo de permanencia |
 | `renew()` | Reinvierte capital + rendimiento por el mismo plazo (`AUTO_RENEW`) |
 | `mark_matured()` | Deja el apartado en `MATURED`: deja de rendir y espera la decisión del usuario (`HOLD`) |
+| `configure_cap()` | Cambia tope y destino; devuelve el excedente a desbordar de inmediato |
+| `clear_overflow_target()` | El destino desapareció: el excedente pasa al disponible |
 
 Los movimientos de dinero (crear, depositar, retirar, liquidar) bloquean filas siempre en
 el mismo orden — **cuenta → apartado** — para evitar deadlocks entre sí y con los jobs
 programados. Cada movimiento genera además una transacción tipo `TRANSFER` con
 `position_id`, de modo que el dinero apartado sea trazable desde la actividad de la cuenta.
+
+**Topes y desbordamiento.** Un apartado a la vista puede tener un tope (`max_balance`) y
+un destino para lo que ya no cabe: el saldo disponible o **otro apartado**. Encadenarlos
+es como se representan las tasas por tramo de las SOFIPOs (25,000 al 10% desbordando a
+otro apartado al 5%), sin que la entidad tenga que entender de tramos.
+
+`PositionOverflowService` (`application/investments/services/`) es el único lugar que
+recorre esa cadena, en sus dos momentos: `validate_target()` al configurarla —destino
+existente, de la misma cuenta, a la vista, activo y sin ciclos— y `spill()` en ejecución,
+repartiendo el excedente hasta que algún apartado lo absorba o caiga al disponible.
+`spill()` nunca lanza excepción: una cadena rota no puede tumbar el job diario ni perder
+dinero, así que un destino liquidado, un ciclo en base de datos o una cadena demasiado
+larga terminan igual — log de error y el dinero al saldo disponible. Los locks se toman
+siguiendo las aristas de la cadena, que es acíclica, así que dos cascadas concurrentes no
+pueden bloquearse mutuamente.
+
+La consecuencia operativa del tope está en el job de rendimientos: un apartado que vive en
+su tope sigue rindiendo y desborda **todos los días**. Por eso `generate_daily_yields`
+toca el saldo de la cuenta y crea transacciones, cosa que antes no hacía.
 
 ### 6. Unit of Work
 

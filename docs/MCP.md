@@ -65,7 +65,7 @@ disponible: las operaciones de **lectura** requieren el scope `:read` del recurs
 | | `create_goal`, `update_goal`, `toggle_goal`, `delete_goal` | `goals:write` |
 | **Inversiones** | `get_investment_yields`, `get_investment_projections` | `investments:read` |
 | **Apartados de inversión** | `list_positions`, `get_position`, `get_position_yields`, `get_position_projections` | `investments:read` |
-| | `create_position`, `deposit_to_position`, `withdraw_from_position`, `liquidate_position` | `investments:write` |
+| | `create_position`, `update_position`, `deposit_to_position`, `withdraw_from_position`, `liquidate_position` | `investments:write` |
 | **Suscripciones** | `list_subscriptions`, `list_subscription_charges`, `get_subscription` | `subscriptions:read` |
 | | `create_subscription`, `update_subscription`, `toggle_subscription`, `delete_subscription` | `subscriptions:write` |
 | **Ingresos recurrentes** | `list_incomes`, `get_income_deposits` | `incomes:read` |
@@ -75,13 +75,18 @@ disponible: las operaciones de **lectura** requieren el scope `:read` del recurs
 | **Transferencias** | `create_transfer`, `delete_transfer` | `transfers:write` |
 | **Bancos** | `list_banks` | `banks:read` |
 
-> Total: **58 herramientas**. Excluidos a propósito del MCP: `auth` y `api-keys` (por
+> Total: **59 herramientas**. Excluidos a propósito del MCP: `auth` y `api-keys` (por
 > seguridad) y `ai` (el MCP ya es la capa de IA).
 >
 > Un **apartado de inversión** vive dentro de una cuenta y genera rendimientos (a la
 > vista o a plazo fijo). El dinero apartado no cuenta en el saldo disponible: para
 > gastarlo o transferirlo primero hay que regresarlo con `withdraw_from_position` o
 > `liquidate_position`.
+>
+> Un apartado puede tener un **tope** y un destino para lo que ya no cabe: así se
+> representan las tasas por tramo de las SOFIPOs (25,000 al 10% desbordando a otro
+> apartado al 5%). Como el destino debe existir antes de apuntarlo, encadenar dos
+> apartados se hace creando ambos y conectándolos con `update_position`.
 >
 > Para limitar a un agente a solo-lectura, emite su API key únicamente con scopes
 > `:read` — las tools de escritura devolverán `403`.

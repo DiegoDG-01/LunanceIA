@@ -805,6 +805,40 @@ varios apartados con tasas y plazos distintos.
 | `LIQUIDATE` | Deposita capital + rendimiento en el saldo disponible y cierra el apartado. |
 | `HOLD` (default) | El apartado pasa a `MATURED`, **deja de generar rendimiento** y espera la decisión del usuario. |
 
+#### Topes y desbordamiento
+
+Muchas SOFIPOs pagan su mejor tasa solo hasta cierto monto: los primeros 25,000 al 10%
+y lo que pase de ahí a otra tasa. Eso se representa con un **tope** (`max_balance`) y un
+**destino para el excedente**, encadenando apartados:
+
+```
+Ahorro 10%  (tope 25,000)  ──desborda──▶  Excedente 5%  (sin tope)
+```
+
+Los primeros 25,000 rinden 10% y el resto 5%, sin que ningún apartado necesite entender
+de tramos. El tope solo aplica a apartados **a la vista**: un plazo fijo tiene su monto
+cerrado hasta el vencimiento.
+
+| Campo | Qué hace |
+|-------|----------|
+| `max_balance` | Tope de capital. `null` = sin tope. |
+| `overflow_action` | `TO_AVAILABLE` (el excedente vuelve al saldo disponible) o `TO_POSITION` (pasa a otro apartado). Por defecto `TO_AVAILABLE`. |
+| `overflow_position_uuid` | Apartado destino. Obligatorio con `TO_POSITION`, debe ser de la misma cuenta, a la vista y activo. |
+
+**Cómo se comporta:**
+
+- **El tope nunca se rebasa, ni un día.** Un apartado lleno sigue rindiendo sobre su tope,
+  y ese rendimiento se desborda cada día.
+- **El excedente recorre la cadena completa.** Si el destino también está lleno, sigue al
+  suyo; lo que ningún apartado absorbe cae al saldo disponible. El dinero nunca se pierde.
+- **Solo genera transacción lo que cruza al disponible.** Mover dinero de un apartado a
+  otro no aparece en el historial porque nunca pasó por el saldo disponible.
+- **No se permiten ciclos**: la API los rechaza al configurar el destino.
+- **Si liquidas el apartado destino**, los que lo apuntaban pasan a `TO_AVAILABLE` y
+  reciben una notificación. No heredan la cadena del apartado liquidado.
+- **El monto inicial no puede superar el tope**: crea el apartado dentro del tope y
+  deposita el resto después.
+
 #### Crear un Apartado
 ```bash
 POST /api/v2/positions/
@@ -842,6 +876,19 @@ cualquier cuenta **excepto tarjetas de crédito**.
 | `early_withdrawal_penalty` | ❌ | % (0-100) que se castiga **solo sobre los rendimientos**; el capital nunca se toca |
 | `on_maturity` | ❌ | `AUTO_RENEW`, `LIQUIDATE` o `HOLD` (default `HOLD`) |
 | `currency` | ❌ | Default `MXN` |
+| `cap` | ❌ | Tope y destino del excedente (solo a la vista). Ver [Topes y desbordamiento](#topes-y-desbordamiento) |
+
+**Con tope:**
+```json
+{
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Ahorro 10%",
+  "position_type": "ON_DEMAND",
+  "amount": 25000.00,
+  "annual_rate": 10.00,
+  "cap": { "max_balance": 25000.00, "overflow_action": "TO_AVAILABLE" }
+}
+```
 
 **Response:** `201 Created`
 ```json
@@ -863,6 +910,9 @@ cualquier cuenta **excepto tarjetas de crédito**.
   "lock_period_end_date": null,
   "maturity_date": "2026-11-12",
   "early_withdrawal_penalty": 10.00,
+  "max_balance": null,
+  "overflow_action": null,
+  "overflow_position_uuid": null,
   "created_at": "2026-08-14T18:00:00Z",
   "account_available_balance": 1200.00
 }
@@ -904,6 +954,33 @@ GET /api/v2/positions/account/{account_uuid}/
 ```bash
 GET /api/v2/positions/{position_uuid}/
 ```
+
+**Response:** misma estructura que la respuesta de creación.
+
+#### Actualizar un Apartado
+```bash
+PATCH /api/v2/positions/{position_uuid}/
+```
+
+Cambia el nombre o la configuración de tope. **Es el único camino para encadenar
+apartados**: el destino tiene que existir antes de que otro lo apunte, así que no se
+puede armar la cadena solo con `POST`.
+
+```jsonc
+{ "name": "Ahorro 10%" }                          // renombra, no toca el tope
+{ "cap": { "max_balance": 25000 } }               // tope, excedente al disponible
+{ "cap": { "max_balance": 25000,                  // encadena a otro apartado
+           "overflow_action": "TO_POSITION",
+           "overflow_position_uuid": "770e..." } }
+{ "cap": null }                                   // quita el tope
+```
+
+> Omitir `cap` deja la configuración como estaba; mandarlo en `null` la quita. Sin esa
+> distinción, renombrar un apartado le borraría el tope sin querer.
+
+Bajar el tope por debajo del saldo actual **saca el excedente en el momento**, no espera
+al proceso diario: el dinero recorre la cadena y lo que sobre entra al saldo disponible
+con su transacción.
 
 **Response:** misma estructura que la respuesta de creación.
 
@@ -987,25 +1064,49 @@ GET /api/v2/positions/{position_uuid}/projections/?days=90
       "projection_date": "2026-08-15",
       "principal_amount": 5012.34,
       "yield_amount": 1.61,
-      "projected_balance": 5013.95
+      "projected_balance": 5013.95,
+      "overflow_amount": 0.00
     }
-  ]
+  ],
+  "projected_overflow": 0.00,
+  "max_balance": null
 }
 ```
 
 Si omites `days`, proyecta hasta el vencimiento (plazo fijo) o 365 días (a la vista). Un
 plazo fijo nunca se proyecta más allá de su fecha de vencimiento.
 
+**Apartados con tope:** la proyección **se aplana en el tope** en vez de seguir creciendo,
+porque ese dinero no se queda ahí. `overflow_amount` es lo que ese día sale del apartado
+y `projected_overflow` el total del horizonte — la respuesta a "¿cuánto me va a soltar
+esta cajita en 90 días?". Un apartado lleno desborda exactamente lo que rinde:
+
+```json
+{
+  "projection_date": "2026-08-15",
+  "principal_amount": 25000.00,
+  "yield_amount": 6.53,
+  "projected_balance": 25000.00,
+  "overflow_amount": 6.53
+}
+```
+
 #### Procesos automáticos
 
 | Job | Hora (UTC) | Qué hace |
 |-----|------------|----------|
-| Rendimientos diarios | 12:00 | Calcula el rendimiento de cada apartado activo. A la vista capitaliza en `balance`; a plazo fijo suma a `accrued_yield`. El día del vencimiento todavía genera rendimiento. |
+| Rendimientos diarios | 12:00 | Calcula el rendimiento de cada apartado activo. A la vista capitaliza en `balance`; a plazo fijo suma a `accrued_yield`. El día del vencimiento todavía genera rendimiento. Si un apartado con tope ya está lleno, el rendimiento se desborda. |
 | Vencimientos | 12:30 | Ejecuta el `on_maturity` de cada plazo vencido y envía una notificación. |
 
-> El rendimiento diario **no genera transacciones**: solo queda registrado en los yields
-> del apartado. Las transacciones (tipo `TRANSFER`, con el campo `position_id`) se crean
-> cuando el dinero cruza al disponible: apartar, retirar, liquidar o vencer.
+> Las transacciones (tipo `TRANSFER`, con el campo `position_id`) se crean **cuando el
+> dinero cruza al saldo disponible**: apartar, retirar, liquidar, vencer, o desbordar un
+> apartado lleno hacia el disponible. El rendimiento que se queda dentro del apartado
+> solo se registra en sus yields, y el que se desborda hacia otro apartado tampoco
+> genera transacción porque nunca pasa por el disponible.
+>
+> Un apartado a la vista que vive en su tope desborda su rendimiento **todos los días**:
+> el tope no se rebasa ni un día, así que espera un movimiento diario pequeño por cada
+> apartado lleno cuyo excedente termine en el disponible.
 
 ---
 
@@ -1582,6 +1683,30 @@ curl -X POST "http://localhost:8000/api/v2/positions/770e8400-e29b-41d4-a716-446
      -H "Content-Type: application/json" \
      -d '{"amount": 1500.00}'
 
+# Tramos por monto: primero el apartado que recibe el excedente...
+curl -X POST "http://localhost:8000/api/v2/positions/" \
+     -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+       "name": "Excedente 5%",
+       "position_type": "ON_DEMAND",
+       "amount": 0.01,
+       "annual_rate": 5.00
+     }'
+
+# ...y después se conecta el de la tasa alta con su tope
+curl -X PATCH "http://localhost:8000/api/v2/positions/770e8400-e29b-41d4-a716-446655440009/" \
+     -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "cap": {
+         "max_balance": 25000.00,
+         "overflow_action": "TO_POSITION",
+         "overflow_position_uuid": "880e8400-e29b-41d4-a716-446655440010"
+       }
+     }'
+
 # Actualizar nombre de cuenta
 curl -X PATCH "http://localhost:8000/api/v2/account/550e8400-e29b-41d4-a716-446655440000/" \
      -H "Authorization: Bearer $ACCESS_TOKEN" \
@@ -1687,6 +1812,10 @@ La API retorna errores en un formato estándar con soporte de internacionalizaci
 - `INVESTMENT_POSITION_NOT_MATURED` (409): El plazo aún no llega a su vencimiento
 - `POSITION_ACCOUNT_TYPE_NOT_ALLOWED` (409): Las tarjetas de crédito no admiten apartados
 - `VALIDATION_INVALID_FIXED_TERM_CONFIG` (400): Un plazo fijo requiere `term_days` o `maturity_date` válidos
+- `POSITION_CAP_EXCEEDED` (409): El monto inicial supera el tope del apartado
+- `INVALID_OVERFLOW_TARGET` (409): El destino del excedente no existe, es de otra cuenta, no es a la vista, está liquidado o cerraría un ciclo
+- `FIXED_TERM_CAP_NOT_ALLOWED` (409): Un plazo fijo no admite tope ni desbordamiento
+- `VALIDATION_INVALID_POSITION_CAP` (400): Tope menor o igual a cero, o destino de desbordamiento sin tope
 
 ### Rate Limit Exceeded (429)
 
@@ -1811,6 +1940,7 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 | `GET /positions/{uuid}/yields/` | **50 requests/minuto** | Rendimientos del apartado |
 | `GET /positions/{uuid}/projections/` | **30 requests/minuto** | Proyecciones del apartado |
 | `POST /positions/` | **20 requests/minuto** | Creación |
+| `PATCH /positions/{uuid}/` | **20 requests/minuto** | Nombre y configuración de tope |
 | `POST /positions/{uuid}/deposit/` | **20 requests/minuto** | Apartar dinero |
 | `POST /positions/{uuid}/withdraw/` | **20 requests/minuto** | Regresar al disponible |
 | `POST /positions/{uuid}/liquidate/` | **10 requests/minuto** | Cierre del apartado |
