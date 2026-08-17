@@ -61,6 +61,10 @@ from shared.exceptions.domain import (
     FixedTermWithdrawalNotAllowedError,
     InvalidFixedTermConfigError,
     PositionAccountTypeNotAllowedError,
+    PositionCapExceededError,
+    InvalidOverflowTargetError,
+    InvalidPositionCapError,
+    FixedTermCapNotAllowedError,
 )
 from shared.exceptions.application import (
     JWTValidationError,
@@ -111,6 +115,9 @@ EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     FixedTermDepositNotAllowedError: ("FIXED_TERM_DEPOSIT_NOT_ALLOWED", 409),
     FixedTermWithdrawalNotAllowedError: ("FIXED_TERM_WITHDRAWAL_NOT_ALLOWED", 409),
     PositionAccountTypeNotAllowedError: ("POSITION_ACCOUNT_TYPE_NOT_ALLOWED", 409),
+    PositionCapExceededError: ("POSITION_CAP_EXCEEDED", 409),
+    InvalidOverflowTargetError: ("INVALID_OVERFLOW_TARGET", 409),
+    FixedTermCapNotAllowedError: ("FIXED_TERM_CAP_NOT_ALLOWED", 409),
     # --- Errores de Validación y Reglas de Negocio (400 / 422) ---
     InsufficientFundsError: ("INSUFFICIENT_FUNDS", 422),
     AccountInactiveError: ("BUSINESS_RULE_VIOLATION", 400),
@@ -140,6 +147,7 @@ EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     InvalidEmailError: ("VALIDATION_INVALID_EMAIL", 400),
     InvalidBalanceUpdateError: ("VALIDATION_INVALID_BALANCE_UPDATE", 400),
     InvalidFixedTermConfigError: ("VALIDATION_INVALID_FIXED_TERM_CONFIG", 400),
+    InvalidPositionCapError: ("VALIDATION_INVALID_POSITION_CAP", 400),
 }
 
 SENSITIVE_FIELDS = {

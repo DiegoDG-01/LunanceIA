@@ -2,12 +2,14 @@ from dataclasses import dataclass
 from datetime import date
 from typing import cast
 
+from domain.entities.notification import Notification, NotificationType
 from domain.entities.transaction import Transaction
 from domain.objects.enums import TransactionType
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.investment_position_repository import (
     InvestmentPositionRepository,
 )
+from domain.repositories.notification_repository import NotificationRepository
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.repositories.user_repository import UserRepository
@@ -32,6 +34,10 @@ class LiquidatePositionHandler:
 
     Liquidar un plazo fijo antes del vencimiento aplica la penalización sobre
     el rendimiento acumulado; durante el periodo de permanencia no se permite.
+
+    Si otros apartados desbordaban hacia este, su excedente pasa a ir al saldo
+    disponible: no heredan la cadena del apartado liquidado, para no alargar
+    cadenas que el usuario nunca configuró.
     """
 
     def __init__(
@@ -40,12 +46,14 @@ class LiquidatePositionHandler:
         account_repository: AccountRepository,
         position_repository: InvestmentPositionRepository,
         transaction_repository: TransactionRepository,
+        notification_repository: NotificationRepository,
         uow: AbstractUnitOfWork,
     ):
         self.user_repository = user_repository
         self.account_repository = account_repository
         self.position_repository = position_repository
         self.transaction_repository = transaction_repository
+        self.notification_repository = notification_repository
         self.uow = uow
 
     async def handle(
@@ -95,6 +103,8 @@ class LiquidatePositionHandler:
             movement.position_id = position.id
             await self.transaction_repository.create(movement)
 
+            await self._repoint_sources_to_available(position, account.user_id)
+
             await self.uow.commit()
 
         return LiquidatePositionResponseDTO(
@@ -106,3 +116,29 @@ class LiquidatePositionHandler:
             account_uuid=cast(str, account.uuid),
             account_available_balance=account.current_balance.amount,
         )
+
+    async def _repoint_sources_to_available(self, position, user_id: int) -> None:
+        """Corta las cadenas que apuntaban al apartado recién liquidado.
+
+        Solo un apartado a la vista puede ser destino, así que esto únicamente
+        tiene efecto aquí: el job de vencimientos liquida plazos fijos, que
+        nadie puede estar apuntando.
+        """
+        sources = await self.position_repository.get_by_overflow_target(
+            position_id=cast(int, position.id), for_update=True
+        )
+        for source in sources:
+            source.clear_overflow_target()
+            await self.position_repository.update(source)
+
+            notification = Notification.create_new(
+                user_id=user_id,
+                title=f"El excedente de {source.name} cambió de destino",
+                message=(
+                    f"Liquidaste el apartado {position.name}, así que el "
+                    f"excedente de {source.name} ahora va a tu saldo disponible."
+                ),
+                type=NotificationType.PUSH,
+                is_read=False,
+            )
+            await self.notification_repository.create(notification)

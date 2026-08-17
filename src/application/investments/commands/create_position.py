@@ -17,10 +17,13 @@ from application.dto.investment_position_dto import (
     CreatePositionDTO,
     PositionResponseDTO,
 )
+from application.investments.services.position_overflow import PositionOverflowService
+from domain.objects.enums import OverflowAction
 from shared.exceptions.domain import (
     AccountInactiveError,
     AccountNotFoundError,
     InsufficientFundsError,
+    InvalidOverflowTargetError,
     PositionAccountTypeNotAllowedError,
     UserNotFoundError,
 )
@@ -44,12 +47,14 @@ class CreatePositionHandler:
         account_repository: AccountRepository,
         position_repository: InvestmentPositionRepository,
         transaction_repository: TransactionRepository,
+        overflow_service: PositionOverflowService,
         uow: AbstractUnitOfWork,
     ):
         self.user_repository = user_repository
         self.account_repository = account_repository
         self.position_repository = position_repository
         self.transaction_repository = transaction_repository
+        self.overflow_service = overflow_service
         self.uow = uow
 
     async def handle(self, command: CreatePositionCommand) -> PositionResponseDTO:
@@ -86,6 +91,8 @@ class CreatePositionHandler:
                     available_amount=float(account.current_balance.amount),
                 )
 
+            target_id = await self._resolve_target(dto)
+
             position = InvestmentPosition.create_new(
                 account_id=cast(int, account.id),
                 name=dto.name,
@@ -98,7 +105,13 @@ class CreatePositionHandler:
                 lock_period_end_date=dto.lock_period_end_date,
                 early_withdrawal_penalty=dto.early_withdrawal_penalty,
                 on_maturity=dto.on_maturity,
+                max_balance=dto.max_balance,
+                overflow_action=dto.overflow_action,
+                overflow_position_id=target_id,
             )
+
+            if target_id is not None:
+                await self.overflow_service.validate_target(position, target_id)
 
             account.update_balance(account.current_balance.subtract(money))
 
@@ -123,4 +136,24 @@ class CreatePositionHandler:
             saved_position,
             account_uuid=cast(str, account.uuid),
             account_available_balance=account.current_balance.amount,
+            overflow_position_uuid=dto.overflow_position_uuid,
         )
+
+    async def _resolve_target(self, dto: CreatePositionDTO) -> int | None:
+        """Traduce el uuid del apartado destino a su id interno."""
+        if dto.overflow_action != OverflowAction.TO_POSITION:
+            return None
+
+        if not dto.overflow_position_uuid:
+            raise InvalidOverflowTargetError(
+                "desbordar a un apartado requiere indicar cuál"
+            )
+
+        target = await self.position_repository.get_by_uuid_and_user_id(
+            dto.overflow_position_uuid, dto.user_id
+        )
+        if not target:
+            raise InvalidOverflowTargetError(
+                f"el apartado {dto.overflow_position_uuid} no existe"
+            )
+        return cast(int, target.id)

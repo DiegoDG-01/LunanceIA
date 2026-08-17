@@ -6,6 +6,7 @@ from datetime import date, datetime
 from domain.objects.enums import (
     InterestType,
     MaturityAction,
+    OverflowAction,
     PositionStatus,
     PositionType,
 )
@@ -28,6 +29,9 @@ class CreatePositionDTO:
     early_withdrawal_penalty: Optional[Decimal] = None
     on_maturity: MaturityAction = MaturityAction.HOLD
     currency: str = "MXN"
+    max_balance: Optional[Decimal] = None
+    overflow_action: Optional[OverflowAction] = None
+    overflow_position_uuid: Optional[str] = None
 
 
 @dataclass
@@ -38,6 +42,24 @@ class PositionMovementDTO:
     position_uuid: str
     amount: Decimal
     currency: str = "MXN"
+
+
+@dataclass
+class UpdatePositionDTO:
+    """DTO para actualizar el nombre y la configuración de tope de un apartado.
+
+    `cap_provided` distingue "no mandaron la configuración de tope" de
+    "mandaron quitarla": sin esa bandera, un PATCH que solo cambia el nombre
+    borraría el tope sin querer.
+    """
+
+    user_id: int
+    position_uuid: str
+    name: Optional[str] = None
+    cap_provided: bool = False
+    max_balance: Optional[Decimal] = None
+    overflow_action: Optional[OverflowAction] = None
+    overflow_position_uuid: Optional[str] = None
 
 
 @dataclass
@@ -69,6 +91,9 @@ class PositionResponseDTO:
     lock_period_end_date: Optional[date] = None
     maturity_date: Optional[date] = None
     early_withdrawal_penalty: Optional[Decimal] = None
+    max_balance: Optional[Decimal] = None
+    overflow_action: Optional[OverflowAction] = None
+    overflow_position_uuid: Optional[str] = None
     created_at: Optional[datetime] = None
     account_available_balance: Optional[Decimal] = None
 
@@ -78,6 +103,7 @@ class PositionResponseDTO:
         position,
         account_uuid: str,
         account_available_balance: Optional[Decimal] = None,
+        overflow_position_uuid: Optional[str] = None,
     ) -> "PositionResponseDTO":
         return cls(
             position_uuid=position.uuid,
@@ -97,6 +123,9 @@ class PositionResponseDTO:
             lock_period_end_date=position.lock_period_end_date,
             maturity_date=position.maturity_date,
             early_withdrawal_penalty=position.early_withdrawal_penalty,
+            max_balance=position.max_balance,
+            overflow_action=position.overflow_action,
+            overflow_position_uuid=overflow_position_uuid,
             created_at=position.created_at,
             account_available_balance=account_available_balance,
         )
@@ -140,3 +169,6 @@ class PositionProjectionResponseDTO:
     maturity_date: Optional[date]
     projected_final_balance: Decimal
     daily_projections: list
+    # Total que se desborda en el horizonte proyectado (0 si no hay tope)
+    projected_overflow: Decimal = Decimal(0)
+    max_balance: Optional[Decimal] = None

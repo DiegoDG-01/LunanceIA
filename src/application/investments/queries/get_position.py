@@ -6,6 +6,7 @@ from domain.repositories.investment_position_repository import (
     InvestmentPositionRepository,
 )
 from application.dto.investment_position_dto import PositionResponseDTO
+from application.investments.services.position_overflow import PositionOverflowService
 from shared.exceptions.domain import InvestmentPositionNotFoundError
 
 
@@ -20,9 +21,11 @@ class GetPositionHandler:
         self,
         account_repository: AccountRepository,
         position_repository: InvestmentPositionRepository,
+        overflow_service: PositionOverflowService,
     ):
         self.account_repository = account_repository
         self.position_repository = position_repository
+        self.overflow_service = overflow_service
 
     async def handle(self, query: GetPositionQuery) -> PositionResponseDTO:
         position = await self.position_repository.get_by_uuid_and_user_id(
@@ -41,4 +44,5 @@ class GetPositionHandler:
             account_available_balance=account.current_balance.amount
             if account
             else None,
+            overflow_position_uuid=await self.overflow_service.target_uuid(position),
         )

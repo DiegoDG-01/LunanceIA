@@ -4,7 +4,32 @@ from datetime import date
 
 from pydantic import Field, BaseModel
 
-from domain.objects.enums import InterestType, MaturityAction, PositionType
+from domain.objects.enums import (
+    InterestType,
+    MaturityAction,
+    OverflowAction,
+    PositionType,
+)
+
+
+class PositionCapRequest(BaseModel):
+    """Tope del apartado y destino del dinero que ya no cabe."""
+
+    max_balance: Optional[Decimal] = Field(
+        None,
+        gt=Decimal("0"),
+        description="Tope de capital. null quita el tope.",
+    )
+    overflow_action: Optional[OverflowAction] = Field(
+        None,
+        description=(
+            "Qué hacer con el excedente: TO_AVAILABLE (al saldo disponible) "
+            "o TO_POSITION (a otro apartado). Por defecto TO_AVAILABLE."
+        ),
+    )
+    overflow_position_uuid: Optional[str] = Field(
+        None, description="Apartado destino, obligatorio con TO_POSITION"
+    )
 
 
 class CreatePositionRequest(BaseModel):
@@ -38,6 +63,24 @@ class CreatePositionRequest(BaseModel):
         description="Qué hacer al vencer: AUTO_RENEW, LIQUIDATE o HOLD",
     )
     currency: str = Field("MXN", min_length=3, max_length=3)
+    cap: Optional[PositionCapRequest] = Field(
+        None,
+        description=(
+            "Tope del apartado (solo a la vista). El monto inicial no puede "
+            "superarlo: para eso crea el apartado en el tope y deposita el resto."
+        ),
+    )
+
+
+class UpdatePositionRequest(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    cap: Optional[PositionCapRequest] = Field(
+        None,
+        description=(
+            "Configuración de tope. Omítelo para dejarla como está; mándalo "
+            "en null para quitar el tope por completo."
+        ),
+    )
 
 
 class PositionMovementRequest(BaseModel):

@@ -40,6 +40,11 @@ class ListPositionsHandler:
         positions = await self.position_repository.get_by_account_id(
             account_id=cast(int, account.id)
         )
+        # Los destinos siempre son de la misma cuenta, así que el uuid sale de
+        # lo ya cargado en vez de una consulta por apartado. Se arma antes de
+        # filtrar para no perder el nombre de un destino ya liquidado.
+        uuid_by_id = {p.id: p.uuid for p in positions}
+
         if not query.include_liquidated:
             positions = [p for p in positions if p.status != PositionStatus.LIQUIDATED]
 
@@ -61,7 +66,11 @@ class ListPositionsHandler:
             total_balance=available + invested,
             currency=account.current_balance.currency,
             positions=[
-                PositionResponseDTO.from_entity(p, cast(str, account.uuid))
+                PositionResponseDTO.from_entity(
+                    p,
+                    cast(str, account.uuid),
+                    overflow_position_uuid=uuid_by_id.get(p.overflow_position_id),
+                )
                 for p in positions
             ],
         )

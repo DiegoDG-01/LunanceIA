@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from domain.objects.enums import (
     InterestType,
     MaturityAction,
+    OverflowAction,
     PositionStatus,
     PositionType,
 )
@@ -31,6 +32,9 @@ class PositionResponse(BaseModel):
     lock_period_end_date: Optional[date] = None
     maturity_date: Optional[date] = None
     early_withdrawal_penalty: Optional[Decimal] = None
+    max_balance: Optional[Decimal] = None
+    overflow_action: Optional[OverflowAction] = None
+    overflow_position_uuid: Optional[str] = None
     created_at: Optional[datetime] = None
     account_available_balance: Optional[Decimal] = None
 
@@ -64,3 +68,5 @@ class PositionProjectionResponse(BaseModel):
     maturity_date: Optional[date]
     projected_final_balance: Decimal
     daily_projections: List[ProjectionDayResponse]
+    projected_overflow: Decimal = Decimal(0)
+    max_balance: Optional[Decimal] = None

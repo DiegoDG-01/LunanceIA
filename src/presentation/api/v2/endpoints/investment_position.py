@@ -8,6 +8,7 @@ from application.dto.investment_position_dto import (
     CreatePositionDTO,
     LiquidatePositionDTO,
     PositionMovementDTO,
+    UpdatePositionDTO,
 )
 from application.investments.commands.create_position import (
     CreatePositionCommand,
@@ -24,6 +25,10 @@ from application.investments.commands.withdraw_from_position import (
 from application.investments.commands.liquidate_position import (
     LiquidatePositionCommand,
     LiquidatePositionHandler,
+)
+from application.investments.commands.update_position import (
+    UpdatePositionCommand,
+    UpdatePositionHandler,
 )
 from application.investments.queries.list_positions import (
     ListPositionsQuery,
@@ -44,6 +49,7 @@ from application.investments.queries.get_position_projections import (
 from presentation.schemas.requests.investment_position import (
     CreatePositionRequest,
     PositionMovementRequest,
+    UpdatePositionRequest,
 )
 from presentation.schemas.responses.investment_position import (
     AccountPositionsResponse,
@@ -62,6 +68,7 @@ from presentation.dependencies.investment_position_deps import (
     get_position_handler,
     get_position_yields_handler,
     get_position_projections_handler,
+    get_update_position_handler,
 )
 
 from infrastructure.rate_limiting.limiters import (
@@ -83,6 +90,7 @@ async def create_position(
     handler: CreatePositionHandler = Depends(get_create_position_handler),
 ):
     enforce_rate_limit(limiter_20_per_minute, request)
+    cap = position_request.cap
     dto = CreatePositionDTO(
         user_id=cast(int, current_user.id),
         account_uuid=position_request.account_uuid,
@@ -97,6 +105,9 @@ async def create_position(
         early_withdrawal_penalty=position_request.early_withdrawal_penalty,
         on_maturity=position_request.on_maturity,
         currency=position_request.currency,
+        max_balance=cap.max_balance if cap else None,
+        overflow_action=cap.overflow_action if cap else None,
+        overflow_position_uuid=cap.overflow_position_uuid if cap else None,
     )
     result = await handler.handle(CreatePositionCommand(dto=dto))
     return PositionResponse(**result.__dict__)
@@ -142,6 +153,32 @@ async def get_position(
             position_uuid=position_uuid, user_id=cast(int, current_user.id)
         )
     )
+    return PositionResponse(**result.__dict__)
+
+
+@router.patch("/{position_uuid}/", response_model=PositionResponse)
+async def update_position(
+    request: Request,
+    position_uuid: str,
+    position_request: UpdatePositionRequest,
+    current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_WRITE.value)),
+    handler: UpdatePositionHandler = Depends(get_update_position_handler),
+):
+    enforce_rate_limit(limiter_20_per_minute, request)
+    cap = position_request.cap
+    dto = UpdatePositionDTO(
+        user_id=cast(int, current_user.id),
+        position_uuid=position_uuid,
+        name=position_request.name,
+        # Sin "cap" en el body la configuración de tope no se toca; con
+        # "cap": null se quita. Sin esta distinción, renombrar un apartado
+        # borraría su tope sin querer.
+        cap_provided="cap" in position_request.model_fields_set,
+        max_balance=cap.max_balance if cap else None,
+        overflow_action=cap.overflow_action if cap else None,
+        overflow_position_uuid=cap.overflow_position_uuid if cap else None,
+    )
+    result = await handler.handle(UpdatePositionCommand(dto=dto))
     return PositionResponse(**result.__dict__)
 
 
@@ -251,4 +288,6 @@ async def get_position_projections(
         maturity_date=result.maturity_date,
         projected_final_balance=result.projected_final_balance,
         daily_projections=[p.__dict__ for p in result.daily_projections],
+        projected_overflow=result.projected_overflow,
+        max_balance=result.max_balance,
     )

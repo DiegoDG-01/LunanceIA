@@ -11,14 +11,24 @@ from application.investments.commands.create_position import (
     CreatePositionHandler,
 )
 from application.dto.investment_position_dto import CreatePositionDTO
+from application.investments.services.position_overflow import PositionOverflowService
 from domain.entities.account import Account
-from domain.objects.enums import AccountType, PositionStatus, PositionType
+from domain.entities.investment_position import InvestmentPosition
+from domain.objects.enums import (
+    AccountType,
+    OverflowAction,
+    PositionStatus,
+    PositionType,
+)
 from domain.objects.money import Money
 from shared.exceptions.domain import (
     AccountInactiveError,
     AccountNotFoundError,
+    FixedTermCapNotAllowedError,
     InsufficientFundsError,
+    InvalidOverflowTargetError,
     PositionAccountTypeNotAllowedError,
+    PositionCapExceededError,
     UserNotFoundError,
 )
 
@@ -93,6 +103,7 @@ class TestCreatePositionHandler:
             mocks["account_repo"],
             mocks["position_repo"],
             mocks["transaction_repo"],
+            PositionOverflowService(position_repository=mocks["position_repo"]),
             mocks["uow"],
         )
 
@@ -178,3 +189,87 @@ class TestCreatePositionHandler:
 
         with pytest.raises(UserNotFoundError):
             await handler.handle(CreatePositionCommand(make_dto()))
+
+    @pytest.mark.asyncio
+    async def test_cap_is_stored_with_its_default_destination(self, handler, mocks):
+        self._wire_account(mocks, make_account())
+
+        result = await handler.handle(
+            CreatePositionCommand(make_dto(max_balance=Decimal("25000.00")))
+        )
+
+        assert result.max_balance == Decimal("25000.00")
+        assert result.overflow_action == OverflowAction.TO_AVAILABLE
+
+    @pytest.mark.asyncio
+    async def test_amount_over_the_cap_is_rejected(self, handler, mocks):
+        self._wire_account(mocks, make_account())
+
+        with pytest.raises(PositionCapExceededError):
+            await handler.handle(
+                CreatePositionCommand(
+                    make_dto(amount=Decimal("400.00"), max_balance=Decimal("300.00"))
+                )
+            )
+
+    @pytest.mark.asyncio
+    async def test_cap_on_fixed_term_is_rejected(self, handler, mocks):
+        self._wire_account(mocks, make_account())
+
+        with pytest.raises(FixedTermCapNotAllowedError):
+            await handler.handle(
+                CreatePositionCommand(
+                    make_dto(
+                        position_type=PositionType.FIXED_TERM,
+                        term_days=90,
+                        max_balance=Decimal("25000.00"),
+                    )
+                )
+            )
+
+    @pytest.mark.asyncio
+    async def test_chained_target_is_resolved_by_uuid(self, handler, mocks):
+        self._wire_account(mocks, make_account())
+        target = replace(
+            InvestmentPosition.create_new(
+                account_id=1,
+                name="Excedente",
+                position_type=PositionType.ON_DEMAND,
+                initial_balance=Money(Decimal("0.00")),
+                annual_rate=Decimal("5.00"),
+            ),
+            id=9,
+            uuid="pos-9",
+        )
+        mocks["position_repo"].get_by_uuid_and_user_id = AsyncMock(return_value=target)
+        mocks["position_repo"].get_by_id = AsyncMock(return_value=target)
+
+        result = await handler.handle(
+            CreatePositionCommand(
+                make_dto(
+                    max_balance=Decimal("25000.00"),
+                    overflow_action=OverflowAction.TO_POSITION,
+                    overflow_position_uuid="pos-9",
+                )
+            )
+        )
+
+        created = mocks["position_repo"].create.call_args.args[0]
+        assert created.overflow_position_id == 9
+        assert result.overflow_position_uuid == "pos-9"
+
+    @pytest.mark.asyncio
+    async def test_unknown_target_is_rejected(self, handler, mocks):
+        self._wire_account(mocks, make_account())
+        mocks["position_repo"].get_by_uuid_and_user_id = AsyncMock(return_value=None)
+
+        with pytest.raises(InvalidOverflowTargetError):
+            await handler.handle(
+                CreatePositionCommand(
+                    make_dto(
+                        max_balance=Decimal("25000.00"),
+                        overflow_action=OverflowAction.TO_POSITION,
+                        overflow_position_uuid="pos-404",
+                    )
+                )
+            )
