@@ -43,6 +43,13 @@ class InvestmentPositionRepository(ABC):
         pass
 
     @abstractmethod
+    async def get_by_overflow_target(
+        self, position_id: int, *, for_update: bool = False
+    ) -> List[InvestmentPosition]:
+        """Get the positions that overflow into this one (liquidation repair)"""
+        pass
+
+    @abstractmethod
     async def update(self, position: InvestmentPosition) -> InvestmentPosition:
         """Update investment position"""
         pass

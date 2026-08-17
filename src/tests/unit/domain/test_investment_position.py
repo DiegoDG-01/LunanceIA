@@ -9,20 +9,25 @@ from domain.entities.investment_position import InvestmentPosition
 from domain.objects.enums import (
     InterestType,
     MaturityAction,
+    OverflowAction,
     PositionStatus,
     PositionType,
 )
 from domain.objects.money import Money
 from shared.exceptions.domain import (
+    FixedTermCapNotAllowedError,
     FixedTermDepositNotAllowedError,
     FixedTermWithdrawalNotAllowedError,
     InsufficientFundsError,
     InvalidFixedTermConfigError,
     InvalidInvestmentRateError,
+    InvalidOverflowTargetError,
     InvalidPenaltyPercentageError,
+    InvalidPositionCapError,
     InvestmentPositionLockedError,
     InvestmentPositionNotActiveError,
     InvestmentPositionNotMaturedError,
+    PositionCapExceededError,
 )
 
 
@@ -328,3 +333,244 @@ class TestLiquidate:
 
         with pytest.raises(InvestmentPositionNotActiveError):
             position.liquidate(date(2026, 2, 2))
+
+
+@pytest.mark.unit
+class TestCapConfiguration:
+    """Test max_balance / overflow validation at creation time."""
+
+    def test_cap_without_action_defaults_to_available(self):
+        position = make_position(max_balance=Decimal("25000.00"))
+
+        assert position.overflow_action == OverflowAction.TO_AVAILABLE
+        assert position.overflow_position_id is None
+
+    def test_cap_to_position_keeps_target(self):
+        position = make_position(
+            max_balance=Decimal("25000.00"),
+            overflow_action=OverflowAction.TO_POSITION,
+            overflow_position_id=7,
+        )
+
+        assert position.overflow_position_id == 7
+
+    def test_cap_on_fixed_term_raises(self):
+        with pytest.raises(FixedTermCapNotAllowedError):
+            make_fixed_term(max_balance=Decimal("25000.00"))
+
+    def test_overflow_target_without_cap_raises(self):
+        with pytest.raises(InvalidPositionCapError):
+            make_position(
+                overflow_action=OverflowAction.TO_POSITION, overflow_position_id=7
+            )
+
+    def test_non_positive_cap_raises(self):
+        with pytest.raises(InvalidPositionCapError):
+            make_position(max_balance=Decimal("0.00"))
+
+    def test_to_position_without_target_raises(self):
+        with pytest.raises(InvalidOverflowTargetError):
+            make_position(
+                max_balance=Decimal("25000.00"),
+                overflow_action=OverflowAction.TO_POSITION,
+            )
+
+    def test_to_available_with_target_raises(self):
+        with pytest.raises(InvalidOverflowTargetError):
+            make_position(
+                max_balance=Decimal("25000.00"),
+                overflow_action=OverflowAction.TO_AVAILABLE,
+                overflow_position_id=7,
+            )
+
+    def test_initial_amount_over_cap_raises(self):
+        with pytest.raises(PositionCapExceededError):
+            make_position(
+                initial_balance=Money(Decimal("30000.00")),
+                max_balance=Decimal("25000.00"),
+            )
+
+    def test_initial_amount_equal_to_cap_is_allowed(self):
+        position = make_position(
+            initial_balance=Money(Decimal("25000.00")),
+            max_balance=Decimal("25000.00"),
+        )
+
+        assert position.balance.amount == Decimal("25000.00")
+
+
+@pytest.mark.unit
+class TestDepositWithCap:
+    """Test how deposits split between the position and its overflow."""
+
+    def test_deposit_without_cap_never_overflows(self):
+        position = make_position()
+
+        overflow = position.deposit(Money(Decimal("500.00")))
+
+        assert overflow.amount == Decimal(0)
+        assert position.balance.amount == Decimal("1500.00")
+
+    def test_deposit_fills_up_to_cap_and_returns_the_rest(self):
+        position = make_position(max_balance=Decimal("1200.00"))
+
+        overflow = position.deposit(Money(Decimal("500.00")))
+
+        assert position.balance.amount == Decimal("1200.00")
+        assert overflow.amount == Decimal("300.00")
+
+    def test_deposit_into_full_position_returns_everything(self):
+        position = make_position(max_balance=Decimal("1000.00"))
+
+        overflow = position.deposit(Money(Decimal("500.00")))
+
+        assert position.balance.amount == Decimal("1000.00")
+        assert overflow.amount == Decimal("500.00")
+
+    def test_simple_interest_base_grows_only_with_accepted_amount(self):
+        position = make_position(
+            interest_type=InterestType.SIMPLE, max_balance=Decimal("1200.00")
+        )
+
+        position.deposit(Money(Decimal("500.00")))
+
+        assert position.base_principal == Decimal("1200.00")
+
+
+@pytest.mark.unit
+class TestAccrueYieldWithCap:
+    """Test that daily yield respects the cap instead of blowing past it."""
+
+    def test_yield_below_cap_capitalizes_normally(self):
+        position = make_position(max_balance=Decimal("25000.00"))
+
+        overflow = position.accrue_yield(Money(Decimal("6.85")))
+
+        assert position.balance.amount == Decimal("1006.85")
+        assert overflow.amount == Decimal(0)
+
+    def test_full_position_overflows_the_whole_yield(self):
+        position = make_position(max_balance=Decimal("1000.00"))
+
+        overflow = position.accrue_yield(Money(Decimal("6.85")))
+
+        assert position.balance.amount == Decimal("1000.00")
+        assert overflow.amount == Decimal("6.85")
+
+    def test_yield_that_crosses_the_cap_splits(self):
+        position = make_position(max_balance=Decimal("1004.00"))
+
+        overflow = position.accrue_yield(Money(Decimal("6.85")))
+
+        assert position.balance.amount == Decimal("1004.00")
+        assert overflow.amount == Decimal("2.85")
+
+    def test_fixed_term_yield_never_overflows(self):
+        position = make_fixed_term()
+
+        overflow = position.accrue_yield(Money(Decimal("6.85")))
+
+        assert position.accrued_yield.amount == Decimal("6.85")
+        assert overflow.amount == Decimal(0)
+
+
+@pytest.mark.unit
+class TestConfigureCap:
+    """Test reconfiguring the cap on an existing position."""
+
+    def test_lowering_cap_below_balance_returns_excess_now(self):
+        position = make_position()
+
+        excess = position.configure_cap(Decimal("800.00"))
+
+        assert excess.amount == Decimal("200.00")
+        assert position.balance.amount == Decimal("800.00")
+        assert position.overflow_action == OverflowAction.TO_AVAILABLE
+
+    def test_cap_above_balance_returns_nothing(self):
+        position = make_position()
+
+        excess = position.configure_cap(Decimal("5000.00"))
+
+        assert excess.amount == Decimal(0)
+        assert position.balance.amount == Decimal("1000.00")
+
+    def test_lowering_cap_trims_simple_interest_base(self):
+        position = make_position(interest_type=InterestType.SIMPLE)
+
+        position.configure_cap(Decimal("800.00"))
+
+        assert position.base_principal == Decimal("800.00")
+
+    def test_removing_cap_clears_the_overflow_config(self):
+        position = make_position(
+            max_balance=Decimal("2000.00"),
+            overflow_action=OverflowAction.TO_POSITION,
+            overflow_position_id=7,
+        )
+
+        position.configure_cap(None)
+
+        assert position.max_balance is None
+        assert position.overflow_action is None
+        assert position.overflow_position_id is None
+
+    def test_pointing_a_position_at_itself_raises(self):
+        position = make_position()
+        position.id = 5
+
+        with pytest.raises(InvalidOverflowTargetError):
+            position.configure_cap(
+                Decimal("2000.00"),
+                overflow_action=OverflowAction.TO_POSITION,
+                overflow_position_id=5,
+            )
+
+    def test_configure_cap_on_liquidated_position_raises(self):
+        position = make_position()
+        position.liquidate(date(2026, 2, 1))
+
+        with pytest.raises(InvestmentPositionNotActiveError):
+            position.configure_cap(Decimal("2000.00"))
+
+
+@pytest.mark.unit
+class TestOverflowTarget:
+    """Test the fallback when the destination position disappears."""
+
+    def test_clear_target_falls_back_to_available(self):
+        position = make_position(
+            max_balance=Decimal("2000.00"),
+            overflow_action=OverflowAction.TO_POSITION,
+            overflow_position_id=7,
+        )
+
+        position.clear_overflow_target()
+
+        assert position.overflow_action == OverflowAction.TO_AVAILABLE
+        assert position.overflow_position_id is None
+        assert position.max_balance == Decimal("2000.00")
+
+    def test_clear_target_leaves_available_config_untouched(self):
+        position = make_position(max_balance=Decimal("2000.00"))
+
+        position.clear_overflow_target()
+
+        assert position.overflow_action == OverflowAction.TO_AVAILABLE
+        assert position.max_balance == Decimal("2000.00")
+
+    def test_full_position_is_still_a_valid_destination(self):
+        position = make_position(max_balance=Decimal("1000.00"))
+
+        assert position.can_absorb() is True
+
+    def test_liquidated_position_cannot_absorb(self):
+        position = make_position()
+        position.liquidate(date(2026, 2, 1))
+
+        assert position.can_absorb() is False
+
+    def test_fixed_term_cannot_absorb(self):
+        position = make_fixed_term()
+
+        assert position.can_absorb() is False

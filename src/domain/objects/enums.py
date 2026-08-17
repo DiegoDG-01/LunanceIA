@@ -103,6 +103,13 @@ class MaturityAction(str, Enum):
     HOLD = "HOLD"
 
 
+class OverflowAction(str, Enum):
+    """Destino del dinero que ya no cabe en un apartado con tope."""
+
+    TO_AVAILABLE = "TO_AVAILABLE"
+    TO_POSITION = "TO_POSITION"
+
+
 class APIKeyScope(str, Enum):
     TRANSACTIONS_READ = "transactions:read"
     TRANSACTIONS_WRITE = "transactions:write"

@@ -39,6 +39,9 @@ class SQLAlchemyInvestmentPositionRepository(InvestmentPositionRepository):
             lock_period_end_date=model.lock_period_end_date,
             maturity_date=model.maturity_date,
             early_withdrawal_penalty=model.early_withdrawal_penalty,
+            max_balance=model.max_balance,
+            overflow_action=model.overflow_action,
+            overflow_position_id=model.overflow_position_id,
             created_at=model.created_at,
         )
 
@@ -61,6 +64,9 @@ class SQLAlchemyInvestmentPositionRepository(InvestmentPositionRepository):
             lock_period_end_date=entity.lock_period_end_date,
             maturity_date=entity.maturity_date,
             early_withdrawal_penalty=entity.early_withdrawal_penalty,
+            max_balance=entity.max_balance,
+            overflow_action=entity.overflow_action,
+            overflow_position_id=entity.overflow_position_id,
         )
 
     async def create(self, position: InvestmentPosition) -> InvestmentPosition:
@@ -151,6 +157,20 @@ class SQLAlchemyInvestmentPositionRepository(InvestmentPositionRepository):
         models = result.scalars().all()
         return [self._model_to_entity(model) for model in models]
 
+    async def get_by_overflow_target(
+        self, position_id: int, *, for_update: bool = False
+    ) -> List[InvestmentPosition]:
+        stmt = select(InvestmentPositionModel).where(
+            InvestmentPositionModel.overflow_position_id == position_id
+        )
+
+        if for_update:
+            stmt = stmt.with_for_update()
+
+        result = await self.db.execute(stmt)
+        models = result.scalars().all()
+        return [self._model_to_entity(model) for model in models]
+
     async def update(self, position: InvestmentPosition) -> InvestmentPosition:
         stmt = select(InvestmentPositionModel).where(
             InvestmentPositionModel.uuid == position.uuid
@@ -174,6 +194,9 @@ class SQLAlchemyInvestmentPositionRepository(InvestmentPositionRepository):
         model.maturity_date = position.maturity_date
         model.early_withdrawal_penalty = position.early_withdrawal_penalty
         model.on_maturity = position.on_maturity
+        model.max_balance = position.max_balance
+        model.overflow_action = position.overflow_action
+        model.overflow_position_id = position.overflow_position_id
 
         await self.db.flush()
         await self.db.refresh(model)

@@ -12,6 +12,7 @@ from infrastructure.database.connection import Base
 from domain.objects.enums import (
     InterestType,
     MaturityAction,
+    OverflowAction,
     PositionStatus,
     PositionType,
 )
@@ -51,6 +52,19 @@ class InvestmentPositionModel(Base):
     )
     on_maturity: Mapped[MaturityAction] = mapped_column(
         Enum(MaturityAction), default=MaturityAction.HOLD
+    )
+    max_balance: Mapped[Optional[Decimal]] = mapped_column(
+        DECIMAL(15, 2), nullable=True
+    )
+    overflow_action: Mapped[Optional[OverflowAction]] = mapped_column(
+        Enum(OverflowAction), nullable=True
+    )
+    # SET NULL y no CASCADE: que desaparezca el destino nunca debe borrar al
+    # apartado que lo apuntaba. La cadena rota se resuelve cayendo al disponible.
+    overflow_position_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("investment_positions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

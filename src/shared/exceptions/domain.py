@@ -444,3 +444,37 @@ class PositionAccountTypeNotAllowedError(BusinessRuleError):
         super().__init__(
             f"Las cuentas de tipo {account_type} no admiten apartados de inversión"
         )
+
+
+class InvalidPositionCapError(ValidationError):
+    """Configuración de tope y desbordamiento inválida."""
+
+    def __init__(self, reason: str):
+        super().__init__(f"Configuración de tope inválida: {reason}")
+
+
+class PositionCapExceededError(BusinessRuleError):
+    """El monto inicial del apartado supera su propio tope."""
+
+    def __init__(self, amount: str, max_balance: str):
+        super().__init__(
+            f"El monto {amount} supera el tope {max_balance} del apartado; "
+            f"crea el apartado dentro del tope y deposita el resto después"
+        )
+
+
+class InvalidOverflowTargetError(BusinessRuleError):
+    """Destino de desbordamiento inválido."""
+
+    def __init__(self, reason: str):
+        super().__init__(f"Destino de desbordamiento inválido: {reason}")
+
+
+class FixedTermCapNotAllowedError(BusinessRuleError):
+    """Tope y desbordamiento no aplican a apartados a plazo fijo."""
+
+    def __init__(self):
+        super().__init__(
+            "Un apartado a plazo fijo no admite tope ni desbordamiento: "
+            "su monto queda fijo hasta el vencimiento"
+        )
