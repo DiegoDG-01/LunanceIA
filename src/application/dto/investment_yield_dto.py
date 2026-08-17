@@ -37,6 +37,8 @@ class ProjectionDayDTO:
     principal_amount: Decimal
     yield_amount: Decimal
     projected_balance: Decimal
+    # Rendimiento que ese día no cabe bajo el tope y sale del apartado
+    overflow_amount: Decimal = Decimal(0)
 
 
 @dataclass

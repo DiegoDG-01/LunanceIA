@@ -166,3 +166,77 @@ class TestGetPositionProjectionsHandler:
 
         assert result.daily_projections == []
         assert result.projected_final_balance == Decimal("1050.00")
+
+
+@pytest.mark.unit
+class TestProjectionsWithCap:
+    """Test that a capped position projects a plateau, not endless growth."""
+
+    def _build(self, position):
+        position_repo = MagicMock()
+        position_repo.get_by_uuid_and_user_id = AsyncMock(return_value=position)
+        return GetPositionProjectionsHandler(position_repo)
+
+    @pytest.mark.asyncio
+    async def test_full_position_projects_a_flat_line(self):
+        position = make_position(max_balance=Decimal("1000.00"))
+        handler = self._build(position)
+
+        result = await handler.handle(
+            GetPositionProjectionsQuery(
+                position_uuid="pos-5", user_id=1, project_days=30
+            )
+        )
+
+        balances = {p.projected_balance for p in result.daily_projections}
+        assert balances == {Decimal("1000.00")}
+        assert result.projected_final_balance == Decimal("1000.00")
+        assert result.max_balance == Decimal("1000.00")
+
+    @pytest.mark.asyncio
+    async def test_the_overflow_is_reported_day_by_day(self):
+        position = make_position(max_balance=Decimal("1000.00"))
+        handler = self._build(position)
+
+        result = await handler.handle(
+            GetPositionProjectionsQuery(
+                position_uuid="pos-5", user_id=1, project_days=30
+            )
+        )
+
+        # Lo que rinde cada día es exactamente lo que se desborda.
+        assert all(
+            p.overflow_amount == p.yield_amount for p in result.daily_projections
+        )
+        assert result.projected_overflow == sum(
+            p.yield_amount for p in result.daily_projections
+        )
+
+    @pytest.mark.asyncio
+    async def test_cap_above_balance_grows_until_it_hits_the_ceiling(self):
+        position = make_position(max_balance=Decimal("1005.00"))
+        handler = self._build(position)
+
+        result = await handler.handle(
+            GetPositionProjectionsQuery(
+                position_uuid="pos-5", user_id=1, project_days=90
+            )
+        )
+
+        assert result.daily_projections[0].overflow_amount == Decimal(0)
+        assert result.projected_final_balance == Decimal("1005.00")
+        assert result.projected_overflow > Decimal(0)
+
+    @pytest.mark.asyncio
+    async def test_position_without_cap_reports_no_overflow(self):
+        handler = self._build(make_position())
+
+        result = await handler.handle(
+            GetPositionProjectionsQuery(
+                position_uuid="pos-5", user_id=1, project_days=30
+            )
+        )
+
+        assert result.projected_overflow == Decimal(0)
+        assert result.max_balance is None
+        assert result.projected_final_balance > Decimal("1000.00")

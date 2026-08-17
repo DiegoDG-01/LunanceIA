@@ -23,6 +23,7 @@ class ProjectionDayResponse(BaseModel):
     principal_amount: Decimal
     yield_amount: Decimal
     projected_balance: Decimal
+    overflow_amount: Decimal = Decimal(0)
 
 
 class InvestmentProjectionResponse(BaseModel):

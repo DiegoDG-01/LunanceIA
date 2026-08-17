@@ -111,12 +111,14 @@ class GetInvestmentProjectionsHandler:
             total_principal = Decimal(0)
             total_yield = Decimal(0)
             total_balance = Decimal(0)
+            total_overflow = Decimal(0)
 
             for position, results in per_position:
                 if i < len(results):
                     total_principal += results[i].principal_amount
                     total_yield += results[i].yield_amount
                     total_balance += results[i].projected_balance
+                    total_overflow += results[i].overflow_amount
                 else:
                     # Después de su vencimiento el apartado ya no crece:
                     # contribuye con su valor final constante.
@@ -134,6 +136,7 @@ class GetInvestmentProjectionsHandler:
                     principal_amount=total_principal,
                     yield_amount=total_yield,
                     projected_balance=total_balance,
+                    overflow_amount=total_overflow,
                 )
             )
 

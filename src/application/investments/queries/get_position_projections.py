@@ -38,6 +38,10 @@ def project_position(
 
     Proyecta sobre el valor total del apartado (capital + rendimiento
     acumulado); para interés simple usa el capital base como principal.
+
+    Un apartado con tope no crece indefinidamente: la proyección se aplana en
+    el tope y el rendimiento que ya no cabe aparece como `overflow_amount` del
+    día, que es lo que ese día se va a otro apartado o al saldo disponible.
     """
     if days <= 0:
         return []
@@ -58,6 +62,9 @@ def project_position(
             start_month=today.month,
             start_day=today.day,
             base_principal=str(base_principal) if base_principal is not None else None,
+            max_balance=str(position.max_balance)
+            if position.max_balance is not None
+            else None,
         )
     except FCInvalidDecimalError as e:
         message, field, type = e.args
@@ -90,6 +97,7 @@ def project_position(
             principal_amount=Decimal(r.principal_amount),
             yield_amount=Decimal(r.yield_amount),
             projected_balance=Decimal(r.projected_balance),
+            overflow_amount=Decimal(r.overflow_amount),
         )
         for r in rust_results
     ]
@@ -148,4 +156,8 @@ class GetPositionProjectionsHandler:
             maturity_date=position.maturity_date,
             projected_final_balance=projected_final,
             daily_projections=projections,
+            projected_overflow=sum(
+                (p.overflow_amount for p in projections), start=Decimal(0)
+            ),
+            max_balance=position.max_balance,
         )
