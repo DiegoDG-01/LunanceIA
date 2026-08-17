@@ -71,7 +71,7 @@ mcp = [
 ]
 
 typecheck = [
-    "pyrefly==0.57.1",
+    "pyrefly==1.2.0",
 ]
 
 [tool.uv]
