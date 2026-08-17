@@ -1057,6 +1057,9 @@ async def create_position(
     lock_period_end_date: str | None = None,  # ISO: YYYY-MM-DD
     early_withdrawal_penalty: float | None = None,  # % 0-100 sobre rendimientos
     on_maturity: str = "HOLD",  # AUTO_RENEW / LIQUIDATE / HOLD
+    max_balance: float | None = None,  # tope de capital (solo ON_DEMAND)
+    overflow_action: str | None = None,  # TO_AVAILABLE / TO_POSITION
+    overflow_position_uuid: str | None = None,  # destino, con TO_POSITION
 ) -> str:
     """Crea un apartado de inversión dentro de una cuenta, moviendo 'amount'
     del saldo disponible al apartado. 'position_type' es ON_DEMAND (a la vista,
@@ -1064,11 +1067,20 @@ async def create_position(
     'maturity_date' y no admite movimientos hasta vencer). 'on_maturity' define
     qué pasa al vencer un plazo: AUTO_RENEW (reinvierte), LIQUIDATE (regresa al
     disponible) o HOLD (espera decisión del usuario). El dinero apartado NO se
-    puede gastar ni transferir hasta retirarlo al disponible. IMPORTANTE: mueve
-    dinero real — muestra un resumen y pide confirmación explícita antes de crear."""
+    puede gastar ni transferir hasta retirarlo al disponible.
+
+    'max_balance' pone un tope al apartado (solo a la vista), como las SOFIPOs
+    que solo pagan su mejor tasa hasta cierto monto. Lo que ya no cabe va a
+    donde diga 'overflow_action': TO_AVAILABLE (al saldo disponible) o
+    TO_POSITION con 'overflow_position_uuid' (a otro apartado, normalmente uno
+    de menor tasa). El monto inicial no puede superar el tope. Para encadenar
+    apartados que todavía no existen, créalos primero y usa update_position.
+
+    IMPORTANTE: mueve dinero real — muestra un resumen y pide confirmación
+    explícita antes de crear."""
     if error := _validate_uuid(account_uuid, "account_uuid"):
         return error
-    body = {
+    body: dict = {
         k: v
         for k, v in {
             "account_uuid": account_uuid,
@@ -1085,7 +1097,69 @@ async def create_position(
         }.items()
         if v is not None
     }
+
+    cap = {
+        k: v
+        for k, v in {
+            "max_balance": max_balance,
+            "overflow_action": overflow_action,
+            "overflow_position_uuid": overflow_position_uuid,
+        }.items()
+        if v is not None
+    }
+    if cap:
+        body["cap"] = cap
+
     return await request_api("POST", "/positions", get_api_key(ctx), json=body)
+
+
+@mcp.tool()
+async def update_position(
+    ctx: Context,
+    position_uuid: str,
+    name: str | None = None,
+    max_balance: float | None = None,  # tope de capital
+    overflow_action: str | None = None,  # TO_AVAILABLE / TO_POSITION
+    overflow_position_uuid: str | None = None,  # destino, con TO_POSITION
+    remove_cap: bool = False,  # quita el tope por completo
+) -> str:
+    """Cambia el nombre o la configuración de tope de un apartado.
+
+    Es el único camino para encadenar apartados: el destino tiene que existir
+    antes de que otro lo apunte, así que crea los dos y después conecta el
+    primero con overflow_action=TO_POSITION y overflow_position_uuid.
+
+    Ejemplo de tramos: 'Ahorro 10%' con tope 25000 desbordando a 'Excedente 5%'
+    hace que los primeros 25,000 rindan 10% y el resto 5%.
+
+    Bajar el tope por debajo del saldo actual saca el excedente en el momento,
+    no espera al proceso diario. 'remove_cap' quita el tope y su destino.
+    IMPORTANTE: puede mover dinero real — pide confirmación antes de ejecutar."""
+    if error := _validate_uuid(position_uuid, "position_uuid"):
+        return error
+
+    body: dict = {}
+    if name is not None:
+        body["name"] = name
+
+    if remove_cap:
+        body["cap"] = None
+    else:
+        cap = {
+            k: v
+            for k, v in {
+                "max_balance": max_balance,
+                "overflow_action": overflow_action,
+                "overflow_position_uuid": overflow_position_uuid,
+            }.items()
+            if v is not None
+        }
+        if cap:
+            body["cap"] = cap
+
+    return await request_api(
+        "PATCH", f"/positions/{position_uuid}/", get_api_key(ctx), json=body
+    )
 
 
 @mcp.tool()
