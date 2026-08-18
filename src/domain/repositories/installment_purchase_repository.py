@@ -22,6 +22,13 @@ class InstallmentPurchaseRepository(ABC):
         pass
 
     @abstractmethod
+    async def get_by_initial_transaction_id(
+        self, transaction_id: int, user_id: int
+    ) -> Optional[InstallmentPurchase]:
+        """Return the installment purchase created by an initial expense."""
+        pass
+
+    @abstractmethod
     async def get_all_by_user_id(self, user_id: int) -> List[InstallmentPurchase]:
         pass
 

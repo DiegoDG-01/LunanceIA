@@ -3,11 +3,15 @@ from fastapi import Depends
 from application.transfers.commands.create_transfer import CreateTransferHandler
 from application.transfers.commands.delete_transfer import DeleteTransferHandler
 from domain.repositories.account_repository import AccountRepository
+from domain.repositories.installment_charge_repository import (
+    InstallmentChargeRepository,
+)
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.repositories.user_repository import UserRepository
 from presentation.dependencies.repositories import (
     get_account_repository,
+    get_installment_charge_repository,
     get_transaction_repository,
     get_unit_of_work_repository,
     get_user_repository,
@@ -26,6 +30,9 @@ def get_create_transfer_handler(
 def get_delete_transfer_handler(
     transaction_repo: TransactionRepository = Depends(get_transaction_repository),
     account_repo: AccountRepository = Depends(get_account_repository),
+    charge_repo: InstallmentChargeRepository = Depends(
+        get_installment_charge_repository
+    ),
     uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> DeleteTransferHandler:
-    return DeleteTransferHandler(transaction_repo, account_repo, uow)
+    return DeleteTransferHandler(transaction_repo, account_repo, charge_repo, uow)

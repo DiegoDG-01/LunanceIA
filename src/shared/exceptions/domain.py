@@ -127,6 +127,15 @@ class InvalidTransactionTypeError(ValidationError):
         super().__init__(f"Tipo de transacción inválido: {transaction_type}")
 
 
+class InstallmentTransactionModificationError(BusinessRuleError):
+    """Evita modificar movimientos que forman parte de una compra a meses."""
+
+    def __init__(self):
+        super().__init__(
+            "La transacción inicial de una compra a meses no puede editarse ni eliminarse por separado"
+        )
+
+
 class CategoryNotFoundError(NotFoundError):
     """Categoría no encontrada."""
 

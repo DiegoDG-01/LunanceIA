@@ -1,50 +1,51 @@
-from fastapi import APIRouter, Depends, Request
 from typing import cast
+
+from fastapi import APIRouter, Depends, Request
 
 from application.dto.installment_dto import CreateInstallmentPurchaseDTO
 from application.installments.commands.create_installment_purchase import (
-    CreateInstallmentPurchaseHandler,
     CreateInstallmentPurchaseCommand,
+    CreateInstallmentPurchaseHandler,
 )
 from application.installments.commands.delete_installment_purchase import (
-    DeleteInstallmentPurchaseHandler,
     DeleteInstallmentPurchaseCommand,
+    DeleteInstallmentPurchaseHandler,
 )
 from application.installments.commands.pay_installment_charge import (
-    PayInstallmentChargeHandler,
     PayInstallmentChargeCommand,
+    PayInstallmentChargeHandler,
 )
 from application.installments.commands.update_installment_purchase import (
-    UpdateInstallmentPurchaseHandler,
     UpdateInstallmentPurchaseCommand,
+    UpdateInstallmentPurchaseHandler,
 )
 from application.installments.queries.get_installment_purchases import (
     GetInstallmentPurchasesHandler,
     GetInstallmentPurchasesQuery,
 )
-from presentation.dependencies.installment_deps import (
-    get_installment_purchases_handler,
-    get_create_installment_handler,
-    get_pay_installment_charge_handler,
-    get_delete_installment_handler,
-    get_update_installment_handler,
-)
 from domain.entities.user import User
 from domain.objects.enums import APIKeyScope
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,
-    limiter_50_per_minute,
     limiter_20_per_minute,
+    limiter_50_per_minute,
 )
 from presentation.dependencies.auth_deps import require_scope
+from presentation.dependencies.installment_deps import (
+    get_create_installment_handler,
+    get_delete_installment_handler,
+    get_installment_purchases_handler,
+    get_pay_installment_charge_handler,
+    get_update_installment_handler,
+)
 from presentation.schemas.requests.installment import (
     CreateInstallmentPurchaseRequest,
     PayInstallmentChargeRequest,
     UpdateInstallmentPurchaseRequest,
 )
 from presentation.schemas.responses.installment import (
-    InstallmentPurchaseResponse,
     InstallmentChargeResponse,
+    InstallmentPurchaseResponse,
 )
 
 router = APIRouter()
@@ -109,6 +110,7 @@ async def pay_installment_charge(
     command = PayInstallmentChargeCommand(
         user_id=cast(int, current_user.id),
         charge_uuid=charge_uuid,
+        source_account_uuid=body.source_account_uuid,
         payment_date=body.payment_date,
     )
     result = await handler.handle(command)
