@@ -605,6 +605,24 @@ DELETE /api/v2/transaction/{transaction_uuid}/
 
 **Response:** `204 No Content`
 
+#### ⚠️ Movimientos que no se editan ni se eliminan por aquí
+
+Editar o eliminar una transacción suelta solo aplica a ingresos y gastos capturados
+directamente. Hay dos casos que este endpoint rechaza a propósito, porque tocarlos por
+separado descuadraría los saldos:
+
+| Movimiento | `PUT` | `DELETE` | Camino correcto |
+|-----------|-------|----------|-----------------|
+| Cualquier `TRANSFER` | `400 INVALID_TRANSACTION_TYPE` | `400 INVALID_TRANSACTION_TYPE` | `DELETE /transfers/{transfer_uuid}/` y volver a crearla |
+| Gasto inicial de una compra a meses | `409 INSTALLMENT_TRANSACTION_LOCKED` | `409 INSTALLMENT_TRANSACTION_LOCKED` | `PATCH` o `DELETE` sobre la compra en `/installments/` |
+
+Una transferencia son **dos movimientos** con el mismo `transfer_uuid`; editar uno solo
+dejaría la contraparte con otro monto. Por eso `PUT` la rechaza aunque antes la aceptara.
+
+El gasto inicial de una compra a meses se reconoce en el listado porque su `description`
+empieza con `"Compra a meses: "`. Si el usuario intenta borrarlo, lo que quiere en realidad
+es cancelar la compra completa.
+
 ### 🏷️ Categorías - `/api/v2/category/`
 
 #### Listar Categorías
@@ -1490,6 +1508,28 @@ DELETE /api/v2/goals/{goal_uuid}/
 
 La lectura requiere scope `installments:read`; crear, pagar, editar y eliminar requieren `installments:write`.
 
+#### Cómo se contabiliza una compra a meses
+
+Una compra a meses genera movimientos reales en el historial, no solo un registro aparte:
+
+```
+Crear compra de 24,000 a 12 meses
+  └─ EXPENSE de 24,000 en la TDC        ← el gasto ocurre una sola vez, el día de la compra
+
+Pagar la cuota 1 (2,000)
+  └─ TRANSFER de 2,000: cuenta de ahorro ──▶ TDC
+       · sale del disponible de la cuenta origen
+       · libera 2,000 de crédito en la TDC
+```
+
+Dos consecuencias que conviene tener claras:
+
+- **El gasto se registra completo el día de la compra**, no repartido mes con mes. Los
+  reportes por categoría y los presupuestos ven los 24,000 en el mes de la compra, que es
+  como funciona una tarjeta de crédito en la vida real.
+- **Pagar una cuota no es un ingreso.** Es un movimiento entre cuentas propias, así que no
+  infla los ingresos del mes. (Antes sí lo hacía: los pagos se registraban como `INCOME`.)
+
 #### Listar Compras a Plazos
 ```bash
 GET /api/v2/installments/
@@ -1519,6 +1559,14 @@ POST /api/v2/installments/
 
 `num_installments` admite valores de 2 a 48; `annual_interest_rate` es 0 si es a meses sin intereses.
 
+`account_uuid` **debe ser una tarjeta de crédito** (`400 VALIDATION_ERROR` si no lo es).
+
+Además de la compra y sus cargos, la llamada crea un `EXPENSE` por `total_amount` en esa
+tarjeta, con la `category_id` y las `notes` que mandaste y descripción
+`"Compra a meses: {description}"`. Ese movimiento queda enlazado a la compra y **no se
+puede editar ni eliminar por separado** desde `/api/v2/transaction/`; devuelve
+`409 INSTALLMENT_TRANSACTION_LOCKED`.
+
 #### Pagar un Cargo
 ```bash
 POST /api/v2/installments/{charge_uuid}/pay/
@@ -1527,11 +1575,32 @@ POST /api/v2/installments/{charge_uuid}/pay/
 **Request:**
 ```json
 {
+  "source_account_uuid": "550e8400-e29b-41d4-a716-446655440001",
   "payment_date": "2026-08-15"
 }
 ```
 
+`source_account_uuid` identifica la cuenta de ahorro, débito o efectivo desde la
+que sale el dinero. El pago crea una transferencia entre esa cuenta y la tarjeta
+de crédito; no se contabiliza como ingreso.
+
+Los dos movimientos que se generan comparten `transfer_uuid` y llevan descripción
+`"Pago de cuota {compra} (3/12) a {tarjeta}"` y `"... desde {cuenta origen}"`.
+
+**Errores posibles:**
+
+| Código | HTTP | Cuándo |
+|--------|------|--------|
+| `NOT_FOUND` | 404 | El cargo no existe o no es del usuario |
+| `NOT_FOUND_ACCOUNT` | 404 | `source_account_uuid` no existe o no es del usuario |
+| `INSTALLMENT_CHARGE_ALREADY_PAID` | 409 | Ese cargo ya se pagó |
+| `SAME_ACCOUNT_TRANSFER` | 409 | La cuenta origen es la misma tarjeta de la compra |
+| `TRANSFER_ACCOUNT_TYPE_NOT_ALLOWED` | 409 | Se intentó pagar desde otra tarjeta de crédito |
+| `INSUFFICIENT_FUNDS` | 422 | La cuenta origen no tiene saldo disponible suficiente |
+
 **Response:** el cargo actualizado (`uuid`, `installment_number`, `amount`, `due_date`, `paid`, `paid_at`).
+
+Cuando se paga el último cargo, la compra pasa a `is_active: false` sola.
 
 #### Actualizar Compra a Plazos
 ```bash
@@ -1540,10 +1609,24 @@ PATCH /api/v2/installments/{purchase_uuid}/
 
 **Request:** todos los campos son opcionales (`description`, `notes`, `category_id`).
 
+> Cambia únicamente el registro de la compra. **El gasto inicial en la tarjeta conserva su
+> descripción y su categoría originales**, así que después de un `PATCH` los dos pueden no
+> coincidir en el historial de movimientos.
+
 #### Eliminar Compra a Plazos
 ```bash
 DELETE /api/v2/installments/{purchase_uuid}/
 ```
+
+Revierte toda la contabilidad de la compra en una sola operación:
+
+- Borra el `EXPENSE` inicial y devuelve su monto al crédito disponible de la tarjeta.
+- Borra las **dos patas** de la transferencia de cada cuota ya pagada, regresando el dinero
+  a la cuenta origen y quitándole a la tarjeta el crédito que ese pago había liberado.
+- Borra los cargos y la compra.
+
+Los saldos de todas las cuentas involucradas cambian, no solo el de la tarjeta: conviene
+refrescar la lista de cuentas después de eliminar, no únicamente la TDC.
 
 **Response:** `204 No Content`
 
@@ -1570,12 +1653,23 @@ POST /api/v2/transfers/
 
 `description`, `notes` y `transfer_date` son opcionales.
 
+La cuenta origen no puede ser una tarjeta de crédito (`409 TRANSFER_ACCOUNT_TYPE_NOT_ALLOWED`)
+ni la misma que el destino (`409 SAME_ACCOUNT_TRANSFER`), y necesita saldo disponible
+suficiente (`422 INSUFFICIENT_FUNDS`).
+
 **Response:** `201 Created` con `transfer_uuid`, `amount`, `transfer_date`, `description`, `source_account_name`, `source_account_uuid`, `destination_account_name`, `destination_account_uuid` y `creation_date`.
 
 #### Eliminar Transferencia
 ```bash
 DELETE /api/v2/transfers/{transfer_uuid}/
 ```
+
+Borra los dos movimientos y revierte ambos saldos.
+
+> **No se pueden borrar las transferencias generadas por el pago de una cuota.** Devuelven
+> `409 TRANSFER_NOT_ALLOWED`: esa transferencia es la que marca el cargo como pagado, y
+> borrarla dejaría la cuota en un estado inconsistente. Para deshacerla hay que eliminar la
+> compra a meses completa.
 
 **Response:** `204 No Content`
 
@@ -1802,6 +1896,14 @@ La API retorna errores en un formato estándar con soporte de internacionalizaci
 - `BUSINESS_ACCOUNT_HAS_TRANSACTIONS` (409): Cuenta tiene transacciones
 - `BUSINESS_RULE_VIOLATION` (400): Violación de regla de negocio genérica
 - `INSUFFICIENT_FUNDS` (422): Fondos insuficientes (en apartados se compara siempre contra el **saldo disponible**, no contra el total de la cuenta)
+
+**Códigos de transferencias y compras a plazos:**
+- `SAME_ACCOUNT_TRANSFER` (409): La cuenta origen y la destino son la misma
+- `TRANSFER_ACCOUNT_TYPE_NOT_ALLOWED` (409): Una tarjeta de crédito no puede ser el origen de una transferencia
+- `TRANSFER_NOT_ALLOWED` (409): La transferencia pertenece al pago de una cuota; hay que eliminar la compra a meses
+- `INSTALLMENT_CHARGE_ALREADY_PAID` (409): El cargo ya fue pagado
+- `INSTALLMENT_TRANSACTION_LOCKED` (409): El movimiento es el gasto inicial de una compra a meses; se edita o elimina desde la compra
+- `INVALID_TRANSACTION_TYPE` (400): Se intentó editar o eliminar una transferencia con los endpoints de transacción
 
 **Códigos de apartados de inversión:**
 - `NOT_FOUND_INVESTMENT_POSITION` (404): Apartado no encontrado
