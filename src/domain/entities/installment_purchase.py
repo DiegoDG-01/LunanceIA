@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-from datetime import datetime, date, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Optional
 
 from domain.objects.enums import InstallmentType
 from domain.objects.money import Money
@@ -9,11 +8,11 @@ from domain.objects.money import Money
 
 @dataclass
 class InstallmentPurchase:
-    id: Optional[int]
-    uuid: Optional[str]
+    id: int | None
+    uuid: str | None
     user_id: int
     account_id: int
-    category_id: Optional[int]
+    category_id: int | None
     description: str
     total_amount: Money
     num_installments: int
@@ -21,23 +20,24 @@ class InstallmentPurchase:
     annual_interest_rate: Decimal
     monthly_payment: Decimal
     purchase_date: date
-    notes: Optional[str]
+    notes: str | None
     is_active: bool
     creation_date: datetime
+    initial_transaction_id: int | None = None
 
     @classmethod
     def create_new(
         cls,
         user_id: int,
         account_id: int,
-        category_id: Optional[int],
+        category_id: int | None,
         description: str,
         total_amount: Money,
         num_installments: int,
         installment_type: InstallmentType,
         annual_interest_rate: Decimal,
         purchase_date: date,
-        notes: Optional[str] = None,
+        notes: str | None = None,
     ) -> "InstallmentPurchase":
         monthly_payment = cls._calculate_monthly_payment(
             total_amount.amount,
@@ -60,7 +60,8 @@ class InstallmentPurchase:
             purchase_date=purchase_date,
             notes=notes,
             is_active=True,
-            creation_date=datetime.now(timezone.utc),
+            creation_date=datetime.now(UTC),
+            initial_transaction_id=None,
         )
 
     @staticmethod
@@ -73,7 +74,7 @@ class InstallmentPurchase:
         if installment_type == InstallmentType.NO_INTEREST or annual_rate == 0:
             return round(principal / n, 2)
 
-        monthly_rate = annual_rate / Decimal("12") / Decimal("100")
+        monthly_rate = annual_rate / Decimal(12) / Decimal(100)
         payment = (
             principal
             * (monthly_rate * (1 + monthly_rate) ** n)

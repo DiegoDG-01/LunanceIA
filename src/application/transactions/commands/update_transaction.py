@@ -9,9 +9,13 @@ from shared.exceptions.domain import (
     TransactionNotFoundError,
     AccountNotFoundError,
     InvalidTransactionTypeError,
+    InstallmentTransactionModificationError,
 )
 from application.dto.transaction_dto import TransactionResponseDTO
 from domain.repositories.account_repository import AccountRepository
+from domain.repositories.installment_purchase_repository import (
+    InstallmentPurchaseRepository,
+)
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 
@@ -34,10 +38,12 @@ class UpdateTransactionCommandHandler:
         self,
         transaction_repository: TransactionRepository,
         account_repository: AccountRepository,
+        installment_purchase_repository: InstallmentPurchaseRepository,
         uow: AbstractUnitOfWork,
     ):
         self.transaction_repository = transaction_repository
         self.account_repository = account_repository
+        self.installment_purchase_repository = installment_purchase_repository
         self.uow = uow
 
     async def handle(self, command: UpdateTransactionCommand) -> TransactionResponseDTO:
@@ -48,6 +54,17 @@ class UpdateTransactionCommandHandler:
             )
             if not transaction:
                 raise TransactionNotFoundError(command.transaction_uuid)
+
+            purchase = await self.installment_purchase_repository.get_by_initial_transaction_id(
+                transaction.id, command.user_id
+            )
+            if purchase:
+                raise InstallmentTransactionModificationError()
+
+            # Una transferencia se compone de dos movimientos y debe editarse
+            # mediante su caso de uso específico para no desbalancear cuentas.
+            if transaction.is_transfer():
+                raise InvalidTransactionTypeError(transaction.transaction_type.value)
 
             source_account_id = transaction.account_id
             destination_account_id = source_account_id

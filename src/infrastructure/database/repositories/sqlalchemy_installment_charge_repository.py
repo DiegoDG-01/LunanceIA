@@ -61,6 +61,16 @@ class SQLAlchemyInstallmentChargeRepository(InstallmentChargeRepository):
         model = result.scalar_one_or_none()
         return self._model_to_entity(model) if model else None
 
+    async def get_by_transaction_id(
+        self, transaction_id: int
+    ) -> Optional[InstallmentCharge]:
+        stmt = select(InstallmentChargeModel).where(
+            InstallmentChargeModel.transaction_id == transaction_id
+        )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
+        return self._model_to_entity(model) if model else None
+
     async def get_by_purchase_id(
         self, purchase_id: int, *, for_update: bool = False
     ) -> List[InstallmentCharge]:

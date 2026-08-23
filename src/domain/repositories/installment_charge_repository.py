@@ -18,6 +18,13 @@ class InstallmentChargeRepository(ABC):
         pass
 
     @abstractmethod
+    async def get_by_transaction_id(
+        self, transaction_id: int
+    ) -> Optional[InstallmentCharge]:
+        """Return the installment charge paid by a transaction, if any."""
+        pass
+
+    @abstractmethod
     async def get_by_purchase_id(
         self, purchase_id: int, *, for_update: bool = False
     ) -> List[InstallmentCharge]:

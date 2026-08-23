@@ -2,12 +2,16 @@ from dataclasses import dataclass
 
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.account_repository import AccountRepository
+from domain.repositories.installment_purchase_repository import (
+    InstallmentPurchaseRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 
 from shared.exceptions.domain import (
     TransactionNotFoundError,
     AccountNotFoundError,
     InvalidTransactionTypeError,
+    InstallmentTransactionModificationError,
 )
 
 
@@ -22,10 +26,12 @@ class DeleteTransactionHandler:
         self,
         transaction_repository: TransactionRepository,
         account_repository: AccountRepository,
+        installment_purchase_repository: InstallmentPurchaseRepository,
         uow: AbstractUnitOfWork,
     ):
         self.transaction_repository = transaction_repository
         self.account_repository = account_repository
+        self.installment_purchase_repository = installment_purchase_repository
         self.uow = uow
 
     async def handle(self, command: DeleteTransactionCommand):
@@ -36,6 +42,12 @@ class DeleteTransactionHandler:
 
             if not transaction:
                 raise TransactionNotFoundError(command.uuid)
+
+            purchase = await self.installment_purchase_repository.get_by_initial_transaction_id(
+                transaction.id, command.user_id
+            )
+            if purchase:
+                raise InstallmentTransactionModificationError()
 
             account = await self.account_repository.get_by_id(
                 transaction.account_id, for_update=True

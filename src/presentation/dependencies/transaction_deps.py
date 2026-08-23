@@ -14,6 +14,9 @@ from application.transactions.queries.get_transaction_by_uuid import (
     GetTransactionByUuidHandler,
 )
 from domain.repositories.account_repository import AccountRepository
+from domain.repositories.installment_purchase_repository import (
+    InstallmentPurchaseRepository,
+)
 from domain.repositories.transaction_repository import TransactionRepository
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
@@ -34,6 +37,7 @@ from domain.repositories.unit_of_work import AbstractUnitOfWork
 
 from presentation.dependencies.repositories import (
     get_account_repository,
+    get_installment_purchase_repository,
     get_user_repository,
     get_transaction_repository,
     get_category_repository,
@@ -79,10 +83,13 @@ def get_create_transaction_handler(
 def get_update_transaction_handler(
     transaction_repository: TransactionRepository = Depends(get_transaction_repository),
     account_repository: AccountRepository = Depends(get_account_repository),
+    installment_purchase_repository: InstallmentPurchaseRepository = Depends(
+        get_installment_purchase_repository
+    ),
     uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> UpdateTransactionCommandHandler:
     return UpdateTransactionCommandHandler(
-        transaction_repository, account_repository, uow
+        transaction_repository, account_repository, installment_purchase_repository, uow
     )
 
 
@@ -91,6 +98,9 @@ def get_delete_transaction_handler(
         get_transaction_repository
     ),
     account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
+    purchase_repo: InstallmentPurchaseRepository = Depends(
+        get_installment_purchase_repository
+    ),
     uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> DeleteTransactionHandler:
-    return DeleteTransactionHandler(transaction_repo, account_repo, uow)
+    return DeleteTransactionHandler(transaction_repo, account_repo, purchase_repo, uow)

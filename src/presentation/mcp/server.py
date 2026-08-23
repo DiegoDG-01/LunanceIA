@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from mcp.server.fastmcp import FastMCP, Context
+from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
 from presentation.mcp.client import get_api_key, request_api
@@ -974,17 +974,19 @@ async def update_installment(
 
 @mcp.tool()
 async def pay_installment_charge(
-    ctx: Context, charge_uuid: str, payment_date: str
+    ctx: Context, charge_uuid: str, source_account_uuid: str, payment_date: str
 ) -> str:
-    """Paga una cuota específica de una compra a meses. Crea la transacción y
-    descuenta el balance de la cuenta. payment_date en YYYY-MM-DD."""
+    """Paga una cuota moviendo dinero de la cuenta indicada hacia la TDC. Crea
+    una transferencia enlazada entre ambas cuentas. payment_date en YYYY-MM-DD."""
     if error := _validate_uuid(charge_uuid, "charge_uuid"):
+        return error
+    if error := _validate_uuid(source_account_uuid, "source_account_uuid"):
         return error
     return await request_api(
         "POST",
         f"/installments/{charge_uuid}/pay/",
         get_api_key(ctx),
-        json={"payment_date": payment_date},
+        json={"source_account_uuid": source_account_uuid, "payment_date": payment_date},
     )
 
 
