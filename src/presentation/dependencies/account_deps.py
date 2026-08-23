@@ -25,9 +25,6 @@ from infrastructure.database.repositories.sqlalchemy_transaction_repository impo
 from infrastructure.database.repositories.sqlalchemy_credit_card_repository import (
     SQLAlchemyCreditCardSettingsRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_investment_card_repository import (
-    SQLAlchemyInvestmentSettingsRepository,
-)
 
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from presentation.dependencies.repositories import (
@@ -35,7 +32,6 @@ from presentation.dependencies.repositories import (
     get_user_repository,
     get_transaction_repository,
     get_credit_card_settings_repository,
-    get_investment_settings_repository,
     get_bank_repository,
     get_unit_of_work_repository,
 )
@@ -48,9 +44,6 @@ def get_create_account_handler(
     cc_settings_repo: SQLAlchemyCreditCardSettingsRepository = Depends(
         get_credit_card_settings_repository
     ),
-    investment_settings_repo: SQLAlchemyInvestmentSettingsRepository = Depends(
-        get_investment_settings_repository
-    ),
     bank_repo: SQLAlchemyBankRepository = Depends(get_bank_repository),
     uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> CreateAccountHandler:
@@ -58,7 +51,6 @@ def get_create_account_handler(
         account_repo,
         user_repo,
         cc_settings_repo,
-        investment_settings_repo,
         bank_repo,
         uow,
     )
@@ -70,14 +62,9 @@ def get_update_account_handler(
     credit_card_repo: SQLAlchemyCreditCardSettingsRepository = Depends(
         get_credit_card_settings_repository
     ),
-    investment_card_repo: SQLAlchemyInvestmentSettingsRepository = Depends(
-        get_investment_settings_repository
-    ),
     uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> UpdateAccountHandler:
-    return UpdateAccountHandler(
-        account_repo, bank_repo, credit_card_repo, investment_card_repo, uow
-    )
+    return UpdateAccountHandler(account_repo, bank_repo, credit_card_repo, uow)
 
 
 def get_delete_account_handler(

@@ -37,7 +37,6 @@ class TestGetUserAccountsHandler:
         account.bank_name = "BBVA"
         account.bank_code = "BBV"
         account.credit_card_settings = None
-        account.investment_settings = None
         return account
 
     @pytest.mark.asyncio
@@ -70,7 +69,9 @@ class TestGetUserAccountsHandler:
         mock_account_repo.get_by_user_id.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_returns_empty_list_when_no_accounts(self, handler, mock_account_repo):
+    async def test_returns_empty_list_when_no_accounts(
+        self, handler, mock_account_repo
+    ):
         mock_account_repo.get_by_user_id = AsyncMock(return_value=[])
 
         query = GetUserAccountsQuery(user_id=1)

@@ -26,6 +26,7 @@ class SQLAlchemyInvestmentYieldRepository(InvestmentYieldRepository):
             annual_rate=model.annual_rate,
             interest_type=model.interest_type,
             created_at=model.created_at,
+            position_id=model.position_id,
         )
 
     @staticmethod
@@ -41,6 +42,7 @@ class SQLAlchemyInvestmentYieldRepository(InvestmentYieldRepository):
             annual_rate=entity.annual_rate,
             interest_type=entity.interest_type,
             created_at=entity.created_at,
+            position_id=entity.position_id,
         )
 
     async def create(self, yield_record: InvestmentYield) -> InvestmentYield:
@@ -88,6 +90,33 @@ class SQLAlchemyInvestmentYieldRepository(InvestmentYieldRepository):
             .where(InvestmentYieldModel.account_id == account_id)
             .order_by(asc(InvestmentYieldModel.yield_date))
             .limit(1)
+        )
+        result = await self.db.execute(stmt)
+        model = result.scalars().one_or_none()
+        return self._model_to_entity(model) if model else None
+
+    async def get_by_position_id(
+        self, position_id: int, limit: int = 365, offset: int = 0
+    ) -> List[InvestmentYield]:
+        stmt = (
+            select(InvestmentYieldModel)
+            .where(InvestmentYieldModel.position_id == position_id)
+            .order_by(desc(InvestmentYieldModel.yield_date))
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self.db.execute(stmt)
+        models = result.scalars().all()
+        return [self._model_to_entity(model) for model in models]
+
+    async def get_by_position_and_date(
+        self, position_id: int, yield_date: date
+    ) -> Optional[InvestmentYield]:
+        stmt = select(InvestmentYieldModel).where(
+            and_(
+                InvestmentYieldModel.position_id == position_id,
+                InvestmentYieldModel.yield_date == yield_date,
+            )
         )
         result = await self.db.execute(stmt)
         model = result.scalars().one_or_none()

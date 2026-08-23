@@ -9,6 +9,7 @@ from presentation.api.v2.endpoints import (
     subscription,
     bank,
     investment_yield,
+    investment_position,
     ai,
     notification,
     installment,
@@ -34,6 +35,9 @@ api_router.include_router(
 api_router.include_router(bank.router, prefix="/bank", tags=["bank"])
 api_router.include_router(
     investment_yield.router, prefix="/investments", tags=["Investment Yield"]
+)
+api_router.include_router(
+    investment_position.router, prefix="/positions", tags=["Investment Positions"]
 )
 api_router.include_router(ai.router, prefix="/ai", tags=["AI"])
 api_router.include_router(

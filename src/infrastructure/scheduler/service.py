@@ -6,6 +6,7 @@ from pytz import utc
 from infrastructure.scheduler.jobs import (
     process_subscriptions_job,
     process_investment_yield_job,
+    process_position_maturity_job,
     process_recurring_income_job,
 )
 
@@ -30,6 +31,16 @@ class SchedulerService:
             trigger=CronTrigger(hour=12, minute=0),
             id="process_investment_yield_job",
             name="Process investment yield job",
+            replace_existing=True,
+        )
+
+        # Corre después del job de rendimientos: el día del vencimiento
+        # todavía rinde y este job entrega el rendimiento completo.
+        self.scheduler.add_job(
+            process_position_maturity_job,
+            trigger=CronTrigger(hour=12, minute=30),
+            id="process_position_maturity_job",
+            name="Process matured investment positions",
             replace_existing=True,
         )
 

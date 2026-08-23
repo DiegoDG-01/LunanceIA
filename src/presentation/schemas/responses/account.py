@@ -3,7 +3,7 @@ from decimal import Decimal
 from datetime import datetime, date
 from typing import Optional
 
-from domain.objects.enums import AccountType, InterestType, TransactionType
+from domain.objects.enums import AccountType, TransactionType
 
 
 class CreditCardSettingsResponse(BaseModel):
@@ -13,19 +13,6 @@ class CreditCardSettingsResponse(BaseModel):
     minimum_payment_percentage: Optional[Decimal] = Field(
         None, description="Percentage de credito"
     )
-
-    class Config:
-        from_attributes = True
-        json_encoders = {Decimal: str}
-
-
-class InvestmentSettingsResponse(BaseModel):
-    investment_type: str
-    investment_rate: Decimal
-    lock_period_end_date: Optional[date]
-    maturity_date: Optional[date]
-    early_withdrawal_penalty: Optional[Decimal]
-    interest_type: InterestType = InterestType.COMPOUND
 
     class Config:
         from_attributes = True
@@ -45,7 +32,6 @@ class AccountResponse(BaseModel):
     currency: str = Field(..., description="Moneda")
     is_active: bool = Field(..., description="Estado de la cuenta")
     credit_card_settings: Optional[CreditCardSettingsResponse] = None
-    investment_settings: Optional[InvestmentSettingsResponse] = None
 
     class Config:
         from_attributes = True

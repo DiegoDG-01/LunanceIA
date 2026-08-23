@@ -15,15 +15,6 @@ class CreditCardSettingsDTO:
 
 
 @dataclass
-class InvestmentCardSettingsDTO:
-    investment_type: str
-    investment_rate: Decimal
-    lock_period_end_date: Optional[date] = None
-    maturity_date: Optional[date] = None
-    early_withdrawal_penalty: Optional[Decimal] = None
-
-
-@dataclass
 class CreateAccountDTO:
     """
     Data Transfer Object for creating an account
@@ -36,7 +27,6 @@ class CreateAccountDTO:
     initial_balance: Decimal = Decimal("0.00")
     currency: str = "MXN"
     credit_card_settings: Optional[CreditCardSettingsDTO] = None
-    investment_settings: Optional[InvestmentCardSettingsDTO] = None
 
 
 @dataclass
@@ -51,7 +41,6 @@ class UpdateAccountDTO:
     name: Optional[str] = None
     current_balance: Optional[Decimal] = None
     credit_card_settings: Optional[CreditCardSettingsDTO] = None
-    investment_settings: Optional[InvestmentCardSettingsDTO] = None
 
 
 @dataclass
@@ -66,7 +55,6 @@ class AccountResponseDTO:
     bank_name: Optional[str]
     bank_code: Optional[str]
     credit_card_settings: Optional[CreditCardSettingsDTO] = None
-    investment_settings: Optional[InvestmentCardSettingsDTO] = None
 
 
 @dataclass

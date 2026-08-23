@@ -1,6 +1,9 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
-from application.accounts.commands.create_account import CreateAccountCommand, CreateAccountHandler
+from application.accounts.commands.create_account import (
+    CreateAccountCommand,
+    CreateAccountHandler,
+)
 from application.dto.account_dto import CreateAccountDTO
 from domain.entities.user import User
 from domain.entities.account import Account
@@ -26,10 +29,6 @@ class TestCreateAccountHandler:
         return MagicMock()
 
     @pytest.fixture
-    def mock_investment_repo(self):
-        return MagicMock()
-
-    @pytest.fixture
     def mock_bank_repo(self):
         return MagicMock()
 
@@ -41,22 +40,37 @@ class TestCreateAccountHandler:
         return uow
 
     @pytest.fixture
-    def handler(self, mock_account_repo, mock_user_repo, mock_credit_card_repo, mock_investment_repo, mock_bank_repo, mock_uow):
+    def handler(
+        self,
+        mock_account_repo,
+        mock_user_repo,
+        mock_credit_card_repo,
+        mock_bank_repo,
+        mock_uow,
+    ):
         return CreateAccountHandler(
             mock_account_repo,
             mock_user_repo,
             mock_credit_card_repo,
-            mock_investment_repo,
             mock_bank_repo,
             mock_uow,
         )
 
     @pytest.mark.asyncio
-    async def test_handle_success_with_bank(self, handler, mock_account_repo, mock_user_repo, mock_bank_repo):
+    async def test_handle_success_with_bank(
+        self, handler, mock_account_repo, mock_user_repo, mock_bank_repo
+    ):
         # 1. Setup Mocks
         user_id = 1
         bank_id = 1
-        mock_user = User(id=user_id, uuid="u-1", auth0_id="a-1", name="Test", email="t@t.com", is_active=True)
+        mock_user = User(
+            id=user_id,
+            uuid="u-1",
+            auth0_id="a-1",
+            name="Test",
+            email="t@t.com",
+            is_active=True,
+        )
         mock_user_repo.get_by_id = AsyncMock(return_value=mock_user)
 
         mock_bank = Bank(id=bank_id, name="BBVA", code="BBV", country="MX")
@@ -81,7 +95,7 @@ class TestCreateAccountHandler:
             account_type=AccountType.SAVINGS,
             bank_id=bank_id,
             initial_balance=Decimal("100.00"),
-            currency="MXN"
+            currency="MXN",
         )
         command = CreateAccountCommand(dto=dto)
         result = await handler.handle(command)
@@ -107,7 +121,7 @@ class TestCreateAccountHandler:
             account_type=AccountType.CASH,
             bank_id=1,
             initial_balance=Decimal("0"),
-            currency="MXN"
+            currency="MXN",
         )
         command = CreateAccountCommand(dto=dto)
 
@@ -117,7 +131,9 @@ class TestCreateAccountHandler:
     @pytest.mark.asyncio
     async def test_handle_user_inactive_fails(self, handler, mock_user_repo):
         # 1. Setup Mock with inactive user
-        mock_user = User(id=1, uuid="u-1", auth0_id="a-1", name="T", email="t@t.com", is_active=False)
+        mock_user = User(
+            id=1, uuid="u-1", auth0_id="a-1", name="T", email="t@t.com", is_active=False
+        )
         mock_user_repo.get_by_id = AsyncMock(return_value=mock_user)
 
         # 2. Execute & Assert
@@ -127,7 +143,7 @@ class TestCreateAccountHandler:
             account_type=AccountType.CASH,
             bank_id=1,
             initial_balance=Decimal("0"),
-            currency="MXN"
+            currency="MXN",
         )
         command = CreateAccountCommand(dto=dto)
 

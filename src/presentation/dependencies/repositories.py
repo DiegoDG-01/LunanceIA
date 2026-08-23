@@ -41,9 +41,6 @@ from infrastructure.database.repositories.sqlalchemy_income_deposit_repository i
 from infrastructure.database.repositories.sqlalchemy_credit_card_repository import (
     SQLAlchemyCreditCardSettingsRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_investment_card_repository import (
-    SQLAlchemyInvestmentSettingsRepository,
-)
 from infrastructure.database.repositories.sqlalchemy_notification_repository import (
     SQLAlchemyNotificationRepository,
 )
@@ -110,12 +107,6 @@ def get_credit_card_settings_repository(
     db: AsyncSession = Depends(get_db),
 ) -> SQLAlchemyCreditCardSettingsRepository:
     return SQLAlchemyCreditCardSettingsRepository(db)
-
-
-def get_investment_settings_repository(
-    db: AsyncSession = Depends(get_db),
-) -> SQLAlchemyInvestmentSettingsRepository:
-    return SQLAlchemyInvestmentSettingsRepository(db)
 
 
 def get_auth_token_repository(

@@ -25,6 +25,9 @@ from infrastructure.database.repositories.sqlalchemy_account_repository import (
 from infrastructure.database.repositories.sqlalchemy_investment_yield_repository import (
     SQLAlchemyInvestmentYieldRepository,
 )
+from infrastructure.database.repositories.sqlalchemy_investment_position_repository import (
+    SQLAlchemyInvestmentPositionRepository,
+)
 from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
     SQLAlchemyUnitOfWork,
 )
@@ -32,6 +35,11 @@ from application.investments.commands.generate_daily_yields import (
     GenerateDailyYieldCommand,
     GenerateDailyYieldHandler,
 )
+from application.investments.commands.process_matured_positions import (
+    ProcessMaturedPositionsCommand,
+    ProcessMaturedPositionsHandler,
+)
+from application.investments.services.position_overflow import PositionOverflowService
 
 from infrastructure.database.repositories.sqlalchemy_income_deposit_repository import (
     SQLAlchemyIncomeDepositRepository,
@@ -81,17 +89,20 @@ async def process_investment_yield_job():
 
     async with AsyncSessionLocal() as db:
         try:
-            account_repo = SQLAlchemyAccountRepository(db)
+            position_repo = SQLAlchemyInvestmentPositionRepository(db)
             yield_repo = SQLAlchemyInvestmentYieldRepository(db)
+            account_repo = SQLAlchemyAccountRepository(db)
             transaction_repo = SQLAlchemyTransactionRepository(db)
-            notification_repo = SQLAlchemyNotificationRepository(db)
 
             uow = SQLAlchemyUnitOfWork(db)
             handler = GenerateDailyYieldHandler(
-                account_repository=account_repo,
+                position_repository=position_repo,
                 investment_yield_repository=yield_repo,
+                account_repository=account_repo,
                 transaction_repository=transaction_repo,
-                notification_repository=notification_repo,
+                overflow_service=PositionOverflowService(
+                    position_repository=position_repo
+                ),
                 uow=uow,
             )
 
@@ -105,6 +116,38 @@ async def process_investment_yield_job():
         except Exception as e:
             await db.rollback()
             logger.error(f"Error processing investment yield job: {e}")
+
+
+async def process_position_maturity_job():
+    """Procesa plazos fijos vencidos; corre después del job de rendimientos."""
+    logger.info(f"Processing position maturity job at {datetime.now(timezone.utc)}")
+
+    async with AsyncSessionLocal() as db:
+        try:
+            position_repo = SQLAlchemyInvestmentPositionRepository(db)
+            account_repo = SQLAlchemyAccountRepository(db)
+            transaction_repo = SQLAlchemyTransactionRepository(db)
+            notification_repo = SQLAlchemyNotificationRepository(db)
+
+            uow = SQLAlchemyUnitOfWork(db)
+            handler = ProcessMaturedPositionsHandler(
+                position_repository=position_repo,
+                account_repository=account_repo,
+                transaction_repository=transaction_repo,
+                notification_repository=notification_repo,
+                uow=uow,
+            )
+
+            stats = await handler.handle(
+                ProcessMaturedPositionsCommand(target_date=date.today())
+            )
+
+            logger.info(
+                f"Job finished at {datetime.now(timezone.utc)} with stats: {stats}"
+            )
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Error processing position maturity job: {e}")
 
 
 async def process_recurring_income_job():

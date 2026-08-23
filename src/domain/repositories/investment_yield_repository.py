@@ -28,3 +28,15 @@ class InvestmentYieldRepository(ABC):
         account_id: int,
     ) -> Optional[InvestmentYield]:
         pass
+
+    @abstractmethod
+    async def get_by_position_id(
+        self, position_id: int, limit: int = 365, offset: int = 0
+    ) -> List[InvestmentYield]:
+        pass
+
+    @abstractmethod
+    async def get_by_position_and_date(
+        self, position_id: int, yield_date: date
+    ) -> Optional[InvestmentYield]:
+        pass

@@ -5,7 +5,6 @@ from domain.repositories.account_repository import AccountRepository
 from application.dto.account_dto import (
     AccountResponseDTO,
     CreditCardSettingsDTO,
-    InvestmentCardSettingsDTO,
 )
 
 
@@ -46,7 +45,6 @@ class GetUserAccountsHandler:
         result = []
         for account in accounts:
             cc_settings_dto = None
-            inv_settings_dto = None
 
             if account.credit_card_settings:
                 cc_settings_dto = CreditCardSettingsDTO(
@@ -54,15 +52,6 @@ class GetUserAccountsHandler:
                     payment_due_day=account.credit_card_settings.payment_due_day,
                     credit_limit=account.credit_card_settings.credit_limit,
                     minimum_payment_percentage=account.credit_card_settings.minimum_payment_percentage,
-                )
-
-            if account.investment_settings:
-                inv_settings_dto = InvestmentCardSettingsDTO(
-                    investment_type=account.investment_settings.investment_type,
-                    investment_rate=account.investment_settings.investment_rate,
-                    lock_period_end_date=account.investment_settings.lock_period_end_date,
-                    maturity_date=account.investment_settings.maturity_date,
-                    early_withdrawal_penalty=account.investment_settings.early_withdrawal_penalty,
                 )
 
             result.append(
@@ -77,7 +66,6 @@ class GetUserAccountsHandler:
                     currency=account.current_balance.currency,
                     is_active=account.is_active,
                     credit_card_settings=cc_settings_dto,
-                    investment_settings=inv_settings_dto,
                 )
             )
         return result

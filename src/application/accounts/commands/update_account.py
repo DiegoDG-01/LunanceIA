@@ -4,13 +4,9 @@ from typing import cast
 from domain.repositories.account_repository import AccountRepository
 from domain.objects.money import Money
 from domain.objects.credit_card_settings import CreditCardSettings
-from domain.objects.investment_settings import InvestmentCardSettings
 from application.dto.account_dto import UpdateAccountDTO, AccountResponseDTO
 from domain.repositories.bank_repository import BankRepository
 from domain.repositories.credit_card_repository import CreditCardSettingsRepository
-from domain.repositories.investment_card_repository import (
-    InvestmentCardSettingsRepository,
-)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.exceptions.domain import AccountNotFoundError
 
@@ -30,13 +26,11 @@ class UpdateAccountHandler:
         account_repository: AccountRepository,
         bank_repository: BankRepository,
         credit_card_settings_repository: CreditCardSettingsRepository,
-        investment_settings_repository: InvestmentCardSettingsRepository,
         uow: AbstractUnitOfWork,
     ):
         self.account_repository = account_repository
         self.bank_repository = bank_repository
         self.credit_card_settings_repository = credit_card_settings_repository
-        self.investment_settings_repository = investment_settings_repository
         self.uow = uow
 
     async def handle(self, command: UpdateAccountCommand) -> AccountResponseDTO:
@@ -68,7 +62,6 @@ class UpdateAccountHandler:
 
             # Update settings if provided
             cc_settings_dto = None
-            inv_settings_dto = None
 
             if dto.credit_card_settings:
                 cc_settings_dto = CreditCardSettings(
@@ -81,19 +74,6 @@ class UpdateAccountHandler:
                     cast(int, updated_account.id), cc_settings_dto
                 )
                 cc_settings_dto = dto.credit_card_settings
-
-            if dto.investment_settings:
-                inv_settings_dto = InvestmentCardSettings(
-                    investment_type=dto.investment_settings.investment_type,
-                    investment_rate=dto.investment_settings.investment_rate,
-                    lock_period_end_date=dto.investment_settings.lock_period_end_date,
-                    maturity_date=dto.investment_settings.maturity_date,
-                    early_withdrawal_penalty=dto.investment_settings.early_withdrawal_penalty,
-                )
-                await self.investment_settings_repository.update(
-                    cast(int, updated_account.id), inv_settings_dto
-                )
-                inv_settings_dto = dto.investment_settings
 
             bank = await self.bank_repository.get_by_id(account.bank_id)
             await self.uow.commit()
@@ -112,5 +92,4 @@ class UpdateAccountHandler:
             currency=updated_account.current_balance.currency,
             is_active=updated_account.is_active,
             credit_card_settings=cc_settings_dto,
-            investment_settings=inv_settings_dto,
         )

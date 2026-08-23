@@ -26,7 +26,7 @@ graph TD
     end
 
     subgraph Domain ["🎯 Capa de Dominio (src/domain/)"]
-        Entities[Entities - Account, User, Transaction]
+        Entities[Entities - Account, User, Transaction, InvestmentPosition]
         VO[Value Objects - Money, Settings]
         RepoInterfaces[Repository Interfaces]
         DomainServices[Domain Services]
@@ -302,7 +302,8 @@ domain/
 │   ├── income_deposit.py             # Entidad IncomeDeposit (depósitos de ingresos)
 │   ├── installment_charge.py         # Entidad InstallmentCharge (cargos de compras a plazos)
 │   ├── installment_purchase.py       # Entidad InstallmentPurchase (compras a meses/plazos)
-│   ├── investment_yield.py           # Entidad InvestmentYield (rendimientos diarios)
+│   ├── investment_position.py        # Entidad InvestmentPosition (apartados: a la vista y a plazo)
+│   ├── investment_yield.py           # Entidad InvestmentYield (rendimientos diarios por apartado)
 │   ├── notification.py               # Entidad Notification (notificaciones al usuario)
 │   ├── recurring_income.py           # Entidad RecurringIncome (ingresos recurrentes)
 │   ├── refresh_token.py              # Entidad RefreshToken (tokens de refresco persistidos)
@@ -314,9 +315,8 @@ domain/
 ├── objects/                          # Value Objects inmutables
 │   ├── __init__.py
 │   ├── credit_card_settings.py      # Configuración de tarjetas de crédito
-│   ├── enums.py                     # Enumeraciones de negocio (AccountType, InterestType, etc.)
+│   ├── enums.py                     # Enumeraciones de negocio (AccountType, InterestType, PositionType, PositionStatus, MaturityAction, etc.)
 │   ├── frequency.py                 # Frecuencias y cálculo de ocurrencias (recurrencias)
-│   ├── investment_settings.py       # Configuración de inversiones (tasa, tipo interés, base_principal)
 │   └── money.py                     # Value Object Money con validaciones
 ├── repositories/                     # Interfaces abstractas para persistencia
 │   ├── __init__.py
@@ -331,7 +331,7 @@ domain/
 │   ├── income_deposit_repository.py # Interface para depósitos de ingresos
 │   ├── installment_charge_repository.py # Interface para cargos de compras a plazos
 │   ├── installment_purchase_repository.py # Interface para compras a plazos
-│   ├── investment_card_repository.py # Interface para configuración de inversiones
+│   ├── investment_position_repository.py # Interface para apartados de inversión
 │   ├── investment_yield_repository.py # Interface para rendimientos de inversión
 │   ├── notification_repository.py   # Interface para notificaciones
 │   ├── recurring_income_repository.py # Interface para ingresos recurrentes
@@ -387,9 +387,8 @@ application/
 │   ├── __init__.py
 │   ├── commands/             # Operaciones de escritura de cuentas
 │   │   ├── __init__.py
-│   │   ├── create_account.py      # Crear cuenta (+ settings de crédito/inversión)
+│   │   ├── create_account.py      # Crear cuenta (+ settings de crédito)
 │   │   ├── update_account.py      # Actualizar cuenta
-│   │   ├── update_account_settings.py # Actualizar settings de crédito/inversión
 │   │   ├── delete_account.py      # Eliminar cuenta
 │   │   └── state_account.py       # Cambiar estado de cuenta
 │   └── queries/              # Operaciones de lectura de cuentas
@@ -401,7 +400,7 @@ application/
 │   ├── __init__.py
 │   ├── commands/             # Operaciones de escritura de transacciones
 │   │   ├── __init__.py
-│   │   ├── create_transaction.py  # Crear transacción (+ actualiza base_principal en inversiones)
+│   │   ├── create_transaction.py  # Crear transacción (afecta el saldo disponible de la cuenta)
 │   │   ├── update_transaction.py
 │   │   └── delete_transaction.py
 │   └── queries/              # Operaciones de lectura de transacciones
@@ -490,15 +489,27 @@ application/
 │   └── queries/
 │       ├── __init__.py
 │       └── get_and_clear_notifications.py  # Obtener y limpiar notificaciones
-├── investments/              # Feature: Gestión de rendimientos de inversión
+├── investments/              # Feature: Apartados de inversión y sus rendimientos
 │   ├── __init__.py
 │   ├── commands/
 │   │   ├── __init__.py
-│   │   └── generate_daily_yields.py  # Generación diaria de rendimientos (scheduled)
-│   └── queries/
-│       ├── __init__.py
-│       ├── get_investment_yields.py       # Consultar rendimientos históricos
-│       └── get_investment_projections.py  # Proyecciones de inversión
+│   │   ├── create_position.py           # Crear apartado (mueve dinero del disponible)
+│   │   ├── update_position.py           # Nombre y configuración de tope/desbordamiento
+│   │   ├── deposit_to_position.py       # Disponible -> apartado (solo a la vista)
+│   │   ├── withdraw_from_position.py    # Apartado -> disponible (solo a la vista)
+│   │   ├── liquidate_position.py        # Cerrar apartado, acreditar y reparar cadenas
+│   │   ├── generate_daily_yields.py     # Rendimientos diarios por apartado (scheduled)
+│   │   └── process_matured_positions.py # Vencimientos: renovar/liquidar/pendiente (scheduled)
+│   ├── queries/
+│   │   ├── __init__.py
+│   │   ├── list_positions.py              # Apartados de una cuenta + disponible/invertido/total
+│   │   ├── get_position.py                # Detalle de un apartado
+│   │   ├── get_position_yields.py         # Rendimientos históricos del apartado
+│   │   ├── get_position_projections.py    # Proyección del apartado (+ helper project_position)
+│   │   ├── get_investment_yields.py       # Rendimientos históricos de la cuenta
+│   │   └── get_investment_projections.py  # Proyección agregada de la cuenta
+│   └── services/
+│       └── position_overflow.py           # Cadena de desbordamiento: validar destino y repartir excedente
 ├── banks/                    # Feature: Catálogo de bancos
 │   ├── __init__.py
 │   └── queries/
@@ -590,8 +601,8 @@ infrastructure/
 │   │   ├── category.py       # Modelo Category
 │   │   ├── credit_card.py    # Modelo CreditCard (settings)
 │   │   ├── installment.py    # Modelos InstallmentPurchase e InstallmentCharge
-│   │   ├── investment_account.py  # Modelo InvestmentCard (settings)
-│   │   ├── investment_yield.py    # Modelo InvestmentYield (rendimientos)
+│   │   ├── investment_position.py # Modelo InvestmentPosition (apartados)
+│   │   ├── investment_yield.py    # Modelo InvestmentYield (rendimientos por apartado)
 │   │   ├── notifications.py  # Modelo Notification
 │   │   ├── recurring_income.py # Modelos RecurringIncome e IncomeDeposit
 │   │   ├── refresh_token.py  # Modelo RefreshToken
@@ -614,7 +625,7 @@ infrastructure/
 │       ├── sqlalchemy_income_deposit_repository.py
 │       ├── sqlalchemy_installment_charge_repository.py
 │       ├── sqlalchemy_installment_purchase_repository.py
-│       ├── sqlalchemy_investment_card_repository.py
+│       ├── sqlalchemy_investment_position_repository.py
 │       ├── sqlalchemy_investment_yield_repository.py
 │       ├── sqlalchemy_notification_repository.py
 │       ├── sqlalchemy_recurring_income_repository.py
@@ -637,7 +648,7 @@ infrastructure/
 │   └── api_key_service.py    # APIKeyService: emisión y validación de API keys
 ├── scheduler/                # Tareas programadas
 │   ├── __init__.py
-│   ├── jobs.py               # Definición de jobs (suscripciones, rendimientos, ingresos recurrentes)
+│   ├── jobs.py               # Definición de jobs (suscripciones, rendimientos, vencimientos de apartados, ingresos recurrentes)
 │   └── service.py            # SchedulerService (APScheduler wrapper)
 ├── rate_limiting/            # Rate limiting por endpoint
 │   ├── __init__.py
@@ -660,7 +671,7 @@ infrastructure/
 #### Características de Infraestructura:
 - **Implementaciones concretas**: 20 repositorios SQLAlchemy + Unit of Work implementando interfaces del dominio
 - **Adaptadores**: Para servicios externos (agentes IA con pydantic-ai multi-proveedor)
-- **Scheduler**: APScheduler con AsyncIOScheduler para jobs diarios
+- **Scheduler**: APScheduler con AsyncIOScheduler para jobs diarios (suscripciones 00:00, ingresos 00:15, rendimientos 12:00 y vencimientos de apartados 12:30, en UTC; los vencimientos corren después de los rendimientos para que el día del vencimiento aún genere interés)
 - **Logging estructurado**: Correlation IDs, filtros personalizados, integración Grafana Loki
 - **Configuración**: Variables de entorno con pydantic-settings
 - **Persistencia async**: Modelos SQLAlchemy con AsyncSession (aiomysql driver)
@@ -686,7 +697,8 @@ presentation/
 │       │   ├── income.py          # CRUD ingresos recurrentes + depósitos
 │       │   ├── installment.py     # Compras a plazos + pago de cargos
 │       │   ├── notification.py    # Notificaciones del usuario
-│       │   ├── investment_yield.py # Rendimientos y proyecciones de inversión
+│       │   ├── investment_yield.py # Rendimientos y proyecciones por cuenta
+│       │   ├── investment_position.py # Apartados: CRUD + depositar/retirar/liquidar
 │       │   ├── bank.py            # Catálogo de bancos
 │       │   ├── category.py        # Catálogo de categorías
 │       │   ├── dashboard.py       # Resumen financiero
@@ -701,6 +713,7 @@ presentation/
 │   │   ├── api_key.py           # Schemas para requests de API keys
 │   │   ├── budget.py            # Schemas para requests de presupuesto
 │   │   ├── installment.py       # Schemas para requests de compras a plazos
+│   │   ├── investment_position.py # Schemas para requests de apartados
 │   │   ├── recurring_income.py  # Schemas para requests de ingresos recurrentes
 │   │   ├── saving_goal.py       # Schemas para requests de metas de ahorro
 │   │   ├── subscription.py     # Schemas para requests de suscripción
@@ -717,6 +730,7 @@ presentation/
 │       ├── error.py             # Schema estandarizado de errores
 │       ├── installment.py       # Schemas para responses de compras a plazos
 │       ├── investment_yield.py  # Schemas para rendimientos/proyecciones
+│       ├── investment_position.py # Schemas para responses de apartados
 │       ├── notification.py      # Schemas para responses de notificaciones
 │       ├── recurring_income.py  # Schemas para responses de ingresos recurrentes
 │       ├── saving_goal.py       # Schemas para responses de metas de ahorro
@@ -739,6 +753,7 @@ presentation/
 │   ├── installment_deps.py      # Factories de handlers de compras a plazos
 │   ├── notification_deps.py     # Factories de handlers de notificaciones
 │   ├── investment_yield_deps.py # Factories de handlers de inversiones
+│   ├── investment_position_deps.py # Factories de handlers de apartados
 │   ├── bank_deps.py             # Factories de handlers de bancos
 │   ├── category_deps.py         # Factories de handlers de categorías
 │   ├── dashboard_deps.py        # Factories de handlers de dashboard
@@ -756,7 +771,7 @@ presentation/
 ```
 
 #### Características de Presentación:
-- **API REST**: 16 módulos de endpoints organizados por dominio
+- **API REST**: 17 módulos de endpoints organizados por dominio
 - **Validación**: Schemas Pydantic para entrada y salida
 - **Dependency Injection**: Sistema granular de DI de FastAPI (un archivo por feature)
 - **Rate Limiting**: Protección por endpoint con fastapi-advanced-rate-limiter (FixedWindowRateLimiter)
@@ -1040,11 +1055,10 @@ class Account:
     bank_id: int
     name: str
     account_type: AccountType
-    current_balance: Money
+    current_balance: Money      # Saldo disponible (no incluye apartados de inversión)
     is_active: bool
     creation_date: datetime
     credit_card_settings: Optional[CreditCardSettings] = None
-    investment_settings: Optional[InvestmentCardSettings] = None
 
     @classmethod
     def create_new(
@@ -1096,6 +1110,57 @@ class Account:
         """Verifica si se puede retirar el monto especificado"""
         return self.current_balance.amount >= amount.amount
 ```
+
+#### Apartados de inversión (`InvestmentPosition`)
+
+Un apartado es una porción de dinero **dentro de una cuenta** que genera rendimientos, con
+su propio saldo, tasa y plazo. Es el equivalente a las "cajitas" de las apps bancarias y
+las inversiones a plazo de las SOFIPOs. Una cuenta puede tener N apartados.
+
+**La invariante central:** `Account.current_balance` es **solo el saldo disponible**. El
+dinero de los apartados vive en `InvestmentPosition.balance`, así que el total de una
+cuenta (`disponible + suma de apartados`) siempre se calcula, nunca se almacena.
+
+De esa decisión se derivan dos propiedades que el diseño garantiza *por construcción*, sin
+validaciones extra: las transferencias, los gastos y `can_withdraw` solo leen
+`current_balance`, por lo que **no pueden tocar el dinero apartado**; y para gastarlo hay
+que regresarlo antes al disponible con `withdraw` o `liquidate`.
+
+La entidad encapsula las reglas de negocio del apartado:
+
+| Método | Regla que encapsula |
+|--------|---------------------|
+| `accrue_yield()` | A la vista capitaliza en `balance`; a plazo fijo acumula en `accrued_yield`. Devuelve lo que no cupo bajo el tope |
+| `deposit()` / `withdraw()` | Solo apartados a la vista; un plazo fijo los rechaza. `deposit()` devuelve el excedente |
+| `liquidate()` | Devuelve el monto a acreditar; si es anticipada aplica la penalización **solo sobre los rendimientos** (el capital nunca se toca) y rechaza si sigue el periodo de permanencia |
+| `renew()` | Reinvierte capital + rendimiento por el mismo plazo (`AUTO_RENEW`) |
+| `mark_matured()` | Deja el apartado en `MATURED`: deja de rendir y espera la decisión del usuario (`HOLD`) |
+| `configure_cap()` | Cambia tope y destino; devuelve el excedente a desbordar de inmediato |
+| `clear_overflow_target()` | El destino desapareció: el excedente pasa al disponible |
+
+Los movimientos de dinero (crear, depositar, retirar, liquidar) bloquean filas siempre en
+el mismo orden — **cuenta → apartado** — para evitar deadlocks entre sí y con los jobs
+programados. Cada movimiento genera además una transacción tipo `TRANSFER` con
+`position_id`, de modo que el dinero apartado sea trazable desde la actividad de la cuenta.
+
+**Topes y desbordamiento.** Un apartado a la vista puede tener un tope (`max_balance`) y
+un destino para lo que ya no cabe: el saldo disponible o **otro apartado**. Encadenarlos
+es como se representan las tasas por tramo de las SOFIPOs (25,000 al 10% desbordando a
+otro apartado al 5%), sin que la entidad tenga que entender de tramos.
+
+`PositionOverflowService` (`application/investments/services/`) es el único lugar que
+recorre esa cadena, en sus dos momentos: `validate_target()` al configurarla —destino
+existente, de la misma cuenta, a la vista, activo y sin ciclos— y `spill()` en ejecución,
+repartiendo el excedente hasta que algún apartado lo absorba o caiga al disponible.
+`spill()` nunca lanza excepción: una cadena rota no puede tumbar el job diario ni perder
+dinero, así que un destino liquidado, un ciclo en base de datos o una cadena demasiado
+larga terminan igual — log de error y el dinero al saldo disponible. Los locks se toman
+siguiendo las aristas de la cadena, que es acíclica, así que dos cascadas concurrentes no
+pueden bloquearse mutuamente.
+
+La consecuencia operativa del tope está en el job de rendimientos: un apartado que vive en
+su tope sigue rindiendo y desborda **todos los días**. Por eso `generate_daily_yields`
+toca el saldo de la cuenta y crea transacciones, cosa que antes no hacía.
 
 ### 6. Unit of Work
 
