@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Lunance IA - Your Personal Intelligence Assistant",
     description="Manage your finances efficiently with our API",
-    version="1.0.0",
+    version="2.0.0",
     docs_url="/docs" if settings.ENVIRONMENT.upper() != "PROD" else None,
     redoc_url="/redoc" if settings.ENVIRONMENT.upper() != "PROD" else None,
     openapi_url="/openapi.json" if settings.ENVIRONMENT.upper() != "PROD" else None,
