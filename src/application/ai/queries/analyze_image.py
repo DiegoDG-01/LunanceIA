@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 from io import BytesIO
-from PIL import Image
 
-from PIL import UnidentifiedImageError
-from application.interfaces.uploaded_file import UploadedFileInterface
+from PIL import Image, UnidentifiedImageError
 from pydantic_ai import BinaryContent
+from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
+
 from application.ai.schemas.image_analysis import ImageAnalysis
 from application.interfaces.ai_agent import AIAgentInterface
+from application.interfaces.uploaded_file import UploadedFileInterface
 from domain.repositories.category_repository import CategoryRepository
-from pydantic_ai.exceptions import UnexpectedModelBehavior, ModelHTTPError
 from shared.exceptions.domain import (
     AIInvalidResponseError,
     AIServiceError,

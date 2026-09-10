@@ -1,36 +1,35 @@
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from typing import Optional, Tuple
 
 from domain.objects.enums import BudgetPeriod
 
 
 @dataclass
 class Budget:
-    id: Optional[int]
-    uuid: Optional[str]
+    id: int | None
+    uuid: str | None
     user_id: int
-    category_id: Optional[int]
+    category_id: int | None
     name: str
     limit_amount: Decimal
     period: BudgetPeriod
     start_date: date
-    end_date: Optional[date]
+    end_date: date | None
     is_active: bool
     alert_percentage: int
-    creation_date: Optional[datetime] = None
+    creation_date: datetime | None = None
 
     @classmethod
     def create_new(
         cls,
         user_id: int,
-        category_id: Optional[int],
+        category_id: int | None,
         name: str,
         limit_amount: Decimal,
         period: BudgetPeriod,
         start_date: date,
-        end_date: Optional[date] = None,
+        end_date: date | None = None,
         alert_percentage: int = 80,
     ) -> "Budget":
         return cls(
@@ -45,12 +44,12 @@ class Budget:
             end_date=end_date,
             is_active=True,
             alert_percentage=alert_percentage,
-            creation_date=datetime.now(timezone.utc),
+            creation_date=datetime.now(UTC),
         )
 
     def get_current_period_dates(
-        self, reference_date: Optional[date] = None
-    ) -> Tuple[date, date]:
+        self, reference_date: date | None = None
+    ) -> tuple[date, date]:
         """
         Calcula el rango de fechas del periodo actual según el tipo de periodo del presupuesto.
 

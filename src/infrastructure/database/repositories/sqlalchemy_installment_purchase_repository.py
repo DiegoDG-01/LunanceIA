@@ -1,12 +1,11 @@
-from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.entities.installment_purchase import InstallmentPurchase
+from domain.objects.money import Money
 from domain.repositories.installment_purchase_repository import (
     InstallmentPurchaseRepository,
 )
-from domain.objects.money import Money
 from infrastructure.database.models.installment import InstallmentPurchaseModel
 
 
@@ -21,6 +20,7 @@ class SQLAlchemyInstallmentPurchaseRepository(InstallmentPurchaseRepository):
             uuid=model.uuid,
             user_id=model.user_id,
             account_id=model.account_id,
+            initial_transaction_id=model.initial_transaction_id,
             category_id=model.category_id,
             description=model.description,
             total_amount=Money(model.total_amount),
@@ -41,6 +41,7 @@ class SQLAlchemyInstallmentPurchaseRepository(InstallmentPurchaseRepository):
             uuid=entity.uuid,
             user_id=entity.user_id,
             account_id=entity.account_id,
+            initial_transaction_id=entity.initial_transaction_id,
             category_id=entity.category_id,
             description=entity.description,
             total_amount=entity.total_amount.amount,
@@ -63,7 +64,7 @@ class SQLAlchemyInstallmentPurchaseRepository(InstallmentPurchaseRepository):
 
     async def get_by_id(
         self, purchase_id: int, *, for_update: bool = False
-    ) -> Optional[InstallmentPurchase]:
+    ) -> InstallmentPurchase | None:
         stmt = select(InstallmentPurchaseModel).where(
             InstallmentPurchaseModel.id == purchase_id
         )
@@ -77,7 +78,7 @@ class SQLAlchemyInstallmentPurchaseRepository(InstallmentPurchaseRepository):
 
     async def get_by_uuid(
         self, uuid: str, user_id: int, *, for_update: bool = False
-    ) -> Optional[InstallmentPurchase]:
+    ) -> InstallmentPurchase | None:
         stmt = select(InstallmentPurchaseModel).where(
             InstallmentPurchaseModel.uuid == uuid,
             InstallmentPurchaseModel.user_id == user_id,
@@ -90,7 +91,18 @@ class SQLAlchemyInstallmentPurchaseRepository(InstallmentPurchaseRepository):
         model = result.scalar_one_or_none()
         return self._model_to_entity(model) if model else None
 
-    async def get_all_by_user_id(self, user_id: int) -> List[InstallmentPurchase]:
+    async def get_by_initial_transaction_id(
+        self, transaction_id: int, user_id: int
+    ) -> InstallmentPurchase | None:
+        stmt = select(InstallmentPurchaseModel).where(
+            InstallmentPurchaseModel.initial_transaction_id == transaction_id,
+            InstallmentPurchaseModel.user_id == user_id,
+        )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
+        return self._model_to_entity(model) if model else None
+
+    async def get_all_by_user_id(self, user_id: int) -> list[InstallmentPurchase]:
         stmt = select(InstallmentPurchaseModel).where(
             InstallmentPurchaseModel.user_id == user_id
         )
@@ -108,6 +120,7 @@ class SQLAlchemyInstallmentPurchaseRepository(InstallmentPurchaseRepository):
         model.notes = purchase.notes
         model.description = purchase.description
         model.category_id = purchase.category_id
+        model.initial_transaction_id = purchase.initial_transaction_id
         await self.db.flush()
         await self.db.refresh(model)
         return self._model_to_entity(model)

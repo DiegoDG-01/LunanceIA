@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
 
 from domain.entities.installment_charge import InstallmentCharge
 
@@ -7,30 +6,36 @@ from domain.entities.installment_charge import InstallmentCharge
 class InstallmentChargeRepository(ABC):
     @abstractmethod
     async def create_bulk(
-        self, charges: List[InstallmentCharge]
-    ) -> List[InstallmentCharge]:
+        self, charges: list[InstallmentCharge]
+    ) -> list[InstallmentCharge]:
         pass
 
     @abstractmethod
     async def get_by_uuid(
         self, uuid: str, *, for_update: bool = False
-    ) -> Optional[InstallmentCharge]:
+    ) -> InstallmentCharge | None:
         pass
+
+    @abstractmethod
+    async def get_by_transaction_id(
+        self, transaction_id: int
+    ) -> InstallmentCharge | None:
+        """Return the installment charge paid by a transaction, if any."""
 
     @abstractmethod
     async def get_by_purchase_id(
         self, purchase_id: int, *, for_update: bool = False
-    ) -> List[InstallmentCharge]:
+    ) -> list[InstallmentCharge]:
         pass
 
     @abstractmethod
     async def get_bulk_by_purchase_ids(
-        self, purchase_ids: List[int]
-    ) -> List[InstallmentCharge]:
+        self, purchase_ids: list[int]
+    ) -> list[InstallmentCharge]:
         pass
 
     @abstractmethod
-    async def get_pending_charges(self, user_id: int) -> List[InstallmentCharge]:
+    async def get_pending_charges(self, user_id: int) -> list[InstallmentCharge]:
         pass
 
     @abstractmethod

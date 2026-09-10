@@ -1,11 +1,11 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, desc, select
-from typing import Optional, List
 from datetime import date
 
+from sqlalchemy import and_, desc, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from domain.entities.subscription import Subscription
-from domain.repositories.subscription_repository import SubscriptionRepository
 from domain.objects.money import Money
+from domain.repositories.subscription_repository import SubscriptionRepository
 from infrastructure.database.models import AccountModel
 from infrastructure.database.models.subscription import SubscriptionModel
 from shared.exceptions.domain import SubscriptionNotFoundError
@@ -107,7 +107,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
 
     async def get_by_uuid_and_user_id(
         self, subscription_uuid: str, user_id: int
-    ) -> Optional[Subscription]:
+    ) -> Subscription | None:
         stmt = select(SubscriptionModel).where(
             and_(
                 SubscriptionModel.uuid == subscription_uuid,
@@ -121,7 +121,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
 
     async def get_by_account(
         self, account_uuid: str, user_id: int, limit: int = 100, offset: int = 0
-    ) -> List[Subscription]:
+    ) -> list[Subscription]:
         stmt = (
             select(SubscriptionModel, AccountModel)
             .join(AccountModel, SubscriptionModel.account_id == AccountModel.id)
@@ -144,7 +144,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
         self,
         user_id: int,
         category_id: int,
-    ) -> List[Subscription]:
+    ) -> list[Subscription]:
         stmt = (
             select(SubscriptionModel)
             .where(
@@ -162,7 +162,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
 
     async def get_by_user(
         self, user_id: int, active_only: bool = False
-    ) -> List[Subscription]:
+    ) -> list[Subscription]:
         stmt = select(SubscriptionModel).where(SubscriptionModel.user_id == user_id)
 
         if active_only:
@@ -180,7 +180,7 @@ class SQLAlchemySubscriptionRepository(SubscriptionRepository):
     #
     #     return [self._model_to_entity(subscription) for subscription in results]
 
-    async def get_due_subscriptions(self, as_of: date) -> List[Subscription]:
+    async def get_due_subscriptions(self, as_of: date) -> list[Subscription]:
         stmt = select(SubscriptionModel).where(
             SubscriptionModel.is_active,
             SubscriptionModel.next_charge_date <= as_of,

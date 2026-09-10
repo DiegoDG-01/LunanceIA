@@ -3,23 +3,30 @@ from fastapi import Depends
 from application.transactions.commands.create_transaction import (
     CreateTransactionHandler,
 )
-from application.transactions.commands.update_transaction import (
-    UpdateTransactionCommandHandler,
-)
 from application.transactions.commands.delete_transaction import (
     DeleteTransactionHandler,
 )
-from application.transactions.queries.get_transactions import GetTransactionsHandler
+from application.transactions.commands.update_transaction import (
+    UpdateTransactionCommandHandler,
+)
 from application.transactions.queries.get_transaction_by_uuid import (
     GetTransactionByUuidHandler,
 )
+from application.transactions.queries.get_transactions import GetTransactionsHandler
 from domain.repositories.account_repository import AccountRepository
+from domain.repositories.installment_purchase_repository import (
+    InstallmentPurchaseRepository,
+)
 from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_investment_card_repository import (
-    SQLAlchemyInvestmentSettingsRepository,
+from infrastructure.database.repositories.sqlalchemy_bank_repository import (
+    SQLAlchemyBankRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_category_repository import (
+    SQLAlchemyCategoryRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_transaction_repository import (
     SQLAlchemyTransactionRepository,
@@ -27,23 +34,14 @@ from infrastructure.database.repositories.sqlalchemy_transaction_repository impo
 from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_category_repository import (
-    SQLAlchemyCategoryRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_bank_repository import (
-    SQLAlchemyBankRepository,
-)
-from presentation.dependencies import get_investment_settings_repository
-
-from domain.repositories.unit_of_work import AbstractUnitOfWork
-
 from presentation.dependencies.repositories import (
     get_account_repository,
-    get_user_repository,
-    get_transaction_repository,
-    get_category_repository,
     get_bank_repository,
+    get_category_repository,
+    get_installment_purchase_repository,
+    get_transaction_repository,
     get_unit_of_work_repository,
+    get_user_repository,
 )
 
 
@@ -69,9 +67,6 @@ def get_create_transaction_handler(
     ),
     category_repo: SQLAlchemyCategoryRepository = Depends(get_category_repository),
     bank_repo: SQLAlchemyBankRepository = Depends(get_bank_repository),
-    settings_repo: SQLAlchemyInvestmentSettingsRepository = Depends(
-        get_investment_settings_repository
-    ),
     uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> CreateTransactionHandler:
     return CreateTransactionHandler(
@@ -80,7 +75,6 @@ def get_create_transaction_handler(
         transaction_repo,
         category_repo,
         bank_repo,
-        settings_repo,
         uow,
     )
 
@@ -88,10 +82,13 @@ def get_create_transaction_handler(
 def get_update_transaction_handler(
     transaction_repository: TransactionRepository = Depends(get_transaction_repository),
     account_repository: AccountRepository = Depends(get_account_repository),
+    installment_purchase_repository: InstallmentPurchaseRepository = Depends(
+        get_installment_purchase_repository
+    ),
     uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> UpdateTransactionCommandHandler:
     return UpdateTransactionCommandHandler(
-        transaction_repository, account_repository, uow
+        transaction_repository, account_repository, installment_purchase_repository, uow
     )
 
 
@@ -100,6 +97,9 @@ def get_delete_transaction_handler(
         get_transaction_repository
     ),
     account_repo: SQLAlchemyAccountRepository = Depends(get_account_repository),
+    purchase_repo: InstallmentPurchaseRepository = Depends(
+        get_installment_purchase_repository
+    ),
     uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> DeleteTransactionHandler:
-    return DeleteTransactionHandler(transaction_repo, account_repo, uow)
+    return DeleteTransactionHandler(transaction_repo, account_repo, purchase_repo, uow)

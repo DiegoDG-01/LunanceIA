@@ -1,10 +1,9 @@
 from dataclasses import dataclass
-from typing import Optional
 
+from application.dto.budget_dto import BudgetResponseDTO, UpdateBudgetDTO
 from domain.repositories.budget_repository import BudgetRepository
 from domain.repositories.category_repository import CategoryRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from application.dto.budget_dto import UpdateBudgetDTO, BudgetResponseDTO
 from shared.exceptions.domain import BudgetNotFoundError, CategoryNotFoundError
 
 
@@ -35,7 +34,7 @@ class UpdateBudgetHandler:
         if not budget:
             raise BudgetNotFoundError(command.budget_uuid)
 
-        category_name: Optional[str] = None
+        category_name: str | None = None
 
         if dto.category_id is not None:
             category = await self.category_repository.get_by_id(dto.category_id)
@@ -64,4 +63,6 @@ class UpdateBudgetHandler:
             updated_budget = await self.budget_repository.update(budget)
             await self.uow.commit()
 
-        return BudgetResponseDTO.from_entity(updated_budget, category_name=category_name)
+        return BudgetResponseDTO.from_entity(
+            updated_budget, category_name=category_name
+        )

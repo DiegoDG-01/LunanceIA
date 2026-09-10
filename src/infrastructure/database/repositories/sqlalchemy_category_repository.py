@@ -1,11 +1,10 @@
-from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.repositories.category_repository import CategoryRepository
 from domain.entities.category import Category
-from shared.exceptions.domain import CategoryNotFoundError
+from domain.repositories.category_repository import CategoryRepository
 from infrastructure.database.models.category import CategoryModel
+from shared.exceptions.domain import CategoryNotFoundError
 
 
 class SQLAlchemyCategoryRepository(CategoryRepository):
@@ -23,14 +22,14 @@ class SQLAlchemyCategoryRepository(CategoryRepository):
             is_active=model.is_active,
         )
 
-    async def get_all(self) -> List[Category]:
+    async def get_all(self) -> list[Category]:
         stmt = select(CategoryModel)
         result = await self.db.execute(stmt)
         category_models = result.scalars().all()
 
         return [self._model_to_entity(model) for model in category_models]
 
-    async def get_by_id(self, category_id: int) -> Optional[Category]:
+    async def get_by_id(self, category_id: int) -> Category | None:
         stmt = select(CategoryModel).where(CategoryModel.id == category_id)
         result = await self.db.execute(stmt)
         category_model = result.scalar_one_or_none()
@@ -80,7 +79,7 @@ class SQLAlchemyCategoryRepository(CategoryRepository):
         await self.db.delete(category_model)
         await self.db.flush()
 
-    async def get_by_name(self, category_name: str) -> Optional[Category]:
+    async def get_by_name(self, category_name: str) -> Category | None:
         stmt = select(CategoryModel).where(CategoryModel.name == category_name)
         result = await self.db.execute(stmt)
         category = result.scalar_one_or_none()

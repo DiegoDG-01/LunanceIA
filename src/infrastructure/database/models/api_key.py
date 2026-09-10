@@ -1,8 +1,7 @@
 import uuid
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import CHAR, String, DateTime, ForeignKey, func
+from sqlalchemy import CHAR, DateTime, ForeignKey, String, func
 from sqlalchemy.dialects.mysql import JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -10,7 +9,7 @@ from infrastructure.database.connection import Base
 
 
 class APIKeyModel(Base):
-    __tablename__ = 'api_keys'
+    __tablename__ = "api_keys"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
     uuid: Mapped[str] = mapped_column(
@@ -24,10 +23,10 @@ class APIKeyModel(Base):
     key_prefix: Mapped[str] = mapped_column(String(20))
     scopes: Mapped[list[str]] = mapped_column(JSON)
     is_active: Mapped[bool] = mapped_column(default=True)
-    expires_at: Mapped[Optional[datetime]] = mapped_column(
+    expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    last_used_at: Mapped[Optional[datetime]] = mapped_column(
+    last_used_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(

@@ -1,20 +1,21 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, asc, extract, desc, select
-from typing import Optional, List, Tuple, cast
 from datetime import date
+from typing import cast
+
+from sqlalchemy import and_, asc, desc, extract, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.entities.subscription_charge import SubscriptionCharge
+from domain.objects.enums import TransactionStatus
+from domain.objects.money import Money
 from domain.repositories.subscription_charge_repository import (
     SubscriptionChargeRepository,
 )
-from domain.objects.money import Money
-from domain.objects.enums import TransactionStatus
 from infrastructure.database.models import (
+    AccountModel,
+    CategoryModel,
     SubscriptionChargeModel,
     SubscriptionModel,
     TransactionModel,
-    CategoryModel,
-    AccountModel,
 )
 from shared.exceptions.domain import SubscriptionNotFoundError
 
@@ -77,7 +78,7 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    async def get_by_id(self, charge_id: int) -> Optional[SubscriptionCharge]:
+    async def get_by_id(self, charge_id: int) -> SubscriptionCharge | None:
         stmt = select(SubscriptionChargeModel).where(
             SubscriptionChargeModel.id == charge_id
         )
@@ -88,7 +89,7 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
 
     async def get_by_subscription(
         self, subscription_id: int, limit: int = 100, offset: int = 0
-    ) -> List[SubscriptionCharge]:
+    ) -> list[SubscriptionCharge]:
         stmt = (
             select(SubscriptionChargeModel)
             .where(SubscriptionChargeModel.subscription_id == subscription_id)
@@ -103,7 +104,7 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
 
     async def get_by_subscription_and_month(
         self, subscription_id: int, year: int, month: int
-    ) -> Optional[SubscriptionCharge]:
+    ) -> SubscriptionCharge | None:
         stmt = select(SubscriptionChargeModel).where(
             and_(
                 SubscriptionChargeModel.subscription_id == subscription_id,
@@ -118,7 +119,7 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
 
     async def get_by_subscription_and_date(
         self, subscription_id: int, charge_date: date
-    ) -> Optional[SubscriptionCharge]:
+    ) -> SubscriptionCharge | None:
         stmt = select(SubscriptionChargeModel).where(
             and_(
                 SubscriptionChargeModel.subscription_id == subscription_id,
@@ -130,7 +131,7 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
 
         return self._model_to_entity(model) if model else None
 
-    async def get_pending_charges(self) -> List[SubscriptionCharge]:
+    async def get_pending_charges(self) -> list[SubscriptionCharge]:
         stmt = (
             select(SubscriptionChargeModel)
             .where(SubscriptionChargeModel.status == TransactionStatus.PENDIENTE)
@@ -141,7 +142,7 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
 
         return [self._model_to_entity(model) for model in models]
 
-    async def get_by_user_with_details(self, user_id: int) -> List[tuple]:
+    async def get_by_user_with_details(self, user_id: int) -> list[tuple]:
         """Retorna subscription_charges con datos relacionados via JOIN"""
         stmt = (
             select(
@@ -177,7 +178,7 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
         charge_model: SubscriptionChargeModel,
         subscription_model: SubscriptionModel,
         transaction_model: TransactionModel,
-        category_model: Optional[CategoryModel],
+        category_model: CategoryModel | None,
         account_model: AccountModel,
     ) -> tuple:
         """Convierte modelos a tupla con datos necesarios"""
@@ -193,7 +194,7 @@ class SQLAlchemySubscriptionChargeRepository(SubscriptionChargeRepository):
 
     async def get_last_charges_by_subscription_id(
         self, subscription_id: int
-    ) -> List[Tuple[SubscriptionCharge, str, str]]:
+    ) -> list[tuple[SubscriptionCharge, str, str]]:
         stmt = (
             select(SubscriptionChargeModel, SubscriptionModel, AccountModel)
             .join(

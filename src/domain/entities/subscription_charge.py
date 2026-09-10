@@ -1,21 +1,20 @@
 from dataclasses import dataclass
-from datetime import datetime, date, timezone
-from typing import Optional
+from datetime import UTC, date, datetime
 
-from domain.objects.money import Money
 from domain.objects.enums import TransactionStatus
+from domain.objects.money import Money
 
 
 @dataclass
 class SubscriptionCharge:
-    id: Optional[int]
-    uuid: Optional[str]
+    id: int | None
+    uuid: str | None
     subscription_id: int
     charge_date: date
     amount: Money
     status: TransactionStatus
-    transaction_id: Optional[int] = None
-    processing_date: Optional[datetime] = None
+    transaction_id: int | None = None
+    processing_date: datetime | None = None
 
     @classmethod
     def create_pending(
@@ -38,12 +37,12 @@ class SubscriptionCharge:
     def mark_as_paid(self, transaction_id: int):
         self.transaction_id = transaction_id
         self.status = TransactionStatus.PAGADO
-        self.processing_date = datetime.now(timezone.utc)
+        self.processing_date = datetime.now(UTC)
 
     def mark_as_failed(self):
         self.status = TransactionStatus.FALLIDO
-        self.processing_date = datetime.now(timezone.utc)
+        self.processing_date = datetime.now(UTC)
 
     def mark_as_cancelled(self):
         self.status = TransactionStatus.CANCELADO
-        self.processing_date = datetime.now(timezone.utc)
+        self.processing_date = datetime.now(UTC)

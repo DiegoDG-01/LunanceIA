@@ -1,5 +1,5 @@
 import json
-from typing import Optional
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,7 +17,7 @@ class SQLAlchemyDashboardRepository(DashboardRepository):
 
     async def get_dashboard_summary(
         self, uuid: str, user_id: int
-    ) -> Optional[DashboardSummary]:
+    ) -> DashboardSummary | None:
         # Check if we are running on SQLite (for tests)
         try:
             is_sqlite = self.db.bind and self.db.bind.dialect.name == "sqlite"
@@ -170,13 +170,15 @@ SELECT
 
     async def _get_sqlite_dashboard_summary(self, user_id: int) -> DashboardSummary:
         """Simplified version of dashboard summary for SQLite (tests)"""
-        from infrastructure.database.models import (
-            TransactionModel,
-            CategoryModel,
-            AccountModel,
-        )
-        from sqlalchemy import func, case, select
         from datetime import date
+
+        from sqlalchemy import case, func, select
+
+        from infrastructure.database.models import (
+            AccountModel,
+            CategoryModel,
+            TransactionModel,
+        )
 
         # Get start of current month
         today = date.today()

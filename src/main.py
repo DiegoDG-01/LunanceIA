@@ -1,29 +1,29 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, Depends
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from starlette.exceptions import HTTPException as StarletteHTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
+from fastapi.middleware.cors import CORSMiddleware
 from secure import Secure
-from infrastructure.rate_limiting.limiters import (
-    enforce_rate_limit,
-    limiter_10_per_minute,
-    limiter_5_per_minute,
-)
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from infrastructure.config.logging_config import setup_logging
 from infrastructure.config.settings import settings
 from infrastructure.database.connection import get_db
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_5_per_minute,
+    limiter_10_per_minute,
+)
 from infrastructure.scheduler.service import scheduler_service
 from presentation.api.v2.router import api_router
 from presentation.middleware.exception_handler import (
+    generic_exception_handler,
+    http_exception_handler,
     lunance_exception_handler,
     validation_exception_handler,
-    http_exception_handler,
-    generic_exception_handler,
 )
 from presentation.middleware.request_logging import RequestLoggingMiddleware
 from shared.exceptions.base import LunanceException
@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Lunance IA - Your Personal Intelligence Assistant",
     description="Manage your finances efficiently with our API",
-    version="1.0.0",
+    version="2.0.0",
     docs_url="/docs" if settings.ENVIRONMENT.upper() != "PROD" else None,
     redoc_url="/redoc" if settings.ENVIRONMENT.upper() != "PROD" else None,
     openapi_url="/openapi.json" if settings.ENVIRONMENT.upper() != "PROD" else None,

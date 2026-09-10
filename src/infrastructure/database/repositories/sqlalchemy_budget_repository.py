@@ -1,6 +1,5 @@
 from datetime import date
 from decimal import Decimal
-from typing import Optional, List
 
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -93,7 +92,7 @@ class SQLAlchemyBudgetRepository(BudgetRepository):
 
     async def get_by_uuid_and_user_id(
         self, budget_uuid: str, user_id: int
-    ) -> Optional[Budget]:
+    ) -> Budget | None:
         stmt = select(BudgetModel).where(
             and_(
                 BudgetModel.uuid == budget_uuid,
@@ -108,8 +107,8 @@ class SQLAlchemyBudgetRepository(BudgetRepository):
         self,
         user_id: int,
         active_only: bool = False,
-        category_id: Optional[int] = None,
-    ) -> List[Budget]:
+        category_id: int | None = None,
+    ) -> list[Budget]:
         stmt = select(BudgetModel).where(BudgetModel.user_id == user_id)
 
         if active_only:
@@ -133,7 +132,7 @@ class SQLAlchemyBudgetRepository(BudgetRepository):
         user_id: int,
         period_start: date,
         period_end: date,
-        category_id: Optional[int] = None,
+        category_id: int | None = None,
     ) -> Decimal:
         """
         Suma el total de transacciones de tipo EXPENSE del usuario en el rango de fechas,

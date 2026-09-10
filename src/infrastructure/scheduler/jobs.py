@@ -1,52 +1,57 @@
 import logging
-from datetime import datetime, date, timezone
+from datetime import UTC, date, datetime
 
-from infrastructure.database.connection import AsyncSessionLocal
-from infrastructure.database.repositories.sqlalchemy_notification_repository import (
-    SQLAlchemyNotificationRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_subscription_repository import (
-    SQLAlchemySubscriptionRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_subscription_charge_repository import (
-    SQLAlchemySubscriptionChargeRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_transaction_repository import (
-    SQLAlchemyTransactionRepository,
-)
-
-from application.subscriptions.services.subscription_processor import (
-    SubscriptionProcessor,
-)
 from application.incomes.services.income_processor import IncomeProcessor
-from infrastructure.database.repositories.sqlalchemy_account_repository import (
-    SQLAlchemyAccountRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_investment_yield_repository import (
-    SQLAlchemyInvestmentYieldRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
-    SQLAlchemyUnitOfWork,
-)
 from application.investments.commands.generate_daily_yields import (
     GenerateDailyYieldCommand,
     GenerateDailyYieldHandler,
 )
-
+from application.investments.commands.process_matured_positions import (
+    ProcessMaturedPositionsCommand,
+    ProcessMaturedPositionsHandler,
+)
+from application.investments.services.position_overflow import PositionOverflowService
+from application.subscriptions.services.subscription_processor import (
+    SubscriptionProcessor,
+)
+from infrastructure.database.connection import AsyncSessionLocal
+from infrastructure.database.repositories.sqlalchemy_account_repository import (
+    SQLAlchemyAccountRepository,
+)
 from infrastructure.database.repositories.sqlalchemy_income_deposit_repository import (
     SQLAlchemyIncomeDepositRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_investment_position_repository import (
+    SQLAlchemyInvestmentPositionRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_investment_yield_repository import (
+    SQLAlchemyInvestmentYieldRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_notification_repository import (
+    SQLAlchemyNotificationRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_recurring_income_repository import (
     SQLAlchemyRecurringIncomeRepository,
 )
-
+from infrastructure.database.repositories.sqlalchemy_subscription_charge_repository import (
+    SQLAlchemySubscriptionChargeRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_subscription_repository import (
+    SQLAlchemySubscriptionRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_transaction_repository import (
+    SQLAlchemyTransactionRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
+    SQLAlchemyUnitOfWork,
+)
 
 logger = logging.getLogger(__name__)
 
 
 async def process_subscriptions_job():
     """Process due subscriptions - runs in the existing event loop"""
-    logger.info(f"Processing subscriptions job at {datetime.now(timezone.utc)}")
+    logger.info(f"Processing subscriptions job at {datetime.now(UTC)}")
 
     async with AsyncSessionLocal() as db:
         try:
@@ -67,9 +72,7 @@ async def process_subscriptions_job():
             stats = await processor.process_due_subscriptions()
             await db.commit()
 
-            logger.info(
-                f"Job finished at {datetime.now(timezone.utc)} with stats: {stats}"
-            )
+            logger.info(f"Job finished at {datetime.now(UTC)} with stats: {stats}")
 
         except Exception as e:
             await db.rollback()
@@ -77,21 +80,24 @@ async def process_subscriptions_job():
 
 
 async def process_investment_yield_job():
-    logger.info(f"Processing investment yield job at {datetime.now(timezone.utc)}")
+    logger.info(f"Processing investment yield job at {datetime.now(UTC)}")
 
     async with AsyncSessionLocal() as db:
         try:
-            account_repo = SQLAlchemyAccountRepository(db)
+            position_repo = SQLAlchemyInvestmentPositionRepository(db)
             yield_repo = SQLAlchemyInvestmentYieldRepository(db)
+            account_repo = SQLAlchemyAccountRepository(db)
             transaction_repo = SQLAlchemyTransactionRepository(db)
-            notification_repo = SQLAlchemyNotificationRepository(db)
 
             uow = SQLAlchemyUnitOfWork(db)
             handler = GenerateDailyYieldHandler(
-                account_repository=account_repo,
+                position_repository=position_repo,
                 investment_yield_repository=yield_repo,
+                account_repository=account_repo,
                 transaction_repository=transaction_repo,
-                notification_repository=notification_repo,
+                overflow_service=PositionOverflowService(
+                    position_repository=position_repo
+                ),
                 uow=uow,
             )
 
@@ -99,17 +105,45 @@ async def process_investment_yield_job():
                 GenerateDailyYieldCommand(target_date=date.today())
             )
 
-            logger.info(
-                f"Job finished at {datetime.now(timezone.utc)} with stats: {stats}"
-            )
+            logger.info(f"Job finished at {datetime.now(UTC)} with stats: {stats}")
         except Exception as e:
             await db.rollback()
             logger.error(f"Error processing investment yield job: {e}")
 
 
+async def process_position_maturity_job():
+    """Procesa plazos fijos vencidos; corre después del job de rendimientos."""
+    logger.info(f"Processing position maturity job at {datetime.now(UTC)}")
+
+    async with AsyncSessionLocal() as db:
+        try:
+            position_repo = SQLAlchemyInvestmentPositionRepository(db)
+            account_repo = SQLAlchemyAccountRepository(db)
+            transaction_repo = SQLAlchemyTransactionRepository(db)
+            notification_repo = SQLAlchemyNotificationRepository(db)
+
+            uow = SQLAlchemyUnitOfWork(db)
+            handler = ProcessMaturedPositionsHandler(
+                position_repository=position_repo,
+                account_repository=account_repo,
+                transaction_repository=transaction_repo,
+                notification_repository=notification_repo,
+                uow=uow,
+            )
+
+            stats = await handler.handle(
+                ProcessMaturedPositionsCommand(target_date=date.today())
+            )
+
+            logger.info(f"Job finished at {datetime.now(UTC)} with stats: {stats}")
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Error processing position maturity job: {e}")
+
+
 async def process_recurring_income_job():
     """Process due incomes - runs in the existing event loop"""
-    logger.info(f"Processing recurring income job at {datetime.now(timezone.utc)}")
+    logger.info(f"Processing recurring income job at {datetime.now(UTC)}")
 
     async with AsyncSessionLocal() as db:
         try:
@@ -130,9 +164,7 @@ async def process_recurring_income_job():
             stats = await processor.process_due_incomes()
             await db.commit()
 
-            logger.info(
-                f"Job finished at {datetime.now(timezone.utc)} with stats: {stats}"
-            )
+            logger.info(f"Job finished at {datetime.now(UTC)} with stats: {stats}")
 
         except Exception as e:
             await db.rollback()

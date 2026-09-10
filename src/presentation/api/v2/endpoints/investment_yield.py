@@ -1,36 +1,36 @@
-from fastapi import APIRouter, Depends, Query, Request
-from typing import List, Optional, cast
+from typing import cast
 
+from fastapi import APIRouter, Depends, Query, Request
+
+from application.investments.queries.get_investment_projections import (
+    GetInvestmentProjectionsHandler,
+    GetInvestmentProjectionsQuery,
+)
+from application.investments.queries.get_investment_yields import (
+    GetInvestmentYieldsHandler,
+    GetInvestmentYieldsQuery,
+)
 from domain.entities.user import User
 from domain.objects.enums import APIKeyScope
-from application.investments.queries.get_investment_yields import (
-    GetInvestmentYieldsQuery,
-    GetInvestmentYieldsHandler,
-)
-from application.investments.queries.get_investment_projections import (
-    GetInvestmentProjectionsQuery,
-    GetInvestmentProjectionsHandler,
-)
-from presentation.schemas.responses.investment_yield import (
-    InvestmentYieldResponse,
-    InvestmentProjectionResponse,
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_30_per_minute,
+    limiter_50_per_minute,
 )
 from presentation.dependencies.auth_deps import require_scope
 from presentation.dependencies.investment_yield_deps import (
-    get_investment_yields_handler,
     get_investment_projections_handler,
+    get_investment_yields_handler,
 )
-
-from infrastructure.rate_limiting.limiters import (
-    enforce_rate_limit,
-    limiter_50_per_minute,
-    limiter_30_per_minute,
+from presentation.schemas.responses.investment_yield import (
+    InvestmentProjectionResponse,
+    InvestmentYieldResponse,
 )
 
 router = APIRouter()
 
 
-@router.get("/{account_id}/yields/", response_model=List[InvestmentYieldResponse])
+@router.get("/{account_id}/yields/", response_model=list[InvestmentYieldResponse])
 async def get_investment_yields(
     request: Request,
     account_id: str,
@@ -56,7 +56,7 @@ async def get_investment_yields(
 async def get_investment_projections(
     request: Request,
     account_id: str,
-    days: Optional[int] = Query(
+    days: int | None = Query(
         None,
         ge=1,
         le=3650,

@@ -1,6 +1,5 @@
-from decimal import Decimal
 from datetime import date, datetime
-from typing import Optional
+from decimal import Decimal
 
 from pydantic import BaseModel
 
@@ -9,7 +8,7 @@ class TransferResponse(BaseModel):
     transfer_uuid: str
     amount: Decimal
     transfer_date: date
-    description: Optional[str]
+    description: str | None
     source_account_name: str
     source_account_uuid: str
     destination_account_name: str

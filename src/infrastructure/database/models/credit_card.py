@@ -1,7 +1,7 @@
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import ForeignKey, DECIMAL, Index
+from sqlalchemy import DECIMAL, ForeignKey, Index
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import Mapped, mapped_column
 

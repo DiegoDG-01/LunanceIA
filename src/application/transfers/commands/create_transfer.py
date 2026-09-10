@@ -1,23 +1,22 @@
 import uuid as uuid_lib
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import cast
-from datetime import datetime, timezone
 
+from application.dto.transaction_dto import CreateTransferDTO, TransferResponseDTO
 from domain.entities.transaction import Transaction
-from domain.objects.enums import TransactionType, AccountType
+from domain.objects.enums import AccountType, TransactionType
 from domain.objects.money import Money
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.repositories.user_repository import UserRepository
-from application.dto.transaction_dto import CreateTransferDTO, TransferResponseDTO
 from shared.exceptions.domain import (
     AccountNotFoundError,
     InsufficientFundsError,
     SameAccountTransferError,
-    UserNotFoundError,
     TransferAccountTypeNotAllowedError,
+    UserNotFoundError,
 )
 
 
@@ -138,5 +137,5 @@ class CreateTransferHandler:
             source_account_uuid=cast(str, source.uuid),
             destination_account_name=destination.name,
             destination_account_uuid=cast(str, destination.uuid),
-            creation_date=saved_outgoing.creation_date or datetime.now(timezone.utc),
+            creation_date=saved_outgoing.creation_date or datetime.now(UTC),
         )

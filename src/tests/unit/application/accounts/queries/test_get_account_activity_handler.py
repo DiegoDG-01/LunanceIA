@@ -112,7 +112,9 @@ class TestGetAccountActivitiesHandler:
         account = self._make_account()
 
         mocks["account_repo"].get_by_uuid_and_user_id = AsyncMock(return_value=account)
-        mocks["transaction_repo"].get_activity_by_account_id = AsyncMock(return_value=[])
+        mocks["transaction_repo"].get_activity_by_account_id = AsyncMock(
+            return_value=[]
+        )
 
         query = GetAccountActivityQuery(user_id=1, account_uuid="acc-uuid-1")
         result = await handler.handle(query)

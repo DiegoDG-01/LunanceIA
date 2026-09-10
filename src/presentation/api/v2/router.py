@@ -2,21 +2,22 @@ from fastapi import APIRouter
 
 from presentation.api.v2.endpoints import (
     account,
+    ai,
+    api_key,
     auth,
-    transaction,
+    bank,
+    budget,
     category,
     dashboard,
-    subscription,
-    bank,
-    investment_yield,
-    ai,
-    notification,
-    installment,
-    budget,
     goals,
-    transfer,
-    api_key,
     income,
+    installment,
+    investment_position,
+    investment_yield,
+    notification,
+    subscription,
+    transaction,
+    transfer,
 )
 
 api_router = APIRouter()
@@ -34,6 +35,9 @@ api_router.include_router(
 api_router.include_router(bank.router, prefix="/bank", tags=["bank"])
 api_router.include_router(
     investment_yield.router, prefix="/investments", tags=["Investment Yield"]
+)
+api_router.include_router(
+    investment_position.router, prefix="/positions", tags=["Investment Positions"]
 )
 api_router.include_router(ai.router, prefix="/ai", tags=["AI"])
 api_router.include_router(

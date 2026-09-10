@@ -2,12 +2,12 @@ from dataclasses import dataclass
 
 from sqlalchemy.exc import IntegrityError
 
-from domain.entities.user import User
-from domain.repositories.user_repository import UserRepository
-from domain.repositories.unit_of_work import AbstractUnitOfWork
 from application.interfaces.auth_service import AuthTokenServiceInterface
-from shared.exceptions.domain import UsernameAlreadyExistsError
+from domain.entities.user import User
+from domain.repositories.unit_of_work import AbstractUnitOfWork
+from domain.repositories.user_repository import UserRepository
 from shared.exceptions.application import CommandValidationError
+from shared.exceptions.domain import UsernameAlreadyExistsError
 from shared.validators.business import UserValidator
 
 

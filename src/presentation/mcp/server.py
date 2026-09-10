@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from mcp.server.fastmcp import FastMCP, Context
+from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
 from presentation.mcp.client import get_api_key, request_api
@@ -313,13 +313,6 @@ async def create_account(
     account_type: str,  # CHECKING / SAVINGS / CREDIT_CARD / DEBIT_CARD / INVESTMENT / CASH
     initial_balance: float = 0.0,
     currency: str = "MXN",
-    # Ajustes de inversión (solo cuando account_type == INVESTMENT)
-    investment_type: str
-    | None = None,  # fixed_term / stocks / bonds / mutual_fund / etf / variable / other
-    investment_rate: float | None = None,  # tasa de interés anual
-    lock_period_end_date: str | None = None,  # ISO: YYYY-MM-DD
-    maturity_date: str | None = None,  # ISO: YYYY-MM-DD
-    early_withdrawal_penalty: float | None = None,  # porcentaje 0-100
     # Ajustes de tarjeta de crédito (solo cuando account_type == CREDIT_CARD)
     billing_cycle_day: int | None = None,  # día de facturación 1-31
     payment_due_day: int | None = None,  # día de pago 1-31
@@ -330,38 +323,21 @@ async def create_account(
     CHECKING, SAVINGS, CREDIT_CARD, DEBIT_CARD, INVESTMENT, CASH. 'bank_id' es el
     ID del banco (usa list_banks/list_accounts como referencia).
 
-    Para cuentas de inversión (account_type=INVESTMENT) puedes incluir los ajustes:
-    'investment_type' (fixed_term, stocks, bonds, mutual_fund, etf, variable, other)
-    e 'investment_rate' son obligatorios juntos; 'lock_period_end_date',
-    'maturity_date' y 'early_withdrawal_penalty' (0-100) son opcionales.
+    INVESTMENT es solo una etiqueta para organizar (plataformas de inversión);
+    los rendimientos se configuran creando apartados con create_position en
+    cualquier cuenta que no sea de crédito.
 
     Para tarjetas de crédito (account_type=CREDIT_CARD) puedes incluir los ajustes:
     'billing_cycle_day' (1-31), 'payment_due_day' (1-31), 'credit_limit' y
-    'minimum_payment_percentage' (0-100) — se envían juntos.
-
-    Los ajustes de inversión solo aplican a INVESTMENT y los de crédito solo a
+    'minimum_payment_percentage' (0-100) — se envían juntos y solo aplican a
     CREDIT_CARD. Confirma el resumen con el usuario antes de crear."""
-    body = {
+    body: dict = {
         "bank_id": bank_id,
         "name": name,
         "account_type": account_type,
         "initial_balance": initial_balance,
         "currency": currency,
     }
-
-    investment_settings = {
-        k: v
-        for k, v in {
-            "investment_type": investment_type,
-            "investment_rate": investment_rate,
-            "lock_period_end_date": lock_period_end_date,
-            "maturity_date": maturity_date,
-            "early_withdrawal_penalty": early_withdrawal_penalty,
-        }.items()
-        if v is not None
-    }
-    if investment_settings:
-        body["investment_settings"] = investment_settings
 
     credit_card_settings = {
         k: v
@@ -998,17 +974,19 @@ async def update_installment(
 
 @mcp.tool()
 async def pay_installment_charge(
-    ctx: Context, charge_uuid: str, payment_date: str
+    ctx: Context, charge_uuid: str, source_account_uuid: str, payment_date: str
 ) -> str:
-    """Paga una cuota específica de una compra a meses. Crea la transacción y
-    descuenta el balance de la cuenta. payment_date en YYYY-MM-DD."""
+    """Paga una cuota moviendo dinero de la cuenta indicada hacia la TDC. Crea
+    una transferencia enlazada entre ambas cuentas. payment_date en YYYY-MM-DD."""
     if error := _validate_uuid(charge_uuid, "charge_uuid"):
+        return error
+    if error := _validate_uuid(source_account_uuid, "source_account_uuid"):
         return error
     return await request_api(
         "POST",
         f"/installments/{charge_uuid}/pay/",
         get_api_key(ctx),
-        json={"payment_date": payment_date},
+        json={"source_account_uuid": source_account_uuid, "payment_date": payment_date},
     )
 
 
@@ -1036,6 +1014,234 @@ async def delete_transfer(ctx: Context, transfer_uuid: str) -> str:
     if error := _validate_uuid(transfer_uuid, "transfer_uuid"):
         return error
     return await request_api("DELETE", f"/transfers/{transfer_uuid}/", get_api_key(ctx))
+
+
+# ── Investment positions (apartados) ──────────────────────────
+
+
+@mcp.tool()
+async def list_positions(
+    ctx: Context, account_uuid: str, include_liquidated: bool = False
+) -> str:
+    """Lista los apartados de inversión de una cuenta con sus saldos y el
+    resumen de la cuenta: saldo disponible, invertido y total. Úsala para
+    responder cuánto tiene apartado/invertido el usuario y en qué."""
+    if error := _validate_uuid(account_uuid, "account_uuid"):
+        return error
+    return await request_api(
+        "GET",
+        f"/positions/account/{account_uuid}/",
+        get_api_key(ctx),
+        params={"include_liquidated": include_liquidated},
+    )
+
+
+@mcp.tool()
+async def get_position(ctx: Context, position_uuid: str) -> str:
+    """Obtiene el detalle de un apartado de inversión por su UUID: capital,
+    rendimiento acumulado, tasa, plazo y estado."""
+    if error := _validate_uuid(position_uuid, "position_uuid"):
+        return error
+    return await request_api("GET", f"/positions/{position_uuid}/", get_api_key(ctx))
+
+
+@mcp.tool()
+async def create_position(
+    ctx: Context,
+    account_uuid: str,
+    name: str,
+    position_type: str,  # ON_DEMAND (a la vista) / FIXED_TERM (plazo fijo)
+    amount: float,
+    annual_rate: float,
+    interest_type: str = "COMPOUND",  # SIMPLE / COMPOUND
+    term_days: int | None = None,
+    maturity_date: str | None = None,  # ISO: YYYY-MM-DD (alternativa a term_days)
+    lock_period_end_date: str | None = None,  # ISO: YYYY-MM-DD
+    early_withdrawal_penalty: float | None = None,  # % 0-100 sobre rendimientos
+    on_maturity: str = "HOLD",  # AUTO_RENEW / LIQUIDATE / HOLD
+    max_balance: float | None = None,  # tope de capital (solo ON_DEMAND)
+    overflow_action: str | None = None,  # TO_AVAILABLE / TO_POSITION
+    overflow_position_uuid: str | None = None,  # destino, con TO_POSITION
+) -> str:
+    """Crea un apartado de inversión dentro de una cuenta, moviendo 'amount'
+    del saldo disponible al apartado. 'position_type' es ON_DEMAND (a la vista,
+    admite depósitos/retiros) o FIXED_TERM (plazo fijo: requiere 'term_days' o
+    'maturity_date' y no admite movimientos hasta vencer). 'on_maturity' define
+    qué pasa al vencer un plazo: AUTO_RENEW (reinvierte), LIQUIDATE (regresa al
+    disponible) o HOLD (espera decisión del usuario). El dinero apartado NO se
+    puede gastar ni transferir hasta retirarlo al disponible.
+
+    'max_balance' pone un tope al apartado (solo a la vista), como las SOFIPOs
+    que solo pagan su mejor tasa hasta cierto monto. Lo que ya no cabe va a
+    donde diga 'overflow_action': TO_AVAILABLE (al saldo disponible) o
+    TO_POSITION con 'overflow_position_uuid' (a otro apartado, normalmente uno
+    de menor tasa). El monto inicial no puede superar el tope. Para encadenar
+    apartados que todavía no existen, créalos primero y usa update_position.
+
+    IMPORTANTE: mueve dinero real — muestra un resumen y pide confirmación
+    explícita antes de crear."""
+    if error := _validate_uuid(account_uuid, "account_uuid"):
+        return error
+    body: dict = {
+        k: v
+        for k, v in {
+            "account_uuid": account_uuid,
+            "name": name,
+            "position_type": position_type,
+            "amount": amount,
+            "annual_rate": annual_rate,
+            "interest_type": interest_type,
+            "term_days": term_days,
+            "maturity_date": maturity_date,
+            "lock_period_end_date": lock_period_end_date,
+            "early_withdrawal_penalty": early_withdrawal_penalty,
+            "on_maturity": on_maturity,
+        }.items()
+        if v is not None
+    }
+
+    cap = {
+        k: v
+        for k, v in {
+            "max_balance": max_balance,
+            "overflow_action": overflow_action,
+            "overflow_position_uuid": overflow_position_uuid,
+        }.items()
+        if v is not None
+    }
+    if cap:
+        body["cap"] = cap
+
+    return await request_api("POST", "/positions", get_api_key(ctx), json=body)
+
+
+@mcp.tool()
+async def update_position(
+    ctx: Context,
+    position_uuid: str,
+    name: str | None = None,
+    max_balance: float | None = None,  # tope de capital
+    overflow_action: str | None = None,  # TO_AVAILABLE / TO_POSITION
+    overflow_position_uuid: str | None = None,  # destino, con TO_POSITION
+    remove_cap: bool = False,  # quita el tope por completo
+) -> str:
+    """Cambia el nombre o la configuración de tope de un apartado.
+
+    Es el único camino para encadenar apartados: el destino tiene que existir
+    antes de que otro lo apunte, así que crea los dos y después conecta el
+    primero con overflow_action=TO_POSITION y overflow_position_uuid.
+
+    Ejemplo de tramos: 'Ahorro 10%' con tope 25000 desbordando a 'Excedente 5%'
+    hace que los primeros 25,000 rindan 10% y el resto 5%.
+
+    Bajar el tope por debajo del saldo actual saca el excedente en el momento,
+    no espera al proceso diario. 'remove_cap' quita el tope y su destino.
+    IMPORTANTE: puede mover dinero real — pide confirmación antes de ejecutar."""
+    if error := _validate_uuid(position_uuid, "position_uuid"):
+        return error
+
+    body: dict = {}
+    if name is not None:
+        body["name"] = name
+
+    if remove_cap:
+        body["cap"] = None
+    else:
+        cap = {
+            k: v
+            for k, v in {
+                "max_balance": max_balance,
+                "overflow_action": overflow_action,
+                "overflow_position_uuid": overflow_position_uuid,
+            }.items()
+            if v is not None
+        }
+        if cap:
+            body["cap"] = cap
+
+    return await request_api(
+        "PATCH", f"/positions/{position_uuid}/", get_api_key(ctx), json=body
+    )
+
+
+@mcp.tool()
+async def deposit_to_position(ctx: Context, position_uuid: str, amount: float) -> str:
+    """Mueve dinero del saldo disponible de la cuenta hacia un apartado a la
+    vista (los plazos fijos no admiten depósitos). IMPORTANTE: mueve dinero
+    real — pide confirmación explícita del usuario antes de ejecutar."""
+    if error := _validate_uuid(position_uuid, "position_uuid"):
+        return error
+    return await request_api(
+        "POST",
+        f"/positions/{position_uuid}/deposit/",
+        get_api_key(ctx),
+        json={"amount": amount},
+    )
+
+
+@mcp.tool()
+async def withdraw_from_position(
+    ctx: Context, position_uuid: str, amount: float
+) -> str:
+    """Regresa dinero de un apartado a la vista al saldo disponible de la
+    cuenta. Es el único camino para poder gastar o transferir dinero apartado
+    (los plazos fijos solo se liquidan por completo). IMPORTANTE: mueve dinero
+    real — pide confirmación explícita del usuario antes de ejecutar."""
+    if error := _validate_uuid(position_uuid, "position_uuid"):
+        return error
+    return await request_api(
+        "POST",
+        f"/positions/{position_uuid}/withdraw/",
+        get_api_key(ctx),
+        json={"amount": amount},
+    )
+
+
+@mcp.tool()
+async def liquidate_position(ctx: Context, position_uuid: str) -> str:
+    """Cierra un apartado por completo y regresa capital + rendimiento al saldo
+    disponible. Liquidar un plazo fijo antes de su vencimiento aplica la
+    penalización configurada sobre los rendimientos, y no se permite durante el
+    periodo de permanencia. IMPORTANTE: acción permanente que mueve dinero
+    real — muestra el detalle y pide confirmación explícita antes de ejecutar."""
+    if error := _validate_uuid(position_uuid, "position_uuid"):
+        return error
+    return await request_api(
+        "POST", f"/positions/{position_uuid}/liquidate/", get_api_key(ctx)
+    )
+
+
+@mcp.tool()
+async def get_position_yields(
+    ctx: Context, position_uuid: str, limit: int = 365, offset: int = 0
+) -> str:
+    """Lista los rendimientos diarios históricos de un apartado de inversión."""
+    if error := _validate_uuid(position_uuid, "position_uuid"):
+        return error
+    return await request_api(
+        "GET",
+        f"/positions/{position_uuid}/yields/",
+        get_api_key(ctx),
+        params={"limit": limit, "offset": offset},
+    )
+
+
+@mcp.tool()
+async def get_position_projections(
+    ctx: Context, position_uuid: str, days: int | None = None
+) -> str:
+    """Proyección de rendimiento de un apartado: valor actual, tasa y balance
+    proyectado día a día. 'days' son los días a proyectar; si se omite proyecta
+    hasta el vencimiento (o 365 días para apartados a la vista)."""
+    if error := _validate_uuid(position_uuid, "position_uuid"):
+        return error
+    params = {"days": days} if days is not None else {}
+    return await request_api(
+        "GET",
+        f"/positions/{position_uuid}/projections/",
+        get_api_key(ctx),
+        params=params,
+    )
 
 
 if __name__ == "__main__":

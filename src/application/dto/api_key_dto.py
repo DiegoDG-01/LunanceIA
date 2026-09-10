@@ -1,6 +1,5 @@
-from datetime import datetime
 from dataclasses import dataclass
-from typing import Optional
+from datetime import datetime
 
 from domain.entities.api_key import APIKey
 
@@ -10,7 +9,7 @@ class CreateAPIKeyDTO:
     user_id: int
     name: str
     scopes: list[str]
-    expires_at: Optional[datetime] = None
+    expires_at: datetime | None = None
 
 
 @dataclass
@@ -20,7 +19,7 @@ class APICreatedResponseDTO:
     name: str
     key_prefix: str
     scopes: list[str]
-    expires_at: Optional[datetime]
+    expires_at: datetime | None
     created_at: datetime
 
     @classmethod
@@ -35,6 +34,7 @@ class APICreatedResponseDTO:
             created_at=entity.created_at,
         )
 
+
 @dataclass
 class APIKeyResponseDTO:
     uuid: str
@@ -42,8 +42,8 @@ class APIKeyResponseDTO:
     key_prefix: str
     scopes: list[str]
     is_active: bool
-    expires_at: Optional[datetime]
-    last_used_at: Optional[datetime]
+    expires_at: datetime | None
+    last_used_at: datetime | None
     created_at: datetime
 
     @classmethod

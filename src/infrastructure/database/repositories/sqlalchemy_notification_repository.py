@@ -1,11 +1,9 @@
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
-from typing import List
 
 from domain.entities.notification import Notification
-from domain.repositories.notification_repository import NotificationRepository
 from domain.objects.enums import NotificationType
-
+from domain.repositories.notification_repository import NotificationRepository
 from infrastructure.database.models.notifications import NotificationModel
 
 
@@ -44,7 +42,7 @@ class SQLAlchemyNotificationRepository(NotificationRepository):
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    async def get_by_user_id(self, user_id: int) -> List[Notification]:
+    async def get_by_user_id(self, user_id: int) -> list[Notification]:
         stmt = select(NotificationModel).where(NotificationModel.user_id == user_id)
         result = await self.db.execute(stmt)
         models = result.scalars().all()

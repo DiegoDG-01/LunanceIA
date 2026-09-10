@@ -1,7 +1,5 @@
-from typing import List, Optional
-
+from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, delete
 
 from domain.entities.installment_charge import InstallmentCharge
 from domain.repositories.installment_charge_repository import (
@@ -31,8 +29,8 @@ class SQLAlchemyInstallmentChargeRepository(InstallmentChargeRepository):
         )
 
     async def create_bulk(
-        self, charges: List[InstallmentCharge]
-    ) -> List[InstallmentCharge]:
+        self, charges: list[InstallmentCharge]
+    ) -> list[InstallmentCharge]:
         models = [
             InstallmentChargeModel(
                 installment_purchase_id=c.installment_purchase_id,
@@ -51,7 +49,7 @@ class SQLAlchemyInstallmentChargeRepository(InstallmentChargeRepository):
 
     async def get_by_uuid(
         self, uuid: str, *, for_update: bool = False
-    ) -> Optional[InstallmentCharge]:
+    ) -> InstallmentCharge | None:
         stmt = select(InstallmentChargeModel).where(InstallmentChargeModel.uuid == uuid)
 
         if for_update:
@@ -61,9 +59,19 @@ class SQLAlchemyInstallmentChargeRepository(InstallmentChargeRepository):
         model = result.scalar_one_or_none()
         return self._model_to_entity(model) if model else None
 
+    async def get_by_transaction_id(
+        self, transaction_id: int
+    ) -> InstallmentCharge | None:
+        stmt = select(InstallmentChargeModel).where(
+            InstallmentChargeModel.transaction_id == transaction_id
+        )
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
+        return self._model_to_entity(model) if model else None
+
     async def get_by_purchase_id(
         self, purchase_id: int, *, for_update: bool = False
-    ) -> List[InstallmentCharge]:
+    ) -> list[InstallmentCharge]:
         stmt = (
             select(InstallmentChargeModel)
             .where(InstallmentChargeModel.installment_purchase_id == purchase_id)
@@ -78,8 +86,8 @@ class SQLAlchemyInstallmentChargeRepository(InstallmentChargeRepository):
         return [self._model_to_entity(model) for model in models]
 
     async def get_bulk_by_purchase_ids(
-        self, purchase_ids: List[int]
-    ) -> List[InstallmentCharge]:
+        self, purchase_ids: list[int]
+    ) -> list[InstallmentCharge]:
         if not purchase_ids:
             return []
         stmt = (
@@ -94,7 +102,7 @@ class SQLAlchemyInstallmentChargeRepository(InstallmentChargeRepository):
         models = result.scalars().all()
         return [self._model_to_entity(model) for model in models]
 
-    async def get_pending_charges(self, user_id: int) -> List[InstallmentCharge]:
+    async def get_pending_charges(self, user_id: int) -> list[InstallmentCharge]:
         stmt = (
             select(InstallmentChargeModel)
             .join(

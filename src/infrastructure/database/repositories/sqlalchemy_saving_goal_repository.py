@@ -1,12 +1,10 @@
-from sqlalchemy import select, and_
-from typing import Optional
-
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.entities.saving_goal import SavingGoal
-from shared.exceptions.domain import SavingGoalNotFoundError
-from infrastructure.database.models.saving_goal import SavingGoalModel
 from domain.repositories.saving_goal_repository import SavingGoalRepository
+from infrastructure.database.models.saving_goal import SavingGoalModel
+from shared.exceptions.domain import SavingGoalNotFoundError
 
 
 class SQLAlchemySavingGoalRepository(SavingGoalRepository):
@@ -84,8 +82,9 @@ class SQLAlchemySavingGoalRepository(SavingGoalRepository):
             return True
         return False
 
-
-    async def get_by_uuid_and_user_id(self, goal_uuid: str, user_id: int) -> Optional[SavingGoal]:
+    async def get_by_uuid_and_user_id(
+        self, goal_uuid: str, user_id: int
+    ) -> SavingGoal | None:
         stmt = select(SavingGoalModel).where(
             and_(SavingGoalModel.uuid == goal_uuid, SavingGoalModel.user_id == user_id)
         )
@@ -93,8 +92,9 @@ class SQLAlchemySavingGoalRepository(SavingGoalRepository):
         model = result.scalar_one_or_none()
         return self._model_to_entity(model) if model else None
 
-
-    async def get_by_user(self, user_id: int, active_only: bool = True) -> list[SavingGoal]:
+    async def get_by_user(
+        self, user_id: int, active_only: bool = True
+    ) -> list[SavingGoal]:
         stmt = select(SavingGoalModel).where(SavingGoalModel.user_id == user_id)
 
         if active_only:
@@ -105,7 +105,6 @@ class SQLAlchemySavingGoalRepository(SavingGoalRepository):
         result = await self.db.execute(stmt)
         models = result.scalars().all()
         return [self._model_to_entity(model) for model in models]
-
 
     async def switch_status(self, goal: SavingGoal) -> SavingGoal:
         goal.is_active = not goal.is_active

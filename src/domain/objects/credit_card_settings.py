@@ -3,9 +3,9 @@ from decimal import Decimal
 
 from shared.exceptions.domain import (
     InvalidBillingCycleDayError,
-    InvalidPaymentDueDayError,
     InvalidCreditLimitError,
     InvalidMinimumPaymentError,
+    InvalidPaymentDueDayError,
 )
 
 

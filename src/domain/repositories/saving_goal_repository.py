@@ -1,11 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from domain.entities.saving_goal import SavingGoal
 
 
 class SavingGoalRepository(ABC):
-
     @abstractmethod
     async def create(self, goal: SavingGoal) -> SavingGoal:
         pass
@@ -19,11 +17,15 @@ class SavingGoalRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_uuid_and_user_id(self, goal_uuid: str, user_id: int) -> Optional[SavingGoal]:
+    async def get_by_uuid_and_user_id(
+        self, goal_uuid: str, user_id: int
+    ) -> SavingGoal | None:
         pass
 
     @abstractmethod
-    async def get_by_user(self, user_id: int, active_only: bool = True) -> list[SavingGoal]:
+    async def get_by_user(
+        self, user_id: int, active_only: bool = True
+    ) -> list[SavingGoal]:
         pass
 
     @abstractmethod

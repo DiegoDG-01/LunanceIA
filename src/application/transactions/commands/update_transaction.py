@@ -1,32 +1,36 @@
-from decimal import Decimal
-from typing import Optional, cast
-from datetime import datetime, date
 from dataclasses import dataclass
+from datetime import date, datetime
+from decimal import Decimal
+from typing import cast
 
-from domain.objects.money import Money
-from domain.entities.transaction import TransactionType
-from shared.exceptions.domain import (
-    TransactionNotFoundError,
-    AccountNotFoundError,
-    InvalidTransactionTypeError,
-)
 from application.dto.transaction_dto import TransactionResponseDTO
+from domain.entities.transaction import TransactionType
+from domain.objects.money import Money
 from domain.repositories.account_repository import AccountRepository
+from domain.repositories.installment_purchase_repository import (
+    InstallmentPurchaseRepository,
+)
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
+from shared.exceptions.domain import (
+    AccountNotFoundError,
+    InstallmentTransactionModificationError,
+    InvalidTransactionTypeError,
+    TransactionNotFoundError,
+)
 
 
 @dataclass
 class UpdateTransactionCommand:
     transaction_uuid: str
     user_id: int
-    description: Optional[str] = None
-    notes: Optional[str] = None
-    category_id: Optional[int] = None
-    transaction_type: Optional[str] = None
-    amount: Optional[Decimal] = None
-    transaction_date: Optional[date] = None
-    account_uuid: Optional[str] = None
+    description: str | None = None
+    notes: str | None = None
+    category_id: int | None = None
+    transaction_type: str | None = None
+    amount: Decimal | None = None
+    transaction_date: date | None = None
+    account_uuid: str | None = None
 
 
 class UpdateTransactionCommandHandler:
@@ -34,10 +38,12 @@ class UpdateTransactionCommandHandler:
         self,
         transaction_repository: TransactionRepository,
         account_repository: AccountRepository,
+        installment_purchase_repository: InstallmentPurchaseRepository,
         uow: AbstractUnitOfWork,
     ):
         self.transaction_repository = transaction_repository
         self.account_repository = account_repository
+        self.installment_purchase_repository = installment_purchase_repository
         self.uow = uow
 
     async def handle(self, command: UpdateTransactionCommand) -> TransactionResponseDTO:
@@ -48,6 +54,17 @@ class UpdateTransactionCommandHandler:
             )
             if not transaction:
                 raise TransactionNotFoundError(command.transaction_uuid)
+
+            purchase = await self.installment_purchase_repository.get_by_initial_transaction_id(
+                transaction.id, command.user_id
+            )
+            if purchase:
+                raise InstallmentTransactionModificationError()
+
+            # Una transferencia se compone de dos movimientos y debe editarse
+            # mediante su caso de uso específico para no desbalancear cuentas.
+            if transaction.is_transfer():
+                raise InvalidTransactionTypeError(transaction.transaction_type.value)
 
             source_account_id = transaction.account_id
             destination_account_id = source_account_id

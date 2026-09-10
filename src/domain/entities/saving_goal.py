@@ -1,23 +1,21 @@
 from dataclasses import dataclass
+from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Optional
-from datetime import date, datetime, timezone
 
 
 @dataclass
 class SavingGoal:
-    id: Optional[int]
-    uuid: Optional[str]
+    id: int | None
+    uuid: str | None
     user_id: int
     account_id: int
     name: str
     target_amount: Decimal
-    target_date: Optional[date] = None
-    description: Optional[str] = None
+    target_date: date | None = None
+    description: str | None = None
     is_active: bool = True
-    completion_date: Optional[date] = None
+    completion_date: date | None = None
     creation_date: datetime = None
-
 
     @classmethod
     def create_new(
@@ -26,8 +24,8 @@ class SavingGoal:
         account_id: int,
         name: str,
         target_amount: Decimal,
-        target_date: Optional[date] = None,
-        description: Optional[str] = None,
+        target_date: date | None = None,
+        description: str | None = None,
     ):
         return cls(
             id=None,
@@ -39,7 +37,7 @@ class SavingGoal:
             target_date=target_date,
             description=description,
             is_active=True,
-            creation_date=datetime.now(timezone.utc),
+            creation_date=datetime.now(UTC),
         )
 
     def calculate_progress(self, account_balance: Decimal) -> float:

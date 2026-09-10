@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+
 from domain.entities.category import Category
 
 
@@ -7,11 +7,11 @@ from domain.entities.category import Category
 class CategoryResponseDTO:
     id: int
     name: str
-    description: Optional[str]
-    icon: Optional[str]
-    color: Optional[str]
+    description: str | None
+    icon: str | None
+    color: str | None
     is_active: bool
-    type: Optional[str]
+    type: str | None
 
     @classmethod
     def from_entity(cls, category: Category) -> "CategoryResponseDTO":

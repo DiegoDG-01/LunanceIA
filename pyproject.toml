@@ -1,6 +1,6 @@
 [project]
 name = "lunance"
-version = "1.0.0"
+version = "2.0.0"
 description = "API REST de finanzas personales construida con FastAPI y Clean Architecture"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -12,35 +12,35 @@ authors = [
 keywords = ["fastapi", "finanzas", "clean-architecture", "ddd", "cqrs"]
 dependencies = [
     "aiomysql==0.3.2",
-    "alembic==1.18.4",
-    "fastapi==0.140.0",
-    "greenlet==3.5.0",
+    "alembic==1.19.0",
+    "fastapi==0.141.1",
+    "greenlet==3.5.4",
     "pydantic[email]==2.13.4",
-    "pydantic-settings==2.14.2",
+    "pydantic-settings==2.15.0",
     "pymysql==1.2.0",
     "python-dotenv==1.2.2",
     "python-jose[cryptography]==3.5.0",
     "sqlalchemy==2.0.51",
-    "uvicorn==0.43.0",
-    "cryptography==48.0.1",
-    "python-multipart==0.0.31",
+    "uvicorn==0.52.1",
+    "cryptography==50.0.0",
+    "python-multipart==0.0.32",
     "bcrypt==5.0.0",
     "google-genai==2.4.0",
     "email-validator==2.3.0",
     "pillow==12.3.0",
-    "apscheduler==3.11.2",
-    "pytz==2026.2",
-    "google-auth==2.53.0",
+    "apscheduler==3.11.3",
+    "pytz==2026.3.post1",
+    "google-auth==2.56.3",
     "google-auth-oauthlib==1.4.0",
-    "google-api-python-client==2.196.0",
-    "cachetools==7.1.2",
-    "pydantic-ai-slim[google,openai]==2.16.0",
+    "google-api-python-client==2.198.0",
+    "cachetools==7.1.7",
+    "pydantic-ai-slim[google,openai]==2.26.0",
     "fastapi-advanced-rate-limiter==2.1.0",
     "redis==7.4.0",
     "secure==1.0.1",
-    "openai>=2.37.0",
+    "openai>=2.53.0",
     "python-dateutil>=2.9.0.post0",
-    "numpy==2.4.6",
+    "numpy==2.5.1",
 ]
 
 [project.urls]
@@ -51,18 +51,18 @@ Issues = "https://github.com/DiegoDG-01/LunanceIA/issues"
 [dependency-groups]
 test = [
     "aiosqlite==0.22.1",
-    "pytest==9.0.3",
-    "pytest-asyncio==1.3.0",
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
     "httpx==0.28.1",
     "pytest-cov==7.1.0",
 ]
 
 dev = [
-    "maturin==1.12.6",
+    "maturin==1.14.1",
     "virtualenv==20.36.1",
-    "ruff==0.14.3",
-    "pre-commit==4.3.0",
-    "locust==2.32.0",
+    "ruff==0.16.2",
+    "pre-commit==4.6.1",
+    "locust==2.46.3",
 ]
 
 mcp = [

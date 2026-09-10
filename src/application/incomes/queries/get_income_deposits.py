@@ -1,10 +1,8 @@
 from dataclasses import dataclass
-from typing import List
 
-from domain.repositories.recurring_income_repository import RecurringIncomeRepository
-from domain.repositories.income_deposit_repository import IncomeDepositRepository
 from application.dto.recurring_income_dto import IncomeDepositResponseDTO
-
+from domain.repositories.income_deposit_repository import IncomeDepositRepository
+from domain.repositories.recurring_income_repository import RecurringIncomeRepository
 from shared.exceptions.domain import RecurringIncomeNotFoundError
 
 
@@ -27,7 +25,7 @@ class GetIncomeDepositsHandler:
 
     async def handle(
         self, query: GetIncomeDepositsQuery
-    ) -> List[IncomeDepositResponseDTO]:
+    ) -> list[IncomeDepositResponseDTO]:
         income = await self.recurring_income_repository.get_by_uuid_and_user_id(
             income_uuid=query.income_uuid, user_id=query.user_id
         )

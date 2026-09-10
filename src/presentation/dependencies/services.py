@@ -1,16 +1,15 @@
 from fastapi import Depends
 
-from domain.services.account_service import AccountService
-from infrastructure.security.jwt_service import JWTService
 from application.interfaces.auth_service import AuthTokenServiceInterface
+from domain.repositories.auth_token_repository import AuthTokenRepository
+from domain.services.account_service import AccountService
 from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
-from domain.repositories.auth_token_repository import AuthTokenRepository
-
+from infrastructure.security.jwt_service import JWTService
 from presentation.dependencies.repositories import (
-    get_user_repository,
     get_auth_token_repository,
+    get_user_repository,
 )
 
 

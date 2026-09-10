@@ -3,20 +3,20 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
-    ForeignKey,
     DECIMAL,
     Date,
     DateTime,
     Enum,
-    UniqueConstraint,
+    ForeignKey,
     Index,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.mysql import CHAR
-from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
 
-from infrastructure.database.connection import Base
 from domain.objects.enums import InterestType
+from infrastructure.database.connection import Base
 
 
 class InvestmentYieldModel(Base):
@@ -25,6 +25,11 @@ class InvestmentYieldModel(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     account_id: Mapped[int] = mapped_column(
         ForeignKey("accounts.id", ondelete="CASCADE"), index=True
+    )
+    position_id: Mapped[int | None] = mapped_column(
+        ForeignKey("investment_positions.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
     )
     uuid: Mapped[str] = mapped_column(
         CHAR(36), unique=True, index=True, default=lambda: str(uuid.uuid4())
@@ -40,6 +45,6 @@ class InvestmentYieldModel(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("account_id", "yield_date", name="uq_account__yield_date"),
+        UniqueConstraint("position_id", "yield_date", name="uq_position__yield_date"),
         Index("idx_yield_date", "yield_date"),
     )

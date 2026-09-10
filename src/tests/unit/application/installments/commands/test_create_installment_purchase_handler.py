@@ -12,7 +12,8 @@ from domain.entities.account import Account
 from domain.entities.user import User
 from domain.entities.installment_purchase import InstallmentPurchase
 from domain.entities.installment_charge import InstallmentCharge
-from domain.objects.enums import AccountType, InstallmentType
+from domain.entities.transaction import Transaction
+from domain.objects.enums import AccountType, InstallmentType, TransactionType
 from domain.objects.money import Money
 from shared.exceptions.domain import (
     UserNotFoundError,
@@ -23,7 +24,6 @@ from shared.exceptions.domain import (
 
 @pytest.mark.unit
 class TestCreateInstallmentPurchaseHandler:
-
     @pytest.fixture
     def mocks(self):
         uow = AsyncMock()
@@ -34,6 +34,7 @@ class TestCreateInstallmentPurchaseHandler:
             "account_repo": MagicMock(),
             "purchase_repo": MagicMock(),
             "charge_repo": MagicMock(),
+            "transaction_repo": MagicMock(),
             "uow": uow,
         }
 
@@ -44,53 +45,91 @@ class TestCreateInstallmentPurchaseHandler:
             account_repository=mocks["account_repo"],
             installment_purchase_repository=mocks["purchase_repo"],
             installment_charge_repository=mocks["charge_repo"],
+            transaction_repository=mocks["transaction_repo"],
             uow=mocks["uow"],
         )
 
     def _make_user(self, is_active: bool = True) -> User:
         return User(
-            id=1, uuid="u-1", auth0_id="a-1", name="Test",
-            email="t@t.com", is_active=is_active,
+            id=1,
+            uuid="u-1",
+            auth0_id="a-1",
+            name="Test",
+            email="t@t.com",
+            is_active=is_active,
         )
 
     def _make_credit_card_account(self) -> Account:
         return Account(
-            id=10, uuid="acc-uuid-1", user_id=1, bank_id=1,
-            name="BBVA TDC", account_type=AccountType.CREDIT_CARD,
+            id=10,
+            uuid="acc-uuid-1",
+            user_id=1,
+            bank_id=1,
+            name="BBVA TDC",
+            account_type=AccountType.CREDIT_CARD,
             current_balance=Money(Decimal("50000.00")),
-            is_active=True, creation_date=datetime.now(timezone.utc),
+            is_active=True,
+            creation_date=datetime.now(timezone.utc),
         )
 
     def _make_purchase(self, num_installments: int = 12) -> InstallmentPurchase:
         return InstallmentPurchase(
-            id=1, uuid="purchase-uuid-1", user_id=1, account_id=10,
-            category_id=None, description="iPhone 15 Pro",
+            id=1,
+            uuid="purchase-uuid-1",
+            user_id=1,
+            account_id=10,
+            category_id=None,
+            description="iPhone 15 Pro",
             total_amount=Money(Decimal("24000.00")),
             num_installments=num_installments,
             installment_type=InstallmentType.NO_INTEREST,
             annual_interest_rate=Decimal("0"),
             monthly_payment=Decimal("2000.00"),
-            purchase_date=date.today(), notes=None,
-            is_active=True, creation_date=datetime.now(timezone.utc),
+            purchase_date=date.today(),
+            notes=None,
+            is_active=True,
+            creation_date=datetime.now(timezone.utc),
         )
 
     def _make_charges(self, purchase: InstallmentPurchase):
         return [
             InstallmentCharge(
-                id=i, uuid=f"charge-uuid-{i}", installment_purchase_id=1,
-                installment_number=i, amount=purchase.monthly_payment,
-                due_date=date.today(), paid=False,
+                id=i,
+                uuid=f"charge-uuid-{i}",
+                installment_purchase_id=1,
+                installment_number=i,
+                amount=purchase.monthly_payment,
+                due_date=date.today(),
+                paid=False,
                 creation_date=datetime.now(timezone.utc),
             )
             for i in range(1, purchase.num_installments + 1)
         ]
 
+    def _make_initial_transaction(self) -> Transaction:
+        return Transaction(
+            id=101,
+            uuid="transaction-uuid-1",
+            user_id=1,
+            account_id=10,
+            category_id=None,
+            transaction_type=TransactionType.EXPENSE,
+            amount=Money(Decimal("24000.00")),
+            transaction_date=date.today(),
+            creation_date=datetime.now(timezone.utc),
+        )
+
     def _make_dto(self, **kwargs) -> CreateInstallmentPurchaseDTO:
         defaults = dict(
-            user_id=1, account_uuid="acc-uuid-1", category_id=None,
-            description="iPhone 15 Pro", total_amount=Decimal("24000.00"),
-            num_installments=12, installment_type=InstallmentType.NO_INTEREST,
-            annual_interest_rate=Decimal("0"), purchase_date=date.today(),
+            user_id=1,
+            account_uuid="acc-uuid-1",
+            category_id=None,
+            description="iPhone 15 Pro",
+            total_amount=Decimal("24000.00"),
+            num_installments=12,
+            installment_type=InstallmentType.NO_INTEREST,
+            annual_interest_rate=Decimal("0"),
+            purchase_date=date.today(),
         )
         defaults.update(kwargs)
         return CreateInstallmentPurchaseDTO(**defaults)
@@ -107,14 +146,20 @@ class TestCreateInstallmentPurchaseHandler:
         mocks["account_repo"].update = AsyncMock()
         mocks["purchase_repo"].create = AsyncMock(return_value=purchase)
         mocks["charge_repo"].create_bulk = AsyncMock(return_value=charges)
+        mocks["transaction_repo"].create = AsyncMock(
+            return_value=self._make_initial_transaction()
+        )
 
-        result = await handler.handle(CreateInstallmentPurchaseCommand(dto=self._make_dto()))
+        result = await handler.handle(
+            CreateInstallmentPurchaseCommand(dto=self._make_dto())
+        )
 
         assert result.uuid == "purchase-uuid-1"
         assert result.installment_type == InstallmentType.NO_INTEREST
         assert len(result.charges) == 12
         mocks["purchase_repo"].create.assert_called_once()
         mocks["charge_repo"].create_bulk.assert_called_once()
+        mocks["transaction_repo"].create.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_balance_is_deducted_at_creation(self, handler, mocks):
@@ -128,6 +173,9 @@ class TestCreateInstallmentPurchaseHandler:
         mocks["account_repo"].update = AsyncMock()
         mocks["purchase_repo"].create = AsyncMock(return_value=purchase)
         mocks["charge_repo"].create_bulk = AsyncMock(return_value=charges)
+        mocks["transaction_repo"].create = AsyncMock(
+            return_value=self._make_initial_transaction()
+        )
 
         await handler.handle(CreateInstallmentPurchaseCommand(dto=self._make_dto()))
 
@@ -150,10 +198,13 @@ class TestCreateInstallmentPurchaseHandler:
         mocks["account_repo"].update = AsyncMock()
         mocks["purchase_repo"].create = AsyncMock(return_value=purchase)
         mocks["charge_repo"].create_bulk = AsyncMock(return_value=charges)
+        mocks["transaction_repo"].create = AsyncMock(
+            return_value=self._make_initial_transaction()
+        )
 
-        await handler.handle(CreateInstallmentPurchaseCommand(
-            dto=self._make_dto(num_installments=6)
-        ))
+        await handler.handle(
+            CreateInstallmentPurchaseCommand(dto=self._make_dto(num_installments=6))
+        )
 
         created_charges = mocks["charge_repo"].create_bulk.call_args[0][0]
         assert len(created_charges) == 6
@@ -163,11 +214,20 @@ class TestCreateInstallmentPurchaseHandler:
         user = self._make_user()
         account = self._make_credit_card_account()
         purchase = InstallmentPurchase(
-            id=1, uuid="p-1", user_id=1, account_id=10, category_id=None,
-            description="Test", total_amount=Money(Decimal("10001.00")),
-            num_installments=3, installment_type=InstallmentType.NO_INTEREST,
-            annual_interest_rate=Decimal("0"), monthly_payment=Decimal("3333.67"),
-            purchase_date=date.today(), notes=None, is_active=True,
+            id=1,
+            uuid="p-1",
+            user_id=1,
+            account_id=10,
+            category_id=None,
+            description="Test",
+            total_amount=Money(Decimal("10001.00")),
+            num_installments=3,
+            installment_type=InstallmentType.NO_INTEREST,
+            annual_interest_rate=Decimal("0"),
+            monthly_payment=Decimal("3333.67"),
+            purchase_date=date.today(),
+            notes=None,
+            is_active=True,
             creation_date=datetime.now(timezone.utc),
         )
         charges = self._make_charges(purchase)
@@ -177,10 +237,15 @@ class TestCreateInstallmentPurchaseHandler:
         mocks["account_repo"].update = AsyncMock()
         mocks["purchase_repo"].create = AsyncMock(return_value=purchase)
         mocks["charge_repo"].create_bulk = AsyncMock(return_value=charges)
+        mocks["transaction_repo"].create = AsyncMock(
+            return_value=self._make_initial_transaction()
+        )
 
-        await handler.handle(CreateInstallmentPurchaseCommand(
-            dto=self._make_dto(total_amount=Decimal("10001.00"), num_installments=3)
-        ))
+        await handler.handle(
+            CreateInstallmentPurchaseCommand(
+                dto=self._make_dto(total_amount=Decimal("10001.00"), num_installments=3)
+            )
+        )
 
         created_charges = mocks["charge_repo"].create_bulk.call_args[0][0]
         total = sum(c.amount for c in created_charges)
@@ -195,7 +260,9 @@ class TestCreateInstallmentPurchaseHandler:
 
     @pytest.mark.asyncio
     async def test_inactive_user_raises(self, handler, mocks):
-        mocks["user_repo"].get_by_id = AsyncMock(return_value=self._make_user(is_active=False))
+        mocks["user_repo"].get_by_id = AsyncMock(
+            return_value=self._make_user(is_active=False)
+        )
 
         with pytest.raises(UserNotFoundError):
             await handler.handle(CreateInstallmentPurchaseCommand(dto=self._make_dto()))
@@ -212,13 +279,20 @@ class TestCreateInstallmentPurchaseHandler:
     async def test_non_credit_card_account_raises(self, handler, mocks):
         user = self._make_user()
         checking_account = Account(
-            id=10, uuid="acc-uuid-1", user_id=1, bank_id=1,
-            name="Débito", account_type=AccountType.CHECKING,
+            id=10,
+            uuid="acc-uuid-1",
+            user_id=1,
+            bank_id=1,
+            name="Débito",
+            account_type=AccountType.CHECKING,
             current_balance=Money(Decimal("10000.00")),
-            is_active=True, creation_date=datetime.now(timezone.utc),
+            is_active=True,
+            creation_date=datetime.now(timezone.utc),
         )
         mocks["user_repo"].get_by_id = AsyncMock(return_value=user)
-        mocks["account_repo"].get_by_uuid_and_user_id = AsyncMock(return_value=checking_account)
+        mocks["account_repo"].get_by_uuid_and_user_id = AsyncMock(
+            return_value=checking_account
+        )
 
         with pytest.raises(InvalidInstallmentPaymentError):
             await handler.handle(CreateInstallmentPurchaseCommand(dto=self._make_dto()))

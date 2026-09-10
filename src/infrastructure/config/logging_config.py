@@ -1,7 +1,8 @@
 import logging
 import logging.config
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
+
 from pydantic_settings import BaseSettings
 
 
@@ -24,14 +25,14 @@ class LoggingSettings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # Grafana Loki
-    LOKI_URL: Optional[str] = None
-    LOKI_USERNAME: Optional[str] = None
-    LOKI_PASSWORD: Optional[str] = None
-    LOKI_APP_NAME: Optional[str] = None
-    LOKI_ENV: Optional[str] = None
+    LOKI_URL: str | None = None
+    LOKI_USERNAME: str | None = None
+    LOKI_PASSWORD: str | None = None
+    LOKI_APP_NAME: str | None = None
+    LOKI_ENV: str | None = None
 
     # File logging
-    LOG_FILE_PATH: Optional[str] = "logs/app.log"
+    LOG_FILE_PATH: str | None = "logs/app.log"
     LOG_FILE_MAX_BYTES: int = 1024 * 1024 * 10  # 10MB
     LOG_FILE_BACKUP_COUNT: int = 5
 

@@ -1,6 +1,5 @@
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
-from typing import Optional
+from datetime import UTC, date, datetime
 
 from domain.objects.enums import Frequency
 from domain.objects.frequency import next_occurrence
@@ -10,8 +9,8 @@ from shared.exceptions.domain import InvalidIncomeDateRangeError
 
 @dataclass
 class RecurringIncome:
-    id: Optional[int]
-    uuid: Optional[str]
+    id: int | None
+    uuid: str | None
     user_id: int
     account_id: int
     category_id: int
@@ -19,10 +18,10 @@ class RecurringIncome:
     amount: Money
     frequency: Frequency
     start_date: date
-    end_date: Optional[date]
+    end_date: date | None
     next_payment_date: date
     is_active: bool
-    description: Optional[str]
+    description: str | None
     creation_date: datetime
 
     @classmethod
@@ -35,9 +34,9 @@ class RecurringIncome:
         amount: Money,
         frequency: Frequency,
         start_date: date,
-        end_date: Optional[date] = None,
-        description: Optional[str] = None,
-        next_payment_date: Optional[date] = None,
+        end_date: date | None = None,
+        description: str | None = None,
+        next_payment_date: date | None = None,
     ):
         if end_date is not None and end_date < start_date:
             raise InvalidIncomeDateRangeError(str(start_date), str(end_date))
@@ -59,7 +58,7 @@ class RecurringIncome:
             next_payment_date=next_payment_date,
             is_active=True,
             description=description,
-            creation_date=datetime.now(timezone.utc),
+            creation_date=datetime.now(UTC),
         )
 
     def is_due(self, as_of_date: date) -> bool:

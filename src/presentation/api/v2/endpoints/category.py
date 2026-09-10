@@ -1,22 +1,20 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Depends, Request
 
+from application.categories.queries.get_categories import (
+    GetCategoriesHandler,
+    GetCategoriesQuery,
+)
 from domain.entities.user import User
 from domain.objects.enums import APIKeyScope
-from presentation.dependencies.auth_deps import require_scope
-from presentation.schemas.responses.category import (
-    CategoryResponse,
-    CategoryListResponse,
-)
-from presentation.dependencies import get_categories_handler
-from application.categories.queries.get_categories import (
-    GetCategoriesQuery,
-    GetCategoriesHandler,
-)
-
-
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,
     limiter_50_per_minute,
+)
+from presentation.dependencies import get_categories_handler
+from presentation.dependencies.auth_deps import require_scope
+from presentation.schemas.responses.category import (
+    CategoryListResponse,
+    CategoryResponse,
 )
 
 router = APIRouter()

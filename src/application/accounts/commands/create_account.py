@@ -1,24 +1,20 @@
 from dataclasses import dataclass
 from typing import cast
 
+from application.dto.account_dto import AccountResponseDTO, CreateAccountDTO
 from domain.entities.account import Account
 from domain.objects.credit_card_settings import CreditCardSettings
 from domain.objects.enums import AccountType
-from domain.objects.investment_settings import InvestmentCardSettings
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.credit_card_repository import CreditCardSettingsRepository
-from domain.repositories.investment_card_repository import (
-    InvestmentCardSettingsRepository,
-)
-from domain.repositories.bank_repository import BankRepository
-from domain.repositories.user_repository import UserRepository
 from domain.objects.money import Money
-from application.dto.account_dto import CreateAccountDTO, AccountResponseDTO
+from domain.repositories.account_repository import AccountRepository
+from domain.repositories.bank_repository import BankRepository
+from domain.repositories.credit_card_repository import CreditCardSettingsRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
+from domain.repositories.user_repository import UserRepository
 from shared.exceptions.domain import (
     InvalidAccountSettingsError,
-    UserNotFoundError,
     UserInactiveError,
+    UserNotFoundError,
 )
 
 
@@ -41,14 +37,12 @@ class CreateAccountHandler:
         account_repository: AccountRepository,
         user_repository: UserRepository,
         credit_card_settings_repository: CreditCardSettingsRepository,
-        investment_settings_repository: InvestmentCardSettingsRepository,
         bank_repository: BankRepository,
         uow: AbstractUnitOfWork,
     ):
         self.account_repository = account_repository
         self.user_repository = user_repository
         self.credit_card_settings_repository = credit_card_settings_repository
-        self.investment_settings_repository = investment_settings_repository
         self.bank_repository = bank_repository
         self.uow = uow
 
@@ -70,14 +64,11 @@ class CreateAccountHandler:
         if dto.credit_card_settings and dto.account_type != AccountType.CREDIT_CARD:
             raise InvalidAccountSettingsError(AccountType.CREDIT_CARD)
 
-        if dto.investment_settings and dto.account_type != AccountType.INVESTMENT:
-            raise InvalidAccountSettingsError(AccountType.INVESTMENT)
-
         if dto.account_type == AccountType.CREDIT_CARD and not dto.credit_card_settings:
             raise InvalidAccountSettingsError(AccountType.CREDIT_CARD)
 
-        if dto.account_type == AccountType.INVESTMENT and not dto.investment_settings:
-            raise InvalidAccountSettingsError(AccountType.INVESTMENT)
+        # INVESTMENT es solo una etiqueta de organización: el rendimiento se
+        # configura por apartado (investment_positions), no por cuenta.
 
         # Create entity to domain
         initial_balance = Money(amount=dto.initial_balance, currency=dto.currency)
@@ -94,7 +85,6 @@ class CreateAccountHandler:
 
             # Create settings if provided
             cc_settings_dto = None
-            inv_settings_dto = None
             bank = None
 
             if dto.credit_card_settings:
@@ -108,19 +98,6 @@ class CreateAccountHandler:
                     cast(int, saved_account.id), cc_settings_dto
                 )
                 cc_settings_dto = dto.credit_card_settings
-
-            if dto.investment_settings:
-                inv_settings_dto = InvestmentCardSettings(
-                    investment_type=dto.investment_settings.investment_type,
-                    investment_rate=dto.investment_settings.investment_rate,
-                    lock_period_end_date=dto.investment_settings.lock_period_end_date,
-                    maturity_date=dto.investment_settings.maturity_date,
-                    early_withdrawal_penalty=dto.investment_settings.early_withdrawal_penalty,
-                )
-                await self.investment_settings_repository.create(
-                    cast(int, saved_account.id), inv_settings_dto
-                )
-                inv_settings_dto = dto.investment_settings
 
             if dto.bank_id:
                 bank = await self.bank_repository.get_by_id(dto.bank_id)
@@ -138,5 +115,4 @@ class CreateAccountHandler:
             bank_code=bank.code if bank else None,
             is_active=saved_account.is_active,
             credit_card_settings=cc_settings_dto,
-            investment_settings=inv_settings_dto,
         )

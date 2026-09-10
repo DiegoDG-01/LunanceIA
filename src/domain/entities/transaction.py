@@ -1,39 +1,39 @@
 from dataclasses import dataclass
-from datetime import datetime, date, timezone
-from typing import Optional, List
+from datetime import UTC, date, datetime
 
-from domain.objects.money import Money
 from domain.objects.enums import TransactionType
+from domain.objects.money import Money
 
 
 @dataclass
 class Transaction:
-    id: Optional[int]
-    uuid: Optional[str]
+    id: int | None
+    uuid: str | None
     user_id: int
     account_id: int
-    category_id: Optional[int]
+    category_id: int | None
     transaction_type: TransactionType
     amount: Money
     transaction_date: date
-    description: Optional[str] = None
-    notes: Optional[str] = None
-    tags: Optional[List[int]] = None
-    creation_date: Optional[datetime] = None
-    transfer_uuid: Optional[str] = None
+    description: str | None = None
+    notes: str | None = None
+    tags: list[int] | None = None
+    creation_date: datetime | None = None
+    transfer_uuid: str | None = None
+    position_id: int | None = None
 
     @classmethod
     def create_new(
         cls,
         user_id: int,
         account_id: int,
-        category_id: Optional[int],
+        category_id: int | None,
         transaction_type: TransactionType,
         amount: Money,
         transaction_date: date,
-        description: Optional[str] = None,
-        notes: Optional[str] = None,
-        tags: Optional[List[int]] = None,
+        description: str | None = None,
+        notes: str | None = None,
+        tags: list[int] | None = None,
     ):
         if transaction_date is None:
             transaction_date = date.today()
@@ -49,7 +49,7 @@ class Transaction:
             description=description,
             notes=notes,
             tags=tags,
-            creation_date=datetime.now(timezone.utc),
+            creation_date=datetime.now(UTC),
         )
 
     def is_income(self):
@@ -57,6 +57,9 @@ class Transaction:
 
     def is_expense(self):
         return self.transaction_type == TransactionType.EXPENSE
+
+    def is_transfer(self):
+        return self.transaction_type == TransactionType.TRANSFER
 
     def update_description(self, new_description: str):
         self.description = new_description

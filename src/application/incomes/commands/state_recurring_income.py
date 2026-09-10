@@ -5,7 +5,6 @@ from domain.repositories.account_repository import AccountRepository
 from domain.repositories.category_repository import CategoryRepository
 from domain.repositories.recurring_income_repository import RecurringIncomeRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-
 from shared.exceptions.domain import (
     RecurringIncomeNotFoundError,
 )

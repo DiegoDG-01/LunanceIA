@@ -1,10 +1,17 @@
-from typing import cast
 from dataclasses import dataclass
+from typing import cast
 
 from domain.repositories.account_repository import AccountRepository
+from domain.repositories.installment_charge_repository import (
+    InstallmentChargeRepository,
+)
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from shared.exceptions.domain import TransactionNotFoundError, AccountNotFoundError
+from shared.exceptions.domain import (
+    AccountNotFoundError,
+    TransactionNotFoundError,
+    TransferNotAllowedError,
+)
 
 
 @dataclass
@@ -18,10 +25,12 @@ class DeleteTransferHandler:
         self,
         transaction_repository: TransactionRepository,
         account_repository: AccountRepository,
+        installment_charge_repository: InstallmentChargeRepository,
         uow: AbstractUnitOfWork,
     ):
         self.transaction_repository = transaction_repository
         self.account_repository = account_repository
+        self.installment_charge_repository = installment_charge_repository
         self.uow = uow
 
     async def handle(self, command: DeleteTransferCommand) -> bool:
@@ -34,6 +43,15 @@ class DeleteTransferHandler:
 
             if len(transactions) != 2:
                 raise TransactionNotFoundError(command.transfer_uuid)
+
+            for transaction in transactions:
+                charge = await self.installment_charge_repository.get_by_transaction_id(
+                    cast(int, transaction.id)
+                )
+                if charge:
+                    raise TransferNotAllowedError(
+                        "el movimiento pertenece a una cuota; elimina la compra a meses"
+                    )
 
             outgoing, incoming = transactions[0], transactions[1]
 

@@ -1,16 +1,11 @@
-from fastapi import APIRouter, Depends, status, Response, Request, Query
 from typing import cast
 
-from domain.entities.user import User
-from domain.objects.enums import APIKeyScope
+from fastapi import APIRouter, Depends, Query, Request, Response, status
+
 from application.dto.saving_goal_dto import CreateSavingGoalDTO, UpdateSavingGoalDTO
 from application.goals.commands.create_saving_goal import (
     CreateSavingGoalCommand,
     CreateSavingGoalHandler,
-)
-from application.goals.commands.update_saving_goal import (
-    UpdateSavingGoalCommand,
-    UpdateSavingGoalHandler,
 )
 from application.goals.commands.delete_saving_goal import (
     DeleteSavingGoalCommand,
@@ -20,34 +15,40 @@ from application.goals.commands.state_saving_goal import (
     StateSavingGoalCommand,
     StateSavingGoalHandler,
 )
-from application.goals.queries.get_saving_goals import (
-    GetSavingGoalsQuery,
-    GetSavingGoalsHandler,
+from application.goals.commands.update_saving_goal import (
+    UpdateSavingGoalCommand,
+    UpdateSavingGoalHandler,
 )
 from application.goals.queries.get_saving_goal_by_id import (
-    GetSavingGoalQuery,
     GetSavingGoalByIdHandler,
+    GetSavingGoalQuery,
+)
+from application.goals.queries.get_saving_goals import (
+    GetSavingGoalsHandler,
+    GetSavingGoalsQuery,
+)
+from domain.entities.user import User
+from domain.objects.enums import APIKeyScope
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_5_per_minute,
+    limiter_20_per_minute,
+    limiter_50_per_minute,
+)
+from presentation.dependencies.auth_deps import require_scope
+from presentation.dependencies.saving_goal_deps import (
+    get_create_saving_goal_handler,
+    get_delete_saving_goal_handler,
+    get_saving_goals_by_id_handler,
+    get_saving_goals_handler,
+    get_state_saving_goal_handler,
+    get_update_saving_goal_handler,
 )
 from presentation.schemas.requests.saving_goal import (
     SavingGoalRequest,
     UpdateSavingGoalRequest,
 )
 from presentation.schemas.responses.saving_goal import SavingGoalResponse
-from presentation.dependencies.auth_deps import require_scope
-from presentation.dependencies.saving_goal_deps import (
-    get_create_saving_goal_handler,
-    get_update_saving_goal_handler,
-    get_delete_saving_goal_handler,
-    get_state_saving_goal_handler,
-    get_saving_goals_handler,
-    get_saving_goals_by_id_handler,
-)
-from infrastructure.rate_limiting.limiters import (
-    enforce_rate_limit,
-    limiter_50_per_minute,
-    limiter_20_per_minute,
-    limiter_5_per_minute,
-)
 
 router = APIRouter()
 

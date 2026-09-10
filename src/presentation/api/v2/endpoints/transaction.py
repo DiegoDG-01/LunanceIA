@@ -1,57 +1,59 @@
+from datetime import date
+from typing import cast
+
 from fastapi import (
     APIRouter,
     Depends,
-    status,
-    Response,
+    Query,
     Request,
+    Response,
+    status,
 )
 
-from domain.objects.enums import APIKeyScope
-from application.transactions.queries.get_transactions import GetTransactionsQuery
-from application.transactions.queries.get_transactions import GetTransactionsHandler
-from domain.entities.user import User
 from application.dto.transaction_dto import CreateTransactionDTO
-from presentation.schemas.responses.transaction import TransactionResponse
-from presentation.schemas.requests.transaction import CreateTransactionRequest
-from presentation.dependencies.auth_deps import require_scope
-from presentation.dependencies import (
-    get_create_transaction_handler,
-    get_transactions_handler,
-    get_delete_transaction_handler,
-    get_transaction_by_uuid_handler,
+from application.transactions.commands.create_transaction import (
+    CreateTransactionCommand,
+    CreateTransactionHandler,
 )
 from application.transactions.commands.delete_transaction import (
     DeleteTransactionCommand,
     DeleteTransactionHandler,
 )
-from application.transactions.commands.create_transaction import (
-    CreateTransactionCommand,
-    CreateTransactionHandler,
-)
-from application.transactions.queries.get_transaction_by_uuid import (
-    GetTransactionByUuidQuery,
-    GetTransactionByUuidHandler,
-)
-from typing import Optional, cast
-from datetime import date
-from fastapi import Query
-from domain.objects.enums import TransactionType
-
-from presentation.schemas.requests.transaction import UpdateTransactionRequest
 from application.transactions.commands.update_transaction import (
     UpdateTransactionCommand,
     UpdateTransactionCommandHandler,
 )
-from presentation.dependencies import get_update_transaction_handler
-from shared.exceptions.domain import TransactionNotFoundError
-
+from application.transactions.queries.get_transaction_by_uuid import (
+    GetTransactionByUuidHandler,
+    GetTransactionByUuidQuery,
+)
+from application.transactions.queries.get_transactions import (
+    GetTransactionsHandler,
+    GetTransactionsQuery,
+)
+from domain.entities.user import User
+from domain.objects.enums import APIKeyScope, TransactionType
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,
-    limiter_50_per_minute,
-    limiter_20_per_minute,
-    limiter_15_per_minute,
     limiter_10_per_minute,
+    limiter_15_per_minute,
+    limiter_20_per_minute,
+    limiter_50_per_minute,
 )
+from presentation.dependencies import (
+    get_create_transaction_handler,
+    get_delete_transaction_handler,
+    get_transaction_by_uuid_handler,
+    get_transactions_handler,
+    get_update_transaction_handler,
+)
+from presentation.dependencies.auth_deps import require_scope
+from presentation.schemas.requests.transaction import (
+    CreateTransactionRequest,
+    UpdateTransactionRequest,
+)
+from presentation.schemas.responses.transaction import TransactionResponse
+from shared.exceptions.domain import TransactionNotFoundError
 
 router = APIRouter()
 
@@ -62,13 +64,13 @@ async def get_transactions(
     # 📥 QUERY PARAMETERS: Recibe filtros del HTTP request
     skip: int = Query(0, ge=0, description="Saltar N transacciones"),
     limit: int = Query(100, ge=1, le=1000, description="Máximo de resultados"),
-    start_date: Optional[date] = Query(None, description="Filtrar desde esta fecha"),
-    end_date: Optional[date] = Query(None, description="Filtrar hasta esta fecha"),
-    transaction_type: Optional[TransactionType] = Query(
+    start_date: date | None = Query(None, description="Filtrar desde esta fecha"),
+    end_date: date | None = Query(None, description="Filtrar hasta esta fecha"),
+    transaction_type: TransactionType | None = Query(
         None, description="Tipo de transacción"
     ),
-    category_id: Optional[int] = Query(None, gt=0, description="ID de categoría"),
-    account_uuid: Optional[str] = Query(None, description="UUID de la cuenta"),
+    category_id: int | None = Query(None, gt=0, description="ID de categoría"),
+    account_uuid: str | None = Query(None, description="UUID de la cuenta"),
     # 🔐 DEPENDENCIAS: Inyección automática de FastAPI
     current_user: User = Depends(require_scope(APIKeyScope.TRANSACTIONS_READ.value)),
     handler: GetTransactionsHandler = Depends(get_transactions_handler),

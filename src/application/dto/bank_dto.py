@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from domain.entities.bank import Bank
 
@@ -10,8 +9,8 @@ class BankResponseDTO:
     name: str
     code: str
     country: str
-    logo_url: Optional[str]
-    color: Optional[str]
+    logo_url: str | None
+    color: str | None
     is_active: bool
 
     @classmethod

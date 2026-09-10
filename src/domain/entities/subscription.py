@@ -1,17 +1,16 @@
 from dataclasses import dataclass
-from datetime import datetime, date, timezone
-from typing import Optional
+from datetime import UTC, date, datetime
 
+from domain.objects.enums import Frequency
 from domain.objects.frequency import first_occurrence, next_occurrence
 from domain.objects.money import Money
-from domain.objects.enums import Frequency
 from shared.exceptions.domain import InvalidSubscriptionDateRangeError
 
 
 @dataclass
 class Subscription:
-    id: Optional[int]
-    uuid: Optional[str]
+    id: int | None
+    uuid: str | None
     user_id: int
     account_id: int
     category_id: int
@@ -19,13 +18,13 @@ class Subscription:
     amount: Money
     frequency: Frequency
     start_date: date
-    end_date: Optional[date]
-    billing_day: Optional[int]
+    end_date: date | None
+    billing_day: int | None
     is_active: bool
-    description: Optional[str]
-    service_url: Optional[str]
+    description: str | None
+    service_url: str | None
     next_charge_date: date
-    creation_date: Optional[datetime] = None
+    creation_date: datetime | None = None
 
     @classmethod
     def create_new(
@@ -37,11 +36,11 @@ class Subscription:
         amount: Money,
         frequency: Frequency,
         start_date: date,
-        end_date: Optional[date],
-        billing_day: Optional[int],
-        description: Optional[str],
-        service_url: Optional[str],
-        next_charge_date: Optional[date] = None,
+        end_date: date | None,
+        billing_day: int | None,
+        description: str | None,
+        service_url: str | None,
+        next_charge_date: date | None = None,
     ):
         if end_date is not None and end_date < start_date:
             raise InvalidSubscriptionDateRangeError(str(start_date), str(end_date))
@@ -65,7 +64,7 @@ class Subscription:
             is_active=True,
             description=description,
             service_url=service_url,
-            creation_date=datetime.now(timezone.utc),
+            creation_date=datetime.now(UTC),
         )
 
     def anchor_day(self) -> int:

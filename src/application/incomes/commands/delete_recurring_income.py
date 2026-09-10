@@ -1,7 +1,7 @@
 from dataclasses import dataclass
+
 from domain.repositories.recurring_income_repository import RecurringIncomeRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-
 from shared.exceptions.domain import (
     RecurringIncomeNotFoundError,
 )

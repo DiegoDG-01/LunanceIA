@@ -1,19 +1,18 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 from domain.objects.enums import NotificationType
 
 
 @dataclass
 class Notification:
-    id: Optional[int]
+    id: int | None
     user_id: int
     title: str
     message: str
     type: NotificationType
     is_read: bool
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
 
     @classmethod
     def create_new(

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, cast
+from typing import cast
 
 from application.dto.subscription_dto import SubscriptionLastTransactionsResponseDTO
 from domain.repositories.subscription_charge_repository import (
@@ -28,7 +28,7 @@ class GetLastTransactionsHandler:
 
     async def handle(
         self, query: GetLastTransactionsQuery
-    ) -> List[SubscriptionLastTransactionsResponseDTO]:
+    ) -> list[SubscriptionLastTransactionsResponseDTO]:
         # async def handle(self, query: GetLastTransactionsQuery) -> bool:
         subscription = await self.subscription_repository.get_by_uuid_and_user_id(
             query.subscription_uuid, query.user_id

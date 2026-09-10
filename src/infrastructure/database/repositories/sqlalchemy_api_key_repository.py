@@ -1,13 +1,12 @@
-from sqlalchemy import select, update
-from typing import Optional, List
-from datetime import datetime, timezone
+import logging
+from datetime import UTC, datetime
 
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import logging
-from infrastructure.database.models.api_key import APIKeyModel
 from domain.entities.api_key import APIKey
 from domain.repositories.api_key_repository import APIKeyRepository
+from infrastructure.database.models.api_key import APIKeyModel
 
 logger = logging.getLogger(__name__)
 
@@ -53,13 +52,13 @@ class SQLAlchemyAPIKeyRepository(APIKeyRepository):
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    async def get_by_hash(self, key_hash: str) -> Optional[APIKey]:
+    async def get_by_hash(self, key_hash: str) -> APIKey | None:
         stmt = select(APIKeyModel).where(APIKeyModel.key_hash == key_hash)
         result = await self.db.execute(stmt)
         model = result.scalar_one_or_none()
         return self._model_to_entity(model) if model else None
 
-    async def list_by_user(self, user_id: int) -> List[APIKey]:
+    async def list_by_user(self, user_id: int) -> list[APIKey]:
         stmt = select(APIKeyModel).where(APIKeyModel.user_id == user_id)
         result = await self.db.execute(stmt)
         models = result.scalars().all()
@@ -93,6 +92,6 @@ class SQLAlchemyAPIKeyRepository(APIKeyRepository):
         stmt = (
             update(APIKeyModel)
             .where(APIKeyModel.id == api_key_id)
-            .values(last_used_at=datetime.now(timezone.utc))
+            .values(last_used_at=datetime.now(UTC))
         )
         await self.db.execute(stmt)

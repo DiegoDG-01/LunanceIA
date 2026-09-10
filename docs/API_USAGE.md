@@ -7,6 +7,7 @@ Esta guía te mostrará cómo usar la API REST de Lunance IA v2, incluyendo aute
 - [Autenticación JWT](#autenticación-jwt)
 - [Autenticación con API Keys](#-autenticación-con-api-keys)
 - [Endpoints Principales](#endpoints-principales)
+- [Apartados de Inversión](#-apartados-de-inversión---apiv2positions)
 - [Ejemplos de Uso](#ejemplos-de-uso)
 - [Manejo de Errores](#manejo-de-errores)
 - [Códigos de Estado](#códigos-de-estado)
@@ -158,7 +159,8 @@ Los endpoints de recursos (cuentas, transacciones, categorías, dashboard, suscr
 | `budgets:write` | Crear, editar, activar/desactivar y eliminar presupuestos |
 | `goals:read` | Listar / ver metas de ahorro |
 | `goals:write` | Crear, editar, activar/desactivar y eliminar metas de ahorro |
-| `investments:read` | Ver rendimientos y proyecciones de inversión |
+| `investments:read` | Ver apartados de inversión, rendimientos y proyecciones |
+| `investments:write` | Crear apartados, depositar, retirar y liquidar |
 | `subscriptions:read` | Listar / ver suscripciones y sus cargos |
 | `subscriptions:write` | Crear, editar, activar/desactivar y eliminar suscripciones |
 | `installments:read` | Listar compras a plazos (MSI) |
@@ -400,8 +402,7 @@ GET /api/v2/account/
       "current_balance": 15500.75,
       "currency": "MXN",
       "is_active": true,
-      "credit_card_settings": null,
-      "investment_settings": null
+      "credit_card_settings": null
     },
     {
       "account_uuid": "660e8400-e29b-41d4-a716-446655440001",
@@ -413,8 +414,7 @@ GET /api/v2/account/
       "current_balance": -2500.00,
       "currency": "MXN",
       "is_active": true,
-      "credit_card_settings": null,
-      "investment_settings": null
+      "credit_card_settings": null
     }
   ],
   "total": 2
@@ -426,7 +426,12 @@ GET /api/v2/account/
 POST /api/v2/account/
 ```
 
-**Request:** `bank_id` es el ID del banco del catálogo (`GET /api/v2/bank/`). Opcionales: `currency` (default `MXN`), `is_active`, `credit_card_settings` (solo `CREDIT_CARD`) e `investment_settings` (solo `INVESTMENT`).
+**Request:** `bank_id` es el ID del banco del catálogo (`GET /api/v2/bank/`). Opcionales: `currency` (default `MXN`), `is_active` y `credit_card_settings` (solo `CREDIT_CARD`).
+
+> 💡 El tipo `INVESTMENT` es solo una **etiqueta de organización** (para plataformas
+> como GBM o CetesDirecto): no configura rendimientos. Para que el dinero genere
+> rendimientos, crea un apartado con [`POST /api/v2/positions/`](#-apartados-de-inversión---apiv2positions)
+> en cualquier cuenta que no sea de crédito.
 ```json
 {
   "name": "Mi Cuenta de Ahorros",
@@ -448,8 +453,7 @@ POST /api/v2/account/
   "current_balance": 1000.00,
   "currency": "MXN",
   "is_active": true,
-  "credit_card_settings": null,
-  "investment_settings": null
+  "credit_card_settings": null
 }
 ```
 
@@ -470,8 +474,7 @@ GET /api/v2/account/{account_uuid}
   "current_balance": 15500.75,
   "currency": "MXN",
   "is_active": true,
-  "credit_card_settings": null,
-  "investment_settings": null
+  "credit_card_settings": null
 }
 ```
 
@@ -480,7 +483,7 @@ GET /api/v2/account/{account_uuid}
 PATCH /api/v2/account/{account_uuid}/
 ```
 
-**Request:** todos los campos son opcionales (`name`, `bank_id`, `current_balance`, `credit_card_settings`, `investment_settings`).
+**Request:** todos los campos son opcionales (`name`, `bank_id`, `current_balance`, `credit_card_settings`). Ten en cuenta que `current_balance` es el **saldo disponible**: no incluye el dinero que esté en apartados de inversión.
 ```json
 {
   "name": "Cuenta Principal BBVA",
@@ -601,6 +604,24 @@ DELETE /api/v2/transaction/{transaction_uuid}/
 ```
 
 **Response:** `204 No Content`
+
+#### ⚠️ Movimientos que no se editan ni se eliminan por aquí
+
+Editar o eliminar una transacción suelta solo aplica a ingresos y gastos capturados
+directamente. Hay dos casos que este endpoint rechaza a propósito, porque tocarlos por
+separado descuadraría los saldos:
+
+| Movimiento | `PUT` | `DELETE` | Camino correcto |
+|-----------|-------|----------|-----------------|
+| Cualquier `TRANSFER` | `400 INVALID_TRANSACTION_TYPE` | `400 INVALID_TRANSACTION_TYPE` | `DELETE /transfers/{transfer_uuid}/` y volver a crearla |
+| Gasto inicial de una compra a meses | `409 INSTALLMENT_TRANSACTION_LOCKED` | `409 INSTALLMENT_TRANSACTION_LOCKED` | `PATCH` o `DELETE` sobre la compra en `/installments/` |
+
+Una transferencia son **dos movimientos** con el mismo `transfer_uuid`; editar uno solo
+dejaría la contraparte con otro monto. Por eso `PUT` la rechaza aunque antes la aceptara.
+
+El gasto inicial de una compra a meses se reconoce en el listado porque su `description`
+empieza con `"Compra a meses: "`. Si el usuario intenta borrarlo, lo que quiere en realidad
+es cancelar la compra completa.
 
 ### 🏷️ Categorías - `/api/v2/category/`
 
@@ -772,14 +793,352 @@ Retorna los últimos cargos generados por una suscripción. Requiere scope `subs
 
 **Response:** lista con `name` (nombre de la suscripción), `account_name`, `amount` y `charge_date` de cada cargo.
 
+### 🐷 Apartados de Inversión - `/api/v2/positions/`
+
+Un **apartado** (o "cajita", como en las apps bancarias y SOFIPOs) es una porción de
+dinero **dentro de una cuenta** que genera rendimientos. Una misma cuenta puede tener
+varios apartados con tasas y plazos distintos.
+
+**Las dos reglas que rigen todo:**
+
+1. El `current_balance` de una cuenta es **solo el saldo disponible**. El dinero de los
+   apartados vive aparte; el total de la cuenta es `available_balance + invested_balance`,
+   y lo calcula el endpoint de listado.
+2. **El dinero apartado no se puede gastar ni transferir**, ni siquiera el de apartados a
+   la vista: primero hay que regresarlo al disponible con `withdraw` o `liquidate`. Una
+   transferencia que exceda el disponible falla aunque el total de la cuenta alcance.
+
+**Tipos de apartado (`position_type`):**
+
+| Tipo | Comportamiento |
+|------|----------------|
+| `ON_DEMAND` | A la vista: admite depósitos y retiros parciales en cualquier momento. El rendimiento diario capitaliza directo en su `balance`. |
+| `FIXED_TERM` | Plazo fijo: requiere `term_days` o `maturity_date`, no admite depósitos ni retiros parciales. El rendimiento se acumula en `accrued_yield` y se entrega al vencer. |
+
+**Qué pasa al vencer un plazo (`on_maturity`):**
+
+| Valor | Al llegar la fecha de vencimiento |
+|-------|-----------------------------------|
+| `AUTO_RENEW` | Reinvierte capital + rendimiento por el mismo plazo. |
+| `LIQUIDATE` | Deposita capital + rendimiento en el saldo disponible y cierra el apartado. |
+| `HOLD` (default) | El apartado pasa a `MATURED`, **deja de generar rendimiento** y espera la decisión del usuario. |
+
+#### Topes y desbordamiento
+
+Muchas SOFIPOs pagan su mejor tasa solo hasta cierto monto: los primeros 25,000 al 10%
+y lo que pase de ahí a otra tasa. Eso se representa con un **tope** (`max_balance`) y un
+**destino para el excedente**, encadenando apartados:
+
+```
+Ahorro 10%  (tope 25,000)  ──desborda──▶  Excedente 5%  (sin tope)
+```
+
+Los primeros 25,000 rinden 10% y el resto 5%, sin que ningún apartado necesite entender
+de tramos. El tope solo aplica a apartados **a la vista**: un plazo fijo tiene su monto
+cerrado hasta el vencimiento.
+
+| Campo | Qué hace |
+|-------|----------|
+| `max_balance` | Tope de capital. `null` = sin tope. |
+| `overflow_action` | `TO_AVAILABLE` (el excedente vuelve al saldo disponible) o `TO_POSITION` (pasa a otro apartado). Por defecto `TO_AVAILABLE`. |
+| `overflow_position_uuid` | Apartado destino. Obligatorio con `TO_POSITION`, debe ser de la misma cuenta, a la vista y activo. |
+
+**Cómo se comporta:**
+
+- **El tope nunca se rebasa, ni un día.** Un apartado lleno sigue rindiendo sobre su tope,
+  y ese rendimiento se desborda cada día.
+- **El excedente recorre la cadena completa.** Si el destino también está lleno, sigue al
+  suyo; lo que ningún apartado absorbe cae al saldo disponible. El dinero nunca se pierde.
+- **Solo genera transacción lo que cruza al disponible.** Mover dinero de un apartado a
+  otro no aparece en el historial porque nunca pasó por el saldo disponible.
+- **No se permiten ciclos**: la API los rechaza al configurar el destino.
+- **Si liquidas el apartado destino**, los que lo apuntaban pasan a `TO_AVAILABLE` y
+  reciben una notificación. No heredan la cadena del apartado liquidado.
+- **El monto inicial no puede superar el tope**: crea el apartado dentro del tope y
+  deposita el resto después.
+
+#### Crear un Apartado
+```bash
+POST /api/v2/positions/
+```
+
+Mueve `amount` del saldo disponible de la cuenta hacia el apartado nuevo. Funciona en
+cualquier cuenta **excepto tarjetas de crédito**.
+
+**Request:**
+```json
+{
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Plazo 90 días",
+  "position_type": "FIXED_TERM",
+  "amount": 5000.00,
+  "annual_rate": 12.50,
+  "interest_type": "COMPOUND",
+  "term_days": 90,
+  "early_withdrawal_penalty": 10.00,
+  "on_maturity": "HOLD"
+}
+```
+
+| Campo | Requerido | Descripción |
+|-------|-----------|-------------|
+| `account_uuid` | ✅ | Cuenta dueña del apartado |
+| `name` | ✅ | Nombre visible (máx. 100 caracteres) |
+| `position_type` | ✅ | `ON_DEMAND` o `FIXED_TERM` |
+| `amount` | ✅ | Monto a apartar (> 0, sale del disponible) |
+| `annual_rate` | ✅ | Tasa anual en porcentaje (≥ 0) |
+| `interest_type` | ❌ | `SIMPLE` o `COMPOUND` (default `COMPOUND`) |
+| `term_days` | Solo plazo | Días de plazo (alternativa a `maturity_date`) |
+| `maturity_date` | Solo plazo | Fecha de vencimiento `YYYY-MM-DD` |
+| `lock_period_end_date` | ❌ | Antes de esta fecha no se permite liquidar |
+| `early_withdrawal_penalty` | ❌ | % (0-100) que se castiga **solo sobre los rendimientos**; el capital nunca se toca |
+| `on_maturity` | ❌ | `AUTO_RENEW`, `LIQUIDATE` o `HOLD` (default `HOLD`) |
+| `currency` | ❌ | Default `MXN` |
+| `cap` | ❌ | Tope y destino del excedente (solo a la vista). Ver [Topes y desbordamiento](#topes-y-desbordamiento) |
+
+**Con tope:**
+```json
+{
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Ahorro 10%",
+  "position_type": "ON_DEMAND",
+  "amount": 25000.00,
+  "annual_rate": 10.00,
+  "cap": { "max_balance": 25000.00, "overflow_action": "TO_AVAILABLE" }
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "position_uuid": "770e8400-e29b-41d4-a716-446655440009",
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Plazo 90 días",
+  "position_type": "FIXED_TERM",
+  "status": "ACTIVE",
+  "balance": 5000.00,
+  "accrued_yield": 0.00,
+  "total_value": 5000.00,
+  "currency": "MXN",
+  "annual_rate": 12.50,
+  "interest_type": "COMPOUND",
+  "start_date": "2026-08-14",
+  "on_maturity": "HOLD",
+  "term_days": 90,
+  "lock_period_end_date": null,
+  "maturity_date": "2026-11-12",
+  "early_withdrawal_penalty": 10.00,
+  "max_balance": null,
+  "overflow_action": null,
+  "overflow_position_uuid": null,
+  "created_at": "2026-08-14T18:00:00Z",
+  "account_available_balance": 1200.00
+}
+```
+
+`balance` es el capital, `accrued_yield` el rendimiento acumulado aún no entregado y
+`total_value` la suma de ambos. `account_available_balance` es el disponible que le queda
+a la cuenta después de la operación. Estados posibles (`status`): `ACTIVE`, `MATURED`
+(plazo vencido en espera) y `LIQUIDATED` (cerrado).
+
+#### Listar Apartados de una Cuenta
+```bash
+GET /api/v2/positions/account/{account_uuid}/
+```
+
+**Query Parameters:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `include_liquidated` | bool | Incluir apartados ya cerrados (default: false) |
+
+**Response:**
+```json
+{
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "account_name": "Cuenta SOFIPO",
+  "available_balance": 1200.00,
+  "invested_balance": 5012.34,
+  "total_balance": 6212.34,
+  "currency": "MXN",
+  "positions": [ { "position_uuid": "...", "name": "Plazo 90 días" } ]
+}
+```
+
+> Este es el endpoint que debe alimentar la tarjeta de cuenta en un cliente: trae el
+> disponible, el invertido y el total ya calculados. Los apartados liquidados nunca
+> suman al `invested_balance`.
+
+#### Obtener un Apartado
+```bash
+GET /api/v2/positions/{position_uuid}/
+```
+
+**Response:** misma estructura que la respuesta de creación.
+
+#### Actualizar un Apartado
+```bash
+PATCH /api/v2/positions/{position_uuid}/
+```
+
+Cambia el nombre o la configuración de tope. **Es el único camino para encadenar
+apartados**: el destino tiene que existir antes de que otro lo apunte, así que no se
+puede armar la cadena solo con `POST`.
+
+```jsonc
+{ "name": "Ahorro 10%" }                          // renombra, no toca el tope
+{ "cap": { "max_balance": 25000 } }               // tope, excedente al disponible
+{ "cap": { "max_balance": 25000,                  // encadena a otro apartado
+           "overflow_action": "TO_POSITION",
+           "overflow_position_uuid": "770e..." } }
+{ "cap": null }                                   // quita el tope
+```
+
+> Omitir `cap` deja la configuración como estaba; mandarlo en `null` la quita. Sin esa
+> distinción, renombrar un apartado le borraría el tope sin querer.
+
+Bajar el tope por debajo del saldo actual **saca el excedente en el momento**, no espera
+al proceso diario: el dinero recorre la cadena y lo que sobre entra al saldo disponible
+con su transacción.
+
+**Response:** misma estructura que la respuesta de creación.
+
+#### Depositar en un Apartado
+```bash
+POST /api/v2/positions/{position_uuid}/deposit/
+```
+
+Mueve dinero del disponible al apartado. **Solo apartados a la vista**; en un plazo fijo
+responde `409`.
+
+**Request:**
+```json
+{ "amount": 500.00 }
+```
+
+**Response:** el apartado actualizado, con el nuevo `account_available_balance`.
+
+#### Retirar de un Apartado
+```bash
+POST /api/v2/positions/{position_uuid}/withdraw/
+```
+
+Regresa dinero del apartado al disponible: es el único camino para poder gastarlo o
+transferirlo. **Solo apartados a la vista** (los plazos fijos se cierran completos con
+`liquidate`).
+
+**Request:**
+```json
+{ "amount": 400.00 }
+```
+
+#### Liquidar un Apartado
+```bash
+POST /api/v2/positions/{position_uuid}/liquidate/
+```
+
+Cierra el apartado por completo y acredita capital + rendimiento al saldo disponible
+(sin cuerpo en el request). Liquidar un plazo fijo **antes de vencer** aplica la
+penalización sobre los rendimientos; si aún corre el `lock_period_end_date`, responde
+`409`.
+
+**Response:**
+```json
+{
+  "position_uuid": "770e8400-e29b-41d4-a716-446655440009",
+  "name": "Plazo 90 días",
+  "payout_amount": 5075.00,
+  "currency": "MXN",
+  "status": "LIQUIDATED",
+  "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "account_available_balance": 6275.00
+}
+```
+
+#### Rendimientos de un Apartado
+```bash
+GET /api/v2/positions/{position_uuid}/yields/
+```
+
+Historial de rendimientos diarios del apartado (`limit` default 365, máx. 1825; `offset`
+para paginar). Misma estructura que los rendimientos por cuenta.
+
+#### Proyecciones de un Apartado
+```bash
+GET /api/v2/positions/{position_uuid}/projections/?days=90
+```
+
+**Response:**
+```json
+{
+  "position_uuid": "770e8400-e29b-41d4-a716-446655440009",
+  "name": "Plazo 90 días",
+  "current_value": 5012.34,
+  "annual_rate": 12.50,
+  "interest_type": "COMPOUND",
+  "maturity_date": "2026-11-12",
+  "projected_final_balance": 5150.00,
+  "daily_projections": [
+    {
+      "projection_date": "2026-08-15",
+      "principal_amount": 5012.34,
+      "yield_amount": 1.61,
+      "projected_balance": 5013.95,
+      "overflow_amount": 0.00
+    }
+  ],
+  "projected_overflow": 0.00,
+  "max_balance": null
+}
+```
+
+Si omites `days`, proyecta hasta el vencimiento (plazo fijo) o 365 días (a la vista). Un
+plazo fijo nunca se proyecta más allá de su fecha de vencimiento.
+
+**Apartados con tope:** la proyección **se aplana en el tope** en vez de seguir creciendo,
+porque ese dinero no se queda ahí. `overflow_amount` es lo que ese día sale del apartado
+y `projected_overflow` el total del horizonte — la respuesta a "¿cuánto me va a soltar
+esta cajita en 90 días?". Un apartado lleno desborda exactamente lo que rinde:
+
+```json
+{
+  "projection_date": "2026-08-15",
+  "principal_amount": 25000.00,
+  "yield_amount": 6.53,
+  "projected_balance": 25000.00,
+  "overflow_amount": 6.53
+}
+```
+
+#### Procesos automáticos
+
+| Job | Hora (UTC) | Qué hace |
+|-----|------------|----------|
+| Rendimientos diarios | 12:00 | Calcula el rendimiento de cada apartado activo. A la vista capitaliza en `balance`; a plazo fijo suma a `accrued_yield`. El día del vencimiento todavía genera rendimiento. Si un apartado con tope ya está lleno, el rendimiento se desborda. |
+| Vencimientos | 12:30 | Ejecuta el `on_maturity` de cada plazo vencido y envía una notificación. |
+
+> Las transacciones (tipo `TRANSFER`, con el campo `position_id`) se crean **cuando el
+> dinero cruza al saldo disponible**: apartar, retirar, liquidar, vencer, o desbordar un
+> apartado lleno hacia el disponible. El rendimiento que se queda dentro del apartado
+> solo se registra en sus yields, y el que se desborda hacia otro apartado tampoco
+> genera transacción porque nunca pasa por el disponible.
+>
+> Un apartado a la vista que vive en su tope desborda su rendimiento **todos los días**:
+> el tope no se rebasa ni un día, así que espera un movimiento diario pequeño por cada
+> apartado lleno cuyo excedente termine en el disponible.
+
+---
+
 ### 📈 Inversiones - `/api/v2/investments/`
 
-#### Obtener Rendimientos de una Cuenta de Inversión
+Vista agregada **por cuenta**. Para el detalle de cada apartado usa
+[`/api/v2/positions/`](#-apartados-de-inversión---apiv2positions).
+
+#### Obtener Rendimientos de una Cuenta
 ```bash
 GET /api/v2/investments/{account_id}/yields/
 ```
 
-Retorna el historial de rendimientos diarios generados automáticamente para una cuenta de inversión.
+Retorna el historial de rendimientos diarios de todos los apartados de la cuenta.
 
 **Response:**
 ```json
@@ -798,15 +1157,17 @@ Retorna el historial de rendimientos diarios generados automáticamente para una
 ```
 
 **Tipos de interés:**
-- `SIMPLE`: Usa el `base_principal` (se actualiza con transacciones de ingreso)
-- `COMPOUND`: Usa el balance actual de la cuenta como principal
+- `SIMPLE`: Usa el `base_principal` del apartado (el capital, sin los rendimientos ya generados)
+- `COMPOUND`: Usa el valor total del apartado (capital + rendimiento acumulado)
 
-#### Obtener Proyecciones de Inversión
+#### Obtener Proyecciones de una Cuenta
 ```bash
 GET /api/v2/investments/{account_id}/projections/
 ```
 
-Retorna proyecciones de rendimiento futuro basadas en la configuración actual de la cuenta.
+Suma día a día las proyecciones de todos los apartados activos de la cuenta. Cada plazo
+fijo se proyecta solo hasta su vencimiento y después aporta su valor final sin crecer
+(no se asume renovación).
 
 **Response:**
 ```json
@@ -827,6 +1188,11 @@ Retorna proyecciones de rendimiento futuro basadas en la configuración actual d
   ]
 }
 ```
+
+> `current_balance` aquí es la suma de los apartados activos, no el disponible de la
+> cuenta. `annual_rate`, `interest_type` y `maturity_date` llegan en `null` cuando la
+> cuenta tiene **más de un apartado**, porque en ese caso no existe una sola tasa: pide
+> el detalle apartado por apartado.
 
 ### 🤖 IA - `/api/v2/ai/`
 
@@ -1142,6 +1508,28 @@ DELETE /api/v2/goals/{goal_uuid}/
 
 La lectura requiere scope `installments:read`; crear, pagar, editar y eliminar requieren `installments:write`.
 
+#### Cómo se contabiliza una compra a meses
+
+Una compra a meses genera movimientos reales en el historial, no solo un registro aparte:
+
+```
+Crear compra de 24,000 a 12 meses
+  └─ EXPENSE de 24,000 en la TDC        ← el gasto ocurre una sola vez, el día de la compra
+
+Pagar la cuota 1 (2,000)
+  └─ TRANSFER de 2,000: cuenta de ahorro ──▶ TDC
+       · sale del disponible de la cuenta origen
+       · libera 2,000 de crédito en la TDC
+```
+
+Dos consecuencias que conviene tener claras:
+
+- **El gasto se registra completo el día de la compra**, no repartido mes con mes. Los
+  reportes por categoría y los presupuestos ven los 24,000 en el mes de la compra, que es
+  como funciona una tarjeta de crédito en la vida real.
+- **Pagar una cuota no es un ingreso.** Es un movimiento entre cuentas propias, así que no
+  infla los ingresos del mes. (Antes sí lo hacía: los pagos se registraban como `INCOME`.)
+
 #### Listar Compras a Plazos
 ```bash
 GET /api/v2/installments/
@@ -1171,6 +1559,14 @@ POST /api/v2/installments/
 
 `num_installments` admite valores de 2 a 48; `annual_interest_rate` es 0 si es a meses sin intereses.
 
+`account_uuid` **debe ser una tarjeta de crédito** (`400 VALIDATION_ERROR` si no lo es).
+
+Además de la compra y sus cargos, la llamada crea un `EXPENSE` por `total_amount` en esa
+tarjeta, con la `category_id` y las `notes` que mandaste y descripción
+`"Compra a meses: {description}"`. Ese movimiento queda enlazado a la compra y **no se
+puede editar ni eliminar por separado** desde `/api/v2/transaction/`; devuelve
+`409 INSTALLMENT_TRANSACTION_LOCKED`.
+
 #### Pagar un Cargo
 ```bash
 POST /api/v2/installments/{charge_uuid}/pay/
@@ -1179,11 +1575,32 @@ POST /api/v2/installments/{charge_uuid}/pay/
 **Request:**
 ```json
 {
+  "source_account_uuid": "550e8400-e29b-41d4-a716-446655440001",
   "payment_date": "2026-08-15"
 }
 ```
 
+`source_account_uuid` identifica la cuenta de ahorro, débito o efectivo desde la
+que sale el dinero. El pago crea una transferencia entre esa cuenta y la tarjeta
+de crédito; no se contabiliza como ingreso.
+
+Los dos movimientos que se generan comparten `transfer_uuid` y llevan descripción
+`"Pago de cuota {compra} (3/12) a {tarjeta}"` y `"... desde {cuenta origen}"`.
+
+**Errores posibles:**
+
+| Código | HTTP | Cuándo |
+|--------|------|--------|
+| `NOT_FOUND` | 404 | El cargo no existe o no es del usuario |
+| `NOT_FOUND_ACCOUNT` | 404 | `source_account_uuid` no existe o no es del usuario |
+| `INSTALLMENT_CHARGE_ALREADY_PAID` | 409 | Ese cargo ya se pagó |
+| `SAME_ACCOUNT_TRANSFER` | 409 | La cuenta origen es la misma tarjeta de la compra |
+| `TRANSFER_ACCOUNT_TYPE_NOT_ALLOWED` | 409 | Se intentó pagar desde otra tarjeta de crédito |
+| `INSUFFICIENT_FUNDS` | 422 | La cuenta origen no tiene saldo disponible suficiente |
+
 **Response:** el cargo actualizado (`uuid`, `installment_number`, `amount`, `due_date`, `paid`, `paid_at`).
+
+Cuando se paga el último cargo, la compra pasa a `is_active: false` sola.
 
 #### Actualizar Compra a Plazos
 ```bash
@@ -1192,10 +1609,24 @@ PATCH /api/v2/installments/{purchase_uuid}/
 
 **Request:** todos los campos son opcionales (`description`, `notes`, `category_id`).
 
+> Cambia únicamente el registro de la compra. **El gasto inicial en la tarjeta conserva su
+> descripción y su categoría originales**, así que después de un `PATCH` los dos pueden no
+> coincidir en el historial de movimientos.
+
 #### Eliminar Compra a Plazos
 ```bash
 DELETE /api/v2/installments/{purchase_uuid}/
 ```
+
+Revierte toda la contabilidad de la compra en una sola operación:
+
+- Borra el `EXPENSE` inicial y devuelve su monto al crédito disponible de la tarjeta.
+- Borra las **dos patas** de la transferencia de cada cuota ya pagada, regresando el dinero
+  a la cuenta origen y quitándole a la tarjeta el crédito que ese pago había liberado.
+- Borra los cargos y la compra.
+
+Los saldos de todas las cuentas involucradas cambian, no solo el de la tarjeta: conviene
+refrescar la lista de cuentas después de eliminar, no únicamente la TDC.
 
 **Response:** `204 No Content`
 
@@ -1222,12 +1653,23 @@ POST /api/v2/transfers/
 
 `description`, `notes` y `transfer_date` son opcionales.
 
+La cuenta origen no puede ser una tarjeta de crédito (`409 TRANSFER_ACCOUNT_TYPE_NOT_ALLOWED`)
+ni la misma que el destino (`409 SAME_ACCOUNT_TRANSFER`), y necesita saldo disponible
+suficiente (`422 INSUFFICIENT_FUNDS`).
+
 **Response:** `201 Created` con `transfer_uuid`, `amount`, `transfer_date`, `description`, `source_account_name`, `source_account_uuid`, `destination_account_name`, `destination_account_uuid` y `creation_date`.
 
 #### Eliminar Transferencia
 ```bash
 DELETE /api/v2/transfers/{transfer_uuid}/
 ```
+
+Borra los dos movimientos y revierte ambos saldos.
+
+> **No se pueden borrar las transferencias generadas por el pago de una cuota.** Devuelven
+> `409 TRANSFER_NOT_ALLOWED`: esa transferencia es la que marca el cargo como pagado, y
+> borrarla dejaría la cuota en un estado inconsistente. Para deshacerla hay que eliminar la
+> compra a meses completa.
 
 **Response:** `204 No Content`
 
@@ -1300,7 +1742,7 @@ curl -X POST "http://localhost:8000/api/v2/account/" \
        "initial_balance": 2000.00
      }'
 
-# Crear cuenta de inversión
+# Crear cuenta de inversión (la etiqueta no genera rendimientos por sí sola)
 curl -X POST "http://localhost:8000/api/v2/account/" \
      -H "Authorization: Bearer $ACCESS_TOKEN" \
      -H "Content-Type: application/json" \
@@ -1309,6 +1751,54 @@ curl -X POST "http://localhost:8000/api/v2/account/" \
        "account_type": "INVESTMENT",
        "bank_id": 5,
        "initial_balance": 10000.00
+     }'
+
+# Apartar 6,000 de esa cuenta a plazo fijo de 90 días al 12.5%
+curl -X POST "http://localhost:8000/api/v2/positions/" \
+     -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+       "name": "Plazo 90 días",
+       "position_type": "FIXED_TERM",
+       "amount": 6000.00,
+       "annual_rate": 12.50,
+       "term_days": 90,
+       "on_maturity": "AUTO_RENEW"
+     }'
+
+# Ver el disponible, lo invertido y el total de la cuenta
+curl -X GET "http://localhost:8000/api/v2/positions/account/550e8400-e29b-41d4-a716-446655440000/" \
+     -H "Authorization: Bearer $ACCESS_TOKEN"
+
+# Regresar dinero de un apartado a la vista al saldo disponible
+curl -X POST "http://localhost:8000/api/v2/positions/770e8400-e29b-41d4-a716-446655440009/withdraw/" \
+     -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"amount": 1500.00}'
+
+# Tramos por monto: primero el apartado que recibe el excedente...
+curl -X POST "http://localhost:8000/api/v2/positions/" \
+     -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
+       "name": "Excedente 5%",
+       "position_type": "ON_DEMAND",
+       "amount": 0.01,
+       "annual_rate": 5.00
+     }'
+
+# ...y después se conecta el de la tasa alta con su tope
+curl -X PATCH "http://localhost:8000/api/v2/positions/770e8400-e29b-41d4-a716-446655440009/" \
+     -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "cap": {
+         "max_balance": 25000.00,
+         "overflow_action": "TO_POSITION",
+         "overflow_position_uuid": "880e8400-e29b-41d4-a716-446655440010"
+       }
      }'
 
 # Actualizar nombre de cuenta
@@ -1405,7 +1895,29 @@ La API retorna errores en un formato estándar con soporte de internacionalizaci
 - `BUSINESS_EMAIL_EXISTS` (409): Email ya registrado
 - `BUSINESS_ACCOUNT_HAS_TRANSACTIONS` (409): Cuenta tiene transacciones
 - `BUSINESS_RULE_VIOLATION` (400): Violación de regla de negocio genérica
-- `INSUFFICIENT_FUNDS` (422): Fondos insuficientes
+- `INSUFFICIENT_FUNDS` (422): Fondos insuficientes (en apartados se compara siempre contra el **saldo disponible**, no contra el total de la cuenta)
+
+**Códigos de transferencias y compras a plazos:**
+- `SAME_ACCOUNT_TRANSFER` (409): La cuenta origen y la destino son la misma
+- `TRANSFER_ACCOUNT_TYPE_NOT_ALLOWED` (409): Una tarjeta de crédito no puede ser el origen de una transferencia
+- `TRANSFER_NOT_ALLOWED` (409): La transferencia pertenece al pago de una cuota; hay que eliminar la compra a meses
+- `INSTALLMENT_CHARGE_ALREADY_PAID` (409): El cargo ya fue pagado
+- `INSTALLMENT_TRANSACTION_LOCKED` (409): El movimiento es el gasto inicial de una compra a meses; se edita o elimina desde la compra
+- `INVALID_TRANSACTION_TYPE` (400): Se intentó editar o eliminar una transferencia con los endpoints de transacción
+
+**Códigos de apartados de inversión:**
+- `NOT_FOUND_INVESTMENT_POSITION` (404): Apartado no encontrado
+- `INVESTMENT_POSITION_NOT_ACTIVE` (409): El apartado ya está liquidado o vencido y no admite la operación
+- `INVESTMENT_POSITION_LOCKED` (409): El plazo aún está en su periodo de permanencia y no puede liquidarse
+- `FIXED_TERM_DEPOSIT_NOT_ALLOWED` (409): Un plazo fijo no admite depósitos después de creado
+- `FIXED_TERM_WITHDRAWAL_NOT_ALLOWED` (409): Un plazo fijo no admite retiros parciales; debe liquidarse completo
+- `INVESTMENT_POSITION_NOT_MATURED` (409): El plazo aún no llega a su vencimiento
+- `POSITION_ACCOUNT_TYPE_NOT_ALLOWED` (409): Las tarjetas de crédito no admiten apartados
+- `VALIDATION_INVALID_FIXED_TERM_CONFIG` (400): Un plazo fijo requiere `term_days` o `maturity_date` válidos
+- `POSITION_CAP_EXCEEDED` (409): El monto inicial supera el tope del apartado
+- `INVALID_OVERFLOW_TARGET` (409): El destino del excedente no existe, es de otra cuenta, no es a la vista, está liquidado o cerraría un ciclo
+- `FIXED_TERM_CAP_NOT_ALLOWED` (409): Un plazo fijo no admite tope ni desbordamiento
+- `VALIDATION_INVALID_POSITION_CAP` (400): Tope menor o igual a cero, o destino de desbordamiento sin tope
 
 ### Rate Limit Exceeded (429)
 
@@ -1518,8 +2030,22 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 
 | Endpoint | Límite | Nota |
 |----------|--------|------|
-| `GET /investments/{id}/yields/` | **50 requests/minuto** | Rendimientos históricos |
-| `GET /investments/{id}/projections/` | **30 requests/minuto** | Proyecciones |
+| `GET /investments/{id}/yields/` | **50 requests/minuto** | Rendimientos históricos de la cuenta |
+| `GET /investments/{id}/projections/` | **30 requests/minuto** | Proyecciones agregadas de la cuenta |
+
+#### Endpoints de Apartados de Inversión
+
+| Endpoint | Límite | Nota |
+|----------|--------|------|
+| `GET /positions/account/{uuid}/` | **50 requests/minuto** | Listado por cuenta |
+| `GET /positions/{uuid}/` | **50 requests/minuto** | Detalle |
+| `GET /positions/{uuid}/yields/` | **50 requests/minuto** | Rendimientos del apartado |
+| `GET /positions/{uuid}/projections/` | **30 requests/minuto** | Proyecciones del apartado |
+| `POST /positions/` | **20 requests/minuto** | Creación |
+| `PATCH /positions/{uuid}/` | **20 requests/minuto** | Nombre y configuración de tope |
+| `POST /positions/{uuid}/deposit/` | **20 requests/minuto** | Apartar dinero |
+| `POST /positions/{uuid}/withdraw/` | **20 requests/minuto** | Regresar al disponible |
+| `POST /positions/{uuid}/liquidate/` | **10 requests/minuto** | Cierre del apartado |
 
 #### Endpoints de IA
 

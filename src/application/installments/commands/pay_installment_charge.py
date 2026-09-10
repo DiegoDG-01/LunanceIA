@@ -1,10 +1,12 @@
+import uuid as uuid_lib
 from dataclasses import dataclass
 from datetime import date
 from typing import cast
 
-from domain.objects.enums import TransactionType
-from domain.objects.money import Money
+from application.dto.installment_dto import InstallmentChargeResponseDTO
 from domain.entities.transaction import Transaction
+from domain.objects.enums import AccountType, TransactionType
+from domain.objects.money import Money
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.installment_charge_repository import (
     InstallmentChargeRepository,
@@ -14,11 +16,13 @@ from domain.repositories.installment_purchase_repository import (
 )
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from application.dto.installment_dto import InstallmentChargeResponseDTO
 from shared.exceptions.domain import (
     AccountNotFoundError,
     InstallmentChargeAlreadyPaidError,
     InstallmentChargeNotFoundError,
+    InsufficientFundsError,
+    SameAccountTransferError,
+    TransferAccountTypeNotAllowedError,
 )
 
 
@@ -26,6 +30,7 @@ from shared.exceptions.domain import (
 class PayInstallmentChargeCommand:
     user_id: int
     charge_uuid: str
+    source_account_uuid: str
     payment_date: date
 
 
@@ -60,11 +65,33 @@ class PayInstallmentChargeHandler:
             if not purchase or purchase.user_id != command.user_id:
                 raise InstallmentChargeNotFoundError(command.charge_uuid)
 
-            account = await self.account_repository.get_by_id(
-                cast(int, purchase.account_id), for_update=True
+            source_preview = await self.account_repository.get_by_uuid_and_user_id(
+                command.source_account_uuid, command.user_id
             )
-            if not account or account.user_id != command.user_id:
-                raise AccountNotFoundError(account_uuid=str(purchase.account_id))
+            if not source_preview:
+                raise AccountNotFoundError(account_uuid=command.source_account_uuid)
+
+            if source_preview.id == purchase.account_id:
+                raise SameAccountTransferError()
+
+            locked_accounts = {}
+            for account_id in sorted(
+                {cast(int, purchase.account_id), cast(int, source_preview.id)}
+            ):
+                locked_account = await self.account_repository.get_by_id(
+                    account_id, for_update=True
+                )
+                if not locked_account or locked_account.user_id != command.user_id:
+                    raise AccountNotFoundError(account_uuid=str(account_id))
+                locked_accounts[account_id] = locked_account
+
+            account = locked_accounts[cast(int, purchase.account_id)]
+            source_account = locked_accounts[cast(int, source_preview.id)]
+
+            if source_account.account_type == AccountType.CREDIT_CARD:
+                raise TransferAccountTypeNotAllowedError(
+                    source_account.account_type.value
+                )
 
             charge = await self.installment_charge_repository.get_by_uuid(
                 command.charge_uuid, for_update=True
@@ -76,24 +103,51 @@ class PayInstallmentChargeHandler:
                 raise InstallmentChargeAlreadyPaidError(command.charge_uuid)
 
             money = Money(charge.amount)
-            new_balance = account.current_balance.add(money)
+            if not source_account.can_withdraw(money):
+                raise InsufficientFundsError(
+                    required_amount=float(money.amount),
+                    available_amount=float(source_account.current_balance.amount),
+                )
 
-            transaction = Transaction.create_new(
+            transfer_uuid = str(uuid_lib.uuid4())
+            description = (
+                f"Pago de cuota {purchase.description} "
+                f"({charge.installment_number}/{purchase.num_installments})"
+            )
+            outgoing = Transaction.create_new(
                 user_id=command.user_id,
-                account_id=cast(int, account.id),
-                category_id=purchase.category_id,
-                transaction_type=TransactionType.INCOME,
+                account_id=cast(int, source_account.id),
+                category_id=None,
+                transaction_type=TransactionType.TRANSFER,
                 amount=money,
                 transaction_date=command.payment_date,
-                description=f"Payment for installment {purchase.description} ({charge.installment_number}/{purchase.num_installments})",
-                notes=f"Payment for installment {purchase.id}",
+                description=f"{description} a {account.name}",
+                notes=f"Pago de compra a meses {purchase.id}",
             )
+            outgoing.transfer_uuid = transfer_uuid
 
-            account.update_balance(new_balance)
+            incoming = Transaction.create_new(
+                user_id=command.user_id,
+                account_id=cast(int, account.id),
+                category_id=None,
+                transaction_type=TransactionType.TRANSFER,
+                amount=money,
+                transaction_date=command.payment_date,
+                description=f"{description} desde {source_account.name}",
+                notes=f"Pago de compra a meses {purchase.id}",
+            )
+            incoming.transfer_uuid = transfer_uuid
+
+            source_account.update_balance(
+                source_account.current_balance.subtract(money)
+            )
+            account.update_balance(account.current_balance.add(money))
+            await self.account_repository.update(source_account)
             await self.account_repository.update(account)
 
-            transaction = await self.transaction_repository.create(transaction)
-            charge.mark_as_paid(cast(int, transaction.id))
+            await self.transaction_repository.create(outgoing)
+            incoming = await self.transaction_repository.create(incoming)
+            charge.mark_as_paid(cast(int, incoming.id))
             charge = await self.installment_charge_repository.update(charge)
 
             all_charges = await self.installment_charge_repository.get_by_purchase_id(

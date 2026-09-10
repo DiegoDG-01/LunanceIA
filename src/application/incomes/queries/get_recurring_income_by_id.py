@@ -1,11 +1,9 @@
 from dataclasses import dataclass
-from typing import Optional
 
+from application.dto.recurring_income_dto import RecurringIncomeResponseDTO
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.category_repository import CategoryRepository
 from domain.repositories.recurring_income_repository import RecurringIncomeRepository
-from application.dto.recurring_income_dto import RecurringIncomeResponseDTO
-
 from shared.exceptions.domain import RecurringIncomeNotFoundError
 
 
@@ -28,7 +26,7 @@ class GetRecurringIncomeByIdHandler:
 
     async def handle(
         self, query: GetRecurringIncomeByIdQuery
-    ) -> Optional[RecurringIncomeResponseDTO]:
+    ) -> RecurringIncomeResponseDTO | None:
         income = await self.recurring_income_repository.get_by_uuid_and_user_id(
             income_uuid=query.income_uuid, user_id=query.user_id
         )

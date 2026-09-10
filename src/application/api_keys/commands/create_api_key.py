@@ -2,8 +2,8 @@ import hashlib
 import secrets
 from dataclasses import dataclass
 
+from application.dto.api_key_dto import APICreatedResponseDTO, CreateAPIKeyDTO
 from domain.entities.api_key import APIKey
-from application.dto.api_key_dto import CreateAPIKeyDTO, APICreatedResponseDTO
 from domain.repositories.api_key_repository import APIKeyRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 
@@ -12,8 +12,8 @@ from domain.repositories.unit_of_work import AbstractUnitOfWork
 class CreateAPIKeyCommand:
     dto: CreateAPIKeyDTO
 
-class CreateAPIKeyHandler:
 
+class CreateAPIKeyHandler:
     def __init__(
         self,
         api_key_repository: APIKeyRepository,

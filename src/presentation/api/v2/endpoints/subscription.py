@@ -1,31 +1,14 @@
-from fastapi import APIRouter, Depends, status, Response, Request, Query
-from typing import Optional, List, cast
+from typing import cast
 
-from domain.entities.user import User
-from domain.objects.enums import APIKeyScope
+from fastapi import APIRouter, Depends, Query, Request, Response, status
+
 from application.dto.subscription_dto import (
     CreateSubscriptionDTO,
     UpdateSubscriptionDTO,
 )
-from application.subscriptions.queries.get_subscriptions_by_id import (
-    GetSubscriptionsByIdQuery,
-    GetSubscriptionsByIdHandler,
-)
-from application.subscriptions.queries.get_subscriptions import (
-    GetSubscriptionsQuery,
-    GetSubscriptionsHandler,
-)
-from application.subscriptions.queries.get_subscription_charges import (
-    GetSubscriptionChargesQuery,
-    GetSubscriptionChargesHandler,
-)
 from application.subscriptions.commands.create_subscription import (
     CreateSubscriptionCommand,
     CreateSubscriptionHandler,
-)
-from application.subscriptions.commands.update_subscription import (
-    UpdateSubscriptionCommand,
-    UpdateSubscriptionHandler,
 )
 from application.subscriptions.commands.delete_subscription import (
     DeleteSubscriptionCommand,
@@ -35,36 +18,53 @@ from application.subscriptions.commands.state_subscription import (
     StateSubscriptionCommand,
     StateSubscriptionHandler,
 )
+from application.subscriptions.commands.update_subscription import (
+    UpdateSubscriptionCommand,
+    UpdateSubscriptionHandler,
+)
 from application.subscriptions.queries.get_last_transactions import (
-    GetLastTransactionsQuery,
     GetLastTransactionsHandler,
+    GetLastTransactionsQuery,
 )
-from presentation.schemas.responses.subscription import (
-    SubscriptionResponse,
-    SubscriptionChargeDetailResponse,
+from application.subscriptions.queries.get_subscription_charges import (
+    GetSubscriptionChargesHandler,
+    GetSubscriptionChargesQuery,
 )
+from application.subscriptions.queries.get_subscriptions import (
+    GetSubscriptionsHandler,
+    GetSubscriptionsQuery,
+)
+from application.subscriptions.queries.get_subscriptions_by_id import (
+    GetSubscriptionsByIdHandler,
+    GetSubscriptionsByIdQuery,
+)
+from domain.entities.user import User
+from domain.objects.enums import APIKeyScope
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_5_per_minute,
+    limiter_20_per_minute,
+    limiter_50_per_minute,
+)
+from presentation.dependencies import (
+    get_create_subscription_handler,
+    get_delete_subscription_handler,
+    get_last_transactions_handler,
+    get_state_subscription_handler,
+    get_subscription_by_id_handler,
+    get_subscription_charges_handler,
+    get_subscriptions_handler,
+    get_update_subscription_handler,
+)
+from presentation.dependencies.auth_deps import require_scope
 from presentation.schemas.requests.subscription import (
     CreateSubscriptionRequest,
     UpdateSubscriptionRequest,
 )
-from presentation.dependencies.auth_deps import require_scope
-from presentation.dependencies import (
-    get_create_subscription_handler,
-    get_subscriptions_handler,
-    get_update_subscription_handler,
-    get_delete_subscription_handler,
-    get_subscription_charges_handler,
-    get_subscription_by_id_handler,
-    get_state_subscription_handler,
-    get_last_transactions_handler,
-)
-from presentation.schemas.responses.subscription import SubscriptionLastChargeResponse
-
-from infrastructure.rate_limiting.limiters import (
-    enforce_rate_limit,
-    limiter_50_per_minute,
-    limiter_20_per_minute,
-    limiter_5_per_minute,
+from presentation.schemas.responses.subscription import (
+    SubscriptionChargeDetailResponse,
+    SubscriptionLastChargeResponse,
+    SubscriptionResponse,
 )
 
 router = APIRouter()
@@ -73,8 +73,8 @@ router = APIRouter()
 @router.get("/", response_model=list[SubscriptionResponse])
 async def get_subscriptions(
     request: Request,
-    account_uuid: Optional[str] = Query(None, description="UUID de la cuenta"),
-    category_id: Optional[int] = Query(None, gt=0, description="ID de categoría"),
+    account_uuid: str | None = Query(None, description="UUID de la cuenta"),
+    category_id: int | None = Query(None, gt=0, description="ID de categoría"),
     active_only: bool = Query(False, description="Solo suscripciones activas"),
     limit: int = Query(100, ge=1, le=1000, description="Máximo de resultados"),
     offset: int = Query(0, ge=0, description="Offset para paginación"),
@@ -239,7 +239,7 @@ async def delete_subscription(
 
 @router.get(
     "/{subscription_uuid}/transactions/",
-    response_model=List[SubscriptionLastChargeResponse],
+    response_model=list[SubscriptionLastChargeResponse],
 )
 async def get_subscription_last_charge(
     request: Request,

@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, status, Response, Request, Query
-from typing import Optional, List, cast
+from typing import cast
 
-from domain.entities.user import User
-from domain.objects.enums import APIKeyScope
+from fastapi import APIRouter, Depends, Query, Request, Response, status
+
 from application.dto.recurring_income_dto import (
     CreateRecurringIncomeDTO,
     UpdateRecurringIncomeDTO,
@@ -10,10 +9,6 @@ from application.dto.recurring_income_dto import (
 from application.incomes.commands.create_recurring_income import (
     CreateRecurringIncomeCommand,
     CreateRecurringIncomeHandler,
-)
-from application.incomes.commands.update_recurring_income import (
-    UpdateRecurringIncomeCommand,
-    UpdateRecurringIncomeHandler,
 )
 from application.incomes.commands.delete_recurring_income import (
     DeleteRecurringIncomeCommand,
@@ -23,42 +18,47 @@ from application.incomes.commands.state_recurring_income import (
     StateRecurringIncomeCommand,
     StateRecurringIncomeHandler,
 )
-from application.incomes.queries.get_recurring_incomes import (
-    GetRecurringIncomesQuery,
-    GetRecurringIncomesHandler,
-)
-from application.incomes.queries.get_recurring_income_by_id import (
-    GetRecurringIncomeByIdQuery,
-    GetRecurringIncomeByIdHandler,
+from application.incomes.commands.update_recurring_income import (
+    UpdateRecurringIncomeCommand,
+    UpdateRecurringIncomeHandler,
 )
 from application.incomes.queries.get_income_deposits import (
-    GetIncomeDepositsQuery,
     GetIncomeDepositsHandler,
+    GetIncomeDepositsQuery,
 )
+from application.incomes.queries.get_recurring_income_by_id import (
+    GetRecurringIncomeByIdHandler,
+    GetRecurringIncomeByIdQuery,
+)
+from application.incomes.queries.get_recurring_incomes import (
+    GetRecurringIncomesHandler,
+    GetRecurringIncomesQuery,
+)
+from domain.entities.user import User
+from domain.objects.enums import APIKeyScope
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_5_per_minute,
+    limiter_20_per_minute,
+    limiter_50_per_minute,
+)
+from presentation.dependencies import (
+    get_create_recurring_income_handler,
+    get_delete_recurring_income_handler,
+    get_income_deposits_handler,
+    get_recurring_income_by_id_handler,
+    get_recurring_incomes_handler,
+    get_state_recurring_income_handler,
+    get_update_recurring_income_handler,
+)
+from presentation.dependencies.auth_deps import require_scope
 from presentation.schemas.requests.recurring_income import (
     CreateRecurringIncomeRequest,
     UpdateRecurringIncomeRequest,
 )
 from presentation.schemas.responses.recurring_income import (
-    RecurringIncomeResponse,
     IncomeDepositResponse,
-)
-from presentation.dependencies.auth_deps import require_scope
-from presentation.dependencies import (
-    get_create_recurring_income_handler,
-    get_update_recurring_income_handler,
-    get_delete_recurring_income_handler,
-    get_state_recurring_income_handler,
-    get_recurring_incomes_handler,
-    get_recurring_income_by_id_handler,
-    get_income_deposits_handler,
-)
-
-from infrastructure.rate_limiting.limiters import (
-    enforce_rate_limit,
-    limiter_50_per_minute,
-    limiter_20_per_minute,
-    limiter_5_per_minute,
+    RecurringIncomeResponse,
 )
 
 router = APIRouter()
@@ -67,8 +67,8 @@ router = APIRouter()
 @router.get("/", response_model=list[RecurringIncomeResponse])
 async def get_recurring_incomes(
     request: Request,
-    account_uuid: Optional[str] = Query(None, description="UUID de la cuenta"),
-    category_id: Optional[int] = Query(None, gt=0, description="ID de categoría"),
+    account_uuid: str | None = Query(None, description="UUID de la cuenta"),
+    category_id: int | None = Query(None, gt=0, description="ID de categoría"),
     active_only: bool = Query(False, description="Solo ingresos activos"),
     limit: int = Query(100, ge=1, le=1000, description="Máximo de resultados"),
     offset: int = Query(0, ge=0, description="Offset para paginación"),
@@ -109,7 +109,7 @@ async def get_recurring_income(
 
 @router.get(
     "/{income_uuid}/deposits/",
-    response_model=List[IncomeDepositResponse],
+    response_model=list[IncomeDepositResponse],
 )
 async def get_income_deposits(
     request: Request,

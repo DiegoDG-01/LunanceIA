@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+
 from domain.objects.credit_card_settings import CreditCardSettings
 
 
@@ -11,7 +11,7 @@ class CreditCardSettingsRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_account_id(self, account_id: int) -> Optional[CreditCardSettings]:
+    async def get_by_account_id(self, account_id: int) -> CreditCardSettings | None:
         pass
 
     @abstractmethod
