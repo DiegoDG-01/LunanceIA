@@ -1,9 +1,9 @@
-from pydantic import EmailStr
-from typing import Optional
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from email_validator import validate_email, EmailNotValidError
 import uuid as uuid_lib
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+
+from email_validator import EmailNotValidError, validate_email
+from pydantic import EmailStr
 
 from shared.exceptions.domain import InvalidEmailError
 
@@ -11,18 +11,18 @@ from shared.exceptions.domain import InvalidEmailError
 @dataclass
 class User:
     name: str
-    auth0_id: Optional[str] = None
-    email: Optional[EmailStr] = None
-    password: Optional[str] = None
-    picture: Optional[str] = None
-    id: Optional[int] = None  # ← Opcional, se asigna al guardar en DB
+    auth0_id: str | None = None
+    email: EmailStr | None = None
+    password: str | None = None
+    picture: str | None = None
+    id: int | None = None  # ← Opcional, se asigna al guardar en DB
     uuid: str = field(default_factory=lambda: str(uuid_lib.uuid4()))  # ← Auto-genera
     email_verified: bool = False
     last_login: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
+        default_factory=lambda: datetime.now(UTC)
     )  # ← Auto-genera
     registration_date: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
+        default_factory=lambda: datetime.now(UTC)
     )  # ← Auto-genera
     is_active: bool = True
 

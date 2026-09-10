@@ -1,65 +1,65 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from domain.repositories.auth_token_repository import AuthTokenRepository
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.database.connection import get_db
-from infrastructure.database.repositories.sqlalchemy_saving_goal_repository import (
-    SQLAlchemySavingGoalRepository,
-)
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_bank_repository import (
-    SQLAlchemyBankRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_transaction_repository import (
-    SQLAlchemyTransactionRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_user_repository import (
-    SQLAlchemyUserRepository,
+from infrastructure.database.repositories.sqlalchemy_api_key_repository import (
+    SQLAlchemyAPIKeyRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_auth_token_repository import (
     SQLAlchemyAuthTokenRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_category_repository import (
-    SQLAlchemyCategoryRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_dashboard_repository import (
-    SQLAlchemyDashboardRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_subscription_repository import (
-    SQLAlchemySubscriptionRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_subscription_charge_repository import (
-    SQLAlchemySubscriptionChargeRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_recurring_income_repository import (
-    SQLAlchemyRecurringIncomeRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_income_deposit_repository import (
-    SQLAlchemyIncomeDepositRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_credit_card_repository import (
-    SQLAlchemyCreditCardSettingsRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_notification_repository import (
-    SQLAlchemyNotificationRepository,
-)
-from domain.repositories.auth_token_repository import AuthTokenRepository
-from domain.repositories.unit_of_work import AbstractUnitOfWork
-from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
-    SQLAlchemyUnitOfWork,
-)
-from infrastructure.database.repositories.sqlalchemy_installment_purchase_repository import (
-    SQLAlchemyInstallmentPurchaseRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_installment_charge_repository import (
-    SQLAlchemyInstallmentChargeRepository,
+from infrastructure.database.repositories.sqlalchemy_bank_repository import (
+    SQLAlchemyBankRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_budget_repository import (
     SQLAlchemyBudgetRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_api_key_repository import (
-    SQLAlchemyAPIKeyRepository,
+from infrastructure.database.repositories.sqlalchemy_category_repository import (
+    SQLAlchemyCategoryRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_credit_card_repository import (
+    SQLAlchemyCreditCardSettingsRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_dashboard_repository import (
+    SQLAlchemyDashboardRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_income_deposit_repository import (
+    SQLAlchemyIncomeDepositRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_installment_charge_repository import (
+    SQLAlchemyInstallmentChargeRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_installment_purchase_repository import (
+    SQLAlchemyInstallmentPurchaseRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_notification_repository import (
+    SQLAlchemyNotificationRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_recurring_income_repository import (
+    SQLAlchemyRecurringIncomeRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_saving_goal_repository import (
+    SQLAlchemySavingGoalRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_subscription_charge_repository import (
+    SQLAlchemySubscriptionChargeRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_subscription_repository import (
+    SQLAlchemySubscriptionRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_transaction_repository import (
+    SQLAlchemyTransactionRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
+    SQLAlchemyUnitOfWork,
+)
+from infrastructure.database.repositories.sqlalchemy_user_repository import (
+    SQLAlchemyUserRepository,
 )
 
 

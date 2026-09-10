@@ -1,14 +1,15 @@
 from fastapi import Depends
 
 from application.accounts.commands.create_account import CreateAccountHandler
-from application.accounts.commands.update_account import UpdateAccountHandler
 from application.accounts.commands.delete_account import DeleteAccountHandler
 from application.accounts.commands.state_account import StateAccountHandler
-from application.accounts.queries.get_user_accounts import GetUserAccountsHandler
-from application.accounts.queries.get_account_by_id import GetAccountByIdHandler
+from application.accounts.commands.update_account import UpdateAccountHandler
 from application.accounts.queries.get_account_activity import (
     GetAccountActivitiesHandler,
 )
+from application.accounts.queries.get_account_by_id import GetAccountByIdHandler
+from application.accounts.queries.get_user_accounts import GetUserAccountsHandler
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.services.account_service import AccountService
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
@@ -16,24 +17,22 @@ from infrastructure.database.repositories.sqlalchemy_account_repository import (
 from infrastructure.database.repositories.sqlalchemy_bank_repository import (
     SQLAlchemyBankRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_user_repository import (
-    SQLAlchemyUserRepository,
+from infrastructure.database.repositories.sqlalchemy_credit_card_repository import (
+    SQLAlchemyCreditCardSettingsRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_transaction_repository import (
     SQLAlchemyTransactionRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_credit_card_repository import (
-    SQLAlchemyCreditCardSettingsRepository,
+from infrastructure.database.repositories.sqlalchemy_user_repository import (
+    SQLAlchemyUserRepository,
 )
-
-from domain.repositories.unit_of_work import AbstractUnitOfWork
 from presentation.dependencies.repositories import (
     get_account_repository,
-    get_user_repository,
-    get_transaction_repository,
-    get_credit_card_settings_repository,
     get_bank_repository,
+    get_credit_card_settings_repository,
+    get_transaction_repository,
     get_unit_of_work_repository,
+    get_user_repository,
 )
 from presentation.dependencies.services import get_account_service
 

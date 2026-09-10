@@ -2,27 +2,30 @@ import logging
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import List, Optional, cast
+from typing import cast
 
+from application.dto.investment_position_dto import PositionProjectionResponseDTO
+from application.dto.investment_yield_dto import ProjectionDayDTO
 from domain.entities.investment_position import InvestmentPosition
 from domain.objects.enums import InterestType
 from domain.repositories.investment_position_repository import (
     InvestmentPositionRepository,
 )
-from application.dto.investment_yield_dto import ProjectionDayDTO
-from application.dto.investment_position_dto import PositionProjectionResponseDTO
 from shared.exceptions.domain import (
-    InvestmentPositionNotFoundError,
-    FinancialEngineNotAvailableError,
     BusinessRuleError,
+    FinancialEngineNotAvailableError,
+    InvestmentPositionNotFoundError,
     ValidationError,
 )
 
 logger = logging.getLogger(__name__)
 
 try:
-    from fincore import calculate_projections  # type: ignore[import]
-    from fincore import FinCoreError, FCInvalidDecimalError  # type: ignore[import]
+    from fincore import (  # type: ignore[import]
+        FCInvalidDecimalError,
+        FinCoreError,
+        calculate_projections,  # type: ignore[import]
+    )
 except ImportError:
     logger.critical(
         "The 'fincore' financial engine is not available. "
@@ -33,7 +36,7 @@ except ImportError:
 
 def project_position(
     position: InvestmentPosition, days: int, today: date
-) -> List[ProjectionDayDTO]:
+) -> list[ProjectionDayDTO]:
     """Proyección diaria de un apartado usando el motor fincore.
 
     Proyecta sobre el valor total del apartado (capital + rendimiento
@@ -108,7 +111,7 @@ class GetPositionProjectionsQuery:
     position_uuid: str
     user_id: int
 
-    project_days: Optional[int] = None
+    project_days: int | None = None
 
 
 class GetPositionProjectionsHandler:

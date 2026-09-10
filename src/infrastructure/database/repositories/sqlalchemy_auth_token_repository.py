@@ -1,13 +1,14 @@
 import logging
-from typing import Optional, cast
-from datetime import datetime, timezone
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, and_, delete
+from datetime import UTC, datetime
+from typing import cast
+
+from sqlalchemy import and_, delete, select, update
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.repositories.auth_token_repository import AuthTokenRepository
 from domain.entities.refresh_token import RefreshToken
+from domain.repositories.auth_token_repository import AuthTokenRepository
 from infrastructure.database.models.refresh_token import RefreshTokenModel
 from shared.exceptions.application import RepositoryError
 
@@ -45,14 +46,14 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
 
     async def get_refresh_token(
         self, user_id: int, refresh_hash_token: str
-    ) -> Optional[RefreshToken]:
+    ) -> RefreshToken | None:
         try:
             stmt = select(RefreshTokenModel).where(
                 and_(
                     RefreshTokenModel.user_id == user_id,
                     RefreshTokenModel.token_hash == refresh_hash_token,
                     RefreshTokenModel.is_revoked.is_(False),
-                    RefreshTokenModel.expired_at > datetime.now(timezone.utc),
+                    RefreshTokenModel.expired_at > datetime.now(UTC),
                 )
             )
             result = await self.db.execute(stmt)
@@ -128,7 +129,7 @@ class SQLAlchemyAuthTokenRepository(AuthTokenRepository):
     async def cleanup_expired_tokens(self) -> bool:
         try:
             stmt = delete(RefreshTokenModel).where(
-                RefreshTokenModel.expired_at < datetime.now(timezone.utc),
+                RefreshTokenModel.expired_at < datetime.now(UTC),
                 RefreshTokenModel.is_revoked.is_(True),
             )
             await self.db.execute(stmt)

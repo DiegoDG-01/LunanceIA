@@ -1,36 +1,36 @@
-from decimal import Decimal
-from typing import Optional, cast
-from datetime import datetime, date
 from dataclasses import dataclass
+from datetime import date, datetime
+from decimal import Decimal
+from typing import cast
 
-from domain.objects.money import Money
-from domain.entities.transaction import TransactionType
-from shared.exceptions.domain import (
-    TransactionNotFoundError,
-    AccountNotFoundError,
-    InvalidTransactionTypeError,
-    InstallmentTransactionModificationError,
-)
 from application.dto.transaction_dto import TransactionResponseDTO
+from domain.entities.transaction import TransactionType
+from domain.objects.money import Money
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.installment_purchase_repository import (
     InstallmentPurchaseRepository,
 )
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
+from shared.exceptions.domain import (
+    AccountNotFoundError,
+    InstallmentTransactionModificationError,
+    InvalidTransactionTypeError,
+    TransactionNotFoundError,
+)
 
 
 @dataclass
 class UpdateTransactionCommand:
     transaction_uuid: str
     user_id: int
-    description: Optional[str] = None
-    notes: Optional[str] = None
-    category_id: Optional[int] = None
-    transaction_type: Optional[str] = None
-    amount: Optional[Decimal] = None
-    transaction_date: Optional[date] = None
-    account_uuid: Optional[str] = None
+    description: str | None = None
+    notes: str | None = None
+    category_id: int | None = None
+    transaction_type: str | None = None
+    amount: Decimal | None = None
+    transaction_date: date | None = None
+    account_uuid: str | None = None
 
 
 class UpdateTransactionCommandHandler:

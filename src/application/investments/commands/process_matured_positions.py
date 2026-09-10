@@ -14,7 +14,6 @@ from domain.repositories.notification_repository import NotificationRepository
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 
-
 logger = logging.getLogger(__name__)
 
 

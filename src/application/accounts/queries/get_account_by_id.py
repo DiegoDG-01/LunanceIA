@@ -1,12 +1,11 @@
 from dataclasses import dataclass
-from typing import Optional, cast
+from typing import cast
 
-from domain.repositories.account_repository import AccountRepository
 from application.dto.account_dto import (
     AccountResponseDTO,
     CreditCardSettingsDTO,
 )
-
+from domain.repositories.account_repository import AccountRepository
 from shared.exceptions.domain import AccountNotFoundError
 
 
@@ -24,7 +23,7 @@ class GetAccountByIdHandler:
     def __init__(self, account_repository: AccountRepository):
         self.account_repository = account_repository
 
-    async def handle(self, query: GetAccountByIdQuery) -> Optional[AccountResponseDTO]:
+    async def handle(self, query: GetAccountByIdQuery) -> AccountResponseDTO | None:
         """Ejecuta la query de obtener cuenta por ID."""
         account = await self.account_repository.get_by_uuid_and_user_id_with_settings(
             uuid=query.account_uuid,

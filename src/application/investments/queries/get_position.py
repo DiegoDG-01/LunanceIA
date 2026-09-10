@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from typing import cast
 
+from application.dto.investment_position_dto import PositionResponseDTO
+from application.investments.services.position_overflow import PositionOverflowService
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.investment_position_repository import (
     InvestmentPositionRepository,
 )
-from application.dto.investment_position_dto import PositionResponseDTO
-from application.investments.services.position_overflow import PositionOverflowService
 from shared.exceptions.domain import InvestmentPositionNotFoundError
 
 

@@ -1,12 +1,10 @@
-from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.repositories.bank_repository import BankRepository
 from domain.entities.bank import Bank
-
-from shared.exceptions.domain import BankNotFoundError
+from domain.repositories.bank_repository import BankRepository
 from infrastructure.database.models.bank import BankModel
+from shared.exceptions.domain import BankNotFoundError
 
 
 class SQLAlchemyBankRepository(BankRepository):
@@ -24,20 +22,20 @@ class SQLAlchemyBankRepository(BankRepository):
             is_active=model.is_active,
         )
 
-    async def get_all(self) -> List[Bank]:
+    async def get_all(self) -> list[Bank]:
         stmt = select(BankModel)
         result = await self.db.execute(stmt)
         bank_models = result.scalars().all()
 
         return [self._model_to_entity(model) for model in bank_models]
 
-    async def get_by_id(self, bank_id: int) -> Optional[Bank]:
+    async def get_by_id(self, bank_id: int) -> Bank | None:
         bank_model = await self.db.get(BankModel, bank_id)
         if bank_model:
             return self._model_to_entity(bank_model)
         return None
 
-    async def get_by_code(self, bank_code: str) -> Optional[Bank]:
+    async def get_by_code(self, bank_code: str) -> Bank | None:
         result = await self.db.execute(
             select(BankModel).where(BankModel.code == bank_code)
         )

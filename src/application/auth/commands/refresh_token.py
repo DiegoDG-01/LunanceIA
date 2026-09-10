@@ -1,14 +1,13 @@
 from dataclasses import dataclass
-from datetime import timedelta, datetime, timezone
+from datetime import UTC, datetime, timedelta
 from typing import cast
 
-from domain.repositories.user_repository import UserRepository
-from domain.repositories.auth_token_repository import AuthTokenRepository
-from application.interfaces.auth_service import AuthTokenServiceInterface, AuthConfig
-from shared.exceptions.application import CommandValidationError
-from shared.exceptions.application import JWTValidationError
 from application.auth.commands.login import LoginResponse
+from application.interfaces.auth_service import AuthConfig, AuthTokenServiceInterface
+from domain.repositories.auth_token_repository import AuthTokenRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
+from domain.repositories.user_repository import UserRepository
+from shared.exceptions.application import CommandValidationError, JWTValidationError
 
 
 @dataclass
@@ -70,7 +69,7 @@ class RefreshTokenHandler:
             user_uuid=cast(str, user_uuid)
         )
         new_refresh_token_hash = self.jwt_service.hash_refresh_token(new_refresh_token)
-        new_expires_at = datetime.now(tz=timezone.utc) + timedelta(
+        new_expires_at = datetime.now(tz=UTC) + timedelta(
             days=self.auth_config.refresh_token_expire_days
         )
 

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Optional, List
 
 from domain.entities.installment_purchase import InstallmentPurchase
 
@@ -12,24 +11,23 @@ class InstallmentPurchaseRepository(ABC):
     @abstractmethod
     async def get_by_id(
         self, purchase_id: int, *, for_update: bool = False
-    ) -> Optional[InstallmentPurchase]:
+    ) -> InstallmentPurchase | None:
         pass
 
     @abstractmethod
     async def get_by_uuid(
         self, uuid: str, user_id, *, for_update: bool = False
-    ) -> Optional[InstallmentPurchase]:
+    ) -> InstallmentPurchase | None:
         pass
 
     @abstractmethod
     async def get_by_initial_transaction_id(
         self, transaction_id: int, user_id: int
-    ) -> Optional[InstallmentPurchase]:
+    ) -> InstallmentPurchase | None:
         """Return the installment purchase created by an initial expense."""
-        pass
 
     @abstractmethod
-    async def get_all_by_user_id(self, user_id: int) -> List[InstallmentPurchase]:
+    async def get_all_by_user_id(self, user_id: int) -> list[InstallmentPurchase]:
         pass
 
     @abstractmethod

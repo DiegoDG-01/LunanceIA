@@ -1,11 +1,9 @@
 from dataclasses import dataclass
-from typing import Optional
 
+from application.dto.subscription_dto import SubscriptionResponseDTO
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.category_repository import CategoryRepository
 from domain.repositories.subscription_repository import SubscriptionRepository
-from application.dto.subscription_dto import SubscriptionResponseDTO
-
 from shared.exceptions.domain import SubscriptionNotFoundError
 
 
@@ -28,7 +26,7 @@ class GetSubscriptionsByIdHandler:
 
     async def handle(
         self, query: GetSubscriptionsByIdQuery
-    ) -> Optional[SubscriptionResponseDTO]:
+    ) -> SubscriptionResponseDTO | None:
         subscription = await self.subscription_repository.get_by_uuid_and_user_id(
             subscription_uuid=query.subscription_uuid, user_id=query.user_id
         )

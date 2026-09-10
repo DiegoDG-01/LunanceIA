@@ -1,8 +1,8 @@
 from fastapi import Depends
 
 from application.api_keys.commands.create_api_key import CreateAPIKeyHandler
-from application.api_keys.commands.revoke_api_key import RevokeAPIKeyHandler
 from application.api_keys.commands.delete_api_key import DeleteAPIKeyHandler
+from application.api_keys.commands.revoke_api_key import RevokeAPIKeyHandler
 from application.api_keys.queries.list_api_keys import ListAPIKeysHandler
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.database.repositories.sqlalchemy_api_key_repository import (

@@ -1,17 +1,15 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Depends, Request
 
+from application.banks.queries.get_banks import GetBanksHandler, GetBanksQuery
 from domain.entities.user import User
 from domain.objects.enums import APIKeyScope
-from application.banks.queries.get_banks import GetBanksQuery, GetBanksHandler
-from presentation.schemas.responses.bank import BankResponse, BankListResponse
-from presentation.dependencies.auth_deps import require_scope
-from presentation.dependencies.bank_deps import get_banks_handler
-
-
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,
     limiter_10_per_minute,
 )
+from presentation.dependencies.auth_deps import require_scope
+from presentation.dependencies.bank_deps import get_banks_handler
+from presentation.schemas.responses.bank import BankListResponse, BankResponse
 
 router = APIRouter()
 

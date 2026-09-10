@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from datetime import datetime, date, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from typing import Optional, cast
+from typing import cast
 
 from domain.objects.enums import (
     InterestType,
@@ -40,8 +40,8 @@ class InvestmentPosition:
     por tramo de las SOFIPOs (25,000 al 10% y el excedente a otra tasa).
     """
 
-    id: Optional[int]
-    uuid: Optional[str]
+    id: int | None
+    uuid: str | None
     account_id: int
     name: str
     position_type: PositionType
@@ -52,15 +52,15 @@ class InvestmentPosition:
     interest_type: InterestType
     start_date: date
     on_maturity: MaturityAction
-    base_principal: Optional[Decimal] = None  # Base de cálculo para interés simple
-    term_days: Optional[int] = None
-    lock_period_end_date: Optional[date] = None
-    maturity_date: Optional[date] = None
-    early_withdrawal_penalty: Optional[Decimal] = None
-    max_balance: Optional[Decimal] = None  # Solo a la vista; None = sin tope
-    overflow_action: Optional[OverflowAction] = None
-    overflow_position_id: Optional[int] = None
-    created_at: Optional[datetime] = None
+    base_principal: Decimal | None = None  # Base de cálculo para interés simple
+    term_days: int | None = None
+    lock_period_end_date: date | None = None
+    maturity_date: date | None = None
+    early_withdrawal_penalty: Decimal | None = None
+    max_balance: Decimal | None = None  # Solo a la vista; None = sin tope
+    overflow_action: OverflowAction | None = None
+    overflow_position_id: int | None = None
+    created_at: datetime | None = None
 
     @classmethod
     def create_new(
@@ -71,15 +71,15 @@ class InvestmentPosition:
         initial_balance: Money,
         annual_rate: Decimal,
         interest_type: InterestType = InterestType.COMPOUND,
-        start_date: Optional[date] = None,
-        term_days: Optional[int] = None,
-        maturity_date: Optional[date] = None,
-        lock_period_end_date: Optional[date] = None,
-        early_withdrawal_penalty: Optional[Decimal] = None,
+        start_date: date | None = None,
+        term_days: int | None = None,
+        maturity_date: date | None = None,
+        lock_period_end_date: date | None = None,
+        early_withdrawal_penalty: Decimal | None = None,
         on_maturity: MaturityAction = MaturityAction.HOLD,
-        max_balance: Optional[Decimal] = None,
-        overflow_action: Optional[OverflowAction] = None,
-        overflow_position_id: Optional[int] = None,
+        max_balance: Decimal | None = None,
+        overflow_action: OverflowAction | None = None,
+        overflow_position_id: int | None = None,
     ) -> "InvestmentPosition":
         if annual_rate < 0:
             raise InvalidInvestmentRateError(str(annual_rate))
@@ -88,7 +88,7 @@ class InvestmentPosition:
                 raise InvalidPenaltyPercentageError(str(early_withdrawal_penalty))
 
         if start_date is None:
-            start_date = datetime.now(timezone.utc).date()
+            start_date = datetime.now(UTC).date()
 
         if position_type == PositionType.FIXED_TERM:
             if maturity_date is None:
@@ -149,11 +149,11 @@ class InvestmentPosition:
     @staticmethod
     def _normalize_cap_config(
         position_type: PositionType,
-        max_balance: Optional[Decimal],
-        overflow_action: Optional[OverflowAction],
-        overflow_position_id: Optional[int],
-        position_id: Optional[int] = None,
-    ) -> tuple[Optional[Decimal], Optional[OverflowAction], Optional[int]]:
+        max_balance: Decimal | None,
+        overflow_action: OverflowAction | None,
+        overflow_position_id: int | None,
+        position_id: int | None = None,
+    ) -> tuple[Decimal | None, OverflowAction | None, int | None]:
         """Valida la configuración de tope y devuelve los tres campos ya
         consistentes entre sí.
 
@@ -285,9 +285,9 @@ class InvestmentPosition:
 
     def configure_cap(
         self,
-        max_balance: Optional[Decimal],
-        overflow_action: Optional[OverflowAction] = None,
-        overflow_position_id: Optional[int] = None,
+        max_balance: Decimal | None,
+        overflow_action: OverflowAction | None = None,
+        overflow_position_id: int | None = None,
     ) -> Money:
         """Cambia el tope y su destino, y devuelve el excedente a desbordar ya.
 

@@ -1,26 +1,25 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infrastructure.database.connection import get_db
-from application.investments.queries.get_investment_yields import (
-    GetInvestmentYieldsHandler,
-)
 from application.investments.queries.get_investment_projections import (
     GetInvestmentProjectionsHandler,
 )
+from application.investments.queries.get_investment_yields import (
+    GetInvestmentYieldsHandler,
+)
+from infrastructure.database.connection import get_db
 
 # from domain.entities.investment_yield import InvestmentYield
 # from domain.repositories.investment_yield_repository import InvestmentYieldRepository
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_investment_yield_repository import (
-    SQLAlchemyInvestmentYieldRepository,
-)
 from infrastructure.database.repositories.sqlalchemy_investment_position_repository import (
     SQLAlchemyInvestmentPositionRepository,
 )
-
+from infrastructure.database.repositories.sqlalchemy_investment_yield_repository import (
+    SQLAlchemyInvestmentYieldRepository,
+)
 from presentation.dependencies.repositories import get_account_repository
 
 

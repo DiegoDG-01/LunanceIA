@@ -1,12 +1,16 @@
 from dataclasses import dataclass
 from datetime import date
 
+from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
+
 from application.ai.schemas.expense_analysis import ExpenseAnalysis
 from application.interfaces.ai_agent import AIAgentInterface
 from domain.repositories.transaction_repository import TransactionRepository
-from shared.exceptions.domain import TransactionNotActivityError
-from pydantic_ai.exceptions import UnexpectedModelBehavior, ModelHTTPError
-from shared.exceptions.domain import AIInvalidResponseError, AIServiceError
+from shared.exceptions.domain import (
+    AIInvalidResponseError,
+    AIServiceError,
+    TransactionNotActivityError,
+)
 
 
 @dataclass

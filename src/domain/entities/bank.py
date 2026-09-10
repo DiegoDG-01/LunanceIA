@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -8,8 +7,8 @@ class Bank:
     name: str
     code: str
     country: str = "MX"
-    logo_url: Optional[str] = None
-    color: Optional[str] = None
+    logo_url: str | None = None
+    color: str | None = None
     is_active: bool = True
 
     @classmethod
@@ -18,8 +17,8 @@ class Bank:
         name: str,
         code: str,
         country: str = "MX",
-        logo_url: Optional[str] = None,
-        color: Optional[str] = None,
+        logo_url: str | None = None,
+        color: str | None = None,
     ):
         if not name.strip():
             raise ValueError("Bank name cannot be empty")

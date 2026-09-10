@@ -1,15 +1,14 @@
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional
 
 from domain.objects.enums import InterestType
 
 
 @dataclass
 class InvestmentYield:
-    id: Optional[int]
-    uuid: Optional[str]
+    id: int | None
+    uuid: str | None
     account_id: int
     yield_date: date
     principal_amount: Decimal  # Balance utilizado como base de calculo
@@ -17,8 +16,8 @@ class InvestmentYield:
     cumulative_balance: Decimal  # principal_amount + yield_amount
     annual_rate: Decimal  # Taza anual usada (snapshot del dia)
     interest_type: InterestType
-    created_at: Optional[datetime] = None
-    position_id: Optional[int] = None  # Apartado que generó el rendimiento
+    created_at: datetime | None = None
+    position_id: int | None = None  # Apartado que generó el rendimiento
 
     @classmethod
     def create_new(
@@ -30,7 +29,7 @@ class InvestmentYield:
         cumulative_balance: Decimal,
         annual_rate: Decimal,
         interest_type: InterestType,
-        position_id: Optional[int] = None,
+        position_id: int | None = None,
     ) -> "InvestmentYield":
         return cls(
             id=None,

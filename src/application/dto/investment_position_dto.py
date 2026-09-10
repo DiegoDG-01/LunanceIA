@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-from decimal import Decimal
-from typing import Optional
 from datetime import date, datetime
+from decimal import Decimal
 
 from domain.objects.enums import (
     InterestType,
@@ -23,15 +22,15 @@ class CreatePositionDTO:
     amount: Decimal
     annual_rate: Decimal
     interest_type: InterestType = InterestType.COMPOUND
-    term_days: Optional[int] = None
-    maturity_date: Optional[date] = None
-    lock_period_end_date: Optional[date] = None
-    early_withdrawal_penalty: Optional[Decimal] = None
+    term_days: int | None = None
+    maturity_date: date | None = None
+    lock_period_end_date: date | None = None
+    early_withdrawal_penalty: Decimal | None = None
     on_maturity: MaturityAction = MaturityAction.HOLD
     currency: str = "MXN"
-    max_balance: Optional[Decimal] = None
-    overflow_action: Optional[OverflowAction] = None
-    overflow_position_uuid: Optional[str] = None
+    max_balance: Decimal | None = None
+    overflow_action: OverflowAction | None = None
+    overflow_position_uuid: str | None = None
 
 
 @dataclass
@@ -55,11 +54,11 @@ class UpdatePositionDTO:
 
     user_id: int
     position_uuid: str
-    name: Optional[str] = None
+    name: str | None = None
     cap_provided: bool = False
-    max_balance: Optional[Decimal] = None
-    overflow_action: Optional[OverflowAction] = None
-    overflow_position_uuid: Optional[str] = None
+    max_balance: Decimal | None = None
+    overflow_action: OverflowAction | None = None
+    overflow_position_uuid: str | None = None
 
 
 @dataclass
@@ -87,23 +86,23 @@ class PositionResponseDTO:
     interest_type: InterestType
     start_date: date
     on_maturity: MaturityAction
-    term_days: Optional[int] = None
-    lock_period_end_date: Optional[date] = None
-    maturity_date: Optional[date] = None
-    early_withdrawal_penalty: Optional[Decimal] = None
-    max_balance: Optional[Decimal] = None
-    overflow_action: Optional[OverflowAction] = None
-    overflow_position_uuid: Optional[str] = None
-    created_at: Optional[datetime] = None
-    account_available_balance: Optional[Decimal] = None
+    term_days: int | None = None
+    lock_period_end_date: date | None = None
+    maturity_date: date | None = None
+    early_withdrawal_penalty: Decimal | None = None
+    max_balance: Decimal | None = None
+    overflow_action: OverflowAction | None = None
+    overflow_position_uuid: str | None = None
+    created_at: datetime | None = None
+    account_available_balance: Decimal | None = None
 
     @classmethod
     def from_entity(
         cls,
         position,
         account_uuid: str,
-        account_available_balance: Optional[Decimal] = None,
-        overflow_position_uuid: Optional[str] = None,
+        account_available_balance: Decimal | None = None,
+        overflow_position_uuid: str | None = None,
     ) -> "PositionResponseDTO":
         return cls(
             position_uuid=position.uuid,
@@ -166,9 +165,9 @@ class PositionProjectionResponseDTO:
     current_value: Decimal
     annual_rate: Decimal
     interest_type: InterestType
-    maturity_date: Optional[date]
+    maturity_date: date | None
     projected_final_balance: Decimal
     daily_projections: list
     # Total que se desborda en el horizonte proyectado (0 si no hay tope)
     projected_overflow: Decimal = Decimal(0)
-    max_balance: Optional[Decimal] = None
+    max_balance: Decimal | None = None

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from application.dto.saving_goal_dto import UpdateSavingGoalDTO, SavingGoalResponseDTO
+from application.dto.saving_goal_dto import SavingGoalResponseDTO, UpdateSavingGoalDTO
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.saving_goal_repository import SavingGoalRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork

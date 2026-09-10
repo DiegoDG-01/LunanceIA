@@ -1,16 +1,15 @@
 from dataclasses import dataclass
-from typing import Optional, List
 
+from application.dto.budget_dto import BudgetResponseDTO
 from domain.repositories.budget_repository import BudgetRepository
 from domain.repositories.category_repository import CategoryRepository
-from application.dto.budget_dto import BudgetResponseDTO
 
 
 @dataclass
 class GetBudgetsQuery:
     user_id: int
     active_only: bool = False
-    category_id: Optional[int] = None
+    category_id: int | None = None
 
 
 class GetBudgetsHandler:
@@ -22,7 +21,7 @@ class GetBudgetsHandler:
         self.budget_repository = budget_repository
         self.category_repository = category_repository
 
-    async def handle(self, query: GetBudgetsQuery) -> List[BudgetResponseDTO]:
+    async def handle(self, query: GetBudgetsQuery) -> list[BudgetResponseDTO]:
         budgets = await self.budget_repository.get_by_user(
             user_id=query.user_id,
             active_only=query.active_only,
@@ -31,7 +30,7 @@ class GetBudgetsHandler:
 
         result = []
         for budget in budgets:
-            category_name: Optional[str] = None
+            category_name: str | None = None
             if budget.category_id is not None:
                 category = await self.category_repository.get_by_id(budget.category_id)
                 category_name = category.name if category else None

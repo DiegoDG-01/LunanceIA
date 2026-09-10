@@ -1,10 +1,10 @@
 from dataclasses import dataclass
-
 from datetime import date
-from typing import Optional, cast
+from typing import cast
+
+from application.dto.transaction_dto import TransactionResponseDTO
 from domain.objects.enums import TransactionType
 from domain.repositories.transaction_repository import TransactionRepository
-from application.dto.transaction_dto import TransactionResponseDTO
 from shared.exceptions.domain import TransactionNotFoundError
 
 
@@ -15,14 +15,14 @@ class GetTransactionsQuery:
     """
 
     user_id: int
-    account_uuid: Optional[str]
+    account_uuid: str | None
 
     skip: int = 0
     limit: int = 100
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    transaction_type: Optional[TransactionType] = None
-    category_id: Optional[int] = None
+    start_date: date | None = None
+    end_date: date | None = None
+    transaction_type: TransactionType | None = None
+    category_id: int | None = None
 
 
 class GetTransactionsHandler:

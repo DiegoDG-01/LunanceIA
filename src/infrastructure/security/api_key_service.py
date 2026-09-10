@@ -1,5 +1,5 @@
 import hashlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from domain.entities.user import User
 from domain.repositories.api_key_repository import APIKeyRepository
@@ -34,10 +34,10 @@ class APIKeyService:
         if user is None or not user.is_active:
             raise UnauthorizedError("API key owner not found or inactive")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         last_used = api_key.last_used_at
         if last_used is not None and last_used.tzinfo is None:
-            last_used = last_used.replace(tzinfo=timezone.utc)
+            last_used = last_used.replace(tzinfo=UTC)
 
         if last_used is None or (now - last_used).total_seconds() > 60:
             async with self.uow:

@@ -1,13 +1,12 @@
 from dataclasses import dataclass
-from typing import Optional
 
+from application.dto.budget_dto import BudgetResponseDTO, CreateBudgetDTO
 from domain.entities.budget import Budget
 from domain.repositories.budget_repository import BudgetRepository
 from domain.repositories.category_repository import CategoryRepository
-from domain.repositories.user_repository import UserRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from application.dto.budget_dto import CreateBudgetDTO, BudgetResponseDTO
-from shared.exceptions.domain import UserNotFoundError, CategoryNotFoundError
+from domain.repositories.user_repository import UserRepository
+from shared.exceptions.domain import CategoryNotFoundError, UserNotFoundError
 
 
 @dataclass
@@ -35,7 +34,7 @@ class CreateBudgetHandler:
         if not user or not user.is_active:
             raise UserNotFoundError()
 
-        category_name: Optional[str] = None
+        category_name: str | None = None
         if dto.category_id is not None:
             category = await self.category_repository.get_by_id(dto.category_id)
             if not category:

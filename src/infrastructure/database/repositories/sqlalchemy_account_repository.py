@@ -1,14 +1,13 @@
-from typing import Optional, List
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.entities.account import Account
-from domain.repositories.account_repository import AccountRepository
-from domain.objects.money import Money
 from domain.objects.credit_card_settings import CreditCardSettings
+from domain.objects.money import Money
+from domain.repositories.account_repository import AccountRepository
 from infrastructure.database.models import (
-    CreditCardSettingsModel,
     BankModel,
+    CreditCardSettingsModel,
 )
 from infrastructure.database.models.account import AccountModel
 from shared.exceptions.domain import AccountNotFoundError
@@ -66,7 +65,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
 
     async def get_by_id(
         self, account_id: int, for_update: bool = False
-    ) -> Optional[Account]:
+    ) -> Account | None:
         stmt = select(AccountModel).where(AccountModel.id == account_id)
 
         if for_update:
@@ -78,7 +77,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
             return None
         return self._model_to_entity(model)
 
-    async def get_bulk_by_ids(self, account_ids: List[int]) -> List[Account]:
+    async def get_bulk_by_ids(self, account_ids: list[int]) -> list[Account]:
         stmt = select(AccountModel).where(AccountModel.id.in_(account_ids))
         result = await self.db.execute(stmt)
         models = result.scalars().all()
@@ -86,7 +85,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
 
     async def get_by_uuid_and_user_id(
         self, account_uuid: str, user_id: int, *, for_update: bool = False
-    ) -> Optional[Account]:
+    ) -> Account | None:
         stmt = select(AccountModel).where(
             and_(
                 AccountModel.uuid == account_uuid,
@@ -105,7 +104,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
 
     async def get_by_user_id(
         self, user_id: int, limit: int, offset: int
-    ) -> List[Account]:
+    ) -> list[Account]:
         stmt = (
             select(
                 AccountModel,
@@ -144,7 +143,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
 
     async def get_active_by_user(
         self, user_id: int, limit: int, offset: int
-    ) -> List[Account]:
+    ) -> list[Account]:
         stmt = (
             select(
                 AccountModel,
@@ -226,7 +225,7 @@ class SQLAlchemyAccountRepository(AccountRepository):
 
     async def get_by_uuid_and_user_id_with_settings(
         self, uuid: str, user_id: int
-    ) -> Optional[Account]:
+    ) -> Account | None:
         stmt = (
             select(
                 AccountModel,

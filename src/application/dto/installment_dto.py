@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional, List
 
 from domain.objects.enums import InstallmentType
 
@@ -10,14 +9,14 @@ from domain.objects.enums import InstallmentType
 class CreateInstallmentPurchaseDTO:
     user_id: int
     account_uuid: str
-    category_id: Optional[int]
+    category_id: int | None
     description: str
     total_amount: Decimal
     num_installments: int
     installment_type: InstallmentType
     annual_interest_rate: Decimal
     purchase_date: date
-    notes: Optional[str] = None
+    notes: str | None = None
     currency: str = "MXN"
 
 
@@ -28,14 +27,14 @@ class InstallmentChargeResponseDTO:
     amount: Decimal
     due_date: date
     paid: bool
-    paid_at: Optional[datetime]
+    paid_at: datetime | None
 
 
 @dataclass
 class InstallmentPurchaseResponseDTO:
     uuid: str
     account_uuid: str
-    category_id: Optional[int]
+    category_id: int | None
     description: str
     total_amount: Decimal
     num_installments: int
@@ -43,10 +42,10 @@ class InstallmentPurchaseResponseDTO:
     annual_interest_rate: Decimal
     monthly_payment: Decimal
     purchase_date: date
-    notes: Optional[str]
+    notes: str | None
     is_active: bool
     creation_date: datetime
-    charges: List[InstallmentChargeResponseDTO]
+    charges: list[InstallmentChargeResponseDTO]
 
     @classmethod
     def from_entity(

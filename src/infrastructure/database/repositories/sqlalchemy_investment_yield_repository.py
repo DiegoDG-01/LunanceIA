@@ -1,5 +1,4 @@
 from datetime import date
-from typing import Optional, List
 
 from sqlalchemy import and_, asc, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -56,7 +55,7 @@ class SQLAlchemyInvestmentYieldRepository(InvestmentYieldRepository):
 
     async def get_by_account_id(
         self, account_id: int, limit: int = 365, offset: int = 0
-    ) -> List[InvestmentYield]:
+    ) -> list[InvestmentYield]:
         stmt = (
             select(InvestmentYieldModel)
             .where(InvestmentYieldModel.account_id == account_id)
@@ -70,7 +69,7 @@ class SQLAlchemyInvestmentYieldRepository(InvestmentYieldRepository):
 
     async def get_by_account_and_date(
         self, account_id: int, yield_date: date
-    ) -> Optional[InvestmentYield]:
+    ) -> InvestmentYield | None:
         stmt = select(InvestmentYieldModel).where(
             and_(
                 InvestmentYieldModel.account_id == account_id,
@@ -84,7 +83,7 @@ class SQLAlchemyInvestmentYieldRepository(InvestmentYieldRepository):
     async def get_first_by_account_id(
         self,
         account_id: int,
-    ) -> Optional[InvestmentYield]:
+    ) -> InvestmentYield | None:
         stmt = (
             select(InvestmentYieldModel)
             .where(InvestmentYieldModel.account_id == account_id)
@@ -97,7 +96,7 @@ class SQLAlchemyInvestmentYieldRepository(InvestmentYieldRepository):
 
     async def get_by_position_id(
         self, position_id: int, limit: int = 365, offset: int = 0
-    ) -> List[InvestmentYield]:
+    ) -> list[InvestmentYield]:
         stmt = (
             select(InvestmentYieldModel)
             .where(InvestmentYieldModel.position_id == position_id)
@@ -111,7 +110,7 @@ class SQLAlchemyInvestmentYieldRepository(InvestmentYieldRepository):
 
     async def get_by_position_and_date(
         self, position_id: int, yield_date: date
-    ) -> Optional[InvestmentYield]:
+    ) -> InvestmentYield | None:
         stmt = select(InvestmentYieldModel).where(
             and_(
                 InvestmentYieldModel.position_id == position_id,

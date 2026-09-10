@@ -1,11 +1,11 @@
 from dataclasses import dataclass
-from typing import List, cast
+from typing import cast
 
-from domain.repositories.account_repository import AccountRepository
 from application.dto.account_dto import (
     AccountResponseDTO,
     CreditCardSettingsDTO,
 )
+from domain.repositories.account_repository import AccountRepository
 
 
 @dataclass
@@ -27,7 +27,7 @@ class GetUserAccountsHandler:
     ):
         self.account_repository = account_repository
 
-    async def handle(self, query: GetUserAccountsQuery) -> List[AccountResponseDTO]:
+    async def handle(self, query: GetUserAccountsQuery) -> list[AccountResponseDTO]:
         """Ejecuta la query de obtener cuentas."""
         if query.only_active:
             accounts = await self.account_repository.get_active_by_user(

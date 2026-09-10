@@ -2,19 +2,19 @@ import logging
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import List, Optional, Tuple, cast
+from typing import cast
 
+from application.dto.investment_yield_dto import (
+    InvestmentProjectionResponseDTO,
+    ProjectionDayDTO,
+)
+from application.investments.queries.get_position_projections import project_position
 from domain.entities.investment_position import InvestmentPosition
 from domain.objects.enums import PositionStatus
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.investment_position_repository import (
     InvestmentPositionRepository,
 )
-from application.dto.investment_yield_dto import (
-    InvestmentProjectionResponseDTO,
-    ProjectionDayDTO,
-)
-from application.investments.queries.get_position_projections import project_position
 from shared.exceptions.domain import AccountNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ class GetInvestmentProjectionsQuery:
     account_uuid: str
     user_id: int
 
-    project_days: Optional[int] = None
+    project_days: int | None = None
 
 
 class GetInvestmentProjectionsHandler:
@@ -76,7 +76,7 @@ class GetInvestmentProjectionsHandler:
 
         days = min(max(0, days), 3650)  # Limit 10 years
 
-        per_position: List[Tuple[InvestmentPosition, List[ProjectionDayDTO]]] = []
+        per_position: list[tuple[InvestmentPosition, list[ProjectionDayDTO]]] = []
         for position in positions:
             horizon = days
             if position.maturity_date:
@@ -102,11 +102,11 @@ class GetInvestmentProjectionsHandler:
 
     @staticmethod
     def _aggregate(
-        per_position: List[Tuple[InvestmentPosition, List[ProjectionDayDTO]]],
-    ) -> List[ProjectionDayDTO]:
+        per_position: list[tuple[InvestmentPosition, list[ProjectionDayDTO]]],
+    ) -> list[ProjectionDayDTO]:
         longest = max((results for _, results in per_position), key=len, default=[])
 
-        daily: List[ProjectionDayDTO] = []
+        daily: list[ProjectionDayDTO] = []
         for i in range(len(longest)):
             total_principal = Decimal(0)
             total_yield = Decimal(0)

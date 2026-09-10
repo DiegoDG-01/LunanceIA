@@ -1,9 +1,10 @@
 from pydantic import EmailStr
+
 from shared.exceptions.base import (
-    ValidationError,
-    NotFoundError,
     BusinessRuleError,
     LunanceException,
+    NotFoundError,
+    ValidationError,
 )
 
 

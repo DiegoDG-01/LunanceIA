@@ -1,22 +1,20 @@
 from fastapi import Depends
 
 from application.auth.commands.login import LoginHandler
-from application.auth.commands.register import RegisterHandler
-from application.auth.commands.refresh_token import RefreshTokenHandler
 from application.auth.commands.logout import LogoutHandler
+from application.auth.commands.refresh_token import RefreshTokenHandler
+from application.auth.commands.register import RegisterHandler
+from application.interfaces.auth_service import AuthConfig, AuthTokenServiceInterface
 from domain.repositories.auth_token_repository import AuthTokenRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.config.settings import settings
 from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
-from application.interfaces.auth_service import AuthTokenServiceInterface, AuthConfig
-
-
 from presentation.dependencies.repositories import (
-    get_user_repository,
     get_auth_token_repository,
     get_unit_of_work_repository,
+    get_user_repository,
 )
 from presentation.dependencies.services import get_jwt_service
 

@@ -1,29 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from typing import cast
 
-from domain.entities.user import User
-from presentation.schemas.requests.account import (
-    CreateAccountRequest,
-    UpdateAccountRequest,
-)
-from presentation.schemas.responses.account import (
-    AccountResponse,
-    AccountListResponse,
-    AccountRecentActivityResponse,
-)
-from domain.objects.enums import APIKeyScope
-from presentation.dependencies.auth_deps import require_scope
-from presentation.dependencies import (
-    get_create_account_handler,
-    get_update_account_handler,
-    get_delete_account_handler,
-    get_user_accounts_handler,
-    get_account_by_id_handler,
-    get_state_account_handler,
-    get_activity_account_handler,
-)
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+
 from application.accounts.commands.create_account import (
     CreateAccountCommand,
     CreateAccountHandler,
+)
+from application.accounts.commands.delete_account import (
+    DeleteAccountCommand,
+    DeleteAccountHandler,
 )
 from application.accounts.commands.state_account import (
     StateAccountCommand,
@@ -33,32 +18,47 @@ from application.accounts.commands.update_account import (
     UpdateAccountCommand,
     UpdateAccountHandler,
 )
-from application.accounts.commands.delete_account import (
-    DeleteAccountCommand,
-    DeleteAccountHandler,
-)
-from application.accounts.queries.get_user_accounts import (
-    GetUserAccountsQuery,
-    GetUserAccountsHandler,
+from application.accounts.queries.get_account_activity import (
+    GetAccountActivitiesHandler,
+    GetAccountActivityQuery,
 )
 from application.accounts.queries.get_account_by_id import (
-    GetAccountByIdQuery,
     GetAccountByIdHandler,
+    GetAccountByIdQuery,
 )
-from application.accounts.queries.get_account_activity import (
-    GetAccountActivityQuery,
-    GetAccountActivitiesHandler,
+from application.accounts.queries.get_user_accounts import (
+    GetUserAccountsHandler,
+    GetUserAccountsQuery,
 )
 from application.dto.account_dto import (
     CreateAccountDTO,
-    UpdateAccountDTO,
     CreditCardSettingsDTO,
+    UpdateAccountDTO,
 )
-from typing import List, cast
-
+from domain.entities.user import User
+from domain.objects.enums import APIKeyScope
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,
     limiter_50_per_minute,
+)
+from presentation.dependencies import (
+    get_account_by_id_handler,
+    get_activity_account_handler,
+    get_create_account_handler,
+    get_delete_account_handler,
+    get_state_account_handler,
+    get_update_account_handler,
+    get_user_accounts_handler,
+)
+from presentation.dependencies.auth_deps import require_scope
+from presentation.schemas.requests.account import (
+    CreateAccountRequest,
+    UpdateAccountRequest,
+)
+from presentation.schemas.responses.account import (
+    AccountListResponse,
+    AccountRecentActivityResponse,
+    AccountResponse,
 )
 
 router = APIRouter()
@@ -224,7 +224,7 @@ async def activate_account(
 
 
 @router.get(
-    "/{account_uuid}/activity", response_model=List[AccountRecentActivityResponse]
+    "/{account_uuid}/activity", response_model=list[AccountRecentActivityResponse]
 )
 async def get_account_activity(
     request: Request,

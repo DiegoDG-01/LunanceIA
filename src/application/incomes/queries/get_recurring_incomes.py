@@ -1,18 +1,16 @@
 from dataclasses import dataclass
-from typing import Optional, List
-
-from domain.repositories.recurring_income_repository import RecurringIncomeRepository
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.category_repository import CategoryRepository
 
 from application.dto.recurring_income_dto import RecurringIncomeResponseDTO
+from domain.repositories.account_repository import AccountRepository
+from domain.repositories.category_repository import CategoryRepository
+from domain.repositories.recurring_income_repository import RecurringIncomeRepository
 
 
 @dataclass
 class GetRecurringIncomesQuery:
     user_id: int
-    account_uuid: Optional[str] = None
-    category_id: Optional[int] = None
+    account_uuid: str | None = None
+    category_id: int | None = None
     active_only: bool = False
     limit: int = 100
     offset: int = 0
@@ -31,7 +29,7 @@ class GetRecurringIncomesHandler:
 
     async def handle(
         self, query: GetRecurringIncomesQuery
-    ) -> List[RecurringIncomeResponseDTO]:
+    ) -> list[RecurringIncomeResponseDTO]:
         if query.account_uuid:
             incomes = await self.recurring_income_repository.get_by_account(
                 account_uuid=query.account_uuid,

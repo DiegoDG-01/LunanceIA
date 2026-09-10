@@ -1,6 +1,5 @@
-from datetime import datetime, date
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional, List
 
 from pydantic import BaseModel
 
@@ -28,15 +27,15 @@ class PositionResponse(BaseModel):
     interest_type: InterestType
     start_date: date
     on_maturity: MaturityAction
-    term_days: Optional[int] = None
-    lock_period_end_date: Optional[date] = None
-    maturity_date: Optional[date] = None
-    early_withdrawal_penalty: Optional[Decimal] = None
-    max_balance: Optional[Decimal] = None
-    overflow_action: Optional[OverflowAction] = None
-    overflow_position_uuid: Optional[str] = None
-    created_at: Optional[datetime] = None
-    account_available_balance: Optional[Decimal] = None
+    term_days: int | None = None
+    lock_period_end_date: date | None = None
+    maturity_date: date | None = None
+    early_withdrawal_penalty: Decimal | None = None
+    max_balance: Decimal | None = None
+    overflow_action: OverflowAction | None = None
+    overflow_position_uuid: str | None = None
+    created_at: datetime | None = None
+    account_available_balance: Decimal | None = None
 
 
 class AccountPositionsResponse(BaseModel):
@@ -46,7 +45,7 @@ class AccountPositionsResponse(BaseModel):
     invested_balance: Decimal
     total_balance: Decimal
     currency: str
-    positions: List[PositionResponse]
+    positions: list[PositionResponse]
 
 
 class LiquidatePositionResponse(BaseModel):
@@ -65,8 +64,8 @@ class PositionProjectionResponse(BaseModel):
     current_value: Decimal
     annual_rate: Decimal
     interest_type: InterestType
-    maturity_date: Optional[date]
+    maturity_date: date | None
     projected_final_balance: Decimal
-    daily_projections: List[ProjectionDayResponse]
+    daily_projections: list[ProjectionDayResponse]
     projected_overflow: Decimal = Decimal(0)
-    max_balance: Optional[Decimal] = None
+    max_balance: Decimal | None = None

@@ -2,22 +2,22 @@ from fastapi import APIRouter
 
 from presentation.api.v2.endpoints import (
     account,
+    ai,
+    api_key,
     auth,
-    transaction,
+    bank,
+    budget,
     category,
     dashboard,
-    subscription,
-    bank,
-    investment_yield,
-    investment_position,
-    ai,
-    notification,
-    installment,
-    budget,
     goals,
-    transfer,
-    api_key,
     income,
+    installment,
+    investment_position,
+    investment_yield,
+    notification,
+    subscription,
+    transaction,
+    transfer,
 )
 
 api_router = APIRouter()

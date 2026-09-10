@@ -1,14 +1,12 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional
 
-from sqlalchemy import ForeignKey, DECIMAL, Date, DateTime, String, Index, Enum, Integer
+from sqlalchemy import DECIMAL, Date, DateTime, Enum, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.mysql import CHAR
-from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
 
-from infrastructure.database.connection import Base
 from domain.objects.enums import (
     InterestType,
     MaturityAction,
@@ -16,6 +14,7 @@ from domain.objects.enums import (
     PositionStatus,
     PositionType,
 )
+from infrastructure.database.connection import Base
 
 
 class InvestmentPositionModel(Base):
@@ -40,28 +39,26 @@ class InvestmentPositionModel(Base):
     interest_type: Mapped[InterestType] = mapped_column(
         Enum(InterestType), default=InterestType.COMPOUND
     )
-    base_principal: Mapped[Optional[Decimal]] = mapped_column(
+    base_principal: Mapped[Decimal | None] = mapped_column(
         DECIMAL(15, 2), nullable=True
     )
     start_date: Mapped[date] = mapped_column(Date)
-    term_days: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    lock_period_end_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
-    maturity_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
-    early_withdrawal_penalty: Mapped[Optional[Decimal]] = mapped_column(
+    term_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lock_period_end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    maturity_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    early_withdrawal_penalty: Mapped[Decimal | None] = mapped_column(
         DECIMAL(5, 2), nullable=True
     )
     on_maturity: Mapped[MaturityAction] = mapped_column(
         Enum(MaturityAction), default=MaturityAction.HOLD
     )
-    max_balance: Mapped[Optional[Decimal]] = mapped_column(
-        DECIMAL(15, 2), nullable=True
-    )
-    overflow_action: Mapped[Optional[OverflowAction]] = mapped_column(
+    max_balance: Mapped[Decimal | None] = mapped_column(DECIMAL(15, 2), nullable=True)
+    overflow_action: Mapped[OverflowAction | None] = mapped_column(
         Enum(OverflowAction), nullable=True
     )
     # SET NULL y no CASCADE: que desaparezca el destino nunca debe borrar al
     # apartado que lo apuntaba. La cadena rota se resuelve cayendo al disponible.
-    overflow_position_id: Mapped[Optional[int]] = mapped_column(
+    overflow_position_id: Mapped[int | None] = mapped_column(
         ForeignKey("investment_positions.id", ondelete="SET NULL"),
         nullable=True,
         index=True,

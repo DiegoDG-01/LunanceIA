@@ -2,10 +2,9 @@ from dataclasses import dataclass
 
 from domain.entities.account import Account
 from domain.repositories.account_repository import AccountRepository
+from domain.repositories.bank_repository import BankRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.services.account_service import AccountService
-from domain.repositories.bank_repository import BankRepository
-
 from shared.exceptions.domain import AccountNotFoundError
 
 

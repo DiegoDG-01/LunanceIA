@@ -2,6 +2,10 @@ from dataclasses import dataclass
 from datetime import date
 from typing import cast
 
+from application.dto.investment_position_dto import (
+    LiquidatePositionDTO,
+    LiquidatePositionResponseDTO,
+)
 from domain.entities.notification import Notification, NotificationType
 from domain.entities.transaction import Transaction
 from domain.objects.enums import TransactionType
@@ -13,10 +17,6 @@ from domain.repositories.notification_repository import NotificationRepository
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.repositories.user_repository import UserRepository
-from application.dto.investment_position_dto import (
-    LiquidatePositionDTO,
-    LiquidatePositionResponseDTO,
-)
 from shared.exceptions.domain import (
     AccountNotFoundError,
     InvestmentPositionNotFoundError,

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Optional, List
 
 from domain.entities.account import Account
 
@@ -10,57 +9,49 @@ class AccountRepository(ABC):
     @abstractmethod
     async def create(self, account: Account) -> Account:
         """Create account"""
-        pass
 
     @abstractmethod
     async def get_by_id(
         self, account_id: int, *, for_update: bool = False
-    ) -> Optional[Account]:
+    ) -> Account | None:
         """Get account by id"""
-        pass
 
     @abstractmethod
-    async def get_bulk_by_ids(self, account_ids: List[int]) -> List[Account]:
+    async def get_bulk_by_ids(self, account_ids: list[int]) -> list[Account]:
         """Get account by id"""
 
     @abstractmethod
     async def get_by_uuid_and_user_id(
         self, account_uuid: str, user_id: int, *, for_update: bool = False
-    ) -> Optional[Account]:
+    ) -> Account | None:
         """Get account by id and user uuid"""
-        pass
 
     @abstractmethod
     async def get_by_user_id(
         self, user_id: int, limit: int, offset: int
-    ) -> List[Account]:
+    ) -> list[Account]:
         """Get all accounts by user uuid"""
-        pass
 
     @abstractmethod
     async def get_active_by_user(
         self, user_id: int, limit: int, offset: int
-    ) -> List[Account]:
+    ) -> list[Account]:
         """Get all active accounts by user uuid"""
-        pass
 
     @abstractmethod
     async def update(self, account: Account) -> Account:
         """Update account"""
-        pass
 
     @abstractmethod
     async def switch_status(self, account: Account) -> Account:
         """Switch account status"""
-        pass
 
     @abstractmethod
     async def delete(self, account: Account) -> bool:
         """This method is used to completely delete an account"""
-        pass
 
     @abstractmethod
     async def get_by_uuid_and_user_id_with_settings(
         self, uuid: str, user_id: int
-    ) -> Optional[Account]:
+    ) -> Account | None:
         pass

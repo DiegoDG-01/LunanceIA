@@ -1,11 +1,9 @@
-from domain.objects.enums import Frequency
+from datetime import date
+
 from dateutil.relativedelta import relativedelta
 
-from datetime import date
-from typing import Optional
-
+from domain.objects.enums import Frequency
 from shared.utils.date import days_in_month
-
 
 _FREQUENCY_DELTAS = {
     Frequency.DAILY: relativedelta(days=1),
@@ -38,7 +36,7 @@ def next_occurrence(current: date, frequency: Frequency, anchor_day: int) -> dat
 def first_occurrence(
     start_date: date,
     frequency: Frequency,
-    anchor_day: Optional[int] = None,
+    anchor_day: int | None = None,
 ) -> date:
     if frequency not in _MONTH_BASED or anchor_day is None:
         return start_date

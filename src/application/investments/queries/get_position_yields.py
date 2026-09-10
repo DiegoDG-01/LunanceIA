@@ -1,11 +1,11 @@
 from dataclasses import dataclass
-from typing import List, cast
+from typing import cast
 
+from application.dto.investment_yield_dto import InvestmentYieldResponseDTO
 from domain.repositories.investment_position_repository import (
     InvestmentPositionRepository,
 )
 from domain.repositories.investment_yield_repository import InvestmentYieldRepository
-from application.dto.investment_yield_dto import InvestmentYieldResponseDTO
 from shared.exceptions.domain import InvestmentPositionNotFoundError
 
 
@@ -28,7 +28,7 @@ class GetPositionYieldsHandler:
 
     async def handle(
         self, query: GetPositionYieldsQuery
-    ) -> List[InvestmentYieldResponseDTO]:
+    ) -> list[InvestmentYieldResponseDTO]:
         position = await self.position_repository.get_by_uuid_and_user_id(
             position_uuid=query.position_uuid, user_id=query.user_id
         )

@@ -4,10 +4,11 @@ from datetime import date
 from decimal import Decimal
 from typing import cast
 
+from application.investments.services.position_overflow import PositionOverflowService
+from domain.entities.investment_yield import InvestmentYield
 from domain.entities.transaction import Transaction
 from domain.objects.enums import InterestType, PositionStatus, TransactionType
 from domain.objects.money import Money
-from domain.entities.investment_yield import InvestmentYield
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.investment_position_repository import (
     InvestmentPositionRepository,
@@ -15,9 +16,7 @@ from domain.repositories.investment_position_repository import (
 from domain.repositories.investment_yield_repository import InvestmentYieldRepository
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from application.investments.services.position_overflow import PositionOverflowService
 from shared.utils.date import get_year_day_basis
-
 
 logger = logging.getLogger(__name__)
 

@@ -1,17 +1,16 @@
 from dataclasses import dataclass
 
-from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.installment_purchase_repository import (
     InstallmentPurchaseRepository,
 )
+from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-
 from shared.exceptions.domain import (
-    TransactionNotFoundError,
     AccountNotFoundError,
-    InvalidTransactionTypeError,
     InstallmentTransactionModificationError,
+    InvalidTransactionTypeError,
+    TransactionNotFoundError,
 )
 
 

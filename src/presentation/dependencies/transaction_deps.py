@@ -3,23 +3,30 @@ from fastapi import Depends
 from application.transactions.commands.create_transaction import (
     CreateTransactionHandler,
 )
-from application.transactions.commands.update_transaction import (
-    UpdateTransactionCommandHandler,
-)
 from application.transactions.commands.delete_transaction import (
     DeleteTransactionHandler,
 )
-from application.transactions.queries.get_transactions import GetTransactionsHandler
+from application.transactions.commands.update_transaction import (
+    UpdateTransactionCommandHandler,
+)
 from application.transactions.queries.get_transaction_by_uuid import (
     GetTransactionByUuidHandler,
 )
+from application.transactions.queries.get_transactions import GetTransactionsHandler
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.installment_purchase_repository import (
     InstallmentPurchaseRepository,
 )
 from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_bank_repository import (
+    SQLAlchemyBankRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_category_repository import (
+    SQLAlchemyCategoryRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_transaction_repository import (
     SQLAlchemyTransactionRepository,
@@ -27,22 +34,14 @@ from infrastructure.database.repositories.sqlalchemy_transaction_repository impo
 from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_category_repository import (
-    SQLAlchemyCategoryRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_bank_repository import (
-    SQLAlchemyBankRepository,
-)
-from domain.repositories.unit_of_work import AbstractUnitOfWork
-
 from presentation.dependencies.repositories import (
     get_account_repository,
-    get_installment_purchase_repository,
-    get_user_repository,
-    get_transaction_repository,
-    get_category_repository,
     get_bank_repository,
+    get_category_repository,
+    get_installment_purchase_repository,
+    get_transaction_repository,
     get_unit_of_work_repository,
+    get_user_repository,
 )
 
 

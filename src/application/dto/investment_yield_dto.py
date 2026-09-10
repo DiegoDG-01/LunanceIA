@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional, List
 
 from domain.objects.enums import InterestType
 
@@ -15,7 +14,7 @@ class InvestmentYieldResponseDTO:
     cumulative_balance: Decimal
     annual_rate: Decimal
     interest_type: InterestType
-    created_at: Optional[datetime]
+    created_at: datetime | None
 
     @classmethod
     def from_entity(cls, entity) -> "InvestmentYieldResponseDTO":
@@ -47,8 +46,8 @@ class InvestmentProjectionResponseDTO:
     current_balance: Decimal
     # Con varios apartados por cuenta no hay una sola tasa/tipo de interés:
     # estos campos solo se llenan cuando la cuenta tiene un único apartado.
-    annual_rate: Optional[Decimal]
-    interest_type: Optional[InterestType]
-    maturity_date: Optional[date]
-    projected_final_balance: Optional[Decimal]
-    daily_projections: List[ProjectionDayDTO]
+    annual_rate: Decimal | None
+    interest_type: InterestType | None
+    maturity_date: date | None
+    projected_final_balance: Decimal | None
+    daily_projections: list[ProjectionDayDTO]

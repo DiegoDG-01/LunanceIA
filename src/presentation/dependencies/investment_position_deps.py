@@ -1,6 +1,26 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from application.investments.commands.create_position import CreatePositionHandler
+from application.investments.commands.deposit_to_position import (
+    DepositToPositionHandler,
+)
+from application.investments.commands.liquidate_position import (
+    LiquidatePositionHandler,
+)
+from application.investments.commands.update_position import UpdatePositionHandler
+from application.investments.commands.withdraw_from_position import (
+    WithdrawFromPositionHandler,
+)
+from application.investments.queries.get_position import GetPositionHandler
+from application.investments.queries.get_position_projections import (
+    GetPositionProjectionsHandler,
+)
+from application.investments.queries.get_position_yields import (
+    GetPositionYieldsHandler,
+)
+from application.investments.queries.list_positions import ListPositionsHandler
+from application.investments.services.position_overflow import PositionOverflowService
 from infrastructure.database.connection import get_db
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
@@ -8,52 +28,30 @@ from infrastructure.database.repositories.sqlalchemy_account_repository import (
 from infrastructure.database.repositories.sqlalchemy_investment_position_repository import (
     SQLAlchemyInvestmentPositionRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_transaction_repository import (
-    SQLAlchemyTransactionRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_user_repository import (
-    SQLAlchemyUserRepository,
-)
-from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
-    SQLAlchemyUnitOfWork,
-)
-
-from application.investments.commands.create_position import CreatePositionHandler
-from application.investments.commands.deposit_to_position import (
-    DepositToPositionHandler,
-)
-from application.investments.commands.withdraw_from_position import (
-    WithdrawFromPositionHandler,
-)
-from application.investments.commands.liquidate_position import (
-    LiquidatePositionHandler,
-)
-from application.investments.commands.update_position import UpdatePositionHandler
-from application.investments.services.position_overflow import PositionOverflowService
-from application.investments.queries.list_positions import ListPositionsHandler
-from application.investments.queries.get_position import GetPositionHandler
-from application.investments.queries.get_position_yields import (
-    GetPositionYieldsHandler,
-)
-from application.investments.queries.get_position_projections import (
-    GetPositionProjectionsHandler,
-)
-
-from presentation.dependencies.repositories import (
-    get_account_repository,
-    get_notification_repository,
-    get_transaction_repository,
-    get_user_repository,
-    get_unit_of_work_repository,
+from infrastructure.database.repositories.sqlalchemy_investment_yield_repository import (
+    SQLAlchemyInvestmentYieldRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_notification_repository import (
     SQLAlchemyNotificationRepository,
 )
+from infrastructure.database.repositories.sqlalchemy_transaction_repository import (
+    SQLAlchemyTransactionRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
+    SQLAlchemyUnitOfWork,
+)
+from infrastructure.database.repositories.sqlalchemy_user_repository import (
+    SQLAlchemyUserRepository,
+)
 from presentation.dependencies.investment_yield_deps import (
     get_investment_yield_repository,
 )
-from infrastructure.database.repositories.sqlalchemy_investment_yield_repository import (
-    SQLAlchemyInvestmentYieldRepository,
+from presentation.dependencies.repositories import (
+    get_account_repository,
+    get_notification_repository,
+    get_transaction_repository,
+    get_unit_of_work_repository,
+    get_user_repository,
 )
 
 

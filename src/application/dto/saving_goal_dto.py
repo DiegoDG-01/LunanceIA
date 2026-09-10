@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional
 
 from domain.entities.saving_goal import SavingGoal
+
 
 @dataclass
 class CreateSavingGoalDTO:
@@ -11,16 +11,16 @@ class CreateSavingGoalDTO:
     account_uuid: str
     name: str
     target_amount: Decimal
-    target_date: Optional[date] = None
-    description: Optional[str] = None
+    target_date: date | None = None
+    description: str | None = None
 
 
 @dataclass
 class UpdateSavingGoalDTO:
-    name: Optional[str] = None
-    target_amount: Optional[Decimal] = None
-    target_date: Optional[date] = None
-    description: Optional[str] = None
+    name: str | None = None
+    target_amount: Decimal | None = None
+    target_date: date | None = None
+    description: str | None = None
 
 
 @dataclass
@@ -33,13 +33,19 @@ class SavingGoalResponseDTO:
     current_amount: Decimal
     progress_percentage: float
     creation_date: datetime
-    target_date: Optional[date] = None
-    description: Optional[str] = None
+    target_date: date | None = None
+    description: str | None = None
     is_active: bool = True
-    completion_date: Optional[date] = None
+    completion_date: date | None = None
 
     @classmethod
-    def from_entity(cls, goal: SavingGoal, account_uuid: str, account_name: str, current_amount: Decimal):
+    def from_entity(
+        cls,
+        goal: SavingGoal,
+        account_uuid: str,
+        account_name: str,
+        current_amount: Decimal,
+    ):
         return cls(
             uuid=goal.uuid,
             account_uuid=account_uuid,

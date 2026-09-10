@@ -6,6 +6,7 @@ from application.goals.commands.state_saving_goal import StateSavingGoalHandler
 from application.goals.commands.update_saving_goal import UpdateSavingGoalHandler
 from application.goals.queries.get_saving_goal_by_id import GetSavingGoalByIdHandler
 from application.goals.queries.get_saving_goals import GetSavingGoalsHandler
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
 )
@@ -15,12 +16,11 @@ from infrastructure.database.repositories.sqlalchemy_saving_goal_repository impo
 from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
-from domain.repositories.unit_of_work import AbstractUnitOfWork
 from presentation.dependencies.repositories import (
-    get_user_repository,
     get_account_repository,
     get_saving_goals_repository,
     get_unit_of_work_repository,
+    get_user_repository,
 )
 
 

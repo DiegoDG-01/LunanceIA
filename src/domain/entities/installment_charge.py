@@ -1,22 +1,20 @@
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Optional
-from datetime import timezone
 
 
 @dataclass
 class InstallmentCharge:
-    id: Optional[int]
-    uuid: Optional[str]
+    id: int | None
+    uuid: str | None
     installment_purchase_id: int
     installment_number: int
     amount: Decimal
     due_date: date
     paid: bool
-    transaction_id: Optional[int] = None
-    paid_at: Optional[datetime] = None
-    creation_date: Optional[datetime] = None
+    transaction_id: int | None = None
+    paid_at: datetime | None = None
+    creation_date: datetime | None = None
 
     @classmethod
     def create_new(
@@ -36,10 +34,10 @@ class InstallmentCharge:
             paid=False,
             transaction_id=None,
             paid_at=None,
-            creation_date=datetime.now(timezone.utc),
+            creation_date=datetime.now(UTC),
         )
 
     def mark_as_paid(self, transaction_id: int) -> None:
         self.paid = True
         self.transaction_id = transaction_id
-        self.paid_at = datetime.now(timezone.utc)
+        self.paid_at = datetime.now(UTC)

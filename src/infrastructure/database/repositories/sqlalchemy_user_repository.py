@@ -1,5 +1,5 @@
-from typing import Optional
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,7 +26,7 @@ class SQLAlchemyUserRepository(UserRepository):
             password=model.password,
             picture=model.picture,
             email_verified=model.email_verified,
-            last_login=model.last_login or datetime.now(timezone.utc),
+            last_login=model.last_login or datetime.now(UTC),
             registration_date=model.registration_date,
             is_active=model.is_active,
         )
@@ -55,7 +55,7 @@ class SQLAlchemyUserRepository(UserRepository):
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    async def get_by_id(self, user_id: int) -> Optional[User]:
+    async def get_by_id(self, user_id: int) -> User | None:
         """Obtiene usuario por ID."""
         stmt = select(UserModel).where(UserModel.id == user_id)
         result = await self.db.execute(stmt)
@@ -63,13 +63,13 @@ class SQLAlchemyUserRepository(UserRepository):
 
         return self._model_to_entity(model) if model else None
 
-    async def get_by_auth0_uuid(self, id: str) -> Optional[User]:
+    async def get_by_auth0_uuid(self, id: str) -> User | None:
         stmt = select(UserModel).where(UserModel.auth0_id == id)
         result = await self.db.execute(stmt)
         user_model = result.scalar_one_or_none()
         return self._model_to_entity(user_model) if user_model else None
 
-    async def get_by_email(self, email: str) -> Optional[User]:
+    async def get_by_email(self, email: str) -> User | None:
         """Obtiene usuario por email."""
         stmt = select(UserModel).where(UserModel.email == email)
         result = await self.db.execute(stmt)
@@ -77,7 +77,7 @@ class SQLAlchemyUserRepository(UserRepository):
 
         return self._model_to_entity(model) if model else None
 
-    async def get_by_uuid(self, uuid: str) -> Optional[User]:
+    async def get_by_uuid(self, uuid: str) -> User | None:
         """Obtiene usuario por UUID."""
         stmt = select(UserModel).where(UserModel.uuid == uuid)
         result = await self.db.execute(stmt)
@@ -140,7 +140,7 @@ class SQLAlchemyUserRepository(UserRepository):
         """Verifica si existe un usuario con el email dado (alias)."""
         return await self.exist_by_email(email)
 
-    async def get_by_username(self, name: str) -> Optional[User]:
+    async def get_by_username(self, name: str) -> User | None:
         stmt = select(UserModel).where(UserModel.name == name)
         result = await self.db.execute(stmt)
         model = result.scalar_one_or_none()

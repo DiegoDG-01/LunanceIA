@@ -1,8 +1,7 @@
 from datetime import date
-from typing import Optional, List
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.entities.investment_position import InvestmentPosition
 from domain.objects.enums import PositionStatus, PositionType
@@ -78,7 +77,7 @@ class SQLAlchemyInvestmentPositionRepository(InvestmentPositionRepository):
 
     async def get_by_id(
         self, position_id: int, *, for_update: bool = False
-    ) -> Optional[InvestmentPosition]:
+    ) -> InvestmentPosition | None:
         stmt = select(InvestmentPositionModel).where(
             InvestmentPositionModel.id == position_id
         )
@@ -94,7 +93,7 @@ class SQLAlchemyInvestmentPositionRepository(InvestmentPositionRepository):
 
     async def get_by_uuid_and_user_id(
         self, position_uuid: str, user_id: int, *, for_update: bool = False
-    ) -> Optional[InvestmentPosition]:
+    ) -> InvestmentPosition | None:
         stmt = (
             select(InvestmentPositionModel)
             .join(AccountModel, InvestmentPositionModel.account_id == AccountModel.id)
@@ -115,7 +114,7 @@ class SQLAlchemyInvestmentPositionRepository(InvestmentPositionRepository):
             return None
         return self._model_to_entity(model)
 
-    async def get_by_account_id(self, account_id: int) -> List[InvestmentPosition]:
+    async def get_by_account_id(self, account_id: int) -> list[InvestmentPosition]:
         stmt = (
             select(InvestmentPositionModel)
             .where(InvestmentPositionModel.account_id == account_id)
@@ -125,7 +124,7 @@ class SQLAlchemyInvestmentPositionRepository(InvestmentPositionRepository):
         models = result.scalars().all()
         return [self._model_to_entity(model) for model in models]
 
-    async def get_active_positions(self) -> List[InvestmentPosition]:
+    async def get_active_positions(self) -> list[InvestmentPosition]:
         stmt = (
             select(InvestmentPositionModel)
             .join(AccountModel, InvestmentPositionModel.account_id == AccountModel.id)
@@ -140,7 +139,7 @@ class SQLAlchemyInvestmentPositionRepository(InvestmentPositionRepository):
         models = result.scalars().all()
         return [self._model_to_entity(model) for model in models]
 
-    async def get_due_for_maturity(self, as_of: date) -> List[InvestmentPosition]:
+    async def get_due_for_maturity(self, as_of: date) -> list[InvestmentPosition]:
         stmt = (
             select(InvestmentPositionModel)
             .join(AccountModel, InvestmentPositionModel.account_id == AccountModel.id)
@@ -159,7 +158,7 @@ class SQLAlchemyInvestmentPositionRepository(InvestmentPositionRepository):
 
     async def get_by_overflow_target(
         self, position_id: int, *, for_update: bool = False
-    ) -> List[InvestmentPosition]:
+    ) -> list[InvestmentPosition]:
         stmt = select(InvestmentPositionModel).where(
             InvestmentPositionModel.overflow_position_id == position_id
         )

@@ -1,42 +1,40 @@
-import json
 import asyncio
-from typing import Callable
-from typing import Optional
-from datetime import datetime, timezone
+import json
+from collections.abc import Callable
+from datetime import UTC, datetime
 
-from fastapi import Depends, Request, HTTPException, Security
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, APIKeyHeader
-from jose import JWTError, ExpiredSignatureError, jwt
-from sqlalchemy.ext.asyncio import AsyncSession
+import httpx
+from cachetools import TTLCache, cached
+from fastapi import Depends, HTTPException, Request, Security
+from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
+from jose import ExpiredSignatureError, JWTError, jwt
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.entities.user import User
-from shared.exceptions.domain import EmailAlreadyExistsError, UserInactiveError
+from infrastructure.config.settings import settings
 from infrastructure.database.connection import get_db
-from infrastructure.database.repositories.sqlalchemy_user_repository import (
-    SQLAlchemyUserRepository,
-)
 from infrastructure.database.repositories.sqlalchemy_api_key_repository import (
     SQLAlchemyAPIKeyRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
     SQLAlchemyUnitOfWork,
 )
-from infrastructure.security.api_key_service import APIKeyService
-from infrastructure.config.settings import settings
+from infrastructure.database.repositories.sqlalchemy_user_repository import (
+    SQLAlchemyUserRepository,
+)
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,
     limiter_auth_failure,
 )
-from shared.exceptions.base import UnauthorizedError
+from infrastructure.security.api_key_service import APIKeyService
 from shared.exceptions.application import (
-    JWTValidationError,
     ExternalServiceError,
+    JWTValidationError,
     RepositoryError,
 )
-
-import httpx
-from cachetools import TTLCache, cached
+from shared.exceptions.base import UnauthorizedError
+from shared.exceptions.domain import EmailAlreadyExistsError, UserInactiveError
 
 security = HTTPBearer()
 jwks_cache = TTLCache(maxsize=1, ttl=3600)
@@ -149,7 +147,7 @@ async def validate_auth0_user(token: str, db: AsyncSession) -> User:
                 email=user_info.get("email"),
                 picture=user_info.get("picture"),
                 email_verified=bool(user_info.get("email_verified", False)),
-                last_login=user_info.get("last_login") or datetime.now(timezone.utc),
+                last_login=user_info.get("last_login") or datetime.now(UTC),
             )
             try:
                 async with uow:
@@ -232,8 +230,8 @@ def get_api_key_service(
 
 async def get_user_dual_auth(
     request: Request,
-    api_key: Optional[str] = Security(api_key_header),
-    credentials: Optional[HTTPAuthorizationCredentials] = Security(optional_bearer),
+    api_key: str | None = Security(api_key_header),
+    credentials: HTTPAuthorizationCredentials | None = Security(optional_bearer),
     service: APIKeyService = Depends(get_api_key_service),
     db: AsyncSession = Depends(get_db),
 ) -> User:

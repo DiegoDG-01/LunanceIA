@@ -1,4 +1,3 @@
-from typing import List
 from dataclasses import dataclass
 
 from application.dto.saving_goal_dto import SavingGoalResponseDTO
@@ -21,7 +20,7 @@ class GetSavingGoalsHandler:
         self.goal_repository = goal_repository
         self.account_repository = account_repository
 
-    async def handle(self, query: GetSavingGoalsQuery) -> List[SavingGoalResponseDTO]:
+    async def handle(self, query: GetSavingGoalsQuery) -> list[SavingGoalResponseDTO]:
         goals = await self.goal_repository.get_by_user(
             user_id=query.user_id, active_only=query.active_only
         )
@@ -29,7 +28,9 @@ class GetSavingGoalsHandler:
             return []
 
         account_ids = list({g.account_id for g in goals if g.account_id is not None})
-        accounts = await self.account_repository.get_bulk_by_ids(account_ids=account_ids)
+        accounts = await self.account_repository.get_bulk_by_ids(
+            account_ids=account_ids
+        )
         accounts_map = {acc.id: acc for acc in accounts}
 
         result = []

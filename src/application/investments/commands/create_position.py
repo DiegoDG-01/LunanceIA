@@ -2,9 +2,14 @@ from dataclasses import dataclass
 from datetime import date
 from typing import cast
 
+from application.dto.investment_position_dto import (
+    CreatePositionDTO,
+    PositionResponseDTO,
+)
+from application.investments.services.position_overflow import PositionOverflowService
 from domain.entities.investment_position import InvestmentPosition
 from domain.entities.transaction import Transaction
-from domain.objects.enums import AccountType, TransactionType
+from domain.objects.enums import AccountType, OverflowAction, TransactionType
 from domain.objects.money import Money
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.investment_position_repository import (
@@ -13,12 +18,6 @@ from domain.repositories.investment_position_repository import (
 from domain.repositories.transaction_repository import TransactionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.repositories.user_repository import UserRepository
-from application.dto.investment_position_dto import (
-    CreatePositionDTO,
-    PositionResponseDTO,
-)
-from application.investments.services.position_overflow import PositionOverflowService
-from domain.objects.enums import OverflowAction
 from shared.exceptions.domain import (
     AccountInactiveError,
     AccountNotFoundError,

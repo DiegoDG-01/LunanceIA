@@ -1,18 +1,16 @@
 from dataclasses import dataclass
-from typing import Optional, List
-
-from domain.repositories.subscription_repository import SubscriptionRepository
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.category_repository import CategoryRepository
 
 from application.dto.subscription_dto import SubscriptionResponseDTO
+from domain.repositories.account_repository import AccountRepository
+from domain.repositories.category_repository import CategoryRepository
+from domain.repositories.subscription_repository import SubscriptionRepository
 
 
 @dataclass
 class GetSubscriptionsQuery:
     user_id: int
-    account_uuid: Optional[str] = None
-    category_id: Optional[int] = None
+    account_uuid: str | None = None
+    category_id: int | None = None
     active_only: bool = False
     limit: int = 100
     offset: int = 0
@@ -31,7 +29,7 @@ class GetSubscriptionsHandler:
 
     async def handle(
         self, query: GetSubscriptionsQuery
-    ) -> List[SubscriptionResponseDTO]:
+    ) -> list[SubscriptionResponseDTO]:
         if query.account_uuid:
             subscriptions = await self.subscription_repository.get_by_account(
                 account_uuid=query.account_uuid,

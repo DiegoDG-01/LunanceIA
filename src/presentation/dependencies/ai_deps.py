@@ -1,4 +1,5 @@
 from fastapi import Depends
+
 from application.ai.queries.analyze_image import AnalyzeImageHandler
 from application.ai.queries.expense_advisor import GetExpenseAdvisorHandler
 from infrastructure.database.repositories.sqlalchemy_category_repository import (
@@ -7,8 +8,8 @@ from infrastructure.database.repositories.sqlalchemy_category_repository import 
 from infrastructure.database.repositories.sqlalchemy_transaction_repository import (
     SQLAlchemyTransactionRepository,
 )
-from infrastructure.external_services.agents.image import image_agent
 from infrastructure.external_services.agents.expense import expense_agent
+from infrastructure.external_services.agents.image import image_agent
 from presentation.dependencies import get_transaction_repository
 from presentation.dependencies.repositories import get_category_repository
 

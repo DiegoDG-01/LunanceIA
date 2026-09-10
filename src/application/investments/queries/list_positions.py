@@ -2,14 +2,14 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import cast
 
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.investment_position_repository import (
-    InvestmentPositionRepository,
-)
-from domain.objects.enums import PositionStatus
 from application.dto.investment_position_dto import (
     AccountPositionsResponseDTO,
     PositionResponseDTO,
+)
+from domain.objects.enums import PositionStatus
+from domain.repositories.account_repository import AccountRepository
+from domain.repositories.investment_position_repository import (
+    InvestmentPositionRepository,
 )
 from shared.exceptions.domain import AccountNotFoundError
 

@@ -6,7 +6,6 @@ from application.dashboard.queries.get_dashboard_summary import (
 from infrastructure.database.repositories.sqlalchemy_dashboard_repository import (
     SQLAlchemyDashboardRepository,
 )
-
 from presentation.dependencies.repositories import get_dashboard_repository
 
 

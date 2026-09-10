@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from domain.entities.investment_position import InvestmentPosition
 from domain.objects.enums import OverflowAction
@@ -31,7 +30,7 @@ class PositionOverflowService:
     def __init__(self, position_repository: InvestmentPositionRepository):
         self.position_repository = position_repository
 
-    async def target_uuid(self, position: InvestmentPosition) -> Optional[str]:
+    async def target_uuid(self, position: InvestmentPosition) -> str | None:
         """uuid del apartado destino, para no exponer ids internos en la API."""
         if position.overflow_position_id is None:
             return None

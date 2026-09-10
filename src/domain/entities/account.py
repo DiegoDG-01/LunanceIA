@@ -1,20 +1,18 @@
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Optional, cast
-
-from domain.objects.money import Money
-from domain.objects.enums import AccountType
-
-from shared.exceptions.domain import AccountInactiveError, InvalidBalanceUpdateError
+from typing import cast
 
 from domain.objects.credit_card_settings import CreditCardSettings
+from domain.objects.enums import AccountType
+from domain.objects.money import Money
+from shared.exceptions.domain import AccountInactiveError, InvalidBalanceUpdateError
 
 
 @dataclass
 class Account:
-    id: Optional[int]
-    uuid: Optional[str]
+    id: int | None
+    uuid: str | None
     user_id: int
     bank_id: int
     name: str
@@ -22,9 +20,9 @@ class Account:
     current_balance: Money
     is_active: bool
     creation_date: datetime
-    credit_card_settings: Optional[CreditCardSettings] = None
-    bank_name: Optional[str] = None
-    bank_code: Optional[str] = None
+    credit_card_settings: CreditCardSettings | None = None
+    bank_name: str | None = None
+    bank_code: str | None = None
 
     @classmethod
     def create_new(
@@ -33,7 +31,7 @@ class Account:
         bank_id: int,
         name: str,
         account_type: AccountType,
-        initial_balance: Optional[Money] = None,
+        initial_balance: Money | None = None,
     ) -> "Account":
         if initial_balance is None:
             initial_balance = Money(Decimal(0), "MXN")
@@ -47,7 +45,7 @@ class Account:
             account_type=account_type,
             current_balance=initial_balance,
             is_active=True,
-            creation_date=datetime.now(timezone.utc),
+            creation_date=datetime.now(UTC),
         )
 
     def deactivate(self) -> None:

@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from typing import Optional, cast
+from typing import cast
 
 from application.dto.installment_dto import (
-    InstallmentPurchaseResponseDTO,
     InstallmentChargeResponseDTO,
+    InstallmentPurchaseResponseDTO,
 )
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.installment_charge_repository import (
@@ -23,9 +23,9 @@ from shared.exceptions.domain import (
 class UpdateInstallmentPurchaseCommand:
     user_id: int
     purchase_uuid: str
-    category_id: Optional[int] = None
-    description: Optional[str] = None
-    notes: Optional[str] = None
+    category_id: int | None = None
+    description: str | None = None
+    notes: str | None = None
 
 
 class UpdateInstallmentPurchaseHandler:

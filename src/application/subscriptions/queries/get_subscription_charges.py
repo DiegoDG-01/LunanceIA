@@ -1,10 +1,9 @@
 from dataclasses import dataclass
-from typing import List
 
+from application.dto.subscription_dto import SubscriptionChargeDetailResponseDTO
 from domain.repositories.subscription_charge_repository import (
     SubscriptionChargeRepository,
 )
-from application.dto.subscription_dto import SubscriptionChargeDetailResponseDTO
 
 
 @dataclass
@@ -23,7 +22,7 @@ class GetSubscriptionChargesHandler:
 
     async def handle(
         self, query: GetSubscriptionChargesQuery
-    ) -> List[SubscriptionChargeDetailResponseDTO]:
+    ) -> list[SubscriptionChargeDetailResponseDTO]:
         charges = await self.subscription_charge_repository.get_by_user_with_details(
             user_id=query.user_id
         )

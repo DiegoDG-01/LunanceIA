@@ -1,9 +1,8 @@
-from typing import Optional
-
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from domain.repositories.credit_card_repository import CreditCardSettingsRepository
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from domain.objects.credit_card_settings import CreditCardSettings
+from domain.repositories.credit_card_repository import CreditCardSettingsRepository
 from infrastructure.database.models.credit_card import CreditCardSettingsModel
 from shared.exceptions.domain import CreditCardSettingsNotFoundError
 
@@ -40,7 +39,7 @@ class SQLAlchemyCreditCardSettingsRepository(CreditCardSettingsRepository):
         await self.db.refresh(model)
         return self._model_to_vo(model)
 
-    async def get_by_account_id(self, account_id: int) -> Optional[CreditCardSettings]:
+    async def get_by_account_id(self, account_id: int) -> CreditCardSettings | None:
         stmt = select(CreditCardSettingsModel).where(
             CreditCardSettingsModel.account_id == account_id
         )

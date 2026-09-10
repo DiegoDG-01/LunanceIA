@@ -1,5 +1,6 @@
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.exceptions.application import RepositoryError
 

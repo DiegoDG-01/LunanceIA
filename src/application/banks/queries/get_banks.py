@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from application.dto.bank_dto import BankResponseDTO
 from domain.repositories.bank_repository import BankRepository
@@ -8,7 +7,7 @@ from domain.repositories.bank_repository import BankRepository
 @dataclass
 class GetBanksQuery:
     only_active: bool = True
-    country: Optional[str] = None
+    country: str | None = None
 
 
 class GetBanksHandler:

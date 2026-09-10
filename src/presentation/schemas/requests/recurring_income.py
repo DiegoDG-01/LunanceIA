@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field
-from decimal import Decimal
 from datetime import date
-from typing import Optional
+from decimal import Decimal
+
+from pydantic import BaseModel, Field
 
 from domain.objects.enums import Frequency
 
@@ -12,14 +12,14 @@ class CreateRecurringIncomeRequest(BaseModel):
     name: str = Field(
         ..., min_length=1, max_length=100, description="Nombre del ingreso recurrente"
     )
-    amount: Decimal = Field(..., gt=Decimal("0"), description="Monto del ingreso")
+    amount: Decimal = Field(..., gt=Decimal(0), description="Monto del ingreso")
     frequency: Frequency = Field(..., description="Frecuencia del ingreso")
     start_date: date = Field(..., description="Fecha de inicio")
-    end_date: Optional[date] = Field(None, description="Fecha de fin (opcional)")
-    next_payment_date: Optional[date] = Field(
+    end_date: date | None = Field(None, description="Fecha de fin (opcional)")
+    next_payment_date: date | None = Field(
         None, description="Próxima fecha de pago (default: fecha de inicio)"
     )
-    description: Optional[str] = Field(None, max_length=500, description="Descripción")
+    description: str | None = Field(None, max_length=500, description="Descripción")
 
     class Config:
         json_schema_extra = {
@@ -37,18 +37,18 @@ class CreateRecurringIncomeRequest(BaseModel):
 class UpdateRecurringIncomeRequest(BaseModel):
     """Schema para actualizar un ingreso recurrente."""
 
-    account_uuid: Optional[str] = Field(None, description="UUID de la cuenta destino")
-    name: Optional[str] = Field(
+    account_uuid: str | None = Field(None, description="UUID de la cuenta destino")
+    name: str | None = Field(
         None, min_length=1, max_length=100, description="Nombre del ingreso"
     )
-    amount: Optional[Decimal] = Field(None, gt=Decimal("0"), description="Monto")
-    frequency: Optional[Frequency] = Field(None, description="Frecuencia del ingreso")
-    start_date: Optional[date] = Field(None, description="Fecha de inicio")
-    end_date: Optional[date] = Field(None, description="Fecha de fin")
-    next_payment_date: Optional[date] = Field(None, description="Próxima fecha de pago")
-    is_active: Optional[bool] = Field(None, description="Estado activo/inactivo")
-    description: Optional[str] = Field(None, max_length=500, description="Descripción")
-    category_id: Optional[int] = Field(None, gt=0, description="ID de la categoría")
+    amount: Decimal | None = Field(None, gt=Decimal(0), description="Monto")
+    frequency: Frequency | None = Field(None, description="Frecuencia del ingreso")
+    start_date: date | None = Field(None, description="Fecha de inicio")
+    end_date: date | None = Field(None, description="Fecha de fin")
+    next_payment_date: date | None = Field(None, description="Próxima fecha de pago")
+    is_active: bool | None = Field(None, description="Estado activo/inactivo")
+    description: str | None = Field(None, max_length=500, description="Descripción")
+    category_id: int | None = Field(None, gt=0, description="ID de la categoría")
 
     class Config:
         json_schema_extra = {

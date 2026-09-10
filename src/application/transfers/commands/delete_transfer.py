@@ -1,5 +1,5 @@
-from typing import cast
 from dataclasses import dataclass
+from typing import cast
 
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.installment_charge_repository import (

@@ -1,16 +1,16 @@
-from datetime import datetime, timedelta, timezone
-from typing import Optional, cast
-import bcrypt
-from jose import JWTError, jwt
 import hashlib
 import logging
+from datetime import UTC, datetime, timedelta
+from typing import cast
 
+import bcrypt
+from jose import JWTError, jwt
 from sqlalchemy.exc import SQLAlchemyError
 
 from application.interfaces.auth_service import AuthTokenServiceInterface
-from infrastructure.config.settings import settings
 from domain.repositories.auth_token_repository import AuthTokenRepository
 from domain.repositories.user_repository import UserRepository
+from infrastructure.config.settings import settings
 from shared.exceptions.application import JWTValidationError, RepositoryError
 
 logger = logging.getLogger(__name__)
@@ -28,8 +28,8 @@ class JWTService(AuthTokenServiceInterface):
     def check_password(self, plain_password: str, hashed_password: str) -> bool:
         return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
 
-    def create_access_token(self, user_uuid: str, expires_in: Optional[int] = None):
-        now = datetime.now(timezone.utc)
+    def create_access_token(self, user_uuid: str, expires_in: int | None = None):
+        now = datetime.now(UTC)
         if expires_in:
             expire = now + timedelta(minutes=expires_in)
         else:
@@ -47,11 +47,11 @@ class JWTService(AuthTokenServiceInterface):
 
         return encoded_jwt
 
-    def create_refresh_token(self, user_uuid: str, expires_in: Optional[int] = None):
+    def create_refresh_token(self, user_uuid: str, expires_in: int | None = None):
         if expires_in:
-            expire = datetime.now(timezone.utc) + timedelta(days=expires_in)
+            expire = datetime.now(UTC) + timedelta(days=expires_in)
         else:
-            expire = datetime.now(timezone.utc) + timedelta(
+            expire = datetime.now(UTC) + timedelta(
                 days=settings.REFRESH_TOKEN_EXPIRE_DAYS
             )
         to_encode = {"exp": expire, "sub": user_uuid, "type": "refresh"}

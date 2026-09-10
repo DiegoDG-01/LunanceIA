@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from datetime import date
-from typing import Optional, List, Tuple
 
 from domain.entities.income_deposit import IncomeDeposit
 
@@ -17,14 +16,12 @@ class IncomeDepositRepository(ABC):
     @abstractmethod
     async def get_by_income(
         self, recurring_income_id: int, limit: int = 100, offset: int = 0
-    ) -> List[Tuple[IncomeDeposit, Optional[str]]]:
+    ) -> list[tuple[IncomeDeposit, str | None]]:
         """Get deposits for a recurring income with their transaction uuid,
         most recent first"""
-        pass
 
     @abstractmethod
     async def get_by_income_and_date(
         self, recurring_income_id: int, deposit_date: date
-    ) -> Optional[IncomeDeposit]:
+    ) -> IncomeDeposit | None:
         """Get deposit for a recurring income on an exact date (idempotency check)"""
-        pass

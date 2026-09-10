@@ -1,16 +1,15 @@
 from datetime import date
 
+from sqlalchemy import and_, case, delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, func, desc, select, delete, case
-from typing import Optional, List, Tuple
 
 from domain.entities.transaction import Transaction
-from domain.repositories.transaction_repository import TransactionRepository
+from domain.objects.enums import AccountType, TransactionType
 from domain.objects.money import Money
-from domain.objects.enums import TransactionType, AccountType
-from infrastructure.database.models.transaction import TransactionModel
+from domain.repositories.transaction_repository import TransactionRepository
 from infrastructure.database.models.account import AccountModel
 from infrastructure.database.models.category import CategoryModel
+from infrastructure.database.models.transaction import TransactionModel
 from shared.exceptions.domain import TransactionNotFoundError
 
 
@@ -25,7 +24,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         transaction_model: TransactionModel,
         account_model: AccountModel,
         category_model: CategoryModel,
-    ) -> tuple[Transaction, str, AccountType, str, Optional[str]]:
+    ) -> tuple[Transaction, str, AccountType, str, str | None]:
         transaction = self._model_to_entity(transaction_model)
         category_name = category_model.name if category_model else None
         return (
@@ -81,7 +80,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
 
     async def get_by_id(
         self, transaction_id: int, *, for_update: bool = False
-    ) -> Optional[Transaction]:
+    ) -> Transaction | None:
         """Obtiene transacción por ID."""
         stmt = select(TransactionModel).where(TransactionModel.id == transaction_id)
 
@@ -95,7 +94,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
 
     async def get_by_id_and_user_uuid(
         self, transaction_id: int, user_id: int
-    ) -> Optional[Transaction]:
+    ) -> Transaction | None:
         """Obtiene transacción por ID y UUID del usuario."""
         stmt = select(TransactionModel).where(
             and_(
@@ -110,7 +109,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
 
     async def get_by_id_and_user(
         self, transaction_id: int, user_id: int
-    ) -> Optional[Transaction]:
+    ) -> Transaction | None:
         """Obtiene transacción que pertenezca al usuario especificado."""
         stmt = select(TransactionModel).where(
             and_(
@@ -125,7 +124,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
 
     async def get_by_user(
         self, user_id: int, limit: int = 100, offset: int = 0
-    ) -> List[Tuple[Transaction, str, AccountType, Optional[str], Optional[str]]]:
+    ) -> list[tuple[Transaction, str, AccountType, str | None, str | None]]:
         """Obtiene todas las transacciones de un usuario con paginación."""
         stmt = (
             select(TransactionModel, AccountModel, CategoryModel)
@@ -146,7 +145,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
 
     async def get_by_account(
         self, account_id: int, user_id: int, limit: int = 100, offset: int = 0
-    ) -> List[Transaction]:
+    ) -> list[Transaction]:
         """Obtiene todas las transacciones de una cuenta específica."""
         stmt = (
             select(TransactionModel)
@@ -168,11 +167,11 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
     async def get_by_date_range(
         self,
         user_id: int,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None,
-        account_uuid: Optional[str] = None,
-        transaction_type: Optional[TransactionType] = None,
-    ) -> List[Tuple[Transaction, str, AccountType, Optional[str], Optional[str]]]:
+        start_date: date | None = None,
+        end_date: date | None = None,
+        account_uuid: str | None = None,
+        transaction_type: TransactionType | None = None,
+    ) -> list[tuple[Transaction, str, AccountType, str | None, str | None]]:
         """Obtiene transacciones en un rango de fechas."""
         stmt = (
             select(TransactionModel, AccountModel, CategoryModel)
@@ -206,9 +205,9 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         self,
         user_id: int,
         category_id: int,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None,
-    ) -> List[Transaction]:
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> list[Transaction]:
         """Obtiene transacciones por categoría."""
         stmt = select(TransactionModel).where(
             and_(
@@ -231,7 +230,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
 
     async def get_by_uuid_with_account_details(
         self, uuid: str, user_id: int
-    ) -> Optional[Tuple[Transaction, str, AccountType, Optional[str], Optional[str]]]:
+    ) -> tuple[Transaction, str, AccountType, str | None, str | None] | None:
         stmt = (
             select(TransactionModel, AccountModel, CategoryModel)
             .join(AccountModel, TransactionModel.account_id == AccountModel.id)
@@ -257,7 +256,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         transaction_type: TransactionType,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[Transaction]:
+    ) -> list[Transaction]:
         """Obtiene transacciones por tipo (ingreso/gasto)."""
         stmt = (
             select(TransactionModel)
@@ -341,9 +340,9 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
         self,
         user_id: int,
         transaction_type: TransactionType,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None,
-        account_id: Optional[int] = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        account_id: int | None = None,
     ) -> float:
         """Obtiene el total de transacciones por tipo en un período."""
         stmt = select(func.sum(TransactionModel.amount)).where(
@@ -368,7 +367,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
 
     # TODO: Implement endpoint to obtain monthly summary
     async def get_monthly_summary(
-        self, user_id: int, year: int, month: int, account_id: Optional[int] = None
+        self, user_id: int, year: int, month: int, account_id: int | None = None
     ) -> dict:
         """Obtiene resumen mensual de transacciones."""
         # Base conditions
@@ -435,7 +434,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
 
     async def get_by_uuid_and_user_id(
         self, uuid: str, user_id: int, *, for_update: bool = False
-    ) -> Optional[Transaction]:
+    ) -> Transaction | None:
         """Obtiene transacción por UUID y user_id para validar ownership."""
         stmt = select(TransactionModel).where(
             and_(TransactionModel.uuid == uuid, TransactionModel.user_id == user_id)
@@ -450,7 +449,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
 
     async def update_by_uuid(
         self, transaction_uuid: str, user_id: int, updates: dict
-    ) -> Optional[Transaction]:
+    ) -> Transaction | None:
         """Actualiza transacción por UUID con validación de ownership."""
         stmt = select(TransactionModel).where(
             and_(
@@ -483,7 +482,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
 
     async def get_activity_by_account_id(
         self, account_id: int, limit: int = 5
-    ) -> List[Tuple[Transaction, Optional[str]]]:
+    ) -> list[tuple[Transaction, str | None]]:
         stmt = (
             select(TransactionModel, CategoryModel)
             .outerjoin(CategoryModel, TransactionModel.category_id == CategoryModel.id)
@@ -505,14 +504,14 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
     async def get_filtered(
         self,
         user_id: int,
-        account_uuid: Optional[str] = None,
-        transaction_type: Optional[TransactionType] = None,
-        category_id: Optional[int] = None,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None,
+        account_uuid: str | None = None,
+        transaction_type: TransactionType | None = None,
+        category_id: int | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[Tuple[Transaction, str, AccountType, Optional[str], Optional[str]]]:
+    ) -> list[tuple[Transaction, str, AccountType, str | None, str | None]]:
         """Obtiene transacciones filtradas."""
         stmt = (
             select(TransactionModel, AccountModel, CategoryModel)
@@ -552,7 +551,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
 
     async def get_by_transfer_uuid(
         self, transfer_uuid: str, user_id: int, *, for_update: bool = False
-    ) -> List[Transaction]:
+    ) -> list[Transaction]:
         stmt = (
             select(TransactionModel)
             .where(

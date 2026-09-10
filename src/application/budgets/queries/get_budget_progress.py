@@ -1,9 +1,8 @@
 from dataclasses import dataclass
-from typing import Optional
 
+from application.dto.budget_dto import BudgetProgressDTO
 from domain.repositories.budget_repository import BudgetRepository
 from domain.repositories.category_repository import CategoryRepository
-from application.dto.budget_dto import BudgetProgressDTO
 from shared.exceptions.domain import BudgetNotFoundError
 
 
@@ -29,7 +28,7 @@ class GetBudgetProgressHandler:
         if not budget:
             raise BudgetNotFoundError(query.budget_uuid)
 
-        category_name: Optional[str] = None
+        category_name: str | None = None
         if budget.category_id is not None:
             category = await self.category_repository.get_by_id(budget.category_id)
             category_name = category.name if category else None

@@ -1,12 +1,13 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, desc, select
-from typing import Optional, List, Tuple, cast
 from datetime import date
+from typing import cast
 
-from infrastructure.database.models import IncomeDepositModel, TransactionModel
+from sqlalchemy import and_, desc, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from domain.entities.income_deposit import IncomeDeposit
-from domain.repositories.income_deposit_repository import IncomeDepositRepository
 from domain.objects.money import Money
+from domain.repositories.income_deposit_repository import IncomeDepositRepository
+from infrastructure.database.models import IncomeDepositModel, TransactionModel
 from shared.exceptions.domain import (
     IncomeDepositNotFoundError,
 )
@@ -68,7 +69,7 @@ class SQLAlchemyIncomeDepositRepository(IncomeDepositRepository):
 
     async def get_by_income(
         self, recurring_income_id: int, limit: int = 100, offset: int = 0
-    ) -> List[Tuple[IncomeDeposit, Optional[str]]]:
+    ) -> list[tuple[IncomeDeposit, str | None]]:
         stmt = (
             select(IncomeDepositModel, TransactionModel.uuid)
             .outerjoin(
@@ -90,7 +91,7 @@ class SQLAlchemyIncomeDepositRepository(IncomeDepositRepository):
 
     async def get_by_income_and_date(
         self, recurring_income_id: int, deposit_date: date
-    ) -> Optional[IncomeDeposit]:
+    ) -> IncomeDeposit | None:
         stmt = select(IncomeDepositModel).where(
             and_(
                 IncomeDepositModel.recurring_income_id == recurring_income_id,

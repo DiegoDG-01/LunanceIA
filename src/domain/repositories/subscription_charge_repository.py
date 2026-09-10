@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Optional, List, Tuple
 from datetime import date
 
 from domain.entities.subscription_charge import SubscriptionCharge
@@ -15,38 +14,37 @@ class SubscriptionChargeRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_id(self, charge_id: int) -> Optional[SubscriptionCharge]:
+    async def get_by_id(self, charge_id: int) -> SubscriptionCharge | None:
         pass
 
     @abstractmethod
     async def get_by_subscription(
         self, subscription_id: int, limit: int = 100, offset: int = 0
-    ) -> List[SubscriptionCharge]:
+    ) -> list[SubscriptionCharge]:
         pass
 
     @abstractmethod
     async def get_by_subscription_and_month(
         self, subscription_id: int, year: int, month: int
-    ) -> Optional[SubscriptionCharge]:
+    ) -> SubscriptionCharge | None:
         pass
 
     @abstractmethod
     async def get_by_subscription_and_date(
         self, subscription_id: int, charge_date: date
-    ) -> Optional[SubscriptionCharge]:
+    ) -> SubscriptionCharge | None:
         pass
 
     @abstractmethod
-    async def get_pending_charges(self) -> List[SubscriptionCharge]:
+    async def get_pending_charges(self) -> list[SubscriptionCharge]:
         """Get all charges with PENDIENTE status"""
-        pass
 
     @abstractmethod
     async def get_last_charges_by_subscription_id(
         self, subscription_id: int
-    ) -> List[Tuple[SubscriptionCharge, str, str]]:
+    ) -> list[tuple[SubscriptionCharge, str, str]]:
         pass
 
     @abstractmethod
-    async def get_by_user_with_details(self, user_id: int) -> List[tuple]:
+    async def get_by_user_with_details(self, user_id: int) -> list[tuple]:
         pass

@@ -1,13 +1,12 @@
 from dataclasses import dataclass
 
-from domain.entities.saving_goal import SavingGoal
-
 from application.dto.saving_goal_dto import CreateSavingGoalDTO, SavingGoalResponseDTO
+from domain.entities.saving_goal import SavingGoal
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.saving_goal_repository import SavingGoalRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.repositories.user_repository import UserRepository
-from shared.exceptions.domain import UserNotFoundError, AccountNotFoundError
+from shared.exceptions.domain import AccountNotFoundError, UserNotFoundError
 
 
 @dataclass

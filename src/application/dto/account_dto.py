@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-from decimal import Decimal
-from typing import Optional
 from datetime import date
+from decimal import Decimal
 
 from domain.objects.enums import AccountType, TransactionType
 
@@ -26,7 +25,7 @@ class CreateAccountDTO:
     account_type: AccountType
     initial_balance: Decimal = Decimal("0.00")
     currency: str = "MXN"
-    credit_card_settings: Optional[CreditCardSettingsDTO] = None
+    credit_card_settings: CreditCardSettingsDTO | None = None
 
 
 @dataclass
@@ -37,30 +36,30 @@ class UpdateAccountDTO:
 
     account_uuid: str
     user_id: int
-    bank_id: Optional[int]
-    name: Optional[str] = None
-    current_balance: Optional[Decimal] = None
-    credit_card_settings: Optional[CreditCardSettingsDTO] = None
+    bank_id: int | None
+    name: str | None = None
+    current_balance: Decimal | None = None
+    credit_card_settings: CreditCardSettingsDTO | None = None
 
 
 @dataclass
 class AccountResponseDTO:
     account_uuid: str
-    bank_id: Optional[int]
+    bank_id: int | None
     name: str
     account_type: AccountType
     current_balance: Decimal
     currency: str
     is_active: bool
-    bank_name: Optional[str]
-    bank_code: Optional[str]
-    credit_card_settings: Optional[CreditCardSettingsDTO] = None
+    bank_name: str | None
+    bank_code: str | None
+    credit_card_settings: CreditCardSettingsDTO | None = None
 
 
 @dataclass
 class AccountActivityResponseDTO:
     name: str
     transaction_type: TransactionType
-    category_name: Optional[str]
+    category_name: str | None
     amount: Decimal
     transaction_date: date

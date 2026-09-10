@@ -1,13 +1,14 @@
 import logging
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from pytz import utc
 
 from infrastructure.scheduler.jobs import (
-    process_subscriptions_job,
     process_investment_yield_job,
     process_position_maturity_job,
     process_recurring_income_job,
+    process_subscriptions_job,
 )
 
 logger = logging.getLogger(__name__)

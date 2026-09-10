@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional
 
 from domain.objects.enums import BudgetPeriod
 
@@ -13,38 +12,40 @@ class CreateBudgetDTO:
     limit_amount: Decimal
     period: BudgetPeriod
     start_date: date
-    category_id: Optional[int] = None
-    end_date: Optional[date] = None
+    category_id: int | None = None
+    end_date: date | None = None
     alert_percentage: int = 80
 
 
 @dataclass
 class UpdateBudgetDTO:
-    name: Optional[str] = None
-    limit_amount: Optional[Decimal] = None
-    period: Optional[BudgetPeriod] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    alert_percentage: Optional[int] = None
-    category_id: Optional[int] = None
+    name: str | None = None
+    limit_amount: Decimal | None = None
+    period: BudgetPeriod | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    alert_percentage: int | None = None
+    category_id: int | None = None
 
 
 @dataclass
 class BudgetResponseDTO:
     uuid: str
     name: str
-    category_id: Optional[int]
-    category_name: Optional[str]
+    category_id: int | None
+    category_name: str | None
     limit_amount: Decimal
     period: BudgetPeriod
     start_date: date
-    end_date: Optional[date]
+    end_date: date | None
     is_active: bool
     alert_percentage: int
     creation_date: datetime
 
     @classmethod
-    def from_entity(cls, budget, category_name: Optional[str] = None) -> "BudgetResponseDTO":
+    def from_entity(
+        cls, budget, category_name: str | None = None
+    ) -> "BudgetResponseDTO":
         return cls(
             uuid=budget.uuid,
             name=budget.name,
@@ -64,8 +65,8 @@ class BudgetResponseDTO:
 class BudgetProgressDTO:
     uuid: str
     name: str
-    category_id: Optional[int]
-    category_name: Optional[str]
+    category_id: int | None
+    category_name: str | None
     limit_amount: Decimal
     spent_amount: Decimal
     remaining_amount: Decimal

@@ -1,19 +1,18 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import cast
 
 import bcrypt
 
-from domain.repositories.user_repository import UserRepository
+from application.interfaces.auth_service import AuthConfig, AuthTokenServiceInterface
 from domain.repositories.auth_token_repository import AuthTokenRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from application.interfaces.auth_service import AuthTokenServiceInterface, AuthConfig
+from domain.repositories.user_repository import UserRepository
 from shared.exceptions.application import CommandValidationError
 from shared.exceptions.domain import (
-    UserInactiveError,
     InvalidCredentialsError,
+    UserInactiveError,
 )
-
 
 _DUMMY_PASSWORD_HASH = bcrypt.gensalt()
 
@@ -75,7 +74,7 @@ class LoginHandler:
         )
 
         refresh_token_hash = self.jwt_service.hash_refresh_token(refresh_token)
-        refresh_expires_at = datetime.now(timezone.utc) + timedelta(
+        refresh_expires_at = datetime.now(UTC) + timedelta(
             days=self.auth_config.refresh_token_expire_days
         )
 

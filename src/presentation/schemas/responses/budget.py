@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field
-from decimal import Decimal
 from datetime import date, datetime
-from typing import Optional
+from decimal import Decimal
+
+from pydantic import BaseModel, Field
 
 from domain.objects.enums import BudgetPeriod
 
@@ -9,12 +9,12 @@ from domain.objects.enums import BudgetPeriod
 class BudgetResponse(BaseModel):
     uuid: str
     name: str
-    category_id: Optional[int]
-    category_name: Optional[str]
+    category_id: int | None
+    category_name: str | None
     limit_amount: Decimal
     period: BudgetPeriod
     start_date: date
-    end_date: Optional[date]
+    end_date: date | None
     is_active: bool
     alert_percentage: int
     creation_date: datetime
@@ -23,11 +23,13 @@ class BudgetResponse(BaseModel):
 class BudgetProgressResponse(BaseModel):
     uuid: str = Field(..., description="UUID del presupuesto")
     name: str = Field(..., description="Nombre del presupuesto")
-    category_id: Optional[int] = Field(None, description="ID de categoría (null = todas)")
-    category_name: Optional[str] = Field(None, description="Nombre de la categoría")
+    category_id: int | None = Field(None, description="ID de categoría (null = todas)")
+    category_name: str | None = Field(None, description="Nombre de la categoría")
     limit_amount: Decimal = Field(..., description="Monto límite configurado")
     spent_amount: Decimal = Field(..., description="Total gastado en el periodo actual")
-    remaining_amount: Decimal = Field(..., description="Monto restante (puede ser negativo)")
+    remaining_amount: Decimal = Field(
+        ..., description="Monto restante (puede ser negativo)"
+    )
     percentage_used: float = Field(..., description="Porcentaje del límite utilizado")
     alert_percentage: int = Field(..., description="Umbral de alerta configurado (%)")
     is_alert_triggered: bool = Field(

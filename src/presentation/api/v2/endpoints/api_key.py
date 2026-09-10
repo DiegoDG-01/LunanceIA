@@ -1,41 +1,41 @@
 from typing import cast
 
-from fastapi import APIRouter, Depends, Request, Response, status, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
-from domain.entities.user import User
-from application.dto.api_key_dto import CreateAPIKeyDTO
 from application.api_keys.commands.create_api_key import (
     CreateAPIKeyCommand,
     CreateAPIKeyHandler,
-)
-from application.api_keys.commands.revoke_api_key import (
-    RevokeAPIKeyCommand,
-    RevokeAPIKeyHandler,
 )
 from application.api_keys.commands.delete_api_key import (
     DeleteAPIKeyCommand,
     DeleteAPIKeyHandler,
 )
-from application.api_keys.queries.list_api_keys import (
-    ListAPIKeysQuery,
-    ListAPIKeysHandler,
+from application.api_keys.commands.revoke_api_key import (
+    RevokeAPIKeyCommand,
+    RevokeAPIKeyHandler,
 )
+from application.api_keys.queries.list_api_keys import (
+    ListAPIKeysHandler,
+    ListAPIKeysQuery,
+)
+from application.dto.api_key_dto import CreateAPIKeyDTO
+from domain.entities.user import User
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_10_per_minute,
+    limiter_50_per_minute,
+)
+from presentation.dependencies.api_key_deps import (
+    get_create_api_key_handler,
+    get_delete_api_key_handler,
+    get_list_api_keys_handler,
+    get_revoke_api_key_handler,
+)
+from presentation.dependencies.auth_deps import get_current_active_user
 from presentation.schemas.requests.api_key import CreateAPIKeyRequest
 from presentation.schemas.responses.api_key import (
     APIKeyCreatedResponse,
     APIKeyResponse,
-)
-from presentation.dependencies.auth_deps import get_current_active_user
-from presentation.dependencies.api_key_deps import (
-    get_create_api_key_handler,
-    get_list_api_keys_handler,
-    get_revoke_api_key_handler,
-    get_delete_api_key_handler,
-)
-from infrastructure.rate_limiting.limiters import (
-    enforce_rate_limit,
-    limiter_50_per_minute,
-    limiter_10_per_minute,
 )
 
 router = APIRouter()

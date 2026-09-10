@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from typing import List, cast
+from typing import cast
 
+from application.dto.investment_yield_dto import InvestmentYieldResponseDTO
 from domain.repositories.account_repository import AccountRepository
 from domain.repositories.investment_yield_repository import InvestmentYieldRepository
-from application.dto.investment_yield_dto import InvestmentYieldResponseDTO
 from shared.exceptions.domain import AccountNotFoundError
 
 
@@ -26,7 +26,7 @@ class GetInvestmentYieldsHandler:
 
     async def handle(
         self, query: GetInvestmentYieldsQuery
-    ) -> List[InvestmentYieldResponseDTO]:
+    ) -> list[InvestmentYieldResponseDTO]:
         account = await self.account_repository.get_by_uuid_and_user_id(
             account_uuid=query.account_uuid, user_id=query.user_id
         )

@@ -1,16 +1,10 @@
-from fastapi import APIRouter, Depends, status, Response, Request, Query
-from typing import Optional, cast
+from typing import cast
 
-from domain.entities.user import User
-from domain.objects.enums import APIKeyScope
-from application.dto.budget_dto import CreateBudgetDTO, UpdateBudgetDTO
+from fastapi import APIRouter, Depends, Query, Request, Response, status
+
 from application.budgets.commands.create_budget import (
     CreateBudgetCommand,
     CreateBudgetHandler,
-)
-from application.budgets.commands.update_budget import (
-    UpdateBudgetCommand,
-    UpdateBudgetHandler,
 )
 from application.budgets.commands.delete_budget import (
     DeleteBudgetCommand,
@@ -20,39 +14,46 @@ from application.budgets.commands.state_budget import (
     StateBudgetCommand,
     StateBudgetHandler,
 )
-from application.budgets.queries.get_budgets import (
-    GetBudgetsQuery,
-    GetBudgetsHandler,
+from application.budgets.commands.update_budget import (
+    UpdateBudgetCommand,
+    UpdateBudgetHandler,
 )
 from application.budgets.queries.get_budget_by_id import (
-    GetBudgetByIdQuery,
     GetBudgetByIdHandler,
+    GetBudgetByIdQuery,
 )
 from application.budgets.queries.get_budget_progress import (
-    GetBudgetProgressQuery,
     GetBudgetProgressHandler,
+    GetBudgetProgressQuery,
+)
+from application.budgets.queries.get_budgets import (
+    GetBudgetsHandler,
+    GetBudgetsQuery,
+)
+from application.dto.budget_dto import CreateBudgetDTO, UpdateBudgetDTO
+from domain.entities.user import User
+from domain.objects.enums import APIKeyScope
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_5_per_minute,
+    limiter_20_per_minute,
+    limiter_50_per_minute,
+)
+from presentation.dependencies.auth_deps import require_scope
+from presentation.dependencies.budget_deps import (
+    get_budget_by_id_handler,
+    get_budget_progress_handler,
+    get_budgets_handler,
+    get_create_budget_handler,
+    get_delete_budget_handler,
+    get_state_budget_handler,
+    get_update_budget_handler,
 )
 from presentation.schemas.requests.budget import (
     CreateBudgetRequest,
     UpdateBudgetRequest,
 )
-from presentation.schemas.responses.budget import BudgetResponse, BudgetProgressResponse
-from presentation.dependencies.auth_deps import require_scope
-from presentation.dependencies.budget_deps import (
-    get_create_budget_handler,
-    get_update_budget_handler,
-    get_delete_budget_handler,
-    get_state_budget_handler,
-    get_budgets_handler,
-    get_budget_by_id_handler,
-    get_budget_progress_handler,
-)
-from infrastructure.rate_limiting.limiters import (
-    enforce_rate_limit,
-    limiter_50_per_minute,
-    limiter_20_per_minute,
-    limiter_5_per_minute,
-)
+from presentation.schemas.responses.budget import BudgetProgressResponse, BudgetResponse
 
 router = APIRouter()
 
@@ -61,7 +62,7 @@ router = APIRouter()
 async def get_budgets(
     request: Request,
     active_only: bool = Query(False, description="Solo presupuestos activos"),
-    category_id: Optional[int] = Query(None, gt=0, description="Filtrar por categoría"),
+    category_id: int | None = Query(None, gt=0, description="Filtrar por categoría"),
     current_user: User = Depends(require_scope(APIKeyScope.BUDGETS_READ.value)),
     handler: GetBudgetsHandler = Depends(get_budgets_handler),
 ):

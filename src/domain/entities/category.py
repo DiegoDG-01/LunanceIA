@@ -1,26 +1,25 @@
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
 class Category:
     id: int
     name: str
-    type: Optional[str] = None
+    type: str | None = None
     is_active: bool = True
-    description: Optional[str] = None
-    icon: Optional[str] = None
-    color: Optional[str] = None
+    description: str | None = None
+    icon: str | None = None
+    color: str | None = None
 
     @classmethod
     def create_new(
         cls,
         name: str,
-        description: Optional[str] = None,
-        icon: Optional[str] = None,
-        color: Optional[str] = None,
+        description: str | None = None,
+        icon: str | None = None,
+        color: str | None = None,
         is_active: bool = True,
-        type: Optional[str] = None,
+        type: str | None = None,
     ) -> "Category":
         if not name.strip():
             raise ValueError("Category name cannot be empty")

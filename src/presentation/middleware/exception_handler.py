@@ -1,94 +1,94 @@
 """Manejador global de excepciones para estandarizar respuestas de error."""
 
 import logging
-from typing import Union, Dict, Tuple, Type
 
-from fastapi import Request, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from shared.i18n.messages import get_error_message
 
 from infrastructure.config.settings import settings
-
-from shared.exceptions.base import (
-    LunanceException,
-    ValidationError as LunanceValidationError,
-    UnauthorizedError,
-    BusinessRuleError,
-    NotFoundError,
-)
-from shared.exceptions.domain import (
-    UserNotFoundError,
-    InvalidCredentialsError,
-    UserInactiveError,
-    EmailAlreadyExistsError,
-    AccountNotFoundError,
-    AccountInactiveError,
-    AccountHasBalanceError,
-    AccountHasTransactionsError,
-    TransactionNotFoundError,
-    InvalidTransactionAmountError,
-    CategoryNotFoundError,
-    InvalidCurrencyError,
-    CurrencyMismatchError,
-    NegativeAmountError,
-    AIServiceError,
-    AIProcessingError,
-    AIInvalidResponseError,
-    InvalidImageError,
-    InvalidTransactionTypeError,
-    InsufficientFundsError,
-    SubscriptionNotFoundError,
-    InstallmentChargeNotFoundError,
-    InstallmentChargeAlreadyPaidError,
-    InstallmentTransactionModificationError,
-    SameAccountTransferError,
-    TransferAccountTypeNotAllowedError,
-    TransferNotAllowedError,
-    CreditCardSettingsNotFoundError,
-    InvalidAccountSettingsError,
-    TransactionNotActivityError,
-    InvalidInvestmentRateError,
-    InvalidPenaltyPercentageError,
-    InvalidBillingCycleDayError,
-    InvalidPaymentDueDayError,
-    InvalidCreditLimitError,
-    InvalidMinimumPaymentError,
-    InvalidEmailError,
-    InvalidBalanceUpdateError,
-    InvestmentPositionNotFoundError,
-    InvestmentPositionNotActiveError,
-    InvestmentPositionLockedError,
-    InvestmentPositionNotMaturedError,
-    FixedTermDepositNotAllowedError,
-    FixedTermWithdrawalNotAllowedError,
-    InvalidFixedTermConfigError,
-    PositionAccountTypeNotAllowedError,
-    PositionCapExceededError,
-    InvalidOverflowTargetError,
-    InvalidPositionCapError,
-    FixedTermCapNotAllowedError,
+from presentation.schemas.responses.error import ErrorDetail, StandardErrorResponse
+from shared.constants.validation_messages import (
+    get_http_code_error_message,
+    get_main_validation_message,
+    translate_validation_message,
 )
 from shared.exceptions.application import (
-    JWTValidationError,
     CommandValidationError,
+    ExternalServiceError,
+    JWTValidationError,
     QueryValidationError,
     RepositoryError,
-    ExternalServiceError,
 )
-from presentation.schemas.responses.error import StandardErrorResponse, ErrorDetail
-from shared.constants.validation_messages import (
-    translate_validation_message,
-    get_main_validation_message,
-    get_http_code_error_message,
+from shared.exceptions.base import (
+    BusinessRuleError,
+    LunanceException,
+    NotFoundError,
+    UnauthorizedError,
 )
+from shared.exceptions.base import (
+    ValidationError as LunanceValidationError,
+)
+from shared.exceptions.domain import (
+    AccountHasBalanceError,
+    AccountHasTransactionsError,
+    AccountInactiveError,
+    AccountNotFoundError,
+    AIInvalidResponseError,
+    AIProcessingError,
+    AIServiceError,
+    CategoryNotFoundError,
+    CreditCardSettingsNotFoundError,
+    CurrencyMismatchError,
+    EmailAlreadyExistsError,
+    FixedTermCapNotAllowedError,
+    FixedTermDepositNotAllowedError,
+    FixedTermWithdrawalNotAllowedError,
+    InstallmentChargeAlreadyPaidError,
+    InstallmentChargeNotFoundError,
+    InstallmentTransactionModificationError,
+    InsufficientFundsError,
+    InvalidAccountSettingsError,
+    InvalidBalanceUpdateError,
+    InvalidBillingCycleDayError,
+    InvalidCredentialsError,
+    InvalidCreditLimitError,
+    InvalidCurrencyError,
+    InvalidEmailError,
+    InvalidFixedTermConfigError,
+    InvalidImageError,
+    InvalidInvestmentRateError,
+    InvalidMinimumPaymentError,
+    InvalidOverflowTargetError,
+    InvalidPaymentDueDayError,
+    InvalidPenaltyPercentageError,
+    InvalidPositionCapError,
+    InvalidTransactionAmountError,
+    InvalidTransactionTypeError,
+    InvestmentPositionLockedError,
+    InvestmentPositionNotActiveError,
+    InvestmentPositionNotFoundError,
+    InvestmentPositionNotMaturedError,
+    NegativeAmountError,
+    PositionAccountTypeNotAllowedError,
+    PositionCapExceededError,
+    SameAccountTransferError,
+    SubscriptionNotFoundError,
+    TransactionNotActivityError,
+    TransactionNotFoundError,
+    TransferAccountTypeNotAllowedError,
+    TransferNotAllowedError,
+    UserInactiveError,
+    UserNotFoundError,
+)
+from shared.i18n.messages import get_error_message
 from shared.utils.language import get_user_language
 
 logger = logging.getLogger(__name__)
 
 # Definición del diccionario de mapeo
-EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
+EXCEPTION_MAP: dict[type[Exception], tuple[str, int]] = {
     # --- Autenticación y Autorización (401) ---
     InvalidCredentialsError: ("AUTH_INVALID_CREDENTIALS", 401),
     UnauthorizedError: ("AUTH_INVALID_CREDENTIALS", 401),
@@ -309,7 +309,7 @@ async def validation_exception_handler(
 
 
 async def http_exception_handler(
-    request: Request, exc: Union[HTTPException, StarletteHTTPException]
+    request: Request, exc: HTTPException | StarletteHTTPException
 ) -> JSONResponse:
     """
     Handle standard HTTP exceptions and return a standardized JSON error response.
@@ -368,9 +368,7 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
     Returns:
         JSONResponse: A JSON response with HTTP status 500 and a translated error message.
     """
-    logger.error(
-        f"Unhandled exception: {type(exc).__name__} - {str(exc)}", exc_info=exc
-    )
+    logger.error(f"Unhandled exception: {type(exc).__name__} - {exc!s}", exc_info=exc)
 
     # Detectar idioma del usuario
     user_language = get_user_language(request)

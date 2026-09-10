@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-from decimal import Decimal
-from typing import Optional
 from datetime import date, datetime
+from decimal import Decimal
 
 from domain.objects.enums import Frequency, TransactionStatus
 
@@ -15,54 +14,54 @@ class CreateSubscriptionDTO:
     amount: Decimal
     frequency: Frequency
     start_date: date
-    end_date: Optional[date] = None
-    billing_day: Optional[int] = None
-    description: Optional[str] = None
-    service_url: Optional[str] = None
+    end_date: date | None = None
+    billing_day: int | None = None
+    description: str | None = None
+    service_url: str | None = None
     currency: str = "MXN"
 
 
 @dataclass
 class UpdateSubscriptionDTO:
-    account_uuid: Optional[str] = None
-    name: Optional[str] = None
-    amount: Optional[Decimal] = None
-    frequency: Optional[Frequency] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    billing_day: Optional[int] = None
-    is_active: Optional[bool] = None
-    description: Optional[str] = None
-    service_url: Optional[str] = None
-    category_id: Optional[int] = None
+    account_uuid: str | None = None
+    name: str | None = None
+    amount: Decimal | None = None
+    frequency: Frequency | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    billing_day: int | None = None
+    is_active: bool | None = None
+    description: str | None = None
+    service_url: str | None = None
+    category_id: int | None = None
 
 
 @dataclass
 class SubscriptionResponseDTO:
     uuid: str
-    account_uuid: Optional[str]
-    account_name: Optional[str]
-    category_name: Optional[str]
+    account_uuid: str | None
+    account_name: str | None
+    category_name: str | None
     name: str
     amount: Decimal
     currency: str
     frequency: Frequency
     start_date: date
-    end_date: Optional[date]
-    billing_day: Optional[int]
+    end_date: date | None
+    billing_day: int | None
     next_charge_date: date
     is_active: bool
-    description: Optional[str]
-    service_url: Optional[str]
+    description: str | None
+    service_url: str | None
     creation_date: datetime
 
     @classmethod
     def from_entity(
         cls,
         subscription,
-        account_uuid: Optional[str],
-        account_name: Optional[str],
-        category_name: Optional[str],
+        account_uuid: str | None,
+        account_name: str | None,
+        category_name: str | None,
     ):
         return cls(
             uuid=subscription.uuid,
@@ -94,11 +93,11 @@ class SubscriptionChargeDetailResponseDTO:
     charge_amount: Decimal  # sc.amount
     charge_status: TransactionStatus  # sc.status
 
-    transaction_id: Optional[str]  # t.uuid
+    transaction_id: str | None  # t.uuid
     transaction_amount: Decimal  # t.amount
-    transaction_description: Optional[str]  # t.description
+    transaction_description: str | None  # t.description
 
-    category_name: Optional[str]  # c.name
+    category_name: str | None  # c.name
     account_name: str  # a.name
 
     @classmethod
@@ -106,10 +105,10 @@ class SubscriptionChargeDetailResponseDTO:
         cls,
         charge,
         subscription_name: str,
-        transaction_uuid: Optional[str],
+        transaction_uuid: str | None,
         transaction_amount: Decimal,
-        transaction_description: Optional[str],
-        category_name: Optional[str],
+        transaction_description: str | None,
+        category_name: str | None,
         account_name: str,
     ):
         return cls(
@@ -129,6 +128,6 @@ class SubscriptionChargeDetailResponseDTO:
 @dataclass
 class SubscriptionLastTransactionsResponseDTO:
     name: str
-    account_name: Optional[str]
+    account_name: str | None
     amount: Decimal
     charge_date: date

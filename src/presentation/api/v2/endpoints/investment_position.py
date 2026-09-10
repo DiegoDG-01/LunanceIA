@@ -1,9 +1,7 @@
-from typing import List, Optional, cast
+from typing import cast
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from domain.entities.user import User
-from domain.objects.enums import APIKeyScope
 from application.dto.investment_position_dto import (
     CreatePositionDTO,
     LiquidatePositionDTO,
@@ -18,10 +16,6 @@ from application.investments.commands.deposit_to_position import (
     DepositToPositionCommand,
     DepositToPositionHandler,
 )
-from application.investments.commands.withdraw_from_position import (
-    WithdrawFromPositionCommand,
-    WithdrawFromPositionHandler,
-)
 from application.investments.commands.liquidate_position import (
     LiquidatePositionCommand,
     LiquidatePositionHandler,
@@ -30,21 +24,46 @@ from application.investments.commands.update_position import (
     UpdatePositionCommand,
     UpdatePositionHandler,
 )
-from application.investments.queries.list_positions import (
-    ListPositionsQuery,
-    ListPositionsHandler,
+from application.investments.commands.withdraw_from_position import (
+    WithdrawFromPositionCommand,
+    WithdrawFromPositionHandler,
 )
 from application.investments.queries.get_position import (
-    GetPositionQuery,
     GetPositionHandler,
-)
-from application.investments.queries.get_position_yields import (
-    GetPositionYieldsQuery,
-    GetPositionYieldsHandler,
+    GetPositionQuery,
 )
 from application.investments.queries.get_position_projections import (
-    GetPositionProjectionsQuery,
     GetPositionProjectionsHandler,
+    GetPositionProjectionsQuery,
+)
+from application.investments.queries.get_position_yields import (
+    GetPositionYieldsHandler,
+    GetPositionYieldsQuery,
+)
+from application.investments.queries.list_positions import (
+    ListPositionsHandler,
+    ListPositionsQuery,
+)
+from domain.entities.user import User
+from domain.objects.enums import APIKeyScope
+from infrastructure.rate_limiting.limiters import (
+    enforce_rate_limit,
+    limiter_10_per_minute,
+    limiter_20_per_minute,
+    limiter_30_per_minute,
+    limiter_50_per_minute,
+)
+from presentation.dependencies.auth_deps import require_scope
+from presentation.dependencies.investment_position_deps import (
+    get_create_position_handler,
+    get_deposit_to_position_handler,
+    get_liquidate_position_handler,
+    get_list_positions_handler,
+    get_position_handler,
+    get_position_projections_handler,
+    get_position_yields_handler,
+    get_update_position_handler,
+    get_withdraw_from_position_handler,
 )
 from presentation.schemas.requests.investment_position import (
     CreatePositionRequest,
@@ -58,26 +77,6 @@ from presentation.schemas.responses.investment_position import (
     PositionResponse,
 )
 from presentation.schemas.responses.investment_yield import InvestmentYieldResponse
-from presentation.dependencies.auth_deps import require_scope
-from presentation.dependencies.investment_position_deps import (
-    get_create_position_handler,
-    get_deposit_to_position_handler,
-    get_withdraw_from_position_handler,
-    get_liquidate_position_handler,
-    get_list_positions_handler,
-    get_position_handler,
-    get_position_yields_handler,
-    get_position_projections_handler,
-    get_update_position_handler,
-)
-
-from infrastructure.rate_limiting.limiters import (
-    enforce_rate_limit,
-    limiter_10_per_minute,
-    limiter_20_per_minute,
-    limiter_30_per_minute,
-    limiter_50_per_minute,
-)
 
 router = APIRouter()
 
@@ -235,7 +234,7 @@ async def liquidate_position(
     return LiquidatePositionResponse(**result.__dict__)
 
 
-@router.get("/{position_uuid}/yields/", response_model=List[InvestmentYieldResponse])
+@router.get("/{position_uuid}/yields/", response_model=list[InvestmentYieldResponse])
 async def get_position_yields(
     request: Request,
     position_uuid: str,
@@ -262,7 +261,7 @@ async def get_position_yields(
 async def get_position_projections(
     request: Request,
     position_uuid: str,
-    days: Optional[int] = Query(
+    days: int | None = Query(
         None,
         ge=1,
         le=3650,
