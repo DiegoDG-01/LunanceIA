@@ -13,7 +13,6 @@ from domain.entities.user import User
 from presentation.schemas.requests.auth import (
     LoginRequest,
     RegisterRequest,
-    RefreshTokenRequest,
 )
 from shared.exceptions.domain import (
     InvalidCredentialsError,
@@ -50,14 +49,6 @@ class TestAuthSchemas:
     def test_login_request_short_password(self):
         with pytest.raises(ValidationError):
             LoginRequest(username="testuser", password="short")
-
-    def test_refresh_token_request_valid(self):
-        request = RefreshTokenRequest(refresh_token="some-refresh-token")
-        assert request.refresh_token == "some-refresh-token"
-
-    def test_refresh_token_request_missing(self):
-        with pytest.raises(ValidationError):
-            RefreshTokenRequest()  # type: ignore[call-arg]
 
 
 @pytest.mark.unit
