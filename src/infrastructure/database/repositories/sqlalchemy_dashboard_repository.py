@@ -3,7 +3,7 @@ import json
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.dashboard import DashboardSummary
+from domain.entities.dashboard import DashboardSummary, MobileDashboardSummary
 from domain.repositories.dashboard_repository import DashboardRepository
 
 
@@ -15,9 +15,7 @@ class SQLAlchemyDashboardRepository(DashboardRepository):
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_dashboard_summary(
-        self, uuid: str, user_id: int
-    ) -> DashboardSummary | None:
+    async def get_dashboard_summary(self, user_id: int) -> DashboardSummary | None:
         # Check if we are running on SQLite (for tests)
         try:
             is_sqlite = self.db.bind and self.db.bind.dialect.name == "sqlite"
@@ -167,6 +165,133 @@ SELECT
             )
 
         return None
+
+    async def get_mobile_dashboard_summary(
+        self, user_id: int
+    ) -> MobileDashboardSummary | None:
+        try:
+            is_sqlite = self.db.bind and self.db.bind.dialect.name == "sqlite"
+        except (AttributeError, Exception):
+            is_sqlite = False
+
+        if is_sqlite:
+            return await self._get_sqlite_mobile_dashboard_summary(user_id)
+
+        query = text("""
+        WITH CategoryMetrics AS (
+      SELECT
+          COALESCE(c.name, 'Sin categoría') AS category,
+          COUNT(t.id) AS transaction_count,
+          SUM(t.amount) AS total_amount,
+          ROUND(
+              COUNT(t.id) * 100.0 / NULLIF(SUM(COUNT(t.id)) OVER (), 0),
+              2
+          ) AS percentage_by_count
+      FROM transactions t
+      LEFT JOIN categories c ON c.id = t.category_id
+      WHERE t.user_id = :user_id
+        AND t.type = 'EXPENSE'
+        AND t.transaction_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+        AND t.transaction_date < DATE_FORMAT(
+            CURDATE() + INTERVAL 1 MONTH,
+            '%Y-%m-01'
+        )
+      GROUP BY c.id, c.name
+  )
+  SELECT
+      COALESCE(SUM(total_amount), 0) AS total_spent,
+      COALESCE(
+          (
+              SELECT category
+              FROM CategoryMetrics
+              ORDER BY transaction_count DESC, category ASC
+              LIMIT 1
+          ),
+          'N/A'
+      ) AS top_category,
+      COALESCE(
+          JSON_ARRAYAGG(
+              JSON_OBJECT(
+                  'category', category,
+                  'count', transaction_count,
+                  'percent_by_count', percentage_by_count
+              )
+          ),
+          JSON_ARRAY()
+      ) AS category_distribution
+  FROM CategoryMetrics;""")
+
+        result = await self.db.execute(query, {"user_id": user_id})
+
+        row = result.fetchone()
+
+        if row:
+            return MobileDashboardSummary(
+                total_spent=row.total_spent,
+                top_category=row.top_category,
+                category_distribution=json.loads(row.category_distribution)
+                if row.category_distribution
+                else [],
+            )
+
+        return None
+
+    async def _get_sqlite_mobile_dashboard_summary(
+        self, user_id: int
+    ) -> MobileDashboardSummary:
+        """SQLite equivalent of the mobile dashboard aggregate for tests."""
+        from datetime import date
+
+        from sqlalchemy import func, select
+
+        from infrastructure.database.models import CategoryModel, TransactionModel
+
+        today = date.today()
+        month_start = date(today.year, today.month, 1)
+        if today.month == 12:
+            next_month_start = date(today.year + 1, 1, 1)
+        else:
+            next_month_start = date(today.year, today.month + 1, 1)
+
+        category_name = func.coalesce(CategoryModel.name, "Sin categoría")
+        transaction_count = func.count(TransactionModel.id)
+        total_amount = func.coalesce(func.sum(TransactionModel.amount), 0)
+        statement = (
+            select(
+                category_name.label("category"),
+                transaction_count.label("count"),
+                total_amount.label("total_amount"),
+            )
+            .select_from(TransactionModel)
+            .outerjoin(CategoryModel, TransactionModel.category_id == CategoryModel.id)
+            .where(
+                TransactionModel.user_id == user_id,
+                TransactionModel.type == "EXPENSE",
+                TransactionModel.transaction_date >= month_start,
+                TransactionModel.transaction_date < next_month_start,
+            )
+            .group_by(CategoryModel.id, CategoryModel.name)
+            .order_by(transaction_count.desc(), category_name.asc())
+        )
+        rows = (await self.db.execute(statement)).all()
+
+        total_transactions = sum(row.count for row in rows)
+        category_distribution = [
+            {
+                "category": row.category,
+                "count": row.count,
+                "percent_by_count": round(row.count * 100.0 / total_transactions, 2),
+            }
+            for row in rows
+        ]
+
+        return MobileDashboardSummary(
+            total_spent=sum(float(row.total_amount) for row in rows),
+            top_category=category_distribution[0]["category"]
+            if category_distribution
+            else "N/A",
+            category_distribution=category_distribution,
+        )
 
     async def _get_sqlite_dashboard_summary(self, user_id: int) -> DashboardSummary:
         """Simplified version of dashboard summary for SQLite (tests)"""

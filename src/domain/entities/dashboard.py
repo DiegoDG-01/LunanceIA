@@ -10,3 +10,10 @@ class DashboardSummary:
     top_account: str
     today_transactions: list
     category_distribution: list
+
+
+@dataclass
+class MobileDashboardSummary:
+    total_spent: float
+    top_category: str
+    category_distribution: list

@@ -30,7 +30,10 @@ from presentation.dependencies.auth_handler_deps import (
 from presentation.dependencies.category_deps import get_categories_handler
 
 # Dashboard handlers
-from presentation.dependencies.dashboard_deps import get_dashboard_summary_handler
+from presentation.dependencies.dashboard_deps import (
+    get_dashboard_summary_handler,
+    get_mobile_dashboard_summary_handler,
+)
 
 # Recurring income handlers
 from presentation.dependencies.recurring_income_deps import (
@@ -160,6 +163,7 @@ __all__ = [
     "get_categories_handler",
     # Dashboard
     "get_dashboard_summary_handler",
+    "get_mobile_dashboard_summary_handler",
     # Auth handlers
     "get_login_handler",
     "get_register_handler",

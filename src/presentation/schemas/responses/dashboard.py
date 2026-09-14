@@ -28,3 +28,9 @@ class DashboardSummaryResponse(BaseModel):
     category_distribution: list[CategoryDistributionResponse] = Field(
         ..., description="The distribution of categories"
     )
+
+
+class MobileDashboardSummaryResponse(BaseModel):
+    total_spent: float
+    top_category: str
+    category_distribution: list[CategoryDistributionResponse]

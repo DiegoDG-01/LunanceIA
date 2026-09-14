@@ -6,7 +6,6 @@ from domain.repositories.dashboard_repository import DashboardRepository
 
 @dataclass
 class GetDashboardSummaryQuery:
-    user_uuid: str
     user_id: int
 
 
@@ -15,6 +14,4 @@ class GetDashboardSummaryHandler:
         self.dashboard_repository = dashboard_repository
 
     async def handle(self, query: GetDashboardSummaryQuery) -> DashboardSummary | None:
-        return await self.dashboard_repository.get_dashboard_summary(
-            query.user_uuid, query.user_id
-        )
+        return await self.dashboard_repository.get_dashboard_summary(query.user_id)

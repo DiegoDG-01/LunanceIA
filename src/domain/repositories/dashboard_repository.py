@@ -1,13 +1,19 @@
 from abc import ABC, abstractmethod
 
-from domain.entities.dashboard import DashboardSummary
+from domain.entities.dashboard import DashboardSummary, MobileDashboardSummary
 
 
 class DashboardRepository(ABC):
     @abstractmethod
-    async def get_dashboard_summary(
-        self, uuid: str, user_id: int
-    ) -> DashboardSummary | None:
+    async def get_dashboard_summary(self, user_id: int) -> DashboardSummary | None:
         """
         Get dashboard summary for a user.
+        """
+
+    @abstractmethod
+    async def get_mobile_dashboard_summary(
+        self, user_id: int
+    ) -> MobileDashboardSummary | None:
+        """
+        Get mobile dashboard summary for a user.
         """
