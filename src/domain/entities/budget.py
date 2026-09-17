@@ -14,7 +14,9 @@ class Budget:
     name: str
     limit_amount: Decimal
     period: BudgetPeriod
-    start_date: date
+    # TODO(temporary-budgets): Use the optional validity range for activation
+    # and progress, including partial cycles and clearing an existing end date.
+    start_date: date | None
     end_date: date | None
     is_active: bool
     alert_percentage: int
@@ -28,7 +30,7 @@ class Budget:
         name: str,
         limit_amount: Decimal,
         period: BudgetPeriod,
-        start_date: date,
+        start_date: date | None = None,
         end_date: date | None = None,
         alert_percentage: int = 80,
     ) -> "Budget":

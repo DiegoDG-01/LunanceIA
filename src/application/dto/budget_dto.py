@@ -11,7 +11,7 @@ class CreateBudgetDTO:
     name: str
     limit_amount: Decimal
     period: BudgetPeriod
-    start_date: date
+    start_date: date | None = None
     category_id: int | None = None
     end_date: date | None = None
     alert_percentage: int = 80
@@ -36,7 +36,7 @@ class BudgetResponseDTO:
     category_name: str | None
     limit_amount: Decimal
     period: BudgetPeriod
-    start_date: date
+    start_date: date | None
     end_date: date | None
     is_active: bool
     alert_percentage: int

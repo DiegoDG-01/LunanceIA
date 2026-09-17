@@ -1410,14 +1410,13 @@ POST /api/v2/budgets/
   "name": "Comida mensual",
   "limit_amount": 5000.00,
   "period": "mensual",
-  "start_date": "2025-05-01",
   "category_id": 1,
   "end_date": null,
   "alert_percentage": 80
 }
 ```
 
-`category_id` es opcional (si se omite, aplica a todas las categorías) y `alert_percentage` es opcional (default 80, rango 1-100). Periodos disponibles: `semanal`, `quincenal`, `mensual`, `trimestral`, `anual`.
+`category_id` es opcional (si se omite, aplica a todas las categorías), igual que `start_date`, `end_date` y `alert_percentage` (default 80, rango 1-100). Las fechas de vigencia se reservan para presupuestos temporales y aún no afectan el cálculo de progreso. Periodos disponibles: `semanal`, `quincenal`, `mensual`, `trimestral`, `anual`.
 
 **Response:** `201 Created`
 

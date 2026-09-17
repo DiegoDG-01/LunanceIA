@@ -13,7 +13,7 @@ class BudgetResponse(BaseModel):
     category_name: str | None
     limit_amount: Decimal
     period: BudgetPeriod
-    start_date: date
+    start_date: date | None
     end_date: date | None
     is_active: bool
     alert_percentage: int

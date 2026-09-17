@@ -14,7 +14,10 @@ class CreateBudgetRequest(BaseModel):
         ..., gt=Decimal(0), description="Monto límite del presupuesto"
     )
     period: BudgetPeriod = Field(..., description="Periodicidad del presupuesto")
-    start_date: date = Field(..., description="Fecha de inicio del presupuesto")
+    start_date: date | None = Field(
+        None,
+        description="Fecha de inicio opcional, reservada para presupuestos temporales",
+    )
     category_id: int | None = Field(
         None,
         gt=0,
@@ -36,7 +39,6 @@ class CreateBudgetRequest(BaseModel):
                 "name": "Comida mensual",
                 "limit_amount": 5000.00,
                 "period": "mensual",
-                "start_date": "2025-05-01",
                 "category_id": 1,
                 "alert_percentage": 80,
             }

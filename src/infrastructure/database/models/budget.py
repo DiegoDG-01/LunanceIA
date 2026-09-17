@@ -26,7 +26,7 @@ class BudgetModel(Base):
     name: Mapped[str] = mapped_column(String(100))
     limit_amount: Mapped[Decimal] = mapped_column(DECIMAL(12, 2))
     period: Mapped[BudgetPeriod] = mapped_column(Enum(BudgetPeriod))
-    start_date: Mapped[date] = mapped_column(Date, index=True)
+    start_date: Mapped[date | None] = mapped_column(Date, index=True, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, index=True, nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True, index=True)
     alert_percentage: Mapped[int] = mapped_column(default=80)
