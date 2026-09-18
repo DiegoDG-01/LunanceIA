@@ -36,7 +36,7 @@ dependencies = [
     "cachetools==7.1.7",
     "pydantic-ai-slim[google,openai]==2.26.0",
     "fastapi-advanced-rate-limiter==2.1.0",
-    "redis==7.4.0",
+    "redis==8.1.0",
     "secure==1.0.1",
     "openai>=2.53.0",
     "python-dateutil>=2.9.0.post0",
