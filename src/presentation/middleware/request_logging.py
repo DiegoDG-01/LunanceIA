@@ -48,7 +48,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                     "duration_ms": round(duration_ms, 2),
                     "error": str(e),
                 },
-                exc_info=True,
             )
             raise
 

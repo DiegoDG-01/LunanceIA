@@ -36,7 +36,7 @@ class Transaction:
         tags: list[int] | None = None,
     ):
         if transaction_date is None:
-            transaction_date = date.today()
+            transaction_date = datetime.now(UTC).date()
         return cls(
             id=None,
             uuid=None,

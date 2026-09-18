@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import cast
 
@@ -111,7 +111,7 @@ class DepositToPositionHandler:
                     category_id=None,
                     transaction_type=TransactionType.TRANSFER,
                     amount=moved,
-                    transaction_date=date.today(),
+                    transaction_date=datetime.now(UTC).date(),
                     description=f"Apartado a {position.name}",
                 )
                 movement.position_id = position.id

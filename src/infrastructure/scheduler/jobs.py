@@ -1,5 +1,5 @@
 import logging
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 
 from application.incomes.services.income_processor import IncomeProcessor
 from application.investments.commands.generate_daily_yields import (
@@ -102,7 +102,7 @@ async def process_investment_yield_job():
             )
 
             stats = await handler.handle(
-                GenerateDailyYieldCommand(target_date=date.today())
+                GenerateDailyYieldCommand(target_date=datetime.now(UTC).date())
             )
 
             logger.info(f"Job finished at {datetime.now(UTC)} with stats: {stats}")
@@ -132,7 +132,7 @@ async def process_position_maturity_job():
             )
 
             stats = await handler.handle(
-                ProcessMaturedPositionsCommand(target_date=date.today())
+                ProcessMaturedPositionsCommand(target_date=datetime.now(UTC).date())
             )
 
             logger.info(f"Job finished at {datetime.now(UTC)} with stats: {stats}")

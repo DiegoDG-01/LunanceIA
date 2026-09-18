@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, datetime
 from typing import cast
 
 from application.dto.investment_position_dto import (
@@ -94,7 +94,7 @@ class WithdrawFromPositionHandler:
                 category_id=None,
                 transaction_type=TransactionType.TRANSFER,
                 amount=money,
-                transaction_date=date.today(),
+                transaction_date=datetime.now(UTC).date(),
                 description=f"Retiro del apartado {position.name}",
             )
             movement.position_id = position.id

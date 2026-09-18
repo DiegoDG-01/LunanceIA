@@ -1,6 +1,6 @@
 import uuid as uuid_lib
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from typing import cast
 
 from application.dto.transaction_dto import CreateTransferDTO, TransferResponseDTO
@@ -82,7 +82,7 @@ class CreateTransferHandler:
                 raise TransferAccountTypeNotAllowedError(source.account_type.value)
 
             money = Money(dto.amount, dto.currency)
-            transfer_date = dto.transfer_date or date.today()
+            transfer_date = dto.transfer_date or datetime.now(UTC).date()
 
             if not source.can_withdraw(money):
                 raise InsufficientFundsError(

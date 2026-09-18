@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from domain.objects.enums import TransactionType
 
@@ -38,8 +38,8 @@ class UpdateTransactionRequest(BaseModel):
     transaction_date: date | None = Field(None, description="Nueva fecha")
     account_uuid: str | None = Field(None, description="UUID de la cuenta")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "description": "Groceries - Updated",
                 "notes": "Weekly shopping at new store",
@@ -50,6 +50,7 @@ class UpdateTransactionRequest(BaseModel):
                 "account_uuid": "some-uuid",
             }
         }
+    )
 
 
 class TransactionFilterRequest(BaseModel):

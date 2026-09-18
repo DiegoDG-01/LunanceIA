@@ -1,5 +1,5 @@
 import logging
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import cast
 
 from domain.entities.notifications.notification import Notification
@@ -44,7 +44,7 @@ class SubscriptionProcessor:
 
     async def process_due_subscriptions(self) -> dict:
         logger.info("Processing due subscriptions")
-        today = date.today()
+        today = datetime.now(UTC).date()
 
         stats = {
             "processed": 0,
@@ -67,15 +67,14 @@ class SubscriptionProcessor:
                     if created == 0:
                         stats["skipped"] += 1
                 except Exception as e:
-                    logger.error(
-                        f"Error processing due subscription {subscription.uuid}: {e}",
-                        exc_info=True,
+                    logger.exception(
+                        f"Error processing due subscription {subscription.uuid}: {e}"
                     )
                     stats["failed"] += 1
 
             logger.info(f"Processed {stats['processed']} subscriptions")
         except Exception as e:
-            logger.error(f"Error processing due subscriptions: {e}", exc_info=True)
+            logger.exception(f"Error processing due subscriptions: {e}")
             stats["failed"] = 1
             raise
 

@@ -3,7 +3,7 @@
 import pytest
 from dataclasses import replace
 from unittest.mock import MagicMock, AsyncMock
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from application.investments.queries.list_positions import (
@@ -45,7 +45,7 @@ def make_position(pid: int = 5, **overrides) -> InvestmentPosition:
         "position_type": PositionType.ON_DEMAND,
         "initial_balance": Money(Decimal("1000.00")),
         "annual_rate": Decimal("10.00"),
-        "start_date": date.today() - timedelta(days=30),
+        "start_date": datetime.now(timezone.utc).date() - timedelta(days=30),
     }
     defaults.update(overrides)
     position = InvestmentPosition.create_new(**defaults)
@@ -82,7 +82,7 @@ class TestListPositionsHandler:
     async def test_liquidated_positions_hidden_by_default(self):
         active = make_position(pid=1)
         liquidated = make_position(pid=2)
-        liquidated.liquidate(date.today())
+        liquidated.liquidate(datetime.now(timezone.utc).date())
         handler = self._build(make_account(), [active, liquidated])
 
         result = await handler.handle(
@@ -138,7 +138,7 @@ class TestGetPositionProjectionsHandler:
         position = make_position(
             position_type=PositionType.FIXED_TERM,
             term_days=40,
-            start_date=date.today() - timedelta(days=30),  # vence en 10 días
+            start_date=datetime.now(timezone.utc).date() - timedelta(days=30),  # vence en 10 días
         )
         handler = self._build(position)
 
@@ -155,7 +155,7 @@ class TestGetPositionProjectionsHandler:
         position = make_position(
             position_type=PositionType.FIXED_TERM,
             term_days=10,
-            start_date=date.today() - timedelta(days=30),  # ya venció
+            start_date=datetime.now(timezone.utc).date() - timedelta(days=30),  # ya venció
         )
         position.accrue_yield(Money(Decimal("50.00")))
         handler = self._build(position)

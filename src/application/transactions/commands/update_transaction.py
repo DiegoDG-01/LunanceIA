@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from typing import cast
 
@@ -131,9 +131,9 @@ class UpdateTransactionCommandHandler:
 
             if command.transaction_date is not None:
                 if isinstance(command.transaction_date, str):
-                    transaction.transaction_date = datetime.strptime(
-                        command.transaction_date, "%Y-%m-%d"
-                    ).date()
+                    transaction.transaction_date = date.fromisoformat(
+                        command.transaction_date
+                    )
                 else:
                     transaction.transaction_date = command.transaction_date
 

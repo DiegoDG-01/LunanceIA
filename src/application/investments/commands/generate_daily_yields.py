@@ -174,9 +174,8 @@ class GenerateDailyYieldHandler:
 
                 except Exception as e:
                     errors += 1
-                    logger.error(
-                        f"failed to generate daily yield for position {preview.id}: {e}",
-                        exc_info=True,
+                    logger.exception(
+                        f"failed to generate daily yield for position {preview.id}: {e}"
                     )
 
             await self.uow.commit()

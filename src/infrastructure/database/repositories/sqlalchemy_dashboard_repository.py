@@ -19,7 +19,7 @@ class SQLAlchemyDashboardRepository(DashboardRepository):
         # Check if we are running on SQLite (for tests)
         try:
             is_sqlite = self.db.bind and self.db.bind.dialect.name == "sqlite"
-        except (AttributeError, Exception):
+        except AttributeError:
             is_sqlite = False
 
         if is_sqlite:
@@ -171,7 +171,7 @@ SELECT
     ) -> MobileDashboardSummary | None:
         try:
             is_sqlite = self.db.bind and self.db.bind.dialect.name == "sqlite"
-        except (AttributeError, Exception):
+        except AttributeError:
             is_sqlite = False
 
         if is_sqlite:
@@ -240,13 +240,13 @@ SELECT
         self, user_id: int
     ) -> MobileDashboardSummary:
         """SQLite equivalent of the mobile dashboard aggregate for tests."""
-        from datetime import date
+        from datetime import UTC, date, datetime
 
         from sqlalchemy import func, select
 
         from infrastructure.database.models import CategoryModel, TransactionModel
 
-        today = date.today()
+        today = datetime.now(UTC).date()
         month_start = date(today.year, today.month, 1)
         if today.month == 12:
             next_month_start = date(today.year + 1, 1, 1)
@@ -295,7 +295,7 @@ SELECT
 
     async def _get_sqlite_dashboard_summary(self, user_id: int) -> DashboardSummary:
         """Simplified version of dashboard summary for SQLite (tests)"""
-        from datetime import date
+        from datetime import UTC, date, datetime
 
         from sqlalchemy import case, func, select
 
@@ -306,7 +306,7 @@ SELECT
         )
 
         # Get start of current month
-        today = date.today()
+        today = datetime.now(UTC).date()
         month_start = date(today.year, today.month, 1)
 
         # Total Spent & Income

@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import cast
 
@@ -62,7 +62,7 @@ class GetInvestmentProjectionsHandler:
             if p.status == PositionStatus.ACTIVE
         ]
 
-        today = date.today()
+        today = datetime.now(UTC).date()
 
         if query.project_days:
             days = query.project_days

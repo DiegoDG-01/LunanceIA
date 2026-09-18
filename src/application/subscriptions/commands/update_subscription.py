@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, datetime
 from typing import cast
 
 from application.dto.subscription_dto import (
@@ -104,7 +104,7 @@ class UpdateSubscriptionHandler:
             )
 
         if schedule_changed:
-            subscription.reschedule(date.today())
+            subscription.reschedule(datetime.now(UTC).date())
 
         async with self.uow:
             updated_subscription = await self.subscription_repository.update(

@@ -145,3 +145,14 @@ project-excludes = [
     "sql/**",
     "docs/**",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+  "src/presentation/dependencies/*.py" = ["B008"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.File",
+    "fastapi.Query",
+    "presentation.dependencies.auth_deps.require_scope",
+]

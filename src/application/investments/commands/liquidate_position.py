@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, datetime
 from typing import cast
 
 from application.dto.investment_position_dto import (
@@ -89,7 +89,7 @@ class LiquidatePositionHandler:
             if not position:
                 raise InvestmentPositionNotFoundError(dto.position_uuid)
 
-            payout = position.liquidate(date.today())
+            payout = position.liquidate(datetime.now(UTC).date())
             account.update_balance(account.current_balance.add(payout))
 
             await self.position_repository.update(position)
@@ -101,7 +101,7 @@ class LiquidatePositionHandler:
                 category_id=None,
                 transaction_type=TransactionType.TRANSFER,
                 amount=payout,
-                transaction_date=date.today(),
+                transaction_date=datetime.now(UTC).date(),
                 description=f"Liquidación del apartado {position.name}",
             )
             movement.position_id = position.id

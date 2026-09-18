@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import cast
 
@@ -127,7 +127,7 @@ class GetPositionProjectionsHandler:
         if not position:
             raise InvestmentPositionNotFoundError(query.position_uuid)
 
-        today = date.today()
+        today = datetime.now(UTC).date()
 
         if query.project_days:
             days = query.project_days

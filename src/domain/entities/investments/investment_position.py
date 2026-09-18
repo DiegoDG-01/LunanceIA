@@ -83,9 +83,11 @@ class InvestmentPosition:
     ) -> "InvestmentPosition":
         if annual_rate < 0:
             raise InvalidInvestmentRateError(str(annual_rate))
-        if early_withdrawal_penalty is not None:
-            if not 0 <= early_withdrawal_penalty <= 100:
-                raise InvalidPenaltyPercentageError(str(early_withdrawal_penalty))
+        if (
+            early_withdrawal_penalty is not None
+            and not 0 <= early_withdrawal_penalty <= 100
+        ):
+            raise InvalidPenaltyPercentageError(str(early_withdrawal_penalty))
 
         if start_date is None:
             start_date = datetime.now(UTC).date()

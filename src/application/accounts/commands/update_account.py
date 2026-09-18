@@ -5,10 +5,10 @@ from application.dto.account_dto import AccountResponseDTO, UpdateAccountDTO
 from domain.objects.credit_card_settings import CreditCardSettings
 from domain.objects.money import Money
 from domain.repositories.accounts.account_repository import AccountRepository
-from domain.repositories.banks.bank_repository import BankRepository
 from domain.repositories.accounts.credit_card_repository import (
     CreditCardSettingsRepository,
 )
+from domain.repositories.banks.bank_repository import BankRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.exceptions.domain import AccountNotFoundError
 

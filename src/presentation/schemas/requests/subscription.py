@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from domain.objects.enums import Frequency
 
@@ -46,8 +46,8 @@ class UpdateSubscriptionRequest(BaseModel):
     )
     category_id: int | None = Field(None, gt=0, description="ID de la categoría")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Netflix Premium",
                 "amount": 299.00,
@@ -55,3 +55,4 @@ class UpdateSubscriptionRequest(BaseModel):
                 "is_active": True,
             }
         }
+    )

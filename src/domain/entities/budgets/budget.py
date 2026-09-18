@@ -59,7 +59,7 @@ class Budget:
             Tuple[date, date]: (period_start, period_end) — ambas fechas son inclusivas.
         """
         if reference_date is None:
-            reference_date = date.today()
+            reference_date = datetime.now(UTC).date()
 
         if self.period == BudgetPeriod.MENSUAL:
             period_start = reference_date.replace(day=1)

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, datetime
 from typing import cast
 
 from application.dto.transaction_dto import CreateTransactionDTO, TransactionResponseDTO
@@ -50,7 +50,7 @@ class CreateTransactionHandler:
         dto = command.dto
         money = Money(dto.amount, dto.currency)
 
-        transaction_date = dto.transaction_date or date.today()
+        transaction_date = dto.transaction_date or datetime.now(UTC).date()
 
         user = await self.user_repository.get_by_id(dto.user_id)
         if not user or not user.is_active:

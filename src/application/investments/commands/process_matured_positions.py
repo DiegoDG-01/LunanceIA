@@ -151,9 +151,8 @@ class ProcessMaturedPositionsHandler:
 
                 except Exception as e:
                     errors += 1
-                    logger.error(
-                        f"failed to process maturity for position {preview.id}: {e}",
-                        exc_info=True,
+                    logger.exception(
+                        f"failed to process maturity for position {preview.id}: {e}"
                     )
 
             await self.uow.commit()

@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ErrorDetail(BaseModel):
@@ -22,8 +22,8 @@ class StandardErrorResponse(BaseModel):
     message: str  # Mensaje principal del error
     details: list[ErrorDetail] | None = None  # Detalles específicos (validaciones)
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "error": True,
@@ -52,3 +52,4 @@ class StandardErrorResponse(BaseModel):
                 },
             ]
         }
+    )

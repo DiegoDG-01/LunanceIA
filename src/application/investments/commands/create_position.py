@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, datetime
 from typing import cast
 
 from application.dto.investment_position_dto import (
@@ -125,7 +125,7 @@ class CreatePositionHandler:
                 category_id=None,
                 transaction_type=TransactionType.TRANSFER,
                 amount=money,
-                transaction_date=date.today(),
+                transaction_date=datetime.now(UTC).date(),
                 description=f"Apartado a {saved_position.name}",
             )
             movement.position_id = saved_position.id

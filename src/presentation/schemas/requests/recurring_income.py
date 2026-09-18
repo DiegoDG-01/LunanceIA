@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from domain.objects.enums import Frequency
 
@@ -21,8 +21,8 @@ class CreateRecurringIncomeRequest(BaseModel):
     )
     description: str | None = Field(None, max_length=500, description="Descripción")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "account_uuid": "11111111-2222-3333-4444-555555555555",
                 "category_id": 3,
@@ -32,6 +32,7 @@ class CreateRecurringIncomeRequest(BaseModel):
                 "start_date": "2026-08-01",
             }
         }
+    )
 
 
 class UpdateRecurringIncomeRequest(BaseModel):
@@ -50,11 +51,12 @@ class UpdateRecurringIncomeRequest(BaseModel):
     description: str | None = Field(None, max_length=500, description="Descripción")
     category_id: int | None = Field(None, gt=0, description="ID de la categoría")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "Nómina nueva empresa",
                 "amount": 18000.00,
                 "frequency": "MONTHLY",
             }
         }
+    )

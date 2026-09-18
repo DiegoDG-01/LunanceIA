@@ -115,88 +115,88 @@ from .saving_goal_deps import (
 from .transfer_deps import get_create_transfer_handler
 
 __all__ = [
+    "get_account_by_id_handler",
     # Repositories
     "get_account_repository",
-    "get_user_repository",
-    "get_transaction_repository",
-    "get_category_repository",
-    "get_subscription_repository",
-    "get_subscription_charge_repository",
-    "get_credit_card_settings_repository",
-    "get_auth_token_repository",
-    "get_dashboard_repository",
     # Services
     "get_account_service",
-    "get_jwt_service",
-    # Account
-    "get_create_account_handler",
-    "get_update_account_handler",
-    "get_delete_account_handler",
-    "get_state_account_handler",
-    "get_user_accounts_handler",
-    "get_account_by_id_handler",
     "get_activity_account_handler",
-    # Transaction
-    "get_transactions_handler",
-    "get_transaction_by_uuid_handler",
-    "get_create_transaction_handler",
-    "get_update_transaction_handler",
-    "get_delete_transaction_handler",
-    # Subscription
-    "get_create_subscription_handler",
-    "get_update_subscription_handler",
-    "get_state_subscription_handler",
-    "get_subscriptions_handler",
-    "get_subscription_by_id_handler",
-    "get_subscription_charges_handler",
-    "get_delete_subscription_handler",
-    "get_last_transactions_handler",
-    # Recurring income handlers
-    "get_create_recurring_income_handler",
-    "get_update_recurring_income_handler",
-    "get_delete_recurring_income_handler",
-    "get_state_recurring_income_handler",
-    "get_recurring_incomes_handler",
-    "get_recurring_income_by_id_handler",
-    "get_income_deposits_handler",
-    # Category
-    "get_categories_handler",
-    # Dashboard
-    "get_dashboard_summary_handler",
-    "get_mobile_dashboard_summary_handler",
-    # Auth handlers
-    "get_login_handler",
-    "get_register_handler",
-    "get_refresh_token_handler",
-    "get_logout_handler",
-    # Auth validation
-    "get_current_user",
-    "get_current_active_user",
-    "validate_token",
-    # Bank
-    "get_banks_handler",
     # AI
     "get_analyze_image_handler",
-    "get_expense_advisor_handler",
-    # Notifications
-    "get_notifications_handler",
-    # Budget
-    "get_create_budget_handler",
-    "get_update_budget_handler",
-    "get_delete_budget_handler",
-    "get_state_budget_handler",
-    "get_budgets_handler",
+    "get_auth_token_repository",
+    # Bank
+    "get_banks_handler",
     "get_budget_by_id_handler",
     "get_budget_progress_handler",
     # Repositories
     "get_budget_repository",
+    "get_budgets_handler",
+    # Category
+    "get_categories_handler",
+    "get_category_repository",
+    # Account
+    "get_create_account_handler",
+    # Budget
+    "get_create_budget_handler",
+    # Recurring income handlers
+    "get_create_recurring_income_handler",
     # Saving Goals
     "get_create_saving_goal_handler",
-    "get_update_saving_goal_handler",
-    "get_delete_saving_goal_handler",
-    "get_state_saving_goal_handler",
-    "get_saving_goals_handler",
-    "get_saving_goals_by_id_handler",
+    # Subscription
+    "get_create_subscription_handler",
+    "get_create_transaction_handler",
     # Transfer
     "get_create_transfer_handler",
+    "get_credit_card_settings_repository",
+    "get_current_active_user",
+    # Auth validation
+    "get_current_user",
+    "get_dashboard_repository",
+    # Dashboard
+    "get_dashboard_summary_handler",
+    "get_delete_account_handler",
+    "get_delete_budget_handler",
+    "get_delete_recurring_income_handler",
+    "get_delete_saving_goal_handler",
+    "get_delete_subscription_handler",
+    "get_delete_transaction_handler",
+    "get_expense_advisor_handler",
+    "get_income_deposits_handler",
+    "get_jwt_service",
+    "get_last_transactions_handler",
+    # Auth handlers
+    "get_login_handler",
+    "get_logout_handler",
+    "get_mobile_dashboard_summary_handler",
+    # Notifications
+    "get_notifications_handler",
+    "get_recurring_income_by_id_handler",
+    "get_recurring_incomes_handler",
+    "get_refresh_token_handler",
+    "get_register_handler",
+    "get_saving_goals_by_id_handler",
+    "get_saving_goals_handler",
+    "get_state_account_handler",
+    "get_state_budget_handler",
+    "get_state_recurring_income_handler",
+    "get_state_saving_goal_handler",
+    "get_state_subscription_handler",
+    "get_subscription_by_id_handler",
+    "get_subscription_charge_repository",
+    "get_subscription_charges_handler",
+    "get_subscription_repository",
+    "get_subscriptions_handler",
+    "get_transaction_by_uuid_handler",
+    "get_transaction_repository",
+    # Transaction
+    "get_transactions_handler",
+    "get_update_account_handler",
+    "get_update_budget_handler",
+    "get_update_recurring_income_handler",
+    "get_update_saving_goal_handler",
+    "get_update_subscription_handler",
+    "get_update_transaction_handler",
+    "get_user_accounts_handler",
+    "get_user_repository",
+    "validate_token",
 ]

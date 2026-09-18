@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from domain.objects.enums import AccountType, TransactionType
 
@@ -14,9 +14,10 @@ class CreditCardSettingsResponse(BaseModel):
         None, description="Percentage de credito"
     )
 
-    class Config:
-        from_attributes = True
-        json_encoders = {Decimal: str}
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_encoders={Decimal: str},
+    )
 
 
 class AccountResponse(BaseModel):
@@ -33,9 +34,10 @@ class AccountResponse(BaseModel):
     is_active: bool = Field(..., description="Estado de la cuenta")
     credit_card_settings: CreditCardSettingsResponse | None = None
 
-    class Config:
-        from_attributes = True
-        json_encoders = {Decimal: str}
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_encoders={Decimal: str},
+    )
 
 
 class AccountListResponse(BaseModel):

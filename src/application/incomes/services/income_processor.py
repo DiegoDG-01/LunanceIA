@@ -3,19 +3,19 @@ from datetime import UTC, date, datetime
 from typing import cast
 
 from domain.entities.incomes.income_deposit import IncomeDeposit
-from domain.entities.notifications.notification import Notification
 from domain.entities.incomes.recurring_income import RecurringIncome
+from domain.entities.notifications.notification import Notification
 from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import NotificationType, TransactionType
 from domain.repositories.accounts.account_repository import AccountRepository
 from domain.repositories.incomes.income_deposit_repository import (
     IncomeDepositRepository,
 )
-from domain.repositories.notifications.notification_repository import (
-    NotificationRepository,
-)
 from domain.repositories.incomes.recurring_income_repository import (
     RecurringIncomeRepository,
+)
+from domain.repositories.notifications.notification_repository import (
+    NotificationRepository,
 )
 from domain.repositories.transactions.transaction_repository import (
     TransactionRepository,
@@ -60,14 +60,12 @@ class IncomeProcessor:
                     created = await self._process_income(income, today)
                     stats["created"] += created
                 except Exception as e:
-                    logger.error(
-                        f"Error processing income {income.id}: {e}", exc_info=True
-                    )
+                    logger.exception(f"Error processing income {income.id}: {e}")
                     stats["failed"] += 1
 
             logger.info(f"Processed {stats['processed']} incomes")
         except Exception as e:
-            logger.error(f"Error processing due incomes: {e}", exc_info=True)
+            logger.exception(f"Error processing due incomes: {e}")
             raise
 
         return stats
