@@ -7,10 +7,10 @@ from application.installments.commands.pay_installment_charge import (
     PayInstallmentChargeCommand,
     PayInstallmentChargeHandler,
 )
-from domain.entities.account import Account
-from domain.entities.installment_charge import InstallmentCharge
-from domain.entities.installment_purchase import InstallmentPurchase
-from domain.entities.transaction import Transaction
+from domain.entities.accounts.account import Account
+from domain.entities.installments.installment_charge import InstallmentCharge
+from domain.entities.installments.installment_purchase import InstallmentPurchase
+from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import AccountType, InstallmentType, TransactionType
 from domain.objects.money import Money
 from shared.exceptions.domain import (

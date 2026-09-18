@@ -7,8 +7,8 @@ from application.investments.queries.get_investment_yields import (
     GetInvestmentYieldsQuery,
     GetInvestmentYieldsHandler,
 )
-from domain.entities.account import Account
-from domain.entities.investment_yield import InvestmentYield
+from domain.entities.accounts.account import Account
+from domain.entities.investments.investment_yield import InvestmentYield
 from domain.objects.enums import AccountType, InterestType
 from domain.objects.money import Money
 from shared.exceptions.domain import AccountNotFoundError

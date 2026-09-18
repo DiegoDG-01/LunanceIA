@@ -2,10 +2,12 @@ from dataclasses import dataclass
 from typing import cast
 
 from application.dto.investment_yield_dto import InvestmentYieldResponseDTO
-from domain.repositories.investment_position_repository import (
+from domain.repositories.investments.investment_position_repository import (
     InvestmentPositionRepository,
 )
-from domain.repositories.investment_yield_repository import InvestmentYieldRepository
+from domain.repositories.investments.investment_yield_repository import (
+    InvestmentYieldRepository,
+)
 from shared.exceptions.domain import InvestmentPositionNotFoundError
 
 

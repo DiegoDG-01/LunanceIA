@@ -3,15 +3,19 @@ from dataclasses import dataclass
 from datetime import date
 from typing import cast
 
-from domain.entities.notification import Notification, NotificationType
-from domain.entities.transaction import Transaction
+from domain.entities.notifications.notification import Notification, NotificationType
+from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import MaturityAction, TransactionType
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.investment_position_repository import (
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.investments.investment_position_repository import (
     InvestmentPositionRepository,
 )
-from domain.repositories.notification_repository import NotificationRepository
-from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.notifications.notification_repository import (
+    NotificationRepository,
+)
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 
 logger = logging.getLogger(__name__)

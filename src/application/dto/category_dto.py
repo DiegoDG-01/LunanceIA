@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from domain.entities.category import Category
+from domain.entities.categories.category import Category
 
 
 @dataclass

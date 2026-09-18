@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from domain.repositories.saving_goal_repository import SavingGoalRepository
+from domain.repositories.goals.saving_goal_repository import SavingGoalRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.exceptions.domain import SavingGoalNotFoundError
 

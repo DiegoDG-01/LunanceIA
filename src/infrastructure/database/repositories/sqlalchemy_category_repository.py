@@ -1,8 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.category import Category
-from domain.repositories.category_repository import CategoryRepository
+from domain.entities.categories.category import Category
+from domain.repositories.categories.category_repository import CategoryRepository
 from infrastructure.database.models.category import CategoryModel
 from shared.exceptions.domain import CategoryNotFoundError
 

@@ -1,9 +1,9 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.installment_purchase import InstallmentPurchase
+from domain.entities.installments.installment_purchase import InstallmentPurchase
 from domain.objects.money import Money
-from domain.repositories.installment_purchase_repository import (
+from domain.repositories.installments.installment_purchase_repository import (
     InstallmentPurchaseRepository,
 )
 from infrastructure.database.models.installment import InstallmentPurchaseModel

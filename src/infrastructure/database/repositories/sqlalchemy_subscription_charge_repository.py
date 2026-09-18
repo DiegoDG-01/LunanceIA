@@ -4,10 +4,10 @@ from typing import cast
 from sqlalchemy import and_, asc, desc, extract, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.subscription_charge import SubscriptionCharge
+from domain.entities.subscriptions.subscription_charge import SubscriptionCharge
 from domain.objects.enums import TransactionStatus
 from domain.objects.money import Money
-from domain.repositories.subscription_charge_repository import (
+from domain.repositories.subscriptions.subscription_charge_repository import (
     SubscriptionChargeRepository,
 )
 from infrastructure.database.models import (

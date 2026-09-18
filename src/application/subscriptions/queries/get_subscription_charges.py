@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from application.dto.subscription_dto import SubscriptionChargeDetailResponseDTO
-from domain.repositories.subscription_charge_repository import (
+from domain.repositories.subscriptions.subscription_charge_repository import (
     SubscriptionChargeRepository,
 )
 

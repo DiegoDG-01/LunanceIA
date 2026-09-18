@@ -3,9 +3,11 @@ from datetime import date
 from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.recurring_income import RecurringIncome
+from domain.entities.incomes.recurring_income import RecurringIncome
 from domain.objects.money import Money
-from domain.repositories.recurring_income_repository import RecurringIncomeRepository
+from domain.repositories.incomes.recurring_income_repository import (
+    RecurringIncomeRepository,
+)
 from infrastructure.database.models import AccountModel
 from infrastructure.database.models.recurring_income import RecurringIncomeModel
 from shared.exceptions.domain import RecurringIncomeNotFoundError

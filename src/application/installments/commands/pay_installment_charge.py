@@ -4,17 +4,19 @@ from datetime import date
 from typing import cast
 
 from application.dto.installment_dto import InstallmentChargeResponseDTO
-from domain.entities.transaction import Transaction
+from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import AccountType, TransactionType
 from domain.objects.money import Money
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.installment_charge_repository import (
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.installments.installment_charge_repository import (
     InstallmentChargeRepository,
 )
-from domain.repositories.installment_purchase_repository import (
+from domain.repositories.installments.installment_purchase_repository import (
     InstallmentPurchaseRepository,
 )
-from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.exceptions.domain import (
     AccountNotFoundError,

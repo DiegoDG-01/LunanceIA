@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 
 from application.dto.budget_dto import BudgetResponseDTO, CreateBudgetDTO
-from domain.entities.budget import Budget
-from domain.repositories.budget_repository import BudgetRepository
-from domain.repositories.category_repository import CategoryRepository
+from domain.entities.budgets.budget import Budget
+from domain.repositories.budgets.budget_repository import BudgetRepository
+from domain.repositories.categories.category_repository import CategoryRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from domain.repositories.user_repository import UserRepository
+from domain.repositories.users.user_repository import UserRepository
 from shared.exceptions.domain import CategoryNotFoundError, UserNotFoundError
 
 

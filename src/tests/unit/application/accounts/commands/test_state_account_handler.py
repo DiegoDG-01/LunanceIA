@@ -7,8 +7,8 @@ from application.accounts.commands.state_account import (
     StateAccountCommand,
     StateAccountHandler,
 )
-from domain.entities.account import Account
-from domain.entities.bank import Bank
+from domain.entities.accounts.account import Account
+from domain.entities.banks.bank import Bank
 from domain.objects.enums import AccountType
 from domain.objects.money import Money
 from domain.services.account_service import AccountService

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from domain.entities.api_key import APIKey
+from domain.entities.auth.api_key import APIKey
 
 
 @dataclass

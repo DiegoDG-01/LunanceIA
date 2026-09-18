@@ -1,7 +1,7 @@
 """Unit tests for Bank entity."""
 
 import pytest
-from domain.entities.bank import Bank
+from domain.entities.banks.bank import Bank
 
 
 @pytest.mark.unit

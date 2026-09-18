@@ -9,8 +9,8 @@ from application.investments.queries.get_investment_yields import (
 )
 from infrastructure.database.connection import get_db
 
-# from domain.entities.investment_yield import InvestmentYield
-# from domain.repositories.investment_yield_repository import InvestmentYieldRepository
+# from domain.entities.investments.investment_yield import InvestmentYield
+# from domain.repositories.investments.investment_yield_repository import InvestmentYieldRepository
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
 )

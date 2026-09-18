@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from domain.entities.dashboard import DashboardSummary
-from domain.repositories.dashboard_repository import DashboardRepository
+from application.dashboard.dashboard_repository import DashboardRepository
+from application.dashboard.read_models import DashboardSummary
 
 
 @dataclass

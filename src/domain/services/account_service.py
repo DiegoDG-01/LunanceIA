@@ -1,5 +1,5 @@
-from domain.entities.account import Account
-from domain.entities.transaction import Transaction
+from domain.entities.accounts.account import Account
+from domain.entities.transactions.transaction import Transaction
 from domain.objects.money import Money
 
 

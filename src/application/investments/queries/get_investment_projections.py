@@ -9,10 +9,10 @@ from application.dto.investment_yield_dto import (
     ProjectionDayDTO,
 )
 from application.investments.queries.get_position_projections import project_position
-from domain.entities.investment_position import InvestmentPosition
+from domain.entities.investments.investment_position import InvestmentPosition
 from domain.objects.enums import PositionStatus
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.investment_position_repository import (
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.investments.investment_position_repository import (
     InvestmentPositionRepository,
 )
 from shared.exceptions.domain import AccountNotFoundError

@@ -1,7 +1,7 @@
 from fastapi import Depends
 
 from application.interfaces.auth_service import AuthTokenServiceInterface
-from domain.repositories.auth_token_repository import AuthTokenRepository
+from domain.repositories.auth.auth_token_repository import AuthTokenRepository
 from domain.services.account_service import AccountService
 from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,

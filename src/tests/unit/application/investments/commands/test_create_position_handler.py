@@ -12,8 +12,8 @@ from application.investments.commands.create_position import (
 )
 from application.dto.investment_position_dto import CreatePositionDTO
 from application.investments.services.position_overflow import PositionOverflowService
-from domain.entities.account import Account
-from domain.entities.investment_position import InvestmentPosition
+from domain.entities.accounts.account import Account
+from domain.entities.investments.investment_position import InvestmentPosition
 from domain.objects.enums import (
     AccountType,
     OverflowAction,

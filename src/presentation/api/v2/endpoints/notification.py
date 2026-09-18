@@ -6,7 +6,7 @@ from application.notifications.queries.get_and_clear_notifications import (
     GetAndClearNotificationsHandler,
     GetAndClearNotificationsQuery,
 )
-from domain.entities.user import User
+from domain.entities.users.user import User
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,
     limiter_5_per_minute,

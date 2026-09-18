@@ -7,8 +7,8 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.refresh_token import RefreshToken
-from domain.repositories.auth_token_repository import AuthTokenRepository
+from domain.entities.auth.refresh_token import RefreshToken
+from domain.repositories.auth.auth_token_repository import AuthTokenRepository
 from infrastructure.database.models.refresh_token import RefreshTokenModel
 from shared.exceptions.application import RepositoryError
 

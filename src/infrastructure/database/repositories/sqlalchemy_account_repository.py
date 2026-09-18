@@ -1,10 +1,10 @@
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.account import Account
+from domain.entities.accounts.account import Account
 from domain.objects.credit_card_settings import CreditCardSettings
 from domain.objects.money import Money
-from domain.repositories.account_repository import AccountRepository
+from domain.repositories.accounts.account_repository import AccountRepository
 from infrastructure.database.models import (
     BankModel,
     CreditCardSettingsModel,

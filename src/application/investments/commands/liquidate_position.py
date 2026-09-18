@@ -6,17 +6,21 @@ from application.dto.investment_position_dto import (
     LiquidatePositionDTO,
     LiquidatePositionResponseDTO,
 )
-from domain.entities.notification import Notification, NotificationType
-from domain.entities.transaction import Transaction
+from domain.entities.notifications.notification import Notification, NotificationType
+from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import TransactionType
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.investment_position_repository import (
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.investments.investment_position_repository import (
     InvestmentPositionRepository,
 )
-from domain.repositories.notification_repository import NotificationRepository
-from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.notifications.notification_repository import (
+    NotificationRepository,
+)
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from domain.repositories.user_repository import UserRepository
+from domain.repositories.users.user_repository import UserRepository
 from shared.exceptions.domain import (
     AccountNotFoundError,
     InvestmentPositionNotFoundError,

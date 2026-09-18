@@ -7,8 +7,8 @@ from application.transactions.commands.update_transaction import (
     UpdateTransactionCommand,
     UpdateTransactionCommandHandler,
 )
-from domain.entities.account import Account
-from domain.entities.transaction import Transaction
+from domain.entities.accounts.account import Account
+from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import AccountType, TransactionType
 from domain.objects.money import Money
 from application.dto.transaction_dto import TransactionResponseDTO

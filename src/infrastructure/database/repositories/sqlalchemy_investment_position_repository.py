@@ -3,10 +3,10 @@ from datetime import date
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.investment_position import InvestmentPosition
+from domain.entities.investments.investment_position import InvestmentPosition
 from domain.objects.enums import PositionStatus, PositionType
 from domain.objects.money import Money
-from domain.repositories.investment_position_repository import (
+from domain.repositories.investments.investment_position_repository import (
     InvestmentPositionRepository,
 )
 from infrastructure.database.models.account import AccountModel

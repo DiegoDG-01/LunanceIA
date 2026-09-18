@@ -4,7 +4,7 @@ from application.categories.queries.get_categories import (
     GetCategoriesHandler,
     GetCategoriesQuery,
 )
-from domain.entities.user import User
+from domain.entities.users.user import User
 from domain.objects.enums import APIKeyScope
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,

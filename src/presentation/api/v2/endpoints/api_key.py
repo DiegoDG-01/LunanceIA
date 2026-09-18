@@ -19,7 +19,7 @@ from application.api_keys.queries.list_api_keys import (
     ListAPIKeysQuery,
 )
 from application.dto.api_key_dto import CreateAPIKeyDTO
-from domain.entities.user import User
+from domain.entities.users.user import User
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,
     limiter_10_per_minute,

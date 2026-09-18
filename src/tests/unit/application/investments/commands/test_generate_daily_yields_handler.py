@@ -11,8 +11,8 @@ from application.investments.commands.generate_daily_yields import (
     GenerateDailyYieldHandler,
 )
 from application.investments.services.position_overflow import PositionOverflowService
-from domain.entities.account import Account
-from domain.entities.investment_position import InvestmentPosition
+from domain.entities.accounts.account import Account
+from domain.entities.investments.investment_position import InvestmentPosition
 from domain.objects.enums import AccountType, InterestType, OverflowAction, PositionType
 from domain.objects.money import Money
 from shared.utils.date import get_year_day_basis

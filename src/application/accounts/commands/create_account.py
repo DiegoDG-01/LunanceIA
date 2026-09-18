@@ -2,15 +2,17 @@ from dataclasses import dataclass
 from typing import cast
 
 from application.dto.account_dto import AccountResponseDTO, CreateAccountDTO
-from domain.entities.account import Account
+from domain.entities.accounts.account import Account
 from domain.objects.credit_card_settings import CreditCardSettings
 from domain.objects.enums import AccountType
 from domain.objects.money import Money
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.bank_repository import BankRepository
-from domain.repositories.credit_card_repository import CreditCardSettingsRepository
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.banks.bank_repository import BankRepository
+from domain.repositories.accounts.credit_card_repository import (
+    CreditCardSettingsRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from domain.repositories.user_repository import UserRepository
+from domain.repositories.users.user_repository import UserRepository
 from shared.exceptions.domain import (
     InvalidAccountSettingsError,
     UserInactiveError,

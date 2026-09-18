@@ -5,7 +5,9 @@ from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
 
 from application.ai.schemas.expense_analysis import ExpenseAnalysis
 from application.interfaces.ai_agent import AIAgentInterface
-from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from shared.exceptions.domain import (
     AIInvalidResponseError,
     AIServiceError,

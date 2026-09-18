@@ -4,13 +4,15 @@ from decimal import Decimal
 from typing import cast
 
 from application.dto.transaction_dto import TransactionResponseDTO
-from domain.entities.transaction import TransactionType
+from domain.entities.transactions.transaction import TransactionType
 from domain.objects.money import Money
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.installment_purchase_repository import (
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.installments.installment_purchase_repository import (
     InstallmentPurchaseRepository,
 )
-from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.exceptions.domain import (
     AccountNotFoundError,

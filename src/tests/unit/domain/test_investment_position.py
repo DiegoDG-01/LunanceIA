@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 
-from domain.entities.investment_position import InvestmentPosition
+from domain.entities.investments.investment_position import InvestmentPosition
 from domain.objects.enums import (
     InterestType,
     MaturityAction,

@@ -2,13 +2,15 @@ from fastapi import Depends
 
 from application.transfers.commands.create_transfer import CreateTransferHandler
 from application.transfers.commands.delete_transfer import DeleteTransferHandler
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.installment_charge_repository import (
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.installments.installment_charge_repository import (
     InstallmentChargeRepository,
 )
-from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from domain.repositories.user_repository import UserRepository
+from domain.repositories.users.user_repository import UserRepository
 from presentation.dependencies.repositories import (
     get_account_repository,
     get_installment_charge_repository,

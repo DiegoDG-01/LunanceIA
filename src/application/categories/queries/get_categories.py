@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from application.dto.category_dto import CategoryResponseDTO
-from domain.repositories.category_repository import CategoryRepository
+from domain.repositories.categories.category_repository import CategoryRepository
 
 
 @dataclass

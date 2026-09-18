@@ -9,7 +9,7 @@ from application.ai.queries.expense_advisor import (
 )
 from application.ai.schemas.expense_analysis import ExpenseAnalysis
 from application.ai.schemas.image_analysis import ImageAnalysis
-from domain.entities.user import User
+from domain.entities.users.user import User
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,
     limiter_1_per_day,

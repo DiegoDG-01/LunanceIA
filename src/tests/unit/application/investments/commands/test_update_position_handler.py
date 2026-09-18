@@ -12,8 +12,8 @@ from application.investments.commands.update_position import (
     UpdatePositionHandler,
 )
 from application.investments.services.position_overflow import PositionOverflowService
-from domain.entities.account import Account
-from domain.entities.investment_position import InvestmentPosition
+from domain.entities.accounts.account import Account
+from domain.entities.investments.investment_position import InvestmentPosition
 from domain.objects.enums import AccountType, OverflowAction, PositionType
 from domain.objects.money import Money
 from shared.exceptions.domain import (

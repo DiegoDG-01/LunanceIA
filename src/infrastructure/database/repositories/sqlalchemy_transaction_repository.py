@@ -3,10 +3,12 @@ from datetime import date
 from sqlalchemy import and_, case, delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.transaction import Transaction
+from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import AccountType, TransactionType
 from domain.objects.money import Money
-from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from infrastructure.database.models.account import AccountModel
 from infrastructure.database.models.category import CategoryModel
 from infrastructure.database.models.transaction import TransactionModel

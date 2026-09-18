@@ -38,7 +38,7 @@ from application.subscriptions.queries.get_subscriptions_by_id import (
     GetSubscriptionsByIdHandler,
     GetSubscriptionsByIdQuery,
 )
-from domain.entities.user import User
+from domain.entities.users.user import User
 from domain.objects.enums import APIKeyScope
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,

@@ -2,7 +2,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.objects.credit_card_settings import CreditCardSettings
-from domain.repositories.credit_card_repository import CreditCardSettingsRepository
+from domain.repositories.accounts.credit_card_repository import (
+    CreditCardSettingsRepository,
+)
 from infrastructure.database.models.credit_card import CreditCardSettingsModel
 from shared.exceptions.domain import CreditCardSettingsNotFoundError
 

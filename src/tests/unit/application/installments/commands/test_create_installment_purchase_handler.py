@@ -8,11 +8,11 @@ from application.installments.commands.create_installment_purchase import (
     CreateInstallmentPurchaseHandler,
 )
 from application.dto.installment_dto import CreateInstallmentPurchaseDTO
-from domain.entities.account import Account
-from domain.entities.user import User
-from domain.entities.installment_purchase import InstallmentPurchase
-from domain.entities.installment_charge import InstallmentCharge
-from domain.entities.transaction import Transaction
+from domain.entities.accounts.account import Account
+from domain.entities.users.user import User
+from domain.entities.installments.installment_purchase import InstallmentPurchase
+from domain.entities.installments.installment_charge import InstallmentCharge
+from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import AccountType, InstallmentType, TransactionType
 from domain.objects.money import Money
 from shared.exceptions.domain import (

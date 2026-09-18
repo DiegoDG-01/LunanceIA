@@ -2,8 +2,10 @@ from dataclasses import dataclass
 from typing import cast
 
 from application.dto.investment_yield_dto import InvestmentYieldResponseDTO
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.investment_yield_repository import InvestmentYieldRepository
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.investments.investment_yield_repository import (
+    InvestmentYieldRepository,
+)
 from shared.exceptions.domain import AccountNotFoundError
 
 

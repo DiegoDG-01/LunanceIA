@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock, AsyncMock
 
 from application.auth.commands.logout import LogoutCommand, LogoutHandler, LogoutResponse
-from domain.entities.user import User
+from domain.entities.users.user import User
 from shared.exceptions.application import CommandValidationError
 
 

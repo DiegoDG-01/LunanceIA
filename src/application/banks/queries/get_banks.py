@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from application.dto.bank_dto import BankResponseDTO
-from domain.repositories.bank_repository import BankRepository
+from domain.repositories.banks.bank_repository import BankRepository
 
 
 @dataclass

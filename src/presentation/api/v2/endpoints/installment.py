@@ -23,7 +23,7 @@ from application.installments.queries.get_installment_purchases import (
     GetInstallmentPurchasesHandler,
     GetInstallmentPurchasesQuery,
 )
-from domain.entities.user import User
+from domain.entities.users.user import User
 from domain.objects.enums import APIKeyScope
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,

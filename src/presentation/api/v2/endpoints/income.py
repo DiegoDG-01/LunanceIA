@@ -34,7 +34,7 @@ from application.incomes.queries.get_recurring_incomes import (
     GetRecurringIncomesHandler,
     GetRecurringIncomesQuery,
 )
-from domain.entities.user import User
+from domain.entities.users.user import User
 from domain.objects.enums import APIKeyScope
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,

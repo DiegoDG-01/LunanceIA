@@ -8,7 +8,7 @@ from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
 from application.ai.schemas.image_analysis import ImageAnalysis
 from application.interfaces.ai_agent import AIAgentInterface
 from application.interfaces.uploaded_file import UploadedFileInterface
-from domain.repositories.category_repository import CategoryRepository
+from domain.repositories.categories.category_repository import CategoryRepository
 from shared.exceptions.domain import (
     AIInvalidResponseError,
     AIServiceError,

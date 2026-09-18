@@ -1,8 +1,8 @@
 from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.installment_charge import InstallmentCharge
-from domain.repositories.installment_charge_repository import (
+from domain.entities.installments.installment_charge import InstallmentCharge
+from domain.repositories.installments.installment_charge_repository import (
     InstallmentChargeRepository,
 )
 from infrastructure.database.models import InstallmentPurchaseModel

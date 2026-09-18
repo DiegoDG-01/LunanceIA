@@ -5,7 +5,7 @@ from application.dto.account_dto import (
     AccountResponseDTO,
     CreditCardSettingsDTO,
 )
-from domain.repositories.account_repository import AccountRepository
+from domain.repositories.accounts.account_repository import AccountRepository
 from shared.exceptions.domain import AccountNotFoundError
 
 

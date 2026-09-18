@@ -1,0 +1,1 @@
+"""Installment domain entities."""

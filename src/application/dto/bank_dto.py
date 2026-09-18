@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from domain.entities.bank import Bank
+from domain.entities.banks.bank import Bank
 
 
 @dataclass

@@ -6,14 +6,14 @@ from application.dto.installment_dto import (
     InstallmentChargeResponseDTO,
     InstallmentPurchaseResponseDTO,
 )
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.installment_charge_repository import (
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.installments.installment_charge_repository import (
     InstallmentChargeRepository,
 )
-from domain.repositories.installment_purchase_repository import (
+from domain.repositories.installments.installment_purchase_repository import (
     InstallmentPurchaseRepository,
 )
-from domain.repositories.user_repository import UserRepository
+from domain.repositories.users.user_repository import UserRepository
 from shared.exceptions.domain import UserNotFoundError
 
 

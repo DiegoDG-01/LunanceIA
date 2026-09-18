@@ -4,8 +4,8 @@ from datetime import UTC, datetime
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.api_key import APIKey
-from domain.repositories.api_key_repository import APIKeyRepository
+from domain.entities.auth.api_key import APIKey
+from domain.repositories.auth.api_key_repository import APIKeyRepository
 from infrastructure.database.models.api_key import APIKeyModel
 
 logger = logging.getLogger(__name__)

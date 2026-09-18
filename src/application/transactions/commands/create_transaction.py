@@ -3,14 +3,16 @@ from datetime import date
 from typing import cast
 
 from application.dto.transaction_dto import CreateTransactionDTO, TransactionResponseDTO
-from domain.entities.transaction import Transaction
+from domain.entities.transactions.transaction import Transaction
 from domain.objects.money import Money
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.bank_repository import BankRepository
-from domain.repositories.category_repository import CategoryRepository
-from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.banks.bank_repository import BankRepository
+from domain.repositories.categories.category_repository import CategoryRepository
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from domain.repositories.user_repository import UserRepository
+from domain.repositories.users.user_repository import UserRepository
 from shared.exceptions.domain import (
     AccountNotFoundError,
     InvalidTransactionTypeError,

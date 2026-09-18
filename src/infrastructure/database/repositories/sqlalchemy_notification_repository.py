@@ -1,9 +1,11 @@
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.notification import Notification
+from domain.entities.notifications.notification import Notification
 from domain.objects.enums import NotificationType
-from domain.repositories.notification_repository import NotificationRepository
+from domain.repositories.notifications.notification_repository import (
+    NotificationRepository,
+)
 from infrastructure.database.models.notifications import NotificationModel
 
 

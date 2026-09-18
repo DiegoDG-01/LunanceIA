@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
 
-from domain.entities.saving_goal import SavingGoal
+from domain.entities.goals.saving_goal import SavingGoal
 
 
 @dataclass

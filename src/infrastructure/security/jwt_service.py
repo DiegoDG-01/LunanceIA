@@ -8,8 +8,8 @@ from jose import JWTError, jwt
 from sqlalchemy.exc import SQLAlchemyError
 
 from application.interfaces.auth_service import AuthTokenServiceInterface
-from domain.repositories.auth_token_repository import AuthTokenRepository
-from domain.repositories.user_repository import UserRepository
+from domain.repositories.auth.auth_token_repository import AuthTokenRepository
+from domain.repositories.users.user_repository import UserRepository
 from infrastructure.config.settings import settings
 from shared.exceptions.application import JWTValidationError, RepositoryError
 

@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 
 from application.auth.commands.login import LoginCommand, LoginHandler
 from application.auth.commands.register import RegisterCommand, RegisterHandler
-from domain.entities.user import User
+from domain.entities.users.user import User
 from presentation.schemas.requests.auth import (
     LoginRequest,
     RegisterRequest,

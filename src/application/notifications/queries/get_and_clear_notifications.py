@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 
-from domain.entities.notification import Notification
-from domain.repositories.notification_repository import NotificationRepository
+from domain.entities.notifications.notification import Notification
+from domain.repositories.notifications.notification_repository import (
+    NotificationRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 
 

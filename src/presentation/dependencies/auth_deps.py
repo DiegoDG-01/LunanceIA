@@ -11,7 +11,7 @@ from jose import ExpiredSignatureError, JWTError, jwt
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.user import User
+from domain.entities.users.user import User
 from infrastructure.config.settings import settings
 from infrastructure.database.connection import get_db
 from infrastructure.database.repositories.sqlalchemy_api_key_repository import (

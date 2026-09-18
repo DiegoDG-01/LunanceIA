@@ -5,9 +5,9 @@ from application.accounts.commands.create_account import (
     CreateAccountHandler,
 )
 from application.dto.account_dto import CreateAccountDTO
-from domain.entities.user import User
-from domain.entities.account import Account
-from domain.entities.bank import Bank
+from domain.entities.users.user import User
+from domain.entities.accounts.account import Account
+from domain.entities.banks.bank import Bank
 from domain.objects.money import Money
 from domain.objects.enums import AccountType
 from decimal import Decimal

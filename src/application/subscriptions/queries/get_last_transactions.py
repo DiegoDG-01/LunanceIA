@@ -2,10 +2,12 @@ from dataclasses import dataclass
 from typing import cast
 
 from application.dto.subscription_dto import SubscriptionLastTransactionsResponseDTO
-from domain.repositories.subscription_charge_repository import (
+from domain.repositories.subscriptions.subscription_charge_repository import (
     SubscriptionChargeRepository,
 )
-from domain.repositories.subscription_repository import SubscriptionRepository
+from domain.repositories.subscriptions.subscription_repository import (
+    SubscriptionRepository,
+)
 from shared.exceptions.domain import (
     SubscriptionNotFoundError,
 )

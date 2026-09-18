@@ -10,7 +10,7 @@ from application.dashboard.queries.get_mobile_dashboard_summary import (
     GetMobileDashboardSummaryHandler,
     GetMobileDashboardSummaryQuery,
 )
-from domain.entities.user import User
+from domain.entities.users.user import User
 from domain.objects.enums import APIKeyScope
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,

@@ -1,8 +1,12 @@
 from dataclasses import dataclass
 
 from application.dto.recurring_income_dto import IncomeDepositResponseDTO
-from domain.repositories.income_deposit_repository import IncomeDepositRepository
-from domain.repositories.recurring_income_repository import RecurringIncomeRepository
+from domain.repositories.incomes.income_deposit_repository import (
+    IncomeDepositRepository,
+)
+from domain.repositories.incomes.recurring_income_repository import (
+    RecurringIncomeRepository,
+)
 from shared.exceptions.domain import RecurringIncomeNotFoundError
 
 

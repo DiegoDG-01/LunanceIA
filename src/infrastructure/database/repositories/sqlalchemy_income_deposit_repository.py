@@ -4,9 +4,11 @@ from typing import cast
 from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.income_deposit import IncomeDeposit
+from domain.entities.incomes.income_deposit import IncomeDeposit
 from domain.objects.money import Money
-from domain.repositories.income_deposit_repository import IncomeDepositRepository
+from domain.repositories.incomes.income_deposit_repository import (
+    IncomeDepositRepository,
+)
 from infrastructure.database.models import IncomeDepositModel, TransactionModel
 from shared.exceptions.domain import (
     IncomeDepositNotFoundError,

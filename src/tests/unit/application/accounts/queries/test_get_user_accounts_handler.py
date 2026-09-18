@@ -7,7 +7,7 @@ from application.accounts.queries.get_user_accounts import (
     GetUserAccountsQuery,
     GetUserAccountsHandler,
 )
-from domain.entities.account import Account
+from domain.entities.accounts.account import Account
 from domain.objects.enums import AccountType
 from domain.objects.money import Money
 

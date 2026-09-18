@@ -10,9 +10,9 @@ from application.subscriptions.commands.update_subscription import (
     UpdateSubscriptionHandler,
 )
 from application.dto.subscription_dto import UpdateSubscriptionDTO
-from domain.entities.account import Account
-from domain.entities.category import Category
-from domain.entities.subscription import Subscription
+from domain.entities.accounts.account import Account
+from domain.entities.categories.category import Category
+from domain.entities.subscriptions.subscription import Subscription
 from domain.objects.enums import AccountType, Frequency
 from domain.objects.money import Money
 from shared.exceptions.domain import (

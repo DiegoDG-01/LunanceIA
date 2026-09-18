@@ -4,9 +4,9 @@ from decimal import Decimal
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.budget import Budget
+from domain.entities.budgets.budget import Budget
 from domain.objects.enums import BudgetPeriod, TransactionType
-from domain.repositories.budget_repository import BudgetRepository
+from domain.repositories.budgets.budget_repository import BudgetRepository
 from infrastructure.database.models.budget import BudgetModel
 from infrastructure.database.models.transaction import TransactionModel
 from shared.exceptions.domain import BudgetNotFoundError

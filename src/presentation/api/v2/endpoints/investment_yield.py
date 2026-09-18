@@ -10,7 +10,7 @@ from application.investments.queries.get_investment_yields import (
     GetInvestmentYieldsHandler,
     GetInvestmentYieldsQuery,
 )
-from domain.entities.user import User
+from domain.entities.users.user import User
 from domain.objects.enums import APIKeyScope
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,

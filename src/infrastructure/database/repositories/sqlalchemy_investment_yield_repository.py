@@ -3,8 +3,10 @@ from datetime import date
 from sqlalchemy import and_, asc, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.investment_yield import InvestmentYield
-from domain.repositories.investment_yield_repository import InvestmentYieldRepository
+from domain.entities.investments.investment_yield import InvestmentYield
+from domain.repositories.investments.investment_yield_repository import (
+    InvestmentYieldRepository,
+)
 from infrastructure.database.models.investment_yield import InvestmentYieldModel
 
 

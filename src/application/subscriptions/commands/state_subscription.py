@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 
 from application.dto.subscription_dto import SubscriptionResponseDTO
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.category_repository import CategoryRepository
-from domain.repositories.subscription_repository import SubscriptionRepository
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.categories.category_repository import CategoryRepository
+from domain.repositories.subscriptions.subscription_repository import (
+    SubscriptionRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.exceptions.domain import SubscriptionNotFoundError
 

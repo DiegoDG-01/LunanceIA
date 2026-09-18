@@ -10,7 +10,7 @@ from application.investments.services.position_overflow import (
     MAX_OVERFLOW_HOPS,
     PositionOverflowService,
 )
-from domain.entities.investment_position import InvestmentPosition
+from domain.entities.investments.investment_position import InvestmentPosition
 from domain.objects.enums import OverflowAction, PositionType
 from domain.objects.money import Money
 from shared.exceptions.domain import InvalidOverflowTargetError

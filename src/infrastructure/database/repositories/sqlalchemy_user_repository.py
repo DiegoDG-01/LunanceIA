@@ -3,8 +3,8 @@ from datetime import UTC, datetime
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.user import User
-from domain.repositories.user_repository import UserRepository
+from domain.entities.users.user import User
+from domain.repositories.users.user_repository import UserRepository
 from infrastructure.database.models.user import UserModel
 from shared.exceptions.domain import UserNotFoundError
 

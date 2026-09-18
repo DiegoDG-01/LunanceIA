@@ -31,7 +31,7 @@ from application.transactions.queries.get_transactions import (
     GetTransactionsHandler,
     GetTransactionsQuery,
 )
-from domain.entities.user import User
+from domain.entities.users.user import User
 from domain.objects.enums import APIKeyScope, TransactionType
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,

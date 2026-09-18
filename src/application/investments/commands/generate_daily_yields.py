@@ -5,16 +5,20 @@ from decimal import Decimal
 from typing import cast
 
 from application.investments.services.position_overflow import PositionOverflowService
-from domain.entities.investment_yield import InvestmentYield
-from domain.entities.transaction import Transaction
+from domain.entities.investments.investment_yield import InvestmentYield
+from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import InterestType, PositionStatus, TransactionType
 from domain.objects.money import Money
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.investment_position_repository import (
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.investments.investment_position_repository import (
     InvestmentPositionRepository,
 )
-from domain.repositories.investment_yield_repository import InvestmentYieldRepository
-from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.investments.investment_yield_repository import (
+    InvestmentYieldRepository,
+)
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.utils.date import get_year_day_basis
 

@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
 from application.dto.budget_dto import BudgetProgressDTO
-from domain.repositories.budget_repository import BudgetRepository
-from domain.repositories.category_repository import CategoryRepository
+from domain.repositories.budgets.budget_repository import BudgetRepository
+from domain.repositories.categories.category_repository import CategoryRepository
 from shared.exceptions.domain import BudgetNotFoundError
 
 

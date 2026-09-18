@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 from typing import cast
 
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.services.account_service import AccountService
 from shared.exceptions.domain import (

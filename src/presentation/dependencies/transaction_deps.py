@@ -13,11 +13,13 @@ from application.transactions.queries.get_transaction_by_uuid import (
     GetTransactionByUuidHandler,
 )
 from application.transactions.queries.get_transactions import GetTransactionsHandler
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.installment_purchase_repository import (
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.installments.installment_purchase_repository import (
     InstallmentPurchaseRepository,
 )
-from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,

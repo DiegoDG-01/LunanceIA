@@ -10,8 +10,8 @@ from application.investments.queries.get_investment_projections import (
     GetInvestmentProjectionsQuery,
     GetInvestmentProjectionsHandler,
 )
-from domain.entities.account import Account
-from domain.entities.investment_position import InvestmentPosition
+from domain.entities.accounts.account import Account
+from domain.entities.investments.investment_position import InvestmentPosition
 from domain.objects.enums import AccountType, PositionType
 from domain.objects.money import Money
 from shared.exceptions.domain import AccountNotFoundError

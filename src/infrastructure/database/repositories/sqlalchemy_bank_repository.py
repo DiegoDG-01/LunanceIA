@@ -1,8 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.bank import Bank
-from domain.repositories.bank_repository import BankRepository
+from domain.entities.banks.bank import Bank
+from domain.repositories.banks.bank_repository import BankRepository
 from infrastructure.database.models.bank import BankModel
 from shared.exceptions.domain import BankNotFoundError
 

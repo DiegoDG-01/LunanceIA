@@ -5,7 +5,7 @@ from application.auth.commands.logout import LogoutHandler
 from application.auth.commands.refresh_token import RefreshTokenHandler
 from application.auth.commands.register import RegisterHandler
 from application.interfaces.auth_service import AuthConfig, AuthTokenServiceInterface
-from domain.repositories.auth_token_repository import AuthTokenRepository
+from domain.repositories.auth.auth_token_repository import AuthTokenRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.config.settings import settings
 from infrastructure.database.repositories.sqlalchemy_user_repository import (

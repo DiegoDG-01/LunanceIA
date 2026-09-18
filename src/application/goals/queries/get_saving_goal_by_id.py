@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
 from application.dto.saving_goal_dto import SavingGoalResponseDTO
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.saving_goal_repository import SavingGoalRepository
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.goals.saving_goal_repository import SavingGoalRepository
 from shared.exceptions.domain import AccountNotFoundError, SavingGoalNotFoundError
 
 

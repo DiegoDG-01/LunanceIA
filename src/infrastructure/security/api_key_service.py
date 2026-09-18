@@ -1,10 +1,10 @@
 import hashlib
 from datetime import UTC, datetime
 
-from domain.entities.user import User
-from domain.repositories.api_key_repository import APIKeyRepository
+from domain.entities.users.user import User
+from domain.repositories.auth.api_key_repository import APIKeyRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from domain.repositories.user_repository import UserRepository
+from domain.repositories.users.user_repository import UserRepository
 from shared.exceptions.base import UnauthorizedError
 
 

@@ -4,13 +4,15 @@ from datetime import UTC, date, datetime
 from typing import cast
 
 from application.dto.transaction_dto import CreateTransferDTO, TransferResponseDTO
-from domain.entities.transaction import Transaction
+from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import AccountType, TransactionType
 from domain.objects.money import Money
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from domain.repositories.user_repository import UserRepository
+from domain.repositories.users.user_repository import UserRepository
 from shared.exceptions.domain import (
     AccountNotFoundError,
     InsufficientFundsError,

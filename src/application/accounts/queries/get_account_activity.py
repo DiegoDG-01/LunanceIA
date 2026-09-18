@@ -2,8 +2,10 @@ from dataclasses import dataclass
 from typing import cast
 
 from application.dto.account_dto import AccountActivityResponseDTO
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from shared.exceptions.domain import AccountNotFoundError
 
 

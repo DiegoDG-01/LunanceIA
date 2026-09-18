@@ -3,9 +3,11 @@ from datetime import date
 from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.subscription import Subscription
+from domain.entities.subscriptions.subscription import Subscription
 from domain.objects.money import Money
-from domain.repositories.subscription_repository import SubscriptionRepository
+from domain.repositories.subscriptions.subscription_repository import (
+    SubscriptionRepository,
+)
 from infrastructure.database.models import AccountModel
 from infrastructure.database.models.subscription import SubscriptionModel
 from shared.exceptions.domain import SubscriptionNotFoundError

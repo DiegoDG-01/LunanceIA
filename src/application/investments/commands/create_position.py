@@ -7,17 +7,19 @@ from application.dto.investment_position_dto import (
     PositionResponseDTO,
 )
 from application.investments.services.position_overflow import PositionOverflowService
-from domain.entities.investment_position import InvestmentPosition
-from domain.entities.transaction import Transaction
+from domain.entities.investments.investment_position import InvestmentPosition
+from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import AccountType, OverflowAction, TransactionType
 from domain.objects.money import Money
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.investment_position_repository import (
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.investments.investment_position_repository import (
     InvestmentPositionRepository,
 )
-from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from domain.repositories.user_repository import UserRepository
+from domain.repositories.users.user_repository import UserRepository
 from shared.exceptions.domain import (
     AccountInactiveError,
     AccountNotFoundError,

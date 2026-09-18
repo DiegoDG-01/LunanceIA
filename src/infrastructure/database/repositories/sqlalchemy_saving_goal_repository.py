@@ -1,8 +1,8 @@
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.saving_goal import SavingGoal
-from domain.repositories.saving_goal_repository import SavingGoalRepository
+from domain.entities.goals.saving_goal import SavingGoal
+from domain.repositories.goals.saving_goal_repository import SavingGoalRepository
 from infrastructure.database.models.saving_goal import SavingGoalModel
 from shared.exceptions.domain import SavingGoalNotFoundError
 

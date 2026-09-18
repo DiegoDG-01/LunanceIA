@@ -3,8 +3,8 @@ import json
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.dashboard import DashboardSummary, MobileDashboardSummary
-from domain.repositories.dashboard_repository import DashboardRepository
+from application.dashboard.dashboard_repository import DashboardRepository
+from application.dashboard.read_models import DashboardSummary, MobileDashboardSummary
 
 
 class SQLAlchemyDashboardRepository(DashboardRepository):

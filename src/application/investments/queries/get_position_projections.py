@@ -6,9 +6,9 @@ from typing import cast
 
 from application.dto.investment_position_dto import PositionProjectionResponseDTO
 from application.dto.investment_yield_dto import ProjectionDayDTO
-from domain.entities.investment_position import InvestmentPosition
+from domain.entities.investments.investment_position import InvestmentPosition
 from domain.objects.enums import InterestType
-from domain.repositories.investment_position_repository import (
+from domain.repositories.investments.investment_position_repository import (
     InvestmentPositionRepository,
 )
 from shared.exceptions.domain import (

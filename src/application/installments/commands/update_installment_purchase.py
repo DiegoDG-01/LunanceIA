@@ -5,11 +5,11 @@ from application.dto.installment_dto import (
     InstallmentChargeResponseDTO,
     InstallmentPurchaseResponseDTO,
 )
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.installment_charge_repository import (
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.installments.installment_charge_repository import (
     InstallmentChargeRepository,
 )
-from domain.repositories.installment_purchase_repository import (
+from domain.repositories.installments.installment_purchase_repository import (
     InstallmentPurchaseRepository,
 )
 from domain.repositories.unit_of_work import AbstractUnitOfWork

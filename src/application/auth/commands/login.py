@@ -5,9 +5,9 @@ from typing import cast
 import bcrypt
 
 from application.interfaces.auth_service import AuthConfig, AuthTokenServiceInterface
-from domain.repositories.auth_token_repository import AuthTokenRepository
+from domain.repositories.auth.auth_token_repository import AuthTokenRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from domain.repositories.user_repository import UserRepository
+from domain.repositories.users.user_repository import UserRepository
 from shared.exceptions.application import CommandValidationError
 from shared.exceptions.domain import (
     InvalidCredentialsError,

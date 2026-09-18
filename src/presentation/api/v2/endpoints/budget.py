@@ -31,7 +31,7 @@ from application.budgets.queries.get_budgets import (
     GetBudgetsQuery,
 )
 from application.dto.budget_dto import CreateBudgetDTO, UpdateBudgetDTO
-from domain.entities.user import User
+from domain.entities.users.user import User
 from domain.objects.enums import APIKeyScope
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,

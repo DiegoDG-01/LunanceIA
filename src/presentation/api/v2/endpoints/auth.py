@@ -7,7 +7,7 @@ from application.auth.commands.refresh_token import (
     RefreshTokenHandler,
 )
 from application.auth.commands.register import RegisterCommand, RegisterHandler
-from domain.entities.user import User
+from domain.entities.users.user import User
 from infrastructure.config.settings import settings
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,

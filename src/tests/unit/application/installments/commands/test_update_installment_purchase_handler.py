@@ -7,9 +7,9 @@ from application.installments.commands.update_installment_purchase import (
     UpdateInstallmentPurchaseCommand,
     UpdateInstallmentPurchaseHandler,
 )
-from domain.entities.account import Account
-from domain.entities.installment_charge import InstallmentCharge
-from domain.entities.installment_purchase import InstallmentPurchase
+from domain.entities.accounts.account import Account
+from domain.entities.installments.installment_charge import InstallmentCharge
+from domain.entities.installments.installment_purchase import InstallmentPurchase
 from domain.objects.enums import AccountType, InstallmentType
 from domain.objects.money import Money
 from shared.exceptions.domain import AccountNotFoundError

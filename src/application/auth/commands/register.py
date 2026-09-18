@@ -3,9 +3,9 @@ from dataclasses import dataclass
 from sqlalchemy.exc import IntegrityError
 
 from application.interfaces.auth_service import AuthTokenServiceInterface
-from domain.entities.user import User
+from domain.entities.users.user import User
 from domain.repositories.unit_of_work import AbstractUnitOfWork
-from domain.repositories.user_repository import UserRepository
+from domain.repositories.users.user_repository import UserRepository
 from shared.exceptions.application import CommandValidationError
 from shared.exceptions.domain import UsernameAlreadyExistsError
 from shared.validators.business import UserValidator

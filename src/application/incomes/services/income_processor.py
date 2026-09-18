@@ -2,16 +2,24 @@ import logging
 from datetime import UTC, date, datetime
 from typing import cast
 
-from domain.entities.income_deposit import IncomeDeposit
-from domain.entities.notification import Notification
-from domain.entities.recurring_income import RecurringIncome
-from domain.entities.transaction import Transaction
+from domain.entities.incomes.income_deposit import IncomeDeposit
+from domain.entities.notifications.notification import Notification
+from domain.entities.incomes.recurring_income import RecurringIncome
+from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import NotificationType, TransactionType
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.income_deposit_repository import IncomeDepositRepository
-from domain.repositories.notification_repository import NotificationRepository
-from domain.repositories.recurring_income_repository import RecurringIncomeRepository
-from domain.repositories.transaction_repository import TransactionRepository
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.incomes.income_deposit_repository import (
+    IncomeDepositRepository,
+)
+from domain.repositories.notifications.notification_repository import (
+    NotificationRepository,
+)
+from domain.repositories.incomes.recurring_income_repository import (
+    RecurringIncomeRepository,
+)
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from shared.exceptions.domain import AccountNotFoundError
 
 logger = logging.getLogger(__name__)
