@@ -92,6 +92,7 @@ DOCS_PATHS = {"/docs", "/redoc", "/openapi.json"}
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     await secure_header.set_headers_async(response)
+    response.headers["Cache-Contro"] = "no-store"
     if request.url.path in DOCS_PATHS:
         del response.headers["Content-Security-Policy"]
     return response

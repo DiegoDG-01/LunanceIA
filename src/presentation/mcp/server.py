@@ -1,21 +1,19 @@
 from uuid import UUID
 
-from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 
 from presentation.mcp.client import get_api_key, request_api
 from presentation.mcp.config import mcp_settings
 
-mcp = FastMCP(
-    name="Lunance",
-    host=mcp_settings.MCP_HOST,
-    port=mcp_settings.MCP_PORT,
-    transport_security=TransportSecuritySettings(
-        enable_dns_rebinding_protection=True,
-        allowed_hosts=mcp_settings.allowed_hosts,
-        allowed_origins=mcp_settings.allowed_origins,
-    ),
+
+transport_security = TransportSecuritySettings(
+    enable_dns_rebinding_protection=True,
+    allowed_hosts=mcp_settings.allowed_hosts,
+    allowed_origins=mcp_settings.allowed_origins,
 )
+
+mcp = MCPServer(name="Lunance")
 
 
 @mcp.tool()
@@ -1245,4 +1243,9 @@ async def get_position_projections(
 
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http")
+    mcp.run(
+        transport="streamable-http",
+        host=mcp_settings.MCP_HOST,
+        port=mcp_settings.MCP_PORT,
+        transport_security=transport_security,
+    )
