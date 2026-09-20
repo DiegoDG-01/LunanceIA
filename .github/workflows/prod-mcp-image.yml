@@ -22,7 +22,7 @@
 
         - name: Extract Metadata
           id: meta
-          uses: docker/metadata-action@v5
+          uses: docker/metadata-action@v6
           with:
             images: diegodg01/lunance-api          # mismo repo privado, distinto tag
             # tag por SHA (mcp-prod-<sha>) = ancla de rollback por commit
