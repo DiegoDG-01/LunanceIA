@@ -1,6 +1,6 @@
 """End-to-end tests for dashboard API endpoints."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
@@ -123,9 +123,11 @@ class TestDashboardAPI:
             "total_spent",
             "top_category",
             "category_distribution",
+            "monthly_budget",
         }
         assert float(data["total_spent"]) == 400.00
         assert data["top_category"] == "Alimentos"
+        assert data["monthly_budget"] is None
 
         distribution = {item["category"]: item for item in data["category_distribution"]}
         assert distribution["Alimentos"] == {
@@ -141,6 +143,58 @@ class TestDashboardAPI:
         assert sum(item["percent_by_count"] for item in distribution.values()) == pytest.approx(
             100.0, abs=0.01
         )
+
+    @pytest.mark.asyncio
+    async def test_mobile_dashboard_summary_normalizes_active_budget_periods(
+        self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens
+    ):
+        """Mobile summary consolidates every active budget into the current month."""
+        budgets = [
+            ("semanal", 5.00),
+            ("quincenal", 10.00),
+            ("mensual", 100.00),
+            ("trimestral", 30.00),
+            ("anual", 120.00),
+        ]
+        for index, (period, limit_amount) in enumerate(budgets):
+            response = await http_client.post(
+                "/budgets/",
+                json={
+                    "name": f"Mobile summary budget {index}",
+                    "limit_amount": limit_amount,
+                    "period": period,
+                },
+                headers=auth_tokens.get_auth_headers(),
+            )
+            assert response.status_code == 201
+
+        today = datetime.now(UTC).astimezone().date()
+        month_start = today.replace(day=1)
+        if month_start.month == 12:
+            next_month_start = month_start.replace(
+                year=month_start.year + 1, month=1
+            )
+        else:
+            next_month_start = month_start.replace(month=month_start.month + 1)
+        last_day_of_month = next_month_start - timedelta(days=1)
+        first_week_start = month_start - timedelta(days=month_start.weekday())
+        last_week_start = last_day_of_month - timedelta(
+            days=last_day_of_month.weekday()
+        )
+        weekly_cycles = (last_week_start - first_week_start).days // 7 + 1
+        expected_limit = weekly_cycles * 5 + 20 + 100 + 10 + 10
+
+        response = await http_client.get(
+            "/dashboard/mobile", headers=auth_tokens.get_auth_headers()
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["monthly_budget"] == {
+            "limit": pytest.approx(expected_limit),
+            "spent": 0.0,
+            "remaining": pytest.approx(expected_limit),
+        }
 
     @pytest.mark.asyncio
     async def test_mobile_dashboard_summary_requires_authentication(

@@ -30,7 +30,14 @@ class DashboardSummaryResponse(BaseModel):
     )
 
 
+class MonthlyBudgetSummaryResponse(BaseModel):
+    limit: float
+    spent: float
+    remaining: float
+
+
 class MobileDashboardSummaryResponse(BaseModel):
     total_spent: float
     top_category: str
     category_distribution: list[CategoryDistributionResponse]
+    monthly_budget: MonthlyBudgetSummaryResponse | None

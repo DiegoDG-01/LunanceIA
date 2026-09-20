@@ -13,7 +13,15 @@ class DashboardSummary:
 
 
 @dataclass
+class MonthlyBudgetSummary:
+    limit: float
+    spent: float
+    remaining: float
+
+
+@dataclass
 class MobileDashboardSummary:
     total_spent: float
     top_category: str
     category_distribution: list
+    monthly_budget: MonthlyBudgetSummary | None
