@@ -1,9 +1,9 @@
 """Utilidades para validación."""
 
 import re
-from typing import List, Optional
+
+from email_validator import EmailNotValidError, validate_email
 from pydantic import EmailStr
-from email_validator import validate_email, EmailNotValidError
 
 
 def validate_email_format(email: EmailStr) -> bool:
@@ -15,7 +15,7 @@ def validate_email_format(email: EmailStr) -> bool:
         return False
 
 
-def validate_password_strength(password: str) -> List[str]:
+def validate_password_strength(password: str) -> list[str]:
     """Valida la fortaleza de una contraseña."""
     errors = []
 
@@ -50,7 +50,7 @@ def validate_phone_number(phone: str) -> bool:
     return bool(re.match(pattern, phone))
 
 
-def sanitize_string(input_str: str, max_length: Optional[int] = None) -> str:
+def sanitize_string(input_str: str, max_length: int | None = None) -> str:
     """Sanitiza una cadena de texto."""
     if not input_str:
         return ""
@@ -65,7 +65,7 @@ def sanitize_string(input_str: str, max_length: Optional[int] = None) -> str:
     return sanitized
 
 
-def validate_required_fields(data: dict, required_fields: List[str]) -> List[str]:
+def validate_required_fields(data: dict, required_fields: list[str]) -> list[str]:
     """Valída campos requeridos en un diccionario."""
     errors = []
 

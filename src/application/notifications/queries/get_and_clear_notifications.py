@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from typing import List
 
-from domain.entities.notification import Notification
-from domain.repositories.notification_repository import NotificationRepository
+from domain.entities.notifications.notification import Notification
+from domain.repositories.notifications.notification_repository import (
+    NotificationRepository,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 
 
@@ -20,7 +21,7 @@ class GetAndClearNotificationsHandler:
         self.notification_repository = notification_repository
         self.uow = uow
 
-    async def handle(self, query: GetAndClearNotificationsQuery) -> List[Notification]:
+    async def handle(self, query: GetAndClearNotificationsQuery) -> list[Notification]:
         notifications = await self.notification_repository.get_by_user_id(query.user_id)
 
         if notifications:

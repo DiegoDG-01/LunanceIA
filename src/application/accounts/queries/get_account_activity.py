@@ -1,9 +1,11 @@
 from dataclasses import dataclass
-from typing import List, cast
+from typing import cast
 
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.transaction_repository import TransactionRepository
 from application.dto.account_dto import AccountActivityResponseDTO
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from shared.exceptions.domain import AccountNotFoundError
 
 
@@ -24,7 +26,7 @@ class GetAccountActivitiesHandler:
 
     async def handle(
         self, query: GetAccountActivityQuery
-    ) -> List[AccountActivityResponseDTO]:
+    ) -> list[AccountActivityResponseDTO]:
         account = await self.account_repository.get_by_uuid_and_user_id(
             account_uuid=query.account_uuid, user_id=query.user_id
         )

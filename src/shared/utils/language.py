@@ -1,6 +1,5 @@
 """Utilidades para manejo de idiomas."""
 
-from typing import Optional
 from fastapi import Request
 
 
@@ -40,7 +39,7 @@ def detect_language_from_request(request: Request) -> str:
     return "es"
 
 
-def get_user_language(request: Optional[Request] = None) -> str:
+def get_user_language(request: Request | None = None) -> str:
     """
     Return the user's language code, defaulting to Spanish ("es") if no request is provided.
 

@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from application.incomes.services.income_processor import IncomeProcessor
-from domain.entities.account import Account
-from domain.entities.recurring_income import RecurringIncome
-from domain.entities.transaction import Transaction
+from domain.entities.accounts.account import Account
+from domain.entities.incomes.recurring_income import RecurringIncome
+from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import AccountType, Frequency, TransactionType
 from domain.objects.money import Money
 from shared.exceptions.domain import AccountNotFoundError

@@ -244,7 +244,7 @@ sqlalchemy_account_repository.py
 ```python
 # src/application/accounts/commands/create_account.py
 from dataclasses import dataclass
-from domain.repositories.account_repository import AccountRepository
+from domain.repositories.accounts.account_repository import AccountRepository
 
 @dataclass
 class CreateAccountCommand:
@@ -266,7 +266,7 @@ class CreateAccountHandler:
 
 #### Entidades de Dominio
 ```python
-# src/domain/entities/account.py
+# src/domain/entities/accounts/account.py
 from dataclasses import dataclass
 from domain.objects.money import Money
 

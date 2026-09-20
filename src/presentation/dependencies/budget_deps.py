@@ -1,12 +1,12 @@
 from fastapi import Depends
 
 from application.budgets.commands.create_budget import CreateBudgetHandler
-from application.budgets.commands.update_budget import UpdateBudgetHandler
 from application.budgets.commands.delete_budget import DeleteBudgetHandler
 from application.budgets.commands.state_budget import StateBudgetHandler
-from application.budgets.queries.get_budgets import GetBudgetsHandler
+from application.budgets.commands.update_budget import UpdateBudgetHandler
 from application.budgets.queries.get_budget_by_id import GetBudgetByIdHandler
 from application.budgets.queries.get_budget_progress import GetBudgetProgressHandler
+from application.budgets.queries.get_budgets import GetBudgetsHandler
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.database.repositories.sqlalchemy_budget_repository import (
     SQLAlchemyBudgetRepository,
@@ -20,8 +20,8 @@ from infrastructure.database.repositories.sqlalchemy_user_repository import (
 from presentation.dependencies.repositories import (
     get_budget_repository,
     get_category_repository,
-    get_user_repository,
     get_unit_of_work_repository,
+    get_user_repository,
 )
 
 

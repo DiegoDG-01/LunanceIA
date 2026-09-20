@@ -1,11 +1,13 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, desc, select
-from typing import Optional, List
 from datetime import date
 
-from domain.entities.recurring_income import RecurringIncome
-from domain.repositories.recurring_income_repository import RecurringIncomeRepository
+from sqlalchemy import and_, desc, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from domain.entities.incomes.recurring_income import RecurringIncome
 from domain.objects.money import Money
+from domain.repositories.incomes.recurring_income_repository import (
+    RecurringIncomeRepository,
+)
 from infrastructure.database.models import AccountModel
 from infrastructure.database.models.recurring_income import RecurringIncomeModel
 from shared.exceptions.domain import RecurringIncomeNotFoundError
@@ -103,7 +105,7 @@ class SQLAlchemyRecurringIncomeRepository(RecurringIncomeRepository):
 
     async def get_by_uuid_and_user_id(
         self, income_uuid: str, user_id: int
-    ) -> Optional[RecurringIncome]:
+    ) -> RecurringIncome | None:
         stmt = select(RecurringIncomeModel).where(
             and_(
                 RecurringIncomeModel.uuid == income_uuid,
@@ -117,7 +119,7 @@ class SQLAlchemyRecurringIncomeRepository(RecurringIncomeRepository):
 
     async def get_by_account(
         self, account_uuid: str, user_id: int, limit: int = 100, offset: int = 0
-    ) -> List[RecurringIncome]:
+    ) -> list[RecurringIncome]:
         stmt = (
             select(RecurringIncomeModel, AccountModel)
             .join(AccountModel, RecurringIncomeModel.account_id == AccountModel.id)
@@ -140,7 +142,7 @@ class SQLAlchemyRecurringIncomeRepository(RecurringIncomeRepository):
         self,
         user_id: int,
         category_id: int,
-    ) -> List[RecurringIncome]:
+    ) -> list[RecurringIncome]:
         stmt = (
             select(RecurringIncomeModel)
             .where(
@@ -158,7 +160,7 @@ class SQLAlchemyRecurringIncomeRepository(RecurringIncomeRepository):
 
     async def get_by_user(
         self, user_id: int, active_only: bool = False
-    ) -> List[RecurringIncome]:
+    ) -> list[RecurringIncome]:
         stmt = select(RecurringIncomeModel).where(
             RecurringIncomeModel.user_id == user_id
         )
@@ -171,7 +173,7 @@ class SQLAlchemyRecurringIncomeRepository(RecurringIncomeRepository):
 
         return [self._model_to_entity(income) for income in results]
 
-    async def get_due_incomes(self, as_of: date) -> List[RecurringIncome]:
+    async def get_due_incomes(self, as_of: date) -> list[RecurringIncome]:
         stmt = select(RecurringIncomeModel).where(
             RecurringIncomeModel.is_active,
             RecurringIncomeModel.next_payment_date <= as_of,

@@ -1,7 +1,6 @@
 """Utilidades para manejo de dinero."""
 
-from decimal import Decimal, ROUND_HALF_UP
-from typing import List
+from decimal import ROUND_HALF_UP, Decimal
 
 
 def format_currency(amount: Decimal, currency: str = "MXN") -> str:
@@ -35,14 +34,14 @@ def round_money(amount: Decimal) -> Decimal:
     return amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-def sum_money_amounts(amounts: List[Decimal]) -> Decimal:
+def sum_money_amounts(amounts: list[Decimal]) -> Decimal:
     """Suma una lista de cantidades monetarias."""
-    return sum(amounts, Decimal("0"))
+    return sum(amounts, Decimal(0))
 
 
 def calculate_percentage(amount: Decimal, percentage: Decimal) -> Decimal:
     """Calcula el porcentaje de una cantidad."""
-    return round_money(amount * percentage / Decimal("100"))
+    return round_money(amount * percentage / Decimal(100))
 
 
 def is_valid_amount(amount: Decimal) -> bool:

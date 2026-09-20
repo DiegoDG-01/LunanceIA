@@ -1,7 +1,7 @@
-from pydantic import BaseModel
+from datetime import date, datetime
 from decimal import Decimal
-from datetime import datetime, date
-from typing import Optional, List
+
+from pydantic import BaseModel
 
 from domain.objects.enums import InstallmentType
 
@@ -12,13 +12,13 @@ class InstallmentChargeResponse(BaseModel):
     amount: Decimal
     due_date: date
     paid: bool
-    paid_at: Optional[datetime]
+    paid_at: datetime | None
 
 
 class InstallmentPurchaseResponse(BaseModel):
     uuid: str
     account_uuid: str
-    category_id: Optional[int]
+    category_id: int | None
     description: str
     total_amount: Decimal
     num_installments: int
@@ -26,7 +26,7 @@ class InstallmentPurchaseResponse(BaseModel):
     annual_interest_rate: Decimal
     monthly_payment: Decimal
     purchase_date: date
-    notes: Optional[str]
+    notes: str | None
     is_active: bool
     creation_date: datetime
-    charges: List[InstallmentChargeResponse]
+    charges: list[InstallmentChargeResponse]

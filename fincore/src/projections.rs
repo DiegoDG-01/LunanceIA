@@ -35,6 +35,8 @@ pub struct ProjectionResult {
     yield_amount: String,
     #[pyo3(get)]
     projected_balance: String,
+    #[pyo3(get)]
+    overflow_amount: String,  // Lo que ese día no cupo bajo el tope
 }
 
 /// Calcula las proyecciones de inversión día a día.
@@ -47,11 +49,24 @@ pub struct ProjectionResult {
 /// * `days` - Número de días a proyectar (1-3650)
 /// * `start_year`, `start_month`, `start_day` - Fecha de inicio (hoy)
 /// * `base_principal` - Principal fijo para interés simple (None usa current_balance)
+/// * `max_balance` - Tope del apartado (None si no tiene). El balance se aplana
+///   en el tope y lo que no cabe se reporta como `overflow_amount` del día.
 ///
 /// # Retorna
 ///
 /// Vec<ProjectionResult> con la proyección de cada día
 #[pyfunction]
+#[pyo3(signature = (
+    current_balance,
+    annual_rate,
+    interest_type,
+    days,
+    start_year,
+    start_month,
+    start_day,
+    base_principal=None,
+    max_balance=None,
+))]
 pub fn calculate_projections(
     current_balance: &str,
     annual_rate: &str,
@@ -61,6 +76,7 @@ pub fn calculate_projections(
     start_month: u32,
     start_day: u32,
     base_principal: Option<&str>,
+    max_balance: Option<&str>,
 ) -> PyResult<Vec<ProjectionResult>> {
     let mut balance = Decimal::from_str(current_balance)
         .map_err(|e| {
@@ -99,6 +115,19 @@ pub fn calculate_projections(
         }
     } else {
         balance  // No se usa en compound, pero necesitamos un valor
+    };
+
+    let cap = match max_balance {
+        Some(mb) => Some(Decimal::from_str(mb)
+            .map_err(|e| {
+                let detail = FinCoreDetails {
+                    field: "max_balance".to_string(),
+                    message: format!("Invalid max_balance: {}", e),
+                    error_type: "INVALID_TYPE".to_string(),
+                };
+                FCInvalidDecimalError::new_err((detail.message.clone(), detail.field.clone(), detail.error_type.clone()))
+            })?),
+        None => None,
     };
 
     let hundred = Decimal::from(100);
@@ -153,6 +182,16 @@ pub fn calculate_projections(
 
         balance += daily_yield;
 
+        // Un apartado con tope sigue rindiendo, pero el rendimiento ya no cabe:
+        // la proyección se aplana en el tope y el excedente se reporta aparte.
+        let mut overflow = Decimal::ZERO;
+        if let Some(limit) = cap {
+            if balance > limit {
+                overflow = balance - limit;
+                balance = limit;
+            }
+        }
+
         results.push(ProjectionResult {
             year: current_year,
             month: current_month,
@@ -160,6 +199,7 @@ pub fn calculate_projections(
             principal_amount: principal.round_dp(2).to_string(),
             yield_amount: daily_yield.round_dp(2).to_string(),
             projected_balance: balance.round_dp(2).to_string(),
+            overflow_amount: overflow.round_dp(2).to_string(),
         });
     }
 

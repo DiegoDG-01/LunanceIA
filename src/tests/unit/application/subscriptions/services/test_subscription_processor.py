@@ -9,10 +9,10 @@ from application.subscriptions.services.subscription_processor import (
     SubscriptionProcessor,
     MAX_CATCHUP_PERIODS,
 )
-from domain.entities.account import Account
-from domain.entities.subscription import Subscription
-from domain.entities.subscription_charge import SubscriptionCharge
-from domain.entities.transaction import Transaction
+from domain.entities.accounts.account import Account
+from domain.entities.subscriptions.subscription import Subscription
+from domain.entities.subscriptions.subscription_charge import SubscriptionCharge
+from domain.entities.transactions.transaction import Transaction
 from domain.objects.money import Money
 from domain.objects.enums import AccountType, Frequency
 from shared.exceptions.domain import AccountNotFoundError

@@ -1,12 +1,12 @@
 import logging
 import time
 import uuid
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
 from infrastructure.logging.context import set_request_id
-
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                     "duration_ms": round(duration_ms, 2),
                     "error": str(e),
                 },
-                exc_info=True,
             )
             raise
 

@@ -1,18 +1,17 @@
 """Utilidades para manejo de fechas."""
 
-from datetime import date, timedelta
-from typing import Tuple, List
 import calendar
+from datetime import date, timedelta
 
 
-def get_month_range(year: int, month: int) -> Tuple[date, date]:
+def get_month_range(year: int, month: int) -> tuple[date, date]:
     """Obtiene el primer y último día de un mes."""
     first_day = date(year, month, 1)
     last_day = date(year, month, calendar.monthrange(year, month)[1])
     return first_day, last_day
 
 
-def get_week_range(target_date: date) -> Tuple[date, date]:
+def get_week_range(target_date: date) -> tuple[date, date]:
     """Obtiene el primer y último día de la semana."""
     days_since_monday = target_date.weekday()
     monday = target_date - timedelta(days=days_since_monday)
@@ -20,14 +19,14 @@ def get_week_range(target_date: date) -> Tuple[date, date]:
     return monday, sunday
 
 
-def get_year_range(year: int) -> Tuple[date, date]:
+def get_year_range(year: int) -> tuple[date, date]:
     """Obtiene el primer y último día del año."""
     first_day = date(year, 1, 1)
     last_day = date(year, 12, 31)
     return first_day, last_day
 
 
-def get_previous_month(target_date: date) -> Tuple[int, int]:
+def get_previous_month(target_date: date) -> tuple[int, int]:
     """Obtiene el año y mes anterior."""
     if target_date.month == 1:
         return target_date.year - 1, 12
@@ -35,7 +34,7 @@ def get_previous_month(target_date: date) -> Tuple[int, int]:
         return target_date.year, target_date.month - 1
 
 
-def get_next_month(target_date: date) -> Tuple[int, int]:
+def get_next_month(target_date: date) -> tuple[int, int]:
     """Obtiene el año y mes siguiente."""
     if target_date.month == 12:
         return target_date.year + 1, 1
@@ -43,7 +42,7 @@ def get_next_month(target_date: date) -> Tuple[int, int]:
         return target_date.year, target_date.month + 1
 
 
-def get_months_between(start_date: date, end_date: date) -> List[Tuple[int, int]]:
+def get_months_between(start_date: date, end_date: date) -> list[tuple[int, int]]:
     """Obtiene lista de (año, mes) entre dos fechas."""
     months = []
     current_date = start_date.replace(day=1)

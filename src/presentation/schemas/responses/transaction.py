@@ -1,19 +1,20 @@
-from pydantic import BaseModel
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional
-from domain.objects.enums import TransactionType, AccountType
+
+from pydantic import BaseModel
+
+from domain.objects.enums import AccountType, TransactionType
 
 
 class TransactionResponse(BaseModel):
     uuid: str
-    transfer_uuid: Optional[str]
-    category: Optional[str]
+    transfer_uuid: str | None
+    category: str | None
     transaction_type: TransactionType
     amount: Decimal
     transaction_date: date
-    description: Optional[str]
-    notes: Optional[str]
+    description: str | None
+    notes: str | None
     creation_date: datetime
     account_name: str
     account_type: AccountType

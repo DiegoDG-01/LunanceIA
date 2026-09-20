@@ -32,12 +32,12 @@ from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
 from presentation.dependencies.repositories import (
-    get_user_repository,
     get_account_repository,
+    get_installment_charge_repository,
+    get_installment_purchase_repository,
     get_transaction_repository,
     get_unit_of_work_repository,
-    get_installment_purchase_repository,
-    get_installment_charge_repository,
+    get_user_repository,
 )
 
 
@@ -50,6 +50,9 @@ def get_create_installment_handler(
     charge_repo: SQLAlchemyInstallmentChargeRepository = Depends(
         get_installment_charge_repository
     ),
+    transaction_repo: SQLAlchemyTransactionRepository = Depends(
+        get_transaction_repository
+    ),
     uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
 ) -> CreateInstallmentPurchaseHandler:
     return CreateInstallmentPurchaseHandler(
@@ -57,6 +60,7 @@ def get_create_installment_handler(
         account_repository=account_repo,
         installment_purchase_repository=purchase_repo,
         installment_charge_repository=charge_repo,
+        transaction_repository=transaction_repo,
         uow=uow,
     )
 

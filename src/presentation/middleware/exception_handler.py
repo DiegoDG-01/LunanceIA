@@ -1,80 +1,94 @@
 """Manejador global de excepciones para estandarizar respuestas de error."""
 
 import logging
-from typing import Union, Dict, Tuple, Type
 
-from fastapi import Request, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from shared.i18n.messages import get_error_message
 
 from infrastructure.config.settings import settings
-
-from shared.exceptions.base import (
-    LunanceException,
-    ValidationError as LunanceValidationError,
-    UnauthorizedError,
-    BusinessRuleError,
-    NotFoundError,
-)
-from shared.exceptions.domain import (
-    UserNotFoundError,
-    InvalidCredentialsError,
-    UserInactiveError,
-    EmailAlreadyExistsError,
-    AccountNotFoundError,
-    AccountInactiveError,
-    AccountHasBalanceError,
-    AccountHasTransactionsError,
-    TransactionNotFoundError,
-    InvalidTransactionAmountError,
-    CategoryNotFoundError,
-    InvalidCurrencyError,
-    CurrencyMismatchError,
-    NegativeAmountError,
-    AIServiceError,
-    AIProcessingError,
-    AIInvalidResponseError,
-    InvalidImageError,
-    InvalidTransactionTypeError,
-    InsufficientFundsError,
-    SubscriptionNotFoundError,
-    InstallmentChargeNotFoundError,
-    InstallmentChargeAlreadyPaidError,
-    InvestmentSettingsNotFoundError,
-    CreditCardSettingsNotFoundError,
-    InvalidAccountSettingsError,
-    TransactionNotActivityError,
-    InvalidInvestmentRateError,
-    InvalidPenaltyPercentageError,
-    InvalidInvestmentTypeError,
-    InvalidBillingCycleDayError,
-    InvalidPaymentDueDayError,
-    InvalidCreditLimitError,
-    InvalidMinimumPaymentError,
-    InvalidEmailError,
-    InvalidBalanceUpdateError,
+from presentation.schemas.responses.error import ErrorDetail, StandardErrorResponse
+from shared.constants.validation_messages import (
+    get_http_code_error_message,
+    get_main_validation_message,
+    translate_validation_message,
 )
 from shared.exceptions.application import (
-    JWTValidationError,
     CommandValidationError,
+    ExternalServiceError,
+    JWTValidationError,
     QueryValidationError,
     RepositoryError,
-    ExternalServiceError,
 )
-from presentation.schemas.responses.error import StandardErrorResponse, ErrorDetail
-from shared.constants.validation_messages import (
-    translate_validation_message,
-    get_main_validation_message,
-    get_http_code_error_message,
+from shared.exceptions.base import (
+    BusinessRuleError,
+    LunanceException,
+    NotFoundError,
+    UnauthorizedError,
 )
+from shared.exceptions.base import (
+    ValidationError as LunanceValidationError,
+)
+from shared.exceptions.domain import (
+    AccountHasBalanceError,
+    AccountHasTransactionsError,
+    AccountInactiveError,
+    AccountNotFoundError,
+    AIInvalidResponseError,
+    AIProcessingError,
+    AIServiceError,
+    CategoryNotFoundError,
+    CreditCardSettingsNotFoundError,
+    CurrencyMismatchError,
+    EmailAlreadyExistsError,
+    FixedTermCapNotAllowedError,
+    FixedTermDepositNotAllowedError,
+    FixedTermWithdrawalNotAllowedError,
+    InstallmentChargeAlreadyPaidError,
+    InstallmentChargeNotFoundError,
+    InstallmentTransactionModificationError,
+    InsufficientFundsError,
+    InvalidAccountSettingsError,
+    InvalidBalanceUpdateError,
+    InvalidBillingCycleDayError,
+    InvalidCredentialsError,
+    InvalidCreditLimitError,
+    InvalidCurrencyError,
+    InvalidEmailError,
+    InvalidFixedTermConfigError,
+    InvalidImageError,
+    InvalidInvestmentRateError,
+    InvalidMinimumPaymentError,
+    InvalidOverflowTargetError,
+    InvalidPaymentDueDayError,
+    InvalidPenaltyPercentageError,
+    InvalidPositionCapError,
+    InvalidTransactionAmountError,
+    InvalidTransactionTypeError,
+    InvestmentPositionLockedError,
+    InvestmentPositionNotActiveError,
+    InvestmentPositionNotFoundError,
+    InvestmentPositionNotMaturedError,
+    NegativeAmountError,
+    PositionAccountTypeNotAllowedError,
+    PositionCapExceededError,
+    SameAccountTransferError,
+    SubscriptionNotFoundError,
+    TransactionNotActivityError,
+    TransactionNotFoundError,
+    TransferAccountTypeNotAllowedError,
+    TransferNotAllowedError,
+    UserInactiveError,
+    UserNotFoundError,
+)
+from shared.i18n.messages import get_error_message
 from shared.utils.language import get_user_language
 
 logger = logging.getLogger(__name__)
 
 # Definición del diccionario de mapeo
-EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
+EXCEPTION_MAP: dict[type[Exception], tuple[str, int]] = {
     # --- Autenticación y Autorización (401) ---
     InvalidCredentialsError: ("AUTH_INVALID_CREDENTIALS", 401),
     UnauthorizedError: ("AUTH_INVALID_CREDENTIALS", 401),
@@ -87,9 +101,9 @@ EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     CategoryNotFoundError: ("NOT_FOUND_CATEGORY", 404),
     SubscriptionNotFoundError: ("NOT_FOUND_SUBSCRIPTION", 404),
     InstallmentChargeNotFoundError: ("NOT_FOUND", 404),
-    InvestmentSettingsNotFoundError: ("INVESTMENT_SETTINGS_NOT_FOUND", 404),
     CreditCardSettingsNotFoundError: ("CREDIT_CARD_SETTINGS_NOT_FOUND", 404),
     TransactionNotActivityError: ("NOT_FOUND_ACTIVITY", 404),
+    InvestmentPositionNotFoundError: ("NOT_FOUND_INVESTMENT_POSITION", 404),
     # Fallback para cualquier NotFoundError sin entrada específica
     # (presupuestos, metas de ahorro, compras a plazos, bancos, etc.)
     NotFoundError: ("NOT_FOUND", 404),
@@ -98,7 +112,20 @@ EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     AccountHasBalanceError: ("BUSINESS_ACCOUNT_HAS_BALANCE", 409),
     AccountHasTransactionsError: ("BUSINESS_ACCOUNT_HAS_TRANSACTIONS", 409),
     InstallmentChargeAlreadyPaidError: ("INSTALLMENT_CHARGE_ALREADY_PAID", 409),
+    InstallmentTransactionModificationError: ("INSTALLMENT_TRANSACTION_LOCKED", 409),
+    SameAccountTransferError: ("SAME_ACCOUNT_TRANSFER", 409),
+    TransferAccountTypeNotAllowedError: ("TRANSFER_ACCOUNT_TYPE_NOT_ALLOWED", 409),
+    TransferNotAllowedError: ("TRANSFER_NOT_ALLOWED", 409),
     InvalidAccountSettingsError: ("INVALID_ACCOUNT_SETTINGS", 409),
+    InvestmentPositionNotActiveError: ("INVESTMENT_POSITION_NOT_ACTIVE", 409),
+    InvestmentPositionLockedError: ("INVESTMENT_POSITION_LOCKED", 409),
+    InvestmentPositionNotMaturedError: ("INVESTMENT_POSITION_NOT_MATURED", 409),
+    FixedTermDepositNotAllowedError: ("FIXED_TERM_DEPOSIT_NOT_ALLOWED", 409),
+    FixedTermWithdrawalNotAllowedError: ("FIXED_TERM_WITHDRAWAL_NOT_ALLOWED", 409),
+    PositionAccountTypeNotAllowedError: ("POSITION_ACCOUNT_TYPE_NOT_ALLOWED", 409),
+    PositionCapExceededError: ("POSITION_CAP_EXCEEDED", 409),
+    InvalidOverflowTargetError: ("INVALID_OVERFLOW_TARGET", 409),
+    FixedTermCapNotAllowedError: ("FIXED_TERM_CAP_NOT_ALLOWED", 409),
     # --- Errores de Validación y Reglas de Negocio (400 / 422) ---
     InsufficientFundsError: ("INSUFFICIENT_FUNDS", 422),
     AccountInactiveError: ("BUSINESS_RULE_VIOLATION", 400),
@@ -121,13 +148,14 @@ EXCEPTION_MAP: Dict[Type[Exception], Tuple[str, int]] = {
     ExternalServiceError: ("SERVICE_UNAVAILABLE", 503),
     InvalidInvestmentRateError: ("VALIDATION_INVALID_INVESTMENT_RATE", 400),
     InvalidPenaltyPercentageError: ("VALIDATION_INVALID_PENALTY_PERCENTAGE", 400),
-    InvalidInvestmentTypeError: ("VALIDATION_INVALID_INVESTMENT_TYPE", 400),
     InvalidBillingCycleDayError: ("VALIDATION_INVALID_BILLING_CYCLE_DAY", 400),
     InvalidPaymentDueDayError: ("VALIDATION_INVALID_PAYMENT_DUE_DAY", 400),
     InvalidCreditLimitError: ("VALIDATION_INVALID_CREDIT_LIMIT", 400),
     InvalidMinimumPaymentError: ("VALIDATION_INVALID_MINIMUM_PAYMENT", 400),
     InvalidEmailError: ("VALIDATION_INVALID_EMAIL", 400),
     InvalidBalanceUpdateError: ("VALIDATION_INVALID_BALANCE_UPDATE", 400),
+    InvalidFixedTermConfigError: ("VALIDATION_INVALID_FIXED_TERM_CONFIG", 400),
+    InvalidPositionCapError: ("VALIDATION_INVALID_POSITION_CAP", 400),
 }
 
 SENSITIVE_FIELDS = {
@@ -281,7 +309,7 @@ async def validation_exception_handler(
 
 
 async def http_exception_handler(
-    request: Request, exc: Union[HTTPException, StarletteHTTPException]
+    request: Request, exc: HTTPException | StarletteHTTPException
 ) -> JSONResponse:
     """
     Handle standard HTTP exceptions and return a standardized JSON error response.
@@ -340,9 +368,7 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
     Returns:
         JSONResponse: A JSON response with HTTP status 500 and a translated error message.
     """
-    logger.error(
-        f"Unhandled exception: {type(exc).__name__} - {str(exc)}", exc_info=exc
-    )
+    logger.error(f"Unhandled exception: {type(exc).__name__} - {exc!s}", exc_info=exc)
 
     # Detectar idioma del usuario
     user_language = get_user_language(request)

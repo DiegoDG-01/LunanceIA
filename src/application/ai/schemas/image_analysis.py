@@ -1,9 +1,9 @@
-from pydantic import BaseModel
-from decimal import Decimal
 from datetime import date
-from typing import Optional
-from domain.objects.enums import TransactionType, Frequency
-from domain.objects.enums import CategoryName
+from decimal import Decimal
+
+from pydantic import BaseModel
+
+from domain.objects.enums import CategoryName, Frequency, TransactionType
 
 
 # This class is generic to use in Subscription or Transaction
@@ -12,14 +12,14 @@ class ImageAnalysis(BaseModel):
     amount: Decimal
     description: str
     category: CategoryName = CategoryName.OTROS_GASTOS
-    category_id: Optional[int] = None
-    transaction_date: Optional[date] = None
-    notes: Optional[str] = None
+    category_id: int | None = None
+    transaction_date: date | None = None
+    notes: str | None = None
 
     # If only is_subscription=False
-    transaction_type: Optional[TransactionType] = None
+    transaction_type: TransactionType | None = None
 
     # If only is_subscription=True
-    frequency: Optional[Frequency] = None
-    billing_day: Optional[int] = None
-    name: Optional[str] = None
+    frequency: Frequency | None = None
+    billing_day: int | None = None
+    name: str | None = None

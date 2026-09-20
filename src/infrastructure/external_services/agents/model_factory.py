@@ -1,8 +1,10 @@
+from enum import StrEnum
 from os import environ
+
 from pydantic_ai.models import Model
+
 from infrastructure.config.settings import settings
 from shared.exceptions.domain import InvalidAIProviderError
-from enum import StrEnum
 
 
 class AIProvider(StrEnum):

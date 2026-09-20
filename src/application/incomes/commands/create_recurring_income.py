@@ -5,14 +5,16 @@ from application.dto.recurring_income_dto import (
     CreateRecurringIncomeDTO,
     RecurringIncomeResponseDTO,
 )
-from domain.entities.recurring_income import RecurringIncome
-from domain.repositories.recurring_income_repository import RecurringIncomeRepository
-from domain.repositories.user_repository import UserRepository
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.category_repository import CategoryRepository
-from domain.repositories.unit_of_work import AbstractUnitOfWork
+from domain.entities.incomes.recurring_income import RecurringIncome
 from domain.objects.money import Money
-from shared.exceptions.domain import UserNotFoundError, AccountNotFoundError
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.categories.category_repository import CategoryRepository
+from domain.repositories.incomes.recurring_income_repository import (
+    RecurringIncomeRepository,
+)
+from domain.repositories.unit_of_work import AbstractUnitOfWork
+from domain.repositories.users.user_repository import UserRepository
+from shared.exceptions.domain import AccountNotFoundError, UserNotFoundError
 
 
 @dataclass

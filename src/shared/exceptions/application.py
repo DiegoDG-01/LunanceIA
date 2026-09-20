@@ -1,6 +1,6 @@
 """Excepciones de la capa de aplicación."""
 
-from shared.exceptions.base import LunanceException, ValidationError, JWTException
+from shared.exceptions.base import JWTException, LunanceException, ValidationError
 
 
 class JWTValidationError(JWTException):

@@ -1,23 +1,24 @@
 import uuid as uuid_lib
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, datetime
 from typing import cast
-from datetime import datetime, timezone
 
-from domain.entities.transaction import Transaction
-from domain.objects.enums import TransactionType, AccountType
-from domain.objects.money import Money
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.transaction_repository import TransactionRepository
-from domain.repositories.unit_of_work import AbstractUnitOfWork
-from domain.repositories.user_repository import UserRepository
 from application.dto.transaction_dto import CreateTransferDTO, TransferResponseDTO
+from domain.entities.transactions.transaction import Transaction
+from domain.objects.enums import AccountType, TransactionType
+from domain.objects.money import Money
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
+from domain.repositories.unit_of_work import AbstractUnitOfWork
+from domain.repositories.users.user_repository import UserRepository
 from shared.exceptions.domain import (
     AccountNotFoundError,
     InsufficientFundsError,
     SameAccountTransferError,
-    UserNotFoundError,
     TransferAccountTypeNotAllowedError,
+    UserNotFoundError,
 )
 
 
@@ -81,7 +82,7 @@ class CreateTransferHandler:
                 raise TransferAccountTypeNotAllowedError(source.account_type.value)
 
             money = Money(dto.amount, dto.currency)
-            transfer_date = dto.transfer_date or date.today()
+            transfer_date = dto.transfer_date or datetime.now(UTC).date()
 
             if not source.can_withdraw(money):
                 raise InsufficientFundsError(
@@ -138,5 +139,5 @@ class CreateTransferHandler:
             source_account_uuid=cast(str, source.uuid),
             destination_account_name=destination.name,
             destination_account_uuid=cast(str, destination.uuid),
-            creation_date=saved_outgoing.creation_date or datetime.now(timezone.utc),
+            creation_date=saved_outgoing.creation_date or datetime.now(UTC),
         )

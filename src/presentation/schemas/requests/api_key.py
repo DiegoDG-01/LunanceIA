@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
-from typing import Optional
 from datetime import datetime
+
+from pydantic import BaseModel, Field
 
 from domain.objects.enums import APIKeyScope
 
@@ -14,6 +14,6 @@ class CreateAPIKeyRequest(BaseModel):
     scopes: list[APIKeyScope] = Field(
         ..., min_length=1, description="Permisos de la key (solo valores del enum)"
     )
-    expires_at: Optional[datetime] = Field(
+    expires_at: datetime | None = Field(
         None, description="Fecha de expiración (opcional, null = no expira)"
     )

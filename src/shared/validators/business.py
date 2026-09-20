@@ -1,18 +1,19 @@
 """Validadores de reglas de negocio."""
 
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from datetime import date, timedelta
+
 from pydantic import EmailStr
 
 from shared.constants.business import (
+    MAX_ACCOUNT_NAME_LENGTH,
     MAX_TRANSACTION_AMOUNT,
     MIN_TRANSACTION_AMOUNT,
-    MAX_ACCOUNT_NAME_LENGTH,
     SUPPORTED_CURRENCIES,
 )
 from shared.exceptions.domain import (
-    InvalidTransactionAmountError,
     InvalidCurrencyError,
+    InvalidTransactionAmountError,
     ValidationError,
 )
 
@@ -35,7 +36,7 @@ class TransactionValidator:
     @staticmethod
     def validate_date(transaction_date: date) -> None:
         """Valida la fecha de transacción."""
-        today = date.today()
+        today = datetime.now(UTC).date()
 
         # No permitir fechas muy futuras (más de una semana)
         max_future_date = today + timedelta(days=7)

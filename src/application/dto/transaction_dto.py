@@ -1,9 +1,8 @@
 from dataclasses import dataclass
-from decimal import Decimal
-from typing import Optional
 from datetime import date, datetime
+from decimal import Decimal
 
-from domain.objects.enums import TransactionType, AccountType
+from domain.objects.enums import AccountType, TransactionType
 
 
 @dataclass
@@ -12,12 +11,12 @@ class CreateTransactionDTO:
 
     user_id: int
     account_uuid: str
-    category_id: Optional[int]
+    category_id: int | None
     transaction_type: TransactionType
     amount: Decimal
-    description: Optional[str] = None
-    notes: Optional[str] = None
-    transaction_date: Optional[date] = None
+    description: str | None = None
+    notes: str | None = None
+    transaction_date: date | None = None
     currency: str = "MXN"
 
 
@@ -25,12 +24,12 @@ class CreateTransactionDTO:
 class UpdateTransactionDTO:
     """DTO para actualizar transacción."""
 
-    description: Optional[str] = None
-    notes: Optional[str] = None
-    category_id: Optional[int] = None
-    transaction_type: Optional[TransactionType] = None
-    amount: Optional[Decimal] = None
-    transaction_date: Optional[date] = None
+    description: str | None = None
+    notes: str | None = None
+    category_id: int | None = None
+    transaction_type: TransactionType | None = None
+    amount: Decimal | None = None
+    transaction_date: date | None = None
 
 
 @dataclass
@@ -38,17 +37,17 @@ class TransactionResponseDTO:
     """DTO para respuesta de transacción."""
 
     uuid: str
-    category: Optional[str]
+    category: str | None
     transaction_type: TransactionType
     amount: Decimal
     transaction_date: date
-    description: Optional[str]
-    notes: Optional[str]
+    description: str | None
+    notes: str | None
     creation_date: datetime
     account_name: str
     account_type: AccountType
     account_uuid: str
-    transfer_uuid: Optional[str] = None
+    transfer_uuid: str | None = None
 
     @classmethod
     def from_entity(
@@ -57,7 +56,7 @@ class TransactionResponseDTO:
         account_name: str,
         account_type: AccountType,
         account_uuid: str,
-        category_name: Optional[str],
+        category_name: str | None,
     ):
         """Create DTO from Transaction entity."""
         return cls(
@@ -84,9 +83,9 @@ class CreateTransferDTO:
     source_account_uuid: str
     destination_account_uuid: str
     amount: Decimal
-    description: Optional[str] = None
-    notes: Optional[str] = None
-    transfer_date: Optional[date] = None
+    description: str | None = None
+    notes: str | None = None
+    transfer_date: date | None = None
     currency: str = "MXN"
 
 
@@ -97,7 +96,7 @@ class TransferResponseDTO:
     transfer_uuid: str
     amount: Decimal
     transfer_date: date
-    description: Optional[str]
+    description: str | None
     source_account_name: str
     source_account_uuid: str
     destination_account_name: str

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Optional
 from dataclasses import dataclass
 
 
@@ -15,16 +14,16 @@ class AuthTokenServiceInterface(ABC):
 
     @abstractmethod
     def create_access_token(
-        self, user_uuid: str, expires_in: Optional[int] = None
+        self, user_uuid: str, expires_in: int | None = None
     ) -> str: ...
 
     @abstractmethod
     def create_refresh_token(
-        self, user_uuid: str, expires_in: Optional[int] = None
+        self, user_uuid: str, expires_in: int | None = None
     ) -> str: ...
 
     @abstractmethod
-    async def verify_refresh_token(self, token: str) -> Optional[str]: ...
+    async def verify_refresh_token(self, token: str) -> str | None: ...
 
     @abstractmethod
     def get_password_hash(self, password: str) -> str: ...

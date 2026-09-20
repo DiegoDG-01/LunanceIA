@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from domain.repositories.budget_repository import BudgetRepository
+from domain.repositories.budgets.budget_repository import BudgetRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.exceptions.domain import BudgetNotFoundError
 

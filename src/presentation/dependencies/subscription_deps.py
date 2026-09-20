@@ -3,24 +3,24 @@ from fastapi import Depends
 from application.subscriptions.commands.create_subscription import (
     CreateSubscriptionHandler,
 )
-from application.subscriptions.commands.update_subscription import (
-    UpdateSubscriptionHandler,
-)
 from application.subscriptions.commands.delete_subscription import (
     DeleteSubscriptionHandler,
 )
 from application.subscriptions.commands.state_subscription import (
     StateSubscriptionHandler,
 )
-from application.subscriptions.queries.get_subscriptions import GetSubscriptionsHandler
-from application.subscriptions.queries.get_subscriptions_by_id import (
-    GetSubscriptionsByIdHandler,
+from application.subscriptions.commands.update_subscription import (
+    UpdateSubscriptionHandler,
 )
 from application.subscriptions.queries.get_last_transactions import (
     GetLastTransactionsHandler,
 )
 from application.subscriptions.queries.get_subscription_charges import (
     GetSubscriptionChargesHandler,
+)
+from application.subscriptions.queries.get_subscriptions import GetSubscriptionsHandler
+from application.subscriptions.queries.get_subscriptions_by_id import (
+    GetSubscriptionsByIdHandler,
 )
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
@@ -29,23 +29,22 @@ from infrastructure.database.repositories.sqlalchemy_account_repository import (
 from infrastructure.database.repositories.sqlalchemy_category_repository import (
     SQLAlchemyCategoryRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_subscription_repository import (
-    SQLAlchemySubscriptionRepository,
-)
 from infrastructure.database.repositories.sqlalchemy_subscription_charge_repository import (
     SQLAlchemySubscriptionChargeRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_subscription_repository import (
+    SQLAlchemySubscriptionRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
-
 from presentation.dependencies.repositories import (
     get_account_repository,
-    get_user_repository,
     get_category_repository,
-    get_subscription_repository,
     get_subscription_charge_repository,
+    get_subscription_repository,
     get_unit_of_work_repository,
+    get_user_repository,
 )
 
 

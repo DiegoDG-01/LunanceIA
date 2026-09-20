@@ -13,7 +13,9 @@ class TestInstallmentCRUD:
     """Test /installments/ endpoints."""
 
     @pytest.fixture
-    async def test_account(self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens):
+    async def test_account(
+        self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens
+    ):
         response = await http_client.post(
             "/account",
             json={
@@ -56,8 +58,27 @@ class TestInstallmentCRUD:
             "/installments/", json=payload, headers=auth_tokens.get_auth_headers()
         )
 
+    async def _create_payment_account(
+        self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens
+    ) -> dict:
+        response = await http_client.post(
+            "/account",
+            json={
+                "name": "Installment Payment Account",
+                "account_type": "CHECKING",
+                "bank_id": 1,
+                "initial_balance": 5000.00,
+                "currency": "MXN",
+            },
+            headers=auth_tokens.get_auth_headers(),
+        )
+        assert response.status_code == 201, response.text
+        return response.json()
+
     @pytest.mark.asyncio
-    async def test_create_purchase_generates_charges(self, http_client, auth_tokens, test_account):
+    async def test_create_purchase_generates_charges(
+        self, http_client, auth_tokens, test_account
+    ):
         response = await self._create_purchase(
             http_client, auth_tokens, test_account["account_uuid"]
         )
@@ -72,7 +93,9 @@ class TestInstallmentCRUD:
         assert all(charge["paid"] is False for charge in data["charges"])
 
     @pytest.mark.asyncio
-    async def test_create_purchase_invalid_installments(self, http_client, auth_tokens, test_account):
+    async def test_create_purchase_invalid_installments(
+        self, http_client, auth_tokens, test_account
+    ):
         response = await self._create_purchase(
             http_client, auth_tokens, test_account["account_uuid"], num_installments=1
         )
@@ -81,7 +104,10 @@ class TestInstallmentCRUD:
     @pytest.mark.asyncio
     async def test_get_purchases_list(self, http_client, auth_tokens, test_account):
         await self._create_purchase(
-            http_client, auth_tokens, test_account["account_uuid"], description="Compra en lista"
+            http_client,
+            auth_tokens,
+            test_account["account_uuid"],
+            description="Compra en lista",
         )
 
         response = await http_client.get(
@@ -95,13 +121,19 @@ class TestInstallmentCRUD:
     @pytest.mark.asyncio
     async def test_pay_installment_charge(self, http_client, auth_tokens, test_account):
         created = (
-            await self._create_purchase(http_client, auth_tokens, test_account["account_uuid"])
+            await self._create_purchase(
+                http_client, auth_tokens, test_account["account_uuid"]
+            )
         ).json()
         first_charge = created["charges"][0]
+        source_account = await self._create_payment_account(http_client, auth_tokens)
 
         response = await http_client.post(
             f"/installments/{first_charge['uuid']}/pay/",
-            json={"payment_date": str(date.today())},
+            json={
+                "source_account_uuid": source_account["account_uuid"],
+                "payment_date": str(date.today()),
+            },
             headers=auth_tokens.get_auth_headers(),
         )
 
@@ -115,7 +147,10 @@ class TestInstallmentCRUD:
     async def test_pay_unknown_charge_returns_404(self, http_client, auth_tokens):
         response = await http_client.post(
             "/installments/00000000-0000-0000-0000-000000000000/pay/",
-            json={"payment_date": str(date.today())},
+            json={
+                "source_account_uuid": "00000000-0000-0000-0000-000000000000",
+                "payment_date": str(date.today()),
+            },
             headers=auth_tokens.get_auth_headers(),
         )
         assert response.status_code == 404
@@ -123,7 +158,9 @@ class TestInstallmentCRUD:
     @pytest.mark.asyncio
     async def test_update_purchase(self, http_client, auth_tokens, test_account):
         created = (
-            await self._create_purchase(http_client, auth_tokens, test_account["account_uuid"])
+            await self._create_purchase(
+                http_client, auth_tokens, test_account["account_uuid"]
+            )
         ).json()
 
         response = await http_client.patch(
@@ -140,7 +177,9 @@ class TestInstallmentCRUD:
     @pytest.mark.asyncio
     async def test_delete_purchase(self, http_client, auth_tokens, test_account):
         created = (
-            await self._create_purchase(http_client, auth_tokens, test_account["account_uuid"])
+            await self._create_purchase(
+                http_client, auth_tokens, test_account["account_uuid"]
+            )
         ).json()
 
         response = await http_client.delete(

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from application.dto.api_key_dto import APIKeyResponseDTO
-from domain.repositories.api_key_repository import APIKeyRepository
+from domain.repositories.auth.api_key_repository import APIKeyRepository
 
 
 @dataclass

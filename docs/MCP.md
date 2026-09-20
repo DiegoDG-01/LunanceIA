@@ -15,6 +15,7 @@ finanzas del usuario en lenguaje natural.
 - [Requisitos](#-requisitos)
 - [Ejecutar el servidor](#-ejecutar-el-servidor)
 - [Probar con el MCP Inspector](#-probar-con-el-mcp-inspector)
+- [Conectar desde Claude Desktop](#-conectar-desde-claude-desktop)
 - [Configuración](#-configuración)
 - [Seguridad](#-seguridad)
 - [Agregar una herramienta nueva](#-agregar-una-herramienta-nueva)
@@ -63,6 +64,8 @@ disponible: las operaciones de **lectura** requieren el scope `:read` del recurs
 | **Metas de ahorro** | `list_goals`, `get_goal` | `goals:read` |
 | | `create_goal`, `update_goal`, `toggle_goal`, `delete_goal` | `goals:write` |
 | **Inversiones** | `get_investment_yields`, `get_investment_projections` | `investments:read` |
+| **Apartados de inversión** | `list_positions`, `get_position`, `get_position_yields`, `get_position_projections` | `investments:read` |
+| | `create_position`, `update_position`, `deposit_to_position`, `withdraw_from_position`, `liquidate_position` | `investments:write` |
 | **Suscripciones** | `list_subscriptions`, `list_subscription_charges`, `get_subscription` | `subscriptions:read` |
 | | `create_subscription`, `update_subscription`, `toggle_subscription`, `delete_subscription` | `subscriptions:write` |
 | **Ingresos recurrentes** | `list_incomes`, `get_income_deposits` | `incomes:read` |
@@ -72,8 +75,18 @@ disponible: las operaciones de **lectura** requieren el scope `:read` del recurs
 | **Transferencias** | `create_transfer`, `delete_transfer` | `transfers:write` |
 | **Bancos** | `list_banks` | `banks:read` |
 
-> Total: **50 herramientas**. Excluidos a propósito del MCP: `auth` y `api-keys` (por
+> Total: **59 herramientas**. Excluidos a propósito del MCP: `auth` y `api-keys` (por
 > seguridad) y `ai` (el MCP ya es la capa de IA).
+>
+> Un **apartado de inversión** vive dentro de una cuenta y genera rendimientos (a la
+> vista o a plazo fijo). El dinero apartado no cuenta en el saldo disponible: para
+> gastarlo o transferirlo primero hay que regresarlo con `withdraw_from_position` o
+> `liquidate_position`.
+>
+> Un apartado puede tener un **tope** y un destino para lo que ya no cabe: así se
+> representan las tasas por tramo de las SOFIPOs (25,000 al 10% desbordando a otro
+> apartado al 5%). Como el destino debe existir antes de apuntarlo, encadenar dos
+> apartados se hace creando ambos y conectándolos con `update_position`.
 >
 > Para limitar a un agente a solo-lectura, emite su API key únicamente con scopes
 > `:read` — las tools de escritura devolverán `403`.
@@ -82,10 +95,15 @@ disponible: las operaciones de **lectura** requieren el scope `:read` del recurs
 
 ## ✅ Requisitos
 
-1. **La API de Lunance corriendo** en `:8000` (`uvicorn src.main:app --reload`).
+1. **La API de Lunance corriendo** en `:8000` (`uvicorn src.main:app --reload`, o
+   `docker compose up -d`, que ya la levanta junto al MCP).
 2. Una **API Key** (`moon_...`) creada desde la app (`POST /api/v2/api-keys/`) con los
    scopes que quieras usar.
 3. Dependencias del grupo `mcp` instaladas (ver abajo).
+
+> ⚠️ Las API keys **no se pueden editar** una vez creadas. Si tu key es anterior a los
+> apartados de inversión, no tiene el scope `investments:write` y las herramientas que
+> mueven dinero responderán `403`: genera una key nueva incluyendo ese scope.
 
 ---
 
@@ -105,7 +123,23 @@ PYTHONPATH=src uv run --no-sync python -m presentation.mcp.server
 > el módulo `fincore` (no está en el lockfile) y rompe el arranque de la API. El MCP
 > necesita `PYTHONPATH=src` porque el proyecto no se instala como paquete.
 
-### Docker
+### Docker Compose — recomendado
+
+`docker-compose.yml` ya incluye el servicio `mcp` (construido desde `Dockerfile.mcp`), así
+que levanta MCP + API + MySQL en la misma red con un solo comando:
+
+```bash
+docker compose up -d          # todo el stack (db, api, mcp)
+docker compose up -d mcp      # solo el MCP (arrastra api y db por depends_on)
+```
+
+El servicio trae ya resueltas las variables que en `docker run` tendrías que pasar a mano:
+`LUNANCE_API_BASE_URL=http://api:8000` (la API por nombre de servicio en la red interna),
+`MCP_HOST=0.0.0.0` y los allowed hosts/origins de local.
+
+### Docker (imagen suelta)
+
+Solo si quieres el MCP aislado, contra una API que ya corre fuera de compose:
 
 ```bash
 docker build -f Dockerfile.mcp -t lunance-mcp .
@@ -134,6 +168,70 @@ En la UI del Inspector:
 
 > La autenticación va en el **header `X-API-Key`**, no en la config. Los **scopes de esa
 > key** determinan qué tools responden `200` y cuáles `403`.
+
+---
+
+## 🖥️ Conectar desde Claude Desktop
+
+El MCP de Lunance habla **`streamable-http`** (endpoint `/mcp`) y autentica por header
+**`X-API-Key`**. Claude Desktop, en cambio, solo arranca servidores por **`stdio`** desde
+`claude_desktop_config.json`, así que no puede hablarle directo — ni siquiera en
+`localhost`. Hace falta **`mcp-remote`** como puente stdio ↔ HTTP:
+
+```json
+{
+  "mcpServers": {
+    "lunance": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost:8001/mcp",
+        "--header",
+        "X-API-Key: moon_TU_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+Tras editarlo, **reinicia Claude Desktop**.
+
+Notas:
+
+- `--header "X-API-Key: ..."` autentica contra el MCP; los scopes de esa key deciden qué
+  tools responden.
+- **No uses `--sse`**: no es una flag de `mcp-remote` (se ignora en silencio). La real es
+  `--transport <http-first|sse-only|…>`, y aquí no hace falta: el servidor corre
+  `mcp.run(transport="streamable-http")`, así que **no monta endpoint SSE** y `sse-only`
+  daría 404.
+
+### Si el MCP no corre en la misma máquina que Claude Desktop
+
+Un MCP en otro equipo de la red local necesita **tres** cambios; si falta alguno, la
+conexión falla:
+
+| Dónde | Qué | Por qué |
+|---|---|---|
+| Servidor | `MCP_HOST=0.0.0.0` | El default `localhost` escucha solo en loopback: inalcanzable desde otro equipo |
+| Servidor | `MCP_ALLOWED_HOSTS` / `MCP_ALLOWED_ORIGINS` con el host real | Con los defaults solo-localhost, la protección anti DNS-rebinding responde `421`. En compose el servicio `mcp` trae `localhost:8001,127.0.0.1:8001,mcp:8001`: tampoco cubre la IP de red, hay que añadirla |
+| Cliente | `--allow-http` en `mcp-remote` | `mcp-remote` **rechaza URLs `http://` que no sean `localhost`/`127.0.0.1`** y aborta |
+
+Los `args` quedarían así:
+
+```
+"mcp-remote", "http://192.168.1.50:8001/mcp", "--allow-http",
+"--header", "X-API-Key: moon_TU_API_KEY"
+```
+
+> ⚠️ **Por qué esto parece un problema de transporte y no lo es:** el `421` del chequeo de
+> Host es un 4xx, y `mcp-remote` reacciona a los 4xx **cayendo al transporte SSE legacy**.
+> El error que ves acaba hablando de SSE, cuando la causa real es el `Host` no permitido (o
+> la falta de `--allow-http`). Añadir flags de SSE no lo arregla: revisa las tres filas de
+> arriba.
+
+Si el MCP va por HTTPS con certificado self-signed, `--allow-http` no aplica; lo que salta
+la validación TLS es `"env": { "NODE_TLS_REJECT_UNAUTHORIZED": "0" }`. ⚠️ Deja la conexión
+sin verificar frente a MITM: no lo dejes fijo sin entender por qué falla el certificado.
 
 ---
 

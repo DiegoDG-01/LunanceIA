@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock, AsyncMock
 
 from application.auth.commands.register import RegisterCommand, RegisterHandler, RegisterResponse
-from domain.entities.user import User
+from domain.entities.users.user import User
 from shared.exceptions.domain import UsernameAlreadyExistsError
 from shared.exceptions.application import CommandValidationError
 from shared.exceptions.base import ValidationError

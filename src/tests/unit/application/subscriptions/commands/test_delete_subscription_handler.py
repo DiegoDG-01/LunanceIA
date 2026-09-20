@@ -7,7 +7,7 @@ from application.subscriptions.commands.delete_subscription import (
     DeleteSubscriptionCommand,
     DeleteSubscriptionHandler,
 )
-from domain.entities.subscription import Subscription
+from domain.entities.subscriptions.subscription import Subscription
 from domain.objects.enums import Frequency
 from domain.objects.money import Money
 from shared.exceptions.domain import SubscriptionNotFoundError

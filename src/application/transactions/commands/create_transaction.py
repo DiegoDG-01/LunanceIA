@@ -1,28 +1,23 @@
-import dataclasses
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import cast
 
-from datetime import date
-
-from domain.objects.enums import AccountType
-from domain.objects.money import Money
-from domain.entities.transaction import Transaction
-from shared.exceptions.domain import (
-    AccountNotFoundError,
-    InvestmentSettingsNotFoundError,
-)
-from shared.exceptions.domain import UserNotFoundError
-from domain.repositories.user_repository import UserRepository
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.category_repository import CategoryRepository
-from domain.repositories.transaction_repository import TransactionRepository
-from domain.repositories.bank_repository import BankRepository
 from application.dto.transaction_dto import CreateTransactionDTO, TransactionResponseDTO
-from shared.exceptions.domain import InvalidTransactionTypeError
-from domain.repositories.investment_card_repository import (
-    InvestmentCardSettingsRepository,
+from domain.entities.transactions.transaction import Transaction
+from domain.objects.money import Money
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.banks.bank_repository import BankRepository
+from domain.repositories.categories.category_repository import CategoryRepository
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
 )
 from domain.repositories.unit_of_work import AbstractUnitOfWork
+from domain.repositories.users.user_repository import UserRepository
+from shared.exceptions.domain import (
+    AccountNotFoundError,
+    InvalidTransactionTypeError,
+    UserNotFoundError,
+)
 
 
 @dataclass
@@ -42,7 +37,6 @@ class CreateTransactionHandler:
         transaction_repository: TransactionRepository,
         category_repository: CategoryRepository,
         bank_repository: BankRepository,
-        investment_settings_repository: InvestmentCardSettingsRepository,
         uow: AbstractUnitOfWork,
     ):
         self.user_repository = user_repository
@@ -50,14 +44,13 @@ class CreateTransactionHandler:
         self.transaction_repository = transaction_repository
         self.category_repository = category_repository
         self.bank_repository = bank_repository
-        self.investment_settings_repository = investment_settings_repository
         self.uow = uow
 
     async def handle(self, command: CreateTransactionCommand) -> TransactionResponseDTO:
         dto = command.dto
         money = Money(dto.amount, dto.currency)
 
-        transaction_date = dto.transaction_date or date.today()
+        transaction_date = dto.transaction_date or datetime.now(UTC).date()
 
         user = await self.user_repository.get_by_id(dto.user_id)
         if not user or not user.is_active:
@@ -81,31 +74,12 @@ class CreateTransactionHandler:
                 notes=dto.notes,
             )
 
+            # Los ingresos van al saldo disponible sin importar el tipo de
+            # cuenta; el capital que rinde se maneja por apartado
+            # (investment_positions), no a nivel cuenta.
             if transaction.is_expense():
                 new_balance = account.current_balance.subtract(money)
             elif transaction.is_income():
-                if account.account_type is AccountType.INVESTMENT:
-                    settings = (
-                        await self.investment_settings_repository.get_by_account_id(
-                            account_id=cast(int, account.id)
-                        )
-                    )
-                    if not settings:
-                        raise InvestmentSettingsNotFoundError(
-                            transaction.transaction_type
-                        )
-
-                    updated_settings = dataclasses.replace(
-                        settings,
-                        base_principal=(
-                            settings.base_principal or account.current_balance.amount
-                        )
-                        + money.amount,
-                    )
-                    await self.investment_settings_repository.update(
-                        account_id=cast(int, account.id), settings=updated_settings
-                    )
-
                 new_balance = account.current_balance.add(money)
             else:
                 raise InvalidTransactionTypeError(transaction.transaction_type)

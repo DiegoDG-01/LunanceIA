@@ -1,10 +1,14 @@
 import json
-from typing import Optional
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.dashboard import DashboardSummary
-from domain.repositories.dashboard_repository import DashboardRepository
+from application.dashboard.dashboard_repository import DashboardRepository
+from application.dashboard.read_models import (
+    DashboardSummary,
+    MobileDashboardSummary,
+    MonthlyBudgetSummary,
+)
 
 
 class SQLAlchemyDashboardRepository(DashboardRepository):
@@ -15,13 +19,11 @@ class SQLAlchemyDashboardRepository(DashboardRepository):
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_dashboard_summary(
-        self, uuid: str, user_id: int
-    ) -> Optional[DashboardSummary]:
+    async def get_dashboard_summary(self, user_id: int) -> DashboardSummary | None:
         # Check if we are running on SQLite (for tests)
         try:
             is_sqlite = self.db.bind and self.db.bind.dialect.name == "sqlite"
-        except (AttributeError, Exception):
+        except AttributeError:
             is_sqlite = False
 
         if is_sqlite:
@@ -168,18 +170,243 @@ SELECT
 
         return None
 
+    async def get_mobile_dashboard_summary(
+        self, user_id: int
+    ) -> MobileDashboardSummary | None:
+        try:
+            is_sqlite = self.db.bind and self.db.bind.dialect.name == "sqlite"
+        except AttributeError:
+            is_sqlite = False
+
+        if is_sqlite:
+            return await self._get_sqlite_mobile_dashboard_summary(user_id)
+
+        query = text("""
+        WITH DateConfig AS (SELECT DATE_FORMAT(CURDATE(), '%Y-%m-01')                    AS month_start,
+                           DATE_FORMAT(CURDATE() + INTERVAL 1 MONTH, '%Y-%m-01') AS month_end),
+
+     PeriodConfig AS (SELECT dc.*,
+                             TIMESTAMPDIFF(
+                                     WEEK,
+                                     DATE_SUB(
+                                             dc.month_start,
+                                             INTERVAL WEEKDAY(dc.month_start) DAY
+                                     ),
+                                     DATE_SUB(
+                                             DATE_SUB(dc.month_end, INTERVAL 1 DAY),
+                                             INTERVAL WEEKDAY(
+                                                     DATE_SUB(dc.month_end, INTERVAL 1 DAY)
+                                                      ) DAY
+                                     )
+                             ) + 1 AS weekly_cycles
+                      FROM DateConfig dc),
+
+     CategoryMetrics AS (SELECT COALESCE(c.name, 'Sin categoría') AS category,
+                                COUNT(t.id)                       AS transaction_count,
+                                SUM(t.amount)                     AS total_amount,
+                                ROUND(
+                                        COUNT(t.id) * 100.0 / NULLIF(SUM(COUNT(t.id)) OVER (), 0),
+                                        2
+                                )                                 AS percentage_by_count
+                         FROM transactions t
+                                  CROSS JOIN PeriodConfig pc
+                                  LEFT JOIN categories c ON c.id = t.category_id
+                         WHERE t.user_id = :user_id
+                           AND t.type = 'EXPENSE'
+                           AND t.transaction_date >= pc.month_start
+                           AND t.transaction_date < pc.month_end
+                         GROUP BY c.id, c.name),
+     BudgetMetrics AS (SELECT b.period,
+                              b.limit_amount,
+                              CASE b.period
+                                  WHEN 'SEMANAL' THEN b.limit_amount * pc.weekly_cycles
+                                  WHEN 'QUINCENAL' THEN b.limit_amount * 2
+                                  WHEN 'MENSUAL' THEN b.limit_amount
+                                  WHEN 'TRIMESTRAL' THEN b.limit_amount / 3
+                                  WHEN 'ANUAL' THEN b.limit_amount / 12
+                                  ELSE 0
+                                  END AS monthly_limit
+                       FROM budgets b
+                                CROSS JOIN PeriodConfig pc
+                       WHERE b.user_id = :user_id
+                         AND b.is_active = TRUE),
+
+     MonthlyBudget AS (SELECT COUNT(*)                        AS budget_count,
+                              COALESCE(SUM(monthly_limit), 0) AS limit_amount
+                       FROM BudgetMetrics)
+
+
+SELECT COALESCE(SUM(total_amount), 0) AS total_spent,
+       COALESCE(
+               (SELECT category
+                FROM CategoryMetrics
+                ORDER BY transaction_count DESC, category ASC
+                LIMIT 1),
+               'N/A'
+       )                              AS top_category,
+       COALESCE(
+               JSON_ARRAYAGG(
+                       JSON_OBJECT(
+                               'category', category,
+                               'count', transaction_count,
+                               'percent_by_count', percentage_by_count
+                       )
+               ),
+               JSON_ARRAY()
+       )                              AS category_distribution,
+       CASE
+           WHEN MAX(mb.budget_count) = 0 THEN NULL
+           ELSE JSON_OBJECT(
+                   'limit', MAX(mb.limit_amount),
+                   'spent', COALESCE(SUM(total_amount), 0),
+                   'remaining',
+                   MAX(mb.limit_amount) - COALESCE(SUM(total_amount), 0)
+                )
+           END                        AS monthly_budget
+FROM CategoryMetrics
+         CROSS JOIN MonthlyBudget mb;
+""")
+
+        result = await self.db.execute(query, {"user_id": user_id})
+
+        row = result.fetchone()
+
+        if row:
+            return MobileDashboardSummary(
+                total_spent=row.total_spent,
+                top_category=row.top_category,
+                category_distribution=json.loads(row.category_distribution)
+                if row.category_distribution
+                else [],
+                monthly_budget=(
+                    MonthlyBudgetSummary(**json.loads(row.monthly_budget))
+                    if row.monthly_budget
+                    else None
+                ),
+            )
+
+        return None
+
+    async def _get_sqlite_mobile_dashboard_summary(
+        self, user_id: int
+    ) -> MobileDashboardSummary:
+        """SQLite equivalent of the mobile dashboard aggregate for tests."""
+        from datetime import UTC, date, datetime, timedelta
+        from decimal import Decimal
+
+        from sqlalchemy import func, select
+
+        from infrastructure.database.models import (
+            BudgetModel,
+            CategoryModel,
+            TransactionModel,
+        )
+
+        today = datetime.now(UTC).date()
+        month_start = date(today.year, today.month, 1)
+        if today.month == 12:
+            next_month_start = date(today.year + 1, 1, 1)
+        else:
+            next_month_start = date(today.year, today.month + 1, 1)
+
+        last_day_of_month = next_month_start - timedelta(days=1)
+        first_week_start = month_start - timedelta(days=month_start.weekday())
+        last_week_start = last_day_of_month - timedelta(
+            days=last_day_of_month.weekday()
+        )
+        weekly_cycles = (last_week_start - first_week_start).days // 7 + 1
+
+        category_name = func.coalesce(CategoryModel.name, "Sin categoría")
+        transaction_count = func.count(TransactionModel.id)
+        total_amount = func.coalesce(func.sum(TransactionModel.amount), 0)
+        statement = (
+            select(
+                category_name.label("category"),
+                transaction_count.label("count"),
+                total_amount.label("total_amount"),
+            )
+            .select_from(TransactionModel)
+            .outerjoin(CategoryModel, TransactionModel.category_id == CategoryModel.id)
+            .where(
+                TransactionModel.user_id == user_id,
+                TransactionModel.type == "EXPENSE",
+                TransactionModel.transaction_date >= month_start,
+                TransactionModel.transaction_date < next_month_start,
+            )
+            .group_by(CategoryModel.id, CategoryModel.name)
+            .order_by(transaction_count.desc(), category_name.asc())
+        )
+        rows = (await self.db.execute(statement)).all()
+
+        total_transactions = sum(row.count for row in rows)
+        category_distribution = [
+            {
+                "category": row.category,
+                "count": row.count,
+                "percent_by_count": round(row.count * 100.0 / total_transactions, 2),
+            }
+            for row in rows
+        ]
+        total_spent = sum(float(row.total_amount) for row in rows)
+
+        budget_rows = (
+            await self.db.execute(
+                select(BudgetModel.period, BudgetModel.limit_amount).where(
+                    BudgetModel.user_id == user_id,
+                    BudgetModel.is_active.is_(True),
+                )
+            )
+        ).all()
+        monthly_factors = {
+            "SEMANAL": Decimal(weekly_cycles),
+            "QUINCENAL": Decimal(2),
+            "MENSUAL": Decimal(1),
+            "TRIMESTRAL": Decimal(1) / Decimal(3),
+            "ANUAL": Decimal(1) / Decimal(12),
+        }
+        monthly_limit = sum(
+            (
+                Decimal(str(row.limit_amount))
+                * monthly_factors.get(
+                    getattr(row.period, "name", str(row.period)).upper(),
+                    Decimal(0),
+                )
+            )
+            for row in budget_rows
+        )
+        monthly_budget = (
+            MonthlyBudgetSummary(
+                limit=float(monthly_limit),
+                spent=total_spent,
+                remaining=float(monthly_limit) - total_spent,
+            )
+            if budget_rows
+            else None
+        )
+
+        return MobileDashboardSummary(
+            total_spent=total_spent,
+            top_category=category_distribution[0]["category"]
+            if category_distribution
+            else "N/A",
+            category_distribution=category_distribution,
+            monthly_budget=monthly_budget,
+        )
+
     async def _get_sqlite_dashboard_summary(self, user_id: int) -> DashboardSummary:
         """Simplified version of dashboard summary for SQLite (tests)"""
+        from datetime import UTC, date, datetime
+
+        from sqlalchemy import case, func, select
+
         from infrastructure.database.models import (
-            TransactionModel,
-            CategoryModel,
             AccountModel,
+            CategoryModel,
+            TransactionModel,
         )
-        from sqlalchemy import func, case, select
-        from datetime import date
 
         # Get start of current month
-        today = date.today()
+        today = datetime.now(UTC).date()
         month_start = date(today.year, today.month, 1)
 
         # Total Spent & Income

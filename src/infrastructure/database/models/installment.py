@@ -1,24 +1,23 @@
 import uuid
-from datetime import datetime, date
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional
 
 from sqlalchemy import (
+    CHAR,
+    DECIMAL,
     Boolean,
     Date,
     DateTime,
     Enum,
     ForeignKey,
-    DECIMAL,
     Integer,
     Text,
-    CHAR,
 )
-from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
 
-from infrastructure.database.connection import Base
 from domain.objects.enums import InstallmentType
+from infrastructure.database.connection import Base
 
 
 class InstallmentPurchaseModel(Base):
@@ -34,7 +33,10 @@ class InstallmentPurchaseModel(Base):
     account_id: Mapped[int] = mapped_column(
         ForeignKey("accounts.id", ondelete="CASCADE")
     )
-    category_id: Mapped[Optional[int]] = mapped_column(
+    initial_transaction_id: Mapped[int | None] = mapped_column(
+        ForeignKey("transactions.id", ondelete="SET NULL"), nullable=True
+    )
+    category_id: Mapped[int | None] = mapped_column(
         ForeignKey("categories.id"), nullable=True
     )
     description: Mapped[str] = mapped_column(Text)
@@ -44,7 +46,7 @@ class InstallmentPurchaseModel(Base):
     annual_interest_rate: Mapped[Decimal] = mapped_column(DECIMAL(5, 2))
     monthly_payment: Mapped[Decimal] = mapped_column(DECIMAL(12, 2))
     purchase_date: Mapped[date] = mapped_column(Date)
-    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     creation_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -61,14 +63,14 @@ class InstallmentChargeModel(Base):
     installment_purchase_id: Mapped[int] = mapped_column(
         ForeignKey("installment_purchases.id", ondelete="CASCADE"), index=True
     )
-    transaction_id: Mapped[Optional[int]] = mapped_column(
+    transaction_id: Mapped[int | None] = mapped_column(
         ForeignKey("transactions.id", ondelete="SET NULL"), nullable=True
     )
     installment_number: Mapped[int] = mapped_column(Integer)
     amount: Mapped[Decimal] = mapped_column(DECIMAL(12, 2))
     due_date: Mapped[date] = mapped_column(Date, index=True)
     paid: Mapped[bool] = mapped_column(Boolean, default=False)
-    paid_at: Mapped[Optional[datetime]] = mapped_column(
+    paid_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     creation_date: Mapped[datetime] = mapped_column(
