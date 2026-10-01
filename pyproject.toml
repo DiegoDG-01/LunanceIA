@@ -59,7 +59,7 @@ test = [
 
 dev = [
     "maturin==1.12.6",
-    "virtualenv==20.36.1",
+    "virtualenv==21.7.13",
     "ruff==0.14.3",
     "pre-commit==4.3.0",
     "locust==2.32.0",
