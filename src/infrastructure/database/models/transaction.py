@@ -10,6 +10,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     Table,
     Text,
@@ -38,6 +39,14 @@ transaction_tags = Table(
 
 class TransactionModel(Base):
     __tablename__ = "transactions"
+    __table_args__ = (
+        Index(
+            "ix_transactions_user_type_date",
+            "user_id",
+            "type",
+            "transaction_date",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(

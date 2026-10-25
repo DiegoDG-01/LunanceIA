@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import CHAR, DECIMAL, Date, DateTime, Enum, ForeignKey, String
+from sqlalchemy import CHAR, DECIMAL, Date, DateTime, Enum, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -12,6 +12,7 @@ from infrastructure.database.connection import Base
 
 class BudgetModel(Base):
     __tablename__ = "budgets"
+    __table_args__ = (Index("ix_budgets_user_active", "user_id", "is_active"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
