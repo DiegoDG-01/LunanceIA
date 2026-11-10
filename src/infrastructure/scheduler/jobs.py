@@ -1,6 +1,10 @@
 import logging
 from datetime import UTC, datetime
 
+from application.idempotency.commands.purge_idempotency_keys import (
+    PurgeIdempotencyKeysCommand,
+    PurgeIdempotencyKeysHandler,
+)
 from application.incomes.services.income_processor import IncomeProcessor
 from application.investments.commands.generate_daily_yields import (
     GenerateDailyYieldCommand,
@@ -17,6 +21,9 @@ from application.subscriptions.services.subscription_processor import (
 from infrastructure.database.connection import AsyncSessionLocal
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_idempotency_repository import (
+    SQLAlchemyIdempotencyRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_income_deposit_repository import (
     SQLAlchemyIncomeDepositRepository,
@@ -169,3 +176,20 @@ async def process_recurring_income_job():
         except Exception as e:
             await db.rollback()
             logger.error(f"Error processing recurring income job: {e}")
+
+
+async def purge_idempotency_keys_job():
+    """Borra las Idempotency-Key de más de 24 h: ya no protegen ningún reintento."""
+    async with AsyncSessionLocal() as db:
+        try:
+            handler = PurgeIdempotencyKeysHandler(
+                repository=SQLAlchemyIdempotencyRepository(db),
+                uow=SQLAlchemyUnitOfWork(db),
+            )
+            deleted = await handler.handle(
+                PurgeIdempotencyKeysCommand(now=datetime.now(UTC))
+            )
+            logger.info(f"Purged {deleted} expired idempotency keys")
+        except Exception:
+            await db.rollback()
+            logger.exception("Error purging idempotency keys")

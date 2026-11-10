@@ -9,6 +9,7 @@ from infrastructure.scheduler.jobs import (
     process_position_maturity_job,
     process_recurring_income_job,
     process_subscriptions_job,
+    purge_idempotency_keys_job,
 )
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,14 @@ class SchedulerService:
             trigger=CronTrigger(hour=0, minute=15),
             id="process_recurring_incomes_job",
             name="Process recurring incomes",
+            replace_existing=True,
+        )
+
+        self.scheduler.add_job(
+            purge_idempotency_keys_job,
+            trigger=CronTrigger(hour=3, minute=30),
+            id="purge_idempotency_keys_job",
+            name="Purge idempotency keys older than 24 h",
             replace_existing=True,
         )
 
