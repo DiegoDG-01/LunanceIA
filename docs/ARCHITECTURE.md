@@ -1177,6 +1177,53 @@ async with self.uow:
     await self.uow.commit()  # Confirmación atómica de todas las operaciones
 ```
 
+### 7. Idempotencia (`Idempotency-Key`)
+
+Un reintento de la app (se cortó la señal antes de la respuesta) nunca debe duplicar un
+movimiento de dinero. Los `POST` que crean recursos exigen el header `Idempotency-Key`
+(UUID) y los `PUT`/`PATCH`/`DELETE` lo aceptan; el contrato para clientes está en
+[API_USAGE.md](API_USAGE.md#-idempotencia-idempotency-key).
+
+| Capa | Pieza |
+|------|-------|
+| Aplicación | `application/interfaces/idempotency.py` (contrato del almacén), `application/idempotency/service.py` (`IdempotencyService`, el flujo) y `commands/purge_idempotency_keys.py` |
+| Infraestructura | Tabla `idempotency_keys` (PK `(user_id, key)`, `request_hash` SHA-256 de método + ruta + cuerpo, `status_code`, `response` JSON, `created_at` indexado), `SQLAlchemyIdempotencyRepository` y el job diario `purge_idempotency_keys_job` (borra claves de más de 24 h) |
+| Presentación | `presentation/dependencies/idempotency_deps.py`: `require_idempotency_key` / `accept_idempotency_key` validan el header y calculan el hash; el endpoint envuelve la llamada al handler en `idempotency.run(user_id, operation)` |
+
+```python
+@router.post("/", response_model=TransferResponse, status_code=201)
+async def create_transfer(
+    ...,
+    idempotency: Idempotency = Depends(require_idempotency_key),
+):
+    command = CreateTransferCommand(dto=dto)
+
+    async def operation():
+        result = await handler.handle(command)
+        return TransferResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
+```
+
+Todo ocurre en la sesión de BD de la petición (FastAPI cachea `get_db` por petición, así
+que repositorios, `SQLAlchemyUnitOfWork` e idempotencia comparten sesión):
+
+1. Se inserta la clave sin respuesta, sin confirmar.
+2. El handler hace su `commit()`: la clave y el movimiento quedan guardados juntos o
+   ninguno. Si el handler falla, el rollback se lleva la clave y el reintento vuelve a
+   ejecutar.
+3. Se guarda el código y el cuerpo de la respuesta en una segunda transacción.
+
+Un reintento con la respuesta guardada la devuelve sin ejecutar nada
+(`Idempotent-Replayed: true`); con otro cuerpo responde `422 IDEMPOTENCY_KEY_REUSED`. Con
+dos peticiones simultáneas, el `INSERT` de la segunda espera al bloqueo de la clave
+primaria que tiene la primera en InnoDB; al recibir "clave duplicada" hace rollback (para
+soltar el bloqueo compartido que deja InnoDB y salir de la foto de REPEATABLE READ),
+relee la fila y espera hasta 2 s a que aparezca la respuesta. Si la fila sigue sin
+respuesta (el proceso murió entre el paso 2 y el 3) responde
+`409 IDEMPOTENCY_KEY_IN_USE`: el cambio se aplicó y el cliente debe consultar el recurso.
+La prueba contra MySQL real está en `src/tests/integration/test_mysql_idempotency.py`.
+
 ## 🛡️ Sistema de Manejo de Excepciones
 
 ### Arquitectura de Excepciones

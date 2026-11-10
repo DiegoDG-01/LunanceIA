@@ -6,6 +6,7 @@ Esta guía te mostrará cómo usar la API REST de Lunance IA v2, incluyendo aute
 
 - [Autenticación JWT](#autenticación-jwt)
 - [Autenticación con API Keys](#-autenticación-con-api-keys)
+- [Idempotencia (`Idempotency-Key`)](#-idempotencia-idempotency-key)
 - [Endpoints Principales](#endpoints-principales)
 - [Apartados de Inversión](#-apartados-de-inversión---apiv2positions)
 - [Ejemplos de Uso](#ejemplos-de-uso)
@@ -190,7 +191,58 @@ Si la key no tiene el scope requerido, la API responde `403 Forbidden`. Si es in
 
 > La gestión de keys (crear / listar / revocar / eliminar) se hace **con JWT**, no con API key. Ver [API Keys](#-api-keys---apiv2api-keys) en la sección de endpoints.
 
+## 🔁 Idempotencia (`Idempotency-Key`)
+
+Si la app manda una petición y se corta la señal antes de recibir la respuesta, no sabe si el
+movimiento se guardó. Para que el reintento sea seguro, cada escritura lleva un identificador
+de operación en el header `Idempotency-Key`: la API ejecuta esa operación **una sola vez** y,
+si la recibe de nuevo, devuelve la respuesta que ya dio en lugar de repetir el cambio.
+
+```bash
+curl -X POST "http://localhost:8000/api/v2/transaction/" \
+     -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Idempotency-Key: 3f0c8a52-2b7e-4d1a-9f3e-6c5b1a2d7e90" \
+     -H "Content-Type: application/json" \
+     -d '{"account_uuid": "550e8400-e29b-41d4-a716-446655440000", "transaction_type": "EXPENSE", "amount": 250.50}'
+```
+
+**Dónde se usa**
+
+| Peticiones | Header |
+|------------|--------|
+| `POST` que crean recursos o mueven dinero: cuentas, transacciones, transferencias, compras a meses y pago de mensualidades (`/installments/{charge_uuid}/pay/`), ingresos recurrentes, suscripciones, apartados y sus movimientos (`deposit`, `withdraw`, `liquidate`), metas, presupuestos y API keys | **Obligatorio**. Si falta o no es un UUID → `422 VALIDATION_ERROR` (con `loc: ["header", "Idempotency-Key"]`) y no se ejecuta nada |
+| `PUT`, `PATCH` y `DELETE` | Opcional. Si se manda, se aplica la misma protección (útil en los *toggles* `activate`/`status`, que al repetirse se revertirían) |
+| `/auth/*`, `/ai/*` y lecturas (`GET`) | No aplica (se ignora) |
+
+Aplica igual con JWT y con API key (las tools del MCP mandan una clave nueva en cada llamada).
+
+**Reglas para el cliente**
+
+1. Genera un **UUID nuevo por cada operación** que el usuario inicia (por ejemplo, al pulsar
+   "Guardar"), y guárdalo junto con la petición pendiente.
+2. Si no llega respuesta (timeout, sin conexión, la app se cerró), **reintenta con la misma
+   clave y exactamente el mismo cuerpo**. Nunca reutilices una clave para otra operación.
+3. Las claves son **por usuario**: dos usuarios pueden mandar el mismo UUID sin pisarse.
+4. Se guardan **al menos 24 horas** (un job diario borra las más antiguas). Un reintento
+   pasado ese plazo se trata como una operación nueva.
+
+**Qué responde un reintento**
+
+| Situación | Respuesta |
+|-----------|-----------|
+| Misma clave, mismo método, ruta y cuerpo, y la operación ya terminó | El mismo código y el mismo cuerpo JSON de la primera vez, con el header `Idempotent-Replayed: true`. No se repite nada. (El orden de las claves del JSON puede variar.) |
+| Misma clave con otro cuerpo, método o ruta | `422 IDEMPOTENCY_KEY_REUSED`. Es un error del cliente: genera una clave nueva |
+| La primera petición sigue en curso | El reintento espera a que termine y recibe su respuesta |
+| La primera petición falló (cualquier error 4xx/5xx) | No queda rastro de la clave: el reintento vuelve a ejecutar la operación |
+| La operación se aplicó pero su respuesta no llegó a guardarse (el servidor se cayó justo en medio) | `409 IDEMPOTENCY_KEY_IN_USE`. **El cambio sí se aplicó**: vuelve a consultar el recurso (por ejemplo, la lista de transacciones) en lugar de reintentar a ciegas |
+
+> **API keys:** la respuesta guardada de `POST /api-keys/` no incluye la key en claro (el
+> backend solo guarda su hash). Un reintento devuelve el mismo cuerpo con `"raw_key": null`;
+> si la app nunca recibió la key, revócala con el `uuid` de esa respuesta y crea otra.
+
 ## 🌐 Endpoints Principales
+
+> Los `POST` de esta sección que crean recursos o mueven dinero (todos salvo `/auth/*` y `/ai/*`) exigen el header `Idempotency-Key`; ver [Idempotencia](#-idempotencia-idempotency-key).
 
 ### 🔐 Autenticación - `/api/v2/auth/`
 
@@ -324,7 +376,9 @@ POST /api/v2/api-keys/
 | `scopes` | array | ✅ | Mínimo 1; solo valores válidos del enum de scopes |
 | `expires_at` | datetime | ❌ | Expiración ISO 8601 (`null`/omitido = no expira) |
 
-**Response:** `201 Created` — ⚠️ `raw_key` se devuelve **una sola vez**; el backend solo guarda su hash.
+Requiere `Idempotency-Key` ([ver Idempotencia](#-idempotencia-idempotency-key)).
+
+**Response:** `201 Created` — ⚠️ `raw_key` se devuelve **una sola vez**; el backend solo guarda su hash. Un reintento con la misma `Idempotency-Key` devuelve `"raw_key": null`.
 ```json
 {
   "raw_key": "moon_AbC123dEf456...",
@@ -1714,6 +1768,7 @@ curl -X GET "http://localhost:8000/api/v2/auth/me" \
 # 4. Crear primera cuenta
 curl -X POST "http://localhost:8000/api/v2/account/" \
      -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Idempotency-Key: $(uuidgen)" \
      -H "Content-Type: application/json" \
      -d '{
        "name": "Cuenta Principal",
@@ -1733,6 +1788,7 @@ curl -X GET "http://localhost:8000/api/v2/account/" \
 # Crear cuenta de ahorros
 curl -X POST "http://localhost:8000/api/v2/account/" \
      -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Idempotency-Key: $(uuidgen)" \
      -H "Content-Type: application/json" \
      -d '{
        "name": "Ahorro para Vacaciones",
@@ -1744,6 +1800,7 @@ curl -X POST "http://localhost:8000/api/v2/account/" \
 # Crear cuenta de inversión (la etiqueta no genera rendimientos por sí sola)
 curl -X POST "http://localhost:8000/api/v2/account/" \
      -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Idempotency-Key: $(uuidgen)" \
      -H "Content-Type: application/json" \
      -d '{
        "name": "Inversiones GBM",
@@ -1755,6 +1812,7 @@ curl -X POST "http://localhost:8000/api/v2/account/" \
 # Apartar 6,000 de esa cuenta a plazo fijo de 90 días al 12.5%
 curl -X POST "http://localhost:8000/api/v2/positions/" \
      -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Idempotency-Key: $(uuidgen)" \
      -H "Content-Type: application/json" \
      -d '{
        "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
@@ -1773,12 +1831,14 @@ curl -X GET "http://localhost:8000/api/v2/positions/account/550e8400-e29b-41d4-a
 # Regresar dinero de un apartado a la vista al saldo disponible
 curl -X POST "http://localhost:8000/api/v2/positions/770e8400-e29b-41d4-a716-446655440009/withdraw/" \
      -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Idempotency-Key: $(uuidgen)" \
      -H "Content-Type: application/json" \
      -d '{"amount": 1500.00}'
 
 # Tramos por monto: primero el apartado que recibe el excedente...
 curl -X POST "http://localhost:8000/api/v2/positions/" \
      -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Idempotency-Key: $(uuidgen)" \
      -H "Content-Type: application/json" \
      -d '{
        "account_uuid": "550e8400-e29b-41d4-a716-446655440000",
@@ -1918,6 +1978,20 @@ La API retorna errores en un formato estándar con soporte de internacionalizaci
 - `FIXED_TERM_CAP_NOT_ALLOWED` (409): Un plazo fijo no admite tope ni desbordamiento
 - `VALIDATION_INVALID_POSITION_CAP` (400): Tope menor o igual a cero, o destino de desbordamiento sin tope
 
+### Errores de Idempotencia (409 / 422)
+
+```json
+{
+  "error_code": "IDEMPOTENCY_KEY_REUSED",
+  "message": "Esta Idempotency-Key ya se usó con una petición distinta; genera una clave nueva por operación",
+  "details": null
+}
+```
+
+- `IDEMPOTENCY_KEY_REUSED` (422): la misma `Idempotency-Key` llegó con otro cuerpo, método o ruta
+- `IDEMPOTENCY_KEY_IN_USE` (409): la operación de esa clave se aplicó pero su respuesta no está guardada; consulta el recurso antes de reintentar
+- `VALIDATION_ERROR` (422) con `loc: ["header", "Idempotency-Key"]`: falta el header o no es un UUID
+
 ### Rate Limit Exceeded (429)
 
 ```json
@@ -1962,6 +2036,7 @@ curl -X GET "http://localhost:8000/api/v2/account/" \
 | 401 | Unauthorized | Token inválido o faltante |
 | 403 | Forbidden | Sin permisos para el recurso |
 | 404 | Not Found | Recurso no encontrado |
+| 409 | Conflict | Regla de negocio en conflicto, o `IDEMPOTENCY_KEY_IN_USE` |
 | 422 | Unprocessable Entity | Error de validación de datos |
 | 429 | Too Many Requests | Se excedió el límite de rate limiting |
 | 500 | Internal Server Error | Error interno del servidor |
