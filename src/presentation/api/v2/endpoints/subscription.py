@@ -57,6 +57,11 @@ from presentation.dependencies import (
     get_update_subscription_handler,
 )
 from presentation.dependencies.auth_deps import require_scope
+from presentation.dependencies.idempotency_deps import (
+    Idempotency,
+    accept_idempotency_key,
+    require_idempotency_key,
+)
 from presentation.schemas.requests.subscription import (
     CreateSubscriptionRequest,
     UpdateSubscriptionRequest,
@@ -143,6 +148,7 @@ async def create_subscription(
     subscription_request: CreateSubscriptionRequest,
     current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_WRITE.value)),
     handler: CreateSubscriptionHandler = Depends(get_create_subscription_handler),
+    idempotency: Idempotency = Depends(require_idempotency_key),
 ):
     """
     Crear una nueva suscripción.
@@ -164,9 +170,13 @@ async def create_subscription(
     )
 
     command = CreateSubscriptionCommand(dto=dto)
-    result = await handler.handle(command)
 
-    return SubscriptionResponse(**result.__dict__)
+    async def operation():
+        result = await handler.handle(command)
+
+        return SubscriptionResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.patch(
@@ -180,6 +190,7 @@ async def update_subscription(
     subscription_request: UpdateSubscriptionRequest,
     current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_WRITE.value)),
     handler: UpdateSubscriptionHandler = Depends(get_update_subscription_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     await enforce_rate_limit(limiter_20_per_minute, request)
     dto = UpdateSubscriptionDTO(
@@ -201,8 +212,11 @@ async def update_subscription(
         dto=dto,
     )
 
-    update_subscription = await handler.handle(command)
-    return SubscriptionResponse(**update_subscription.__dict__)
+    async def operation():
+        update_subscription = await handler.handle(command)
+        return SubscriptionResponse(**update_subscription.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.patch("/{subscription_uuid}/activate/", response_model=SubscriptionResponse)
@@ -211,14 +225,18 @@ async def activate_subscription(
     subscription_uuid: str,
     current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_WRITE.value)),
     handler: StateSubscriptionHandler = Depends(get_state_subscription_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     await enforce_rate_limit(limiter_5_per_minute, request)
     command = StateSubscriptionCommand(
         subscription_uuid=subscription_uuid, user_id=cast(int, current_user.id)
     )
 
-    subscription = await handler.handle(command)
-    return SubscriptionResponse(**subscription.__dict__)
+    async def operation():
+        subscription = await handler.handle(command)
+        return SubscriptionResponse(**subscription.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.delete("/{subscription_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
@@ -227,14 +245,18 @@ async def delete_subscription(
     subscription_uuid: str,
     current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_WRITE.value)),
     handler: DeleteSubscriptionHandler = Depends(get_delete_subscription_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     await enforce_rate_limit(limiter_5_per_minute, request)
     command = DeleteSubscriptionCommand(
         subscription_uuid=subscription_uuid, user_id=cast(int, current_user.id)
     )
 
-    await handler.handle(command)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    async def operation():
+        await handler.handle(command)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.get(

@@ -3,6 +3,7 @@
 import pytest
 import httpx
 from ..conftest import AuthTokens
+from ..idempotency import with_idempotency_key
 from datetime import date
 
 @pytest.mark.e2e
@@ -19,7 +20,7 @@ class TestSubscriptionCRUD:
             "initial_balance": 5000.00,
             "currency": "MXN"
         }
-        response = await http_client.post("/account", json=account_data, headers=auth_tokens.get_auth_headers())
+        response = await http_client.post("/account", json=account_data, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
         return response.json()
 
     @pytest.mark.asyncio
@@ -41,8 +42,7 @@ class TestSubscriptionCRUD:
         response = await http_client.post(
             "/subscription",
             json=subscription_data,
-            headers=auth_tokens.get_auth_headers()
-        )
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()))
 
         assert response.status_code == 201
         data = response.json()
@@ -74,13 +74,13 @@ class TestGetSubscriptionById:
         acc_res = await http_client.post(
             "/account",
             json={"name": "GetSub Account", "account_type": "CHECKING", "bank_id": 1, "initial_balance": 5000.0, "currency": "MXN"},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         account_uuid = acc_res.json()["account_uuid"]
         sub_res = await http_client.post(
             "/subscription",
             json={"account_uuid": account_uuid, "category_id": 1, "name": "Spotify", "amount": 99.0, "frequency": "MONTHLY", "start_date": str(date.today()), "billing_day": 5},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         return sub_res.json()
 
@@ -118,13 +118,13 @@ class TestUpdateSubscription:
         acc_res = await http_client.post(
             "/account",
             json={"name": "UpdateSub Account", "account_type": "CHECKING", "bank_id": 1, "initial_balance": 5000.0, "currency": "MXN"},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         account_uuid = acc_res.json()["account_uuid"]
         sub_res = await http_client.post(
             "/subscription",
             json={"account_uuid": account_uuid, "category_id": 1, "name": "HBO", "amount": 149.0, "frequency": "MONTHLY", "start_date": str(date.today()), "billing_day": 10},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         return {"account_uuid": account_uuid, "subscription": sub_res.json()}
 
@@ -170,13 +170,13 @@ class TestActivateSubscription:
         acc_res = await http_client.post(
             "/account",
             json={"name": "ActivateSub Account", "account_type": "CHECKING", "bank_id": 1, "initial_balance": 5000.0, "currency": "MXN"},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         account_uuid = acc_res.json()["account_uuid"]
         sub_res = await http_client.post(
             "/subscription",
             json={"account_uuid": account_uuid, "category_id": 1, "name": "Disney+", "amount": 129.0, "frequency": "MONTHLY", "start_date": str(date.today()), "billing_day": 15},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         return sub_res.json()
 
@@ -216,13 +216,13 @@ class TestDeleteSubscription:
         acc_res = await http_client.post(
             "/account",
             json={"name": "DeleteSub Account", "account_type": "CHECKING", "bank_id": 1, "initial_balance": 5000.0, "currency": "MXN"},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         account_uuid = acc_res.json()["account_uuid"]
         sub_res = await http_client.post(
             "/subscription",
             json={"account_uuid": account_uuid, "category_id": 1, "name": "Apple TV", "amount": 89.0, "frequency": "MONTHLY", "start_date": str(date.today()), "billing_day": 20},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         return sub_res.json()
 
@@ -280,13 +280,13 @@ class TestGetSubscriptionTransactions:
         acc_res = await http_client.post(
             "/account",
             json={"name": "SubTx Account", "account_type": "CHECKING", "bank_id": 1, "initial_balance": 5000.0, "currency": "MXN"},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         account_uuid = acc_res.json()["account_uuid"]
         sub_res = await http_client.post(
             "/subscription",
             json={"account_uuid": account_uuid, "category_id": 1, "name": "Paramount+", "amount": 79.0, "frequency": "MONTHLY", "start_date": str(date.today()), "billing_day": 25},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         return sub_res.json()
 

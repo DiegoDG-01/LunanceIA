@@ -2,6 +2,7 @@ import os
 import random
 from datetime import date, timedelta
 from decimal import Decimal
+from uuid import uuid4
 
 from locust import HttpUser, between, task
 
@@ -62,6 +63,7 @@ class LunanceUser(HttpUser):
 
         with self.client.post(
             f"{API_PREFIX}/account/",
+            headers={"Idempotency-Key": str(uuid4())},
             json=payload,
             name="/account/ [POST]",
             catch_response=True,
@@ -102,6 +104,7 @@ class LunanceUser(HttpUser):
 
         self.client.post(
             f"{API_PREFIX}/transaction/",
+            headers={"Idempotency-Key": str(uuid4())},
             json=payload,
             name="/transaction/ [POST]",
         )
@@ -122,6 +125,7 @@ class LunanceUser(HttpUser):
 
         with self.client.post(
             f"{API_PREFIX}/account/",
+            headers={"Idempotency-Key": str(uuid4())},
             json=payload,
             name="/account/ [POST investment]",
             catch_response=True,
@@ -156,6 +160,7 @@ class LunanceUser(HttpUser):
 
         self.client.post(
             f"{API_PREFIX}/positions/",
+            headers={"Idempotency-Key": str(uuid4())},
             json=payload,
             name="/positions/ [POST]",
         )

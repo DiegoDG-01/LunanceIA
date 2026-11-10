@@ -54,6 +54,11 @@ from infrastructure.rate_limiting.limiters import (
     limiter_50_per_minute,
 )
 from presentation.dependencies.auth_deps import require_scope
+from presentation.dependencies.idempotency_deps import (
+    Idempotency,
+    accept_idempotency_key,
+    require_idempotency_key,
+)
 from presentation.dependencies.investment_position_deps import (
     get_create_position_handler,
     get_deposit_to_position_handler,
@@ -87,6 +92,7 @@ async def create_position(
     position_request: CreatePositionRequest,
     current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_WRITE.value)),
     handler: CreatePositionHandler = Depends(get_create_position_handler),
+    idempotency: Idempotency = Depends(require_idempotency_key),
 ):
     await enforce_rate_limit(limiter_20_per_minute, request)
     cap = position_request.cap
@@ -108,8 +114,12 @@ async def create_position(
         overflow_action=cap.overflow_action if cap else None,
         overflow_position_uuid=cap.overflow_position_uuid if cap else None,
     )
-    result = await handler.handle(CreatePositionCommand(dto=dto))
-    return PositionResponse(**result.__dict__)
+
+    async def operation():
+        result = await handler.handle(CreatePositionCommand(dto=dto))
+        return PositionResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.get("/account/{account_uuid}/", response_model=AccountPositionsResponse)
@@ -162,6 +172,7 @@ async def update_position(
     position_request: UpdatePositionRequest,
     current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_WRITE.value)),
     handler: UpdatePositionHandler = Depends(get_update_position_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     await enforce_rate_limit(limiter_20_per_minute, request)
     cap = position_request.cap
@@ -177,8 +188,12 @@ async def update_position(
         overflow_action=cap.overflow_action if cap else None,
         overflow_position_uuid=cap.overflow_position_uuid if cap else None,
     )
-    result = await handler.handle(UpdatePositionCommand(dto=dto))
-    return PositionResponse(**result.__dict__)
+
+    async def operation():
+        result = await handler.handle(UpdatePositionCommand(dto=dto))
+        return PositionResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.post("/{position_uuid}/deposit/", response_model=PositionResponse)
@@ -188,6 +203,7 @@ async def deposit_to_position(
     movement_request: PositionMovementRequest,
     current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_WRITE.value)),
     handler: DepositToPositionHandler = Depends(get_deposit_to_position_handler),
+    idempotency: Idempotency = Depends(require_idempotency_key),
 ):
     await enforce_rate_limit(limiter_20_per_minute, request)
     dto = PositionMovementDTO(
@@ -196,8 +212,12 @@ async def deposit_to_position(
         amount=movement_request.amount,
         currency=movement_request.currency,
     )
-    result = await handler.handle(DepositToPositionCommand(dto=dto))
-    return PositionResponse(**result.__dict__)
+
+    async def operation():
+        result = await handler.handle(DepositToPositionCommand(dto=dto))
+        return PositionResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.post("/{position_uuid}/withdraw/", response_model=PositionResponse)
@@ -207,6 +227,7 @@ async def withdraw_from_position(
     movement_request: PositionMovementRequest,
     current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_WRITE.value)),
     handler: WithdrawFromPositionHandler = Depends(get_withdraw_from_position_handler),
+    idempotency: Idempotency = Depends(require_idempotency_key),
 ):
     await enforce_rate_limit(limiter_20_per_minute, request)
     dto = PositionMovementDTO(
@@ -215,8 +236,12 @@ async def withdraw_from_position(
         amount=movement_request.amount,
         currency=movement_request.currency,
     )
-    result = await handler.handle(WithdrawFromPositionCommand(dto=dto))
-    return PositionResponse(**result.__dict__)
+
+    async def operation():
+        result = await handler.handle(WithdrawFromPositionCommand(dto=dto))
+        return PositionResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.post("/{position_uuid}/liquidate/", response_model=LiquidatePositionResponse)
@@ -225,13 +250,18 @@ async def liquidate_position(
     position_uuid: str,
     current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_WRITE.value)),
     handler: LiquidatePositionHandler = Depends(get_liquidate_position_handler),
+    idempotency: Idempotency = Depends(require_idempotency_key),
 ):
     await enforce_rate_limit(limiter_10_per_minute, request)
     dto = LiquidatePositionDTO(
         user_id=cast(int, current_user.id), position_uuid=position_uuid
     )
-    result = await handler.handle(LiquidatePositionCommand(dto=dto))
-    return LiquidatePositionResponse(**result.__dict__)
+
+    async def operation():
+        result = await handler.handle(LiquidatePositionCommand(dto=dto))
+        return LiquidatePositionResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.get("/{position_uuid}/yields/", response_model=list[InvestmentYieldResponse])

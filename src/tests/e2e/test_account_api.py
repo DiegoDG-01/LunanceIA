@@ -3,6 +3,7 @@
 import pytest
 import httpx
 from ..conftest import AuthTokens
+from ..idempotency import with_idempotency_key
 
 
 class TestAccountStatusToggle:
@@ -23,8 +24,7 @@ class TestAccountStatusToggle:
         create_response = await http_client.post(
             "/account",
             json=account_data,
-            headers=auth_tokens.get_auth_headers()
-        )
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()))
 
         assert create_response.status_code in [200, 201], f"Account creation failed: {create_response.text}"
 
@@ -117,8 +117,7 @@ class TestAccountStatusConsistency:
         create_response = await http_client.post(
             "/account",
             json=account_data,
-            headers=auth_tokens.get_auth_headers()
-        )
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()))
 
         assert create_response.status_code in [200, 201]
 
@@ -164,8 +163,7 @@ class TestAccountStatusValidation:
         create_response = await http_client.post(
             "/account",
             json=account_data,
-            headers=auth_tokens.get_auth_headers()
-        )
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()))
 
         assert create_response.status_code in [200, 201]
 
@@ -200,7 +198,7 @@ class TestGetUserAccounts:
         await http_client.post(
             "/account",
             json={"name": "List Test Account", "account_type": "SAVINGS", "bank_id": 1, "initial_balance": 100.0, "currency": "MXN"},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
 
         response = await http_client.get("/account/", headers=auth_tokens.get_auth_headers())
@@ -238,7 +236,7 @@ class TestGetAccountById:
         create_res = await http_client.post(
             "/account",
             json={"name": "GetById Account", "account_type": "CHECKING", "bank_id": 1, "initial_balance": 300.0, "currency": "MXN"},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         assert create_res.status_code in [200, 201]
         account_uuid = create_res.json()["account_uuid"]
@@ -272,7 +270,7 @@ class TestCreateAccount:
         response = await http_client.post(
             "/account",
             json={"name": "New Account", "account_type": "SAVINGS", "bank_id": 1, "initial_balance": 1000.0, "currency": "MXN"},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
 
         assert response.status_code in [200, 201]
@@ -287,7 +285,7 @@ class TestCreateAccount:
         response = await http_client.post(
             "/account",
             json={"name": "Incomplete"},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         assert response.status_code == 422
 
@@ -308,7 +306,7 @@ class TestUpdateAccount:
         create_res = await http_client.post(
             "/account",
             json={"name": "Original Name", "account_type": "SAVINGS", "bank_id": 1, "initial_balance": 500.0, "currency": "MXN"},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         assert create_res.status_code in [200, 201]
         account_uuid = create_res.json()["account_uuid"]
@@ -345,14 +343,14 @@ class TestGetAccountActivity:
         create_res = await http_client.post(
             "/account",
             json={"name": "Activity Account", "account_type": "CHECKING", "bank_id": 1, "initial_balance": 2000.0, "currency": "MXN"},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         account_uuid = create_res.json()["account_uuid"]
 
         await http_client.post(
             "/transaction",
             json={"account_uuid": account_uuid, "category_id": 1, "transaction_type": "EXPENSE", "amount": 100.0, "description": "Activity tx", "transaction_date": "2024-03-01"},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
 
         response = await http_client.get(

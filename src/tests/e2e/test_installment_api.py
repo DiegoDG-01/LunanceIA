@@ -6,6 +6,7 @@ import pytest
 import httpx
 
 from ..conftest import AuthTokens
+from ..idempotency import with_idempotency_key
 
 
 @pytest.mark.e2e
@@ -31,7 +32,7 @@ class TestInstallmentCRUD:
                     "minimum_payment_percentage": 5,
                 },
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         assert response.status_code == 201, response.text
         return response.json()
@@ -55,8 +56,7 @@ class TestInstallmentCRUD:
         }
         payload.update(overrides)
         return await http_client.post(
-            "/installments/", json=payload, headers=auth_tokens.get_auth_headers()
-        )
+            "/installments/", json=payload, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
 
     async def _create_payment_account(
         self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens
@@ -70,7 +70,7 @@ class TestInstallmentCRUD:
                 "initial_balance": 5000.00,
                 "currency": "MXN",
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         assert response.status_code == 201, response.text
         return response.json()
@@ -134,7 +134,7 @@ class TestInstallmentCRUD:
                 "source_account_uuid": source_account["account_uuid"],
                 "payment_date": str(date.today()),
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
 
         assert response.status_code == 200
@@ -151,7 +151,7 @@ class TestInstallmentCRUD:
                 "source_account_uuid": "00000000-0000-0000-0000-000000000000",
                 "payment_date": str(date.today()),
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         assert response.status_code == 404
 

@@ -3,6 +3,7 @@
 import pytest
 import httpx
 from ..conftest import AuthTokens
+from ..idempotency import with_idempotency_key
 
 @pytest.mark.e2e
 class TestTransactionCRUD:
@@ -18,7 +19,7 @@ class TestTransactionCRUD:
             "initial_balance": 1000.00,
             "currency": "MXN"
         }
-        response = await http_client.post("/account", json=account_data, headers=auth_tokens.get_auth_headers())
+        response = await http_client.post("/account", json=account_data, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
         return response.json()
 
     @pytest.mark.asyncio
@@ -37,7 +38,7 @@ class TestTransactionCRUD:
         }
 
         # 1. Create Transaction
-        response = await http_client.post("/transaction", json=transaction_data, headers=auth_tokens.get_auth_headers())
+        response = await http_client.post("/transaction", json=transaction_data, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
         assert response.status_code == 200
 
         # 2. Verify Account Balance
@@ -62,7 +63,7 @@ class TestTransactionCRUD:
         }
 
         # 1. Create Transaction
-        response = await http_client.post("/transaction", json=transaction_data, headers=auth_tokens.get_auth_headers())
+        response = await http_client.post("/transaction", json=transaction_data, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
         assert response.status_code == 200
 
         # 2. Verify Account Balance
@@ -84,7 +85,7 @@ class TestTransactionCRUD:
             "amount": 50.0,
             "description": "Coffee",
             "transaction_date": "2024-01-22"
-        }, headers=auth_tokens.get_auth_headers())
+        }, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
 
         response = await http_client.get("/transaction", headers=auth_tokens.get_auth_headers())
         assert response.status_code == 200
@@ -107,7 +108,7 @@ class TestTransactionCRUD:
             "amount": 100.0,
             "description": "Temporary expense",
             "transaction_date": "2024-01-22"
-        }, headers=auth_tokens.get_auth_headers())
+        }, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
 
         transaction_uuid = create_res.json()["uuid"]
 
@@ -135,7 +136,7 @@ class TestTransactionValidation:
             "amount": -100.00,
             "description": "Invalid"
         }
-        response = await http_client.post("/transaction", json=transaction_data, headers=auth_tokens.get_auth_headers())
+        response = await http_client.post("/transaction", json=transaction_data, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
         assert response.status_code == 422
 
 
@@ -148,13 +149,13 @@ class TestGetTransactionByUuid:
         acc_res = await http_client.post(
             "/account",
             json={"name": "GetTx Account", "account_type": "CHECKING", "bank_id": 1, "initial_balance": 1000.0, "currency": "MXN"},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         account_uuid = acc_res.json()["account_uuid"]
         tx_res = await http_client.post(
             "/transaction",
             json={"account_uuid": account_uuid, "category_id": 1, "transaction_type": "EXPENSE", "amount": 50.0, "description": "Test", "transaction_date": "2024-01-15"},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         return tx_res.json()
 
@@ -195,13 +196,13 @@ class TestUpdateTransaction:
         acc_res = await http_client.post(
             "/account",
             json={"name": "UpdateTx Account", "account_type": "CHECKING", "bank_id": 1, "initial_balance": 2000.0, "currency": "MXN"},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         account_uuid = acc_res.json()["account_uuid"]
         tx_res = await http_client.post(
             "/transaction",
             json={"account_uuid": account_uuid, "category_id": 1, "transaction_type": "EXPENSE", "amount": 100.0, "description": "Original", "transaction_date": "2024-02-01"},
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         return {"account_uuid": account_uuid, "transaction": tx_res.json()}
 

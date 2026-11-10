@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 from ..conftest import AuthTokens
+from ..idempotency import with_idempotency_key
 
 
 @pytest.mark.e2e
@@ -25,8 +26,7 @@ class TestBudgetCRUD:
         }
         payload.update(overrides)
         return await http_client.post(
-            "/budgets/", json=payload, headers=auth_tokens.get_auth_headers()
-        )
+            "/budgets/", json=payload, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
 
     @pytest.mark.asyncio
     async def test_create_budget_success(self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens):
@@ -58,7 +58,7 @@ class TestBudgetCRUD:
                 "period": "mensual",
                 "category_id": 1,
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
 
         assert response.status_code == 201

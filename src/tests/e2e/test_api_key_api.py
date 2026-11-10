@@ -1,6 +1,7 @@
 """Tests E2E para el ciclo de vida de API keys."""
 
 import pytest
+from ..idempotency import with_idempotency_key
 
 
 @pytest.mark.asyncio
@@ -12,7 +13,7 @@ class TestAPIKeyLifecycle:
                 "name": "test-key",
                 "scopes": scopes or ["transactions:read"],
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         assert response.status_code == 201
         return response.json()
@@ -70,7 +71,7 @@ class TestAPIKeyLifecycle:
                 "initial_balance": 1000.0,
                 "currency": "MXN",
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         account_uuid = acc_res.json()["account_uuid"]
 
@@ -84,7 +85,7 @@ class TestAPIKeyLifecycle:
                 "description": "Compra via API key",
                 "transaction_date": "2024-01-22",
             },
-            headers={"X-API-Key": created["raw_key"]},
+            headers=with_idempotency_key({"X-API-Key": created["raw_key"]}),
         )
         assert response.status_code == 200
         assert response.json()["description"] == "Compra via API key"
@@ -106,7 +107,7 @@ class TestAPIKeyLifecycle:
                 "description": "No debería crearse",
                 "transaction_date": "2024-01-22",
             },
-            headers={"X-API-Key": created["raw_key"]},
+            headers=with_idempotency_key({"X-API-Key": created["raw_key"]}),
         )
         assert response.status_code == 403
 
@@ -277,7 +278,7 @@ class TestAPIKeyLifecycle:
                 "period": "mensual",
                 "start_date": "2026-06-01",
             },
-            headers={"X-API-Key": created["raw_key"]},
+            headers=with_idempotency_key({"X-API-Key": created["raw_key"]}),
         )
         assert response.status_code == 201
         assert response.json()["name"] == "Comida via API key"
@@ -297,7 +298,7 @@ class TestAPIKeyLifecycle:
                 "period": "mensual",
                 "start_date": "2026-06-01",
             },
-            headers={"X-API-Key": created["raw_key"]},
+            headers=with_idempotency_key({"X-API-Key": created["raw_key"]}),
         )
         assert response.status_code == 403
 
@@ -355,7 +356,7 @@ class TestAPIKeyLifecycle:
                 "initial_balance": 1000.0,
                 "currency": "MXN",
             },
-            headers={"X-API-Key": created["raw_key"]},
+            headers=with_idempotency_key({"X-API-Key": created["raw_key"]}),
         )
         assert response.status_code == 201
         assert response.json()["name"] == "Cuenta via API key"
@@ -376,7 +377,7 @@ class TestAPIKeyLifecycle:
                 "initial_balance": 0.0,
                 "currency": "MXN",
             },
-            headers={"X-API-Key": created["raw_key"]},
+            headers=with_idempotency_key({"X-API-Key": created["raw_key"]}),
         )
         assert response.status_code == 403
 
@@ -426,7 +427,7 @@ class TestAPIKeyLifecycle:
                 "destination_account_uuid": "00000000-0000-0000-0000-000000000001",
                 "amount": 100.0,
             },
-            headers={"X-API-Key": created["raw_key"]},
+            headers=with_idempotency_key({"X-API-Key": created["raw_key"]}),
         )
         assert response.status_code == 403
 

@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 from ..conftest import AuthTokens
+from ..idempotency import with_idempotency_key
 
 
 @pytest.mark.e2e
@@ -24,7 +25,7 @@ class TestDashboardAPI:
             "initial_balance": 1000.00,
             "currency": "MXN"
         }
-        acc_res = await http_client.post("/account", json=account_data, headers=auth_tokens.get_auth_headers())
+        acc_res = await http_client.post("/account", json=account_data, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
         account_uuid = acc_res.json()["account_uuid"]
 
         today_str = str(datetime.now(UTC).astimezone().date())
@@ -37,7 +38,7 @@ class TestDashboardAPI:
             "amount": 500.00,
             "description": "Income 1",
             "transaction_date": today_str
-        }, headers=auth_tokens.get_auth_headers())
+        }, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
 
         # 3. Add an Expense (Category 1: Alimentos)
         await http_client.post("/transaction", json={
@@ -47,7 +48,7 @@ class TestDashboardAPI:
             "amount": 200.00,
             "description": "Expense 1",
             "transaction_date": today_str
-        }, headers=auth_tokens.get_auth_headers())
+        }, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
 
         # 4. Get Dashboard Data
         response = await http_client.get("/dashboard", headers=auth_tokens.get_auth_headers())
@@ -88,8 +89,7 @@ class TestDashboardAPI:
             "currency": "MXN",
         }
         account_response = await http_client.post(
-            "/account", json=account_data, headers=auth_tokens.get_auth_headers()
-        )
+            "/account", json=account_data, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
         assert account_response.status_code == 201
         account_uuid = account_response.json()["account_uuid"]
         today = str(datetime.now(UTC).astimezone().date())
@@ -109,7 +109,7 @@ class TestDashboardAPI:
                     "transaction_date": today,
                     **transaction,
                 },
-                headers=auth_tokens.get_auth_headers(),
+                headers=with_idempotency_key(auth_tokens.get_auth_headers()),
             )
             assert response.status_code == 200
 
@@ -164,7 +164,7 @@ class TestDashboardAPI:
                     "limit_amount": limit_amount,
                     "period": period,
                 },
-                headers=auth_tokens.get_auth_headers(),
+                headers=with_idempotency_key(auth_tokens.get_auth_headers()),
             )
             assert response.status_code == 201
 

@@ -49,6 +49,11 @@ from presentation.dependencies.budget_deps import (
     get_state_budget_handler,
     get_update_budget_handler,
 )
+from presentation.dependencies.idempotency_deps import (
+    Idempotency,
+    accept_idempotency_key,
+    require_idempotency_key,
+)
 from presentation.schemas.requests.budget import (
     CreateBudgetRequest,
     UpdateBudgetRequest,
@@ -120,6 +125,7 @@ async def create_budget(
     budget_request: CreateBudgetRequest,
     current_user: User = Depends(require_scope(APIKeyScope.BUDGETS_WRITE.value)),
     handler: CreateBudgetHandler = Depends(get_create_budget_handler),
+    idempotency: Idempotency = Depends(require_idempotency_key),
 ):
     """Crea un nuevo presupuesto."""
     await enforce_rate_limit(limiter_20_per_minute, request)
@@ -134,8 +140,12 @@ async def create_budget(
         alert_percentage=budget_request.alert_percentage,
     )
     command = CreateBudgetCommand(dto=dto)
-    result = await handler.handle(command)
-    return BudgetResponse(**result.__dict__)
+
+    async def operation():
+        result = await handler.handle(command)
+        return BudgetResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.patch(
@@ -149,6 +159,7 @@ async def update_budget(
     budget_request: UpdateBudgetRequest,
     current_user: User = Depends(require_scope(APIKeyScope.BUDGETS_WRITE.value)),
     handler: UpdateBudgetHandler = Depends(get_update_budget_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     """Actualiza un presupuesto existente."""
     await enforce_rate_limit(limiter_20_per_minute, request)
@@ -166,8 +177,12 @@ async def update_budget(
         user_id=cast(int, current_user.id),
         dto=dto,
     )
-    result = await handler.handle(command)
-    return BudgetResponse(**result.__dict__)
+
+    async def operation():
+        result = await handler.handle(command)
+        return BudgetResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.patch("/{budget_uuid}/activate/", response_model=BudgetResponse)
@@ -176,6 +191,7 @@ async def toggle_budget_status(
     budget_uuid: str,
     current_user: User = Depends(require_scope(APIKeyScope.BUDGETS_WRITE.value)),
     handler: StateBudgetHandler = Depends(get_state_budget_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     """Activa o desactiva un presupuesto."""
     await enforce_rate_limit(limiter_5_per_minute, request)
@@ -183,8 +199,12 @@ async def toggle_budget_status(
         budget_uuid=budget_uuid,
         user_id=cast(int, current_user.id),
     )
-    result = await handler.handle(command)
-    return BudgetResponse(**result.__dict__)
+
+    async def operation():
+        result = await handler.handle(command)
+        return BudgetResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.delete("/{budget_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
@@ -193,6 +213,7 @@ async def delete_budget(
     budget_uuid: str,
     current_user: User = Depends(require_scope(APIKeyScope.BUDGETS_WRITE.value)),
     handler: DeleteBudgetHandler = Depends(get_delete_budget_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     """Elimina un presupuesto permanentemente."""
     await enforce_rate_limit(limiter_5_per_minute, request)
@@ -200,5 +221,9 @@ async def delete_budget(
         budget_uuid=budget_uuid,
         user_id=cast(int, current_user.id),
     )
-    await handler.handle(command)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    async def operation():
+        await handler.handle(command)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    return await idempotency.run(cast(int, current_user.id), operation)

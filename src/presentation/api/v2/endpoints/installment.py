@@ -31,6 +31,11 @@ from infrastructure.rate_limiting.limiters import (
     limiter_50_per_minute,
 )
 from presentation.dependencies.auth_deps import require_scope
+from presentation.dependencies.idempotency_deps import (
+    Idempotency,
+    accept_idempotency_key,
+    require_idempotency_key,
+)
 from presentation.dependencies.installment_deps import (
     get_create_installment_handler,
     get_delete_installment_handler,
@@ -79,6 +84,7 @@ async def create_installment_purchase(
     body: CreateInstallmentPurchaseRequest,
     current_user: User = Depends(require_scope(APIKeyScope.INSTALLMENTS_WRITE.value)),
     handler: CreateInstallmentPurchaseHandler = Depends(get_create_installment_handler),
+    idempotency: Idempotency = Depends(require_idempotency_key),
 ):
     await enforce_rate_limit(limiter_20_per_minute, request)
     dto = CreateInstallmentPurchaseDTO(
@@ -93,9 +99,13 @@ async def create_installment_purchase(
         purchase_date=body.purchase_date,
         notes=body.notes,
     )
-    result = await handler.handle(CreateInstallmentPurchaseCommand(dto=dto))
-    charges = [InstallmentChargeResponse(**c.__dict__) for c in result.charges]
-    return InstallmentPurchaseResponse(**{**result.__dict__, "charges": charges})
+
+    async def operation():
+        result = await handler.handle(CreateInstallmentPurchaseCommand(dto=dto))
+        charges = [InstallmentChargeResponse(**c.__dict__) for c in result.charges]
+        return InstallmentPurchaseResponse(**{**result.__dict__, "charges": charges})
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.post("/{charge_uuid}/pay/", response_model=InstallmentChargeResponse)
@@ -105,6 +115,7 @@ async def pay_installment_charge(
     body: PayInstallmentChargeRequest,
     current_user: User = Depends(require_scope(APIKeyScope.INSTALLMENTS_WRITE.value)),
     handler: PayInstallmentChargeHandler = Depends(get_pay_installment_charge_handler),
+    idempotency: Idempotency = Depends(require_idempotency_key),
 ):
     await enforce_rate_limit(limiter_20_per_minute, request)
     command = PayInstallmentChargeCommand(
@@ -113,8 +124,12 @@ async def pay_installment_charge(
         source_account_uuid=body.source_account_uuid,
         payment_date=body.payment_date,
     )
-    result = await handler.handle(command)
-    return InstallmentChargeResponse(**result.__dict__)
+
+    async def operation():
+        result = await handler.handle(command)
+        return InstallmentChargeResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.delete("/{purchase_uuid}/", status_code=204)
@@ -123,12 +138,17 @@ async def delete_installment_purchase(
     purchase_uuid: str,
     current_user: User = Depends(require_scope(APIKeyScope.INSTALLMENTS_WRITE.value)),
     handler: DeleteInstallmentPurchaseHandler = Depends(get_delete_installment_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     await enforce_rate_limit(limiter_20_per_minute, request)
     command = DeleteInstallmentPurchaseCommand(
         user_id=cast(int, current_user.id), purchase_uuid=purchase_uuid
     )
-    await handler.handle(command)
+
+    async def operation():
+        await handler.handle(command)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.patch("/{purchase_uuid}/", response_model=InstallmentPurchaseResponse)
@@ -138,6 +158,7 @@ async def update_installment_purchase(
     body: UpdateInstallmentPurchaseRequest,
     current_user: User = Depends(require_scope(APIKeyScope.INSTALLMENTS_WRITE.value)),
     handler: UpdateInstallmentPurchaseHandler = Depends(get_update_installment_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     await enforce_rate_limit(limiter_20_per_minute, request)
     command = UpdateInstallmentPurchaseCommand(
@@ -147,6 +168,10 @@ async def update_installment_purchase(
         notes=body.notes,
         category_id=body.category_id,
     )
-    result = await handler.handle(command)
-    charges = [InstallmentChargeResponse(**c.__dict__) for c in result.charges]
-    return InstallmentPurchaseResponse(**{**result.__dict__, "charges": charges})
+
+    async def operation():
+        result = await handler.handle(command)
+        charges = [InstallmentChargeResponse(**c.__dict__) for c in result.charges]
+        return InstallmentPurchaseResponse(**{**result.__dict__, "charges": charges})
+
+    return await idempotency.run(cast(int, current_user.id), operation)
