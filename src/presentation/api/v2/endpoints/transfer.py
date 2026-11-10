@@ -36,7 +36,7 @@ async def create_transfer(
     current_user: User = Depends(require_scope(APIKeyScope.TRANSFERS_WRITE.value)),
     handler: CreateTransferHandler = Depends(get_create_transfer_handler),
 ):
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     dto = CreateTransferDTO(
         user_id=cast(int, current_user.id),
         source_account_uuid=transfer_request.source_account_uuid,
@@ -58,7 +58,7 @@ async def delete_transfer(
     current_user: User = Depends(require_scope(APIKeyScope.TRANSFERS_WRITE.value)),
     handler: DeleteTransferHandler = Depends(get_delete_transfer_handler),
 ):
-    enforce_rate_limit(limiter_10_per_minute, request)
+    await enforce_rate_limit(limiter_10_per_minute, request)
     command = DeleteTransferCommand(
         transfer_uuid=transfer_uuid,
         user_id=cast(int, current_user.id),

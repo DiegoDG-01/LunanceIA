@@ -75,7 +75,7 @@ async def get_recurring_incomes(
     current_user: User = Depends(require_scope(APIKeyScope.INCOMES_READ.value)),
     handler: GetRecurringIncomesHandler = Depends(get_recurring_incomes_handler),
 ):
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     query = GetRecurringIncomesQuery(
         user_id=cast(int, current_user.id),
         account_uuid=account_uuid,
@@ -98,7 +98,7 @@ async def get_recurring_income(
         get_recurring_income_by_id_handler
     ),
 ):
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     query = GetRecurringIncomeByIdQuery(
         user_id=cast(int, current_user.id), income_uuid=income_uuid
     )
@@ -120,7 +120,7 @@ async def get_income_deposits(
     handler: GetIncomeDepositsHandler = Depends(get_income_deposits_handler),
 ):
     """Historial de depósitos generados por un ingreso recurrente."""
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     query = GetIncomeDepositsQuery(
         income_uuid=income_uuid,
         user_id=cast(int, current_user.id),
@@ -143,7 +143,7 @@ async def create_recurring_income(
     ),
 ):
     """Crear un nuevo ingreso recurrente (nómina, renta, etc.)."""
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     dto = CreateRecurringIncomeDTO(
         user_id=cast(int, current_user.id),
         account_uuid=income_request.account_uuid,
@@ -177,7 +177,7 @@ async def update_recurring_income(
         get_update_recurring_income_handler
     ),
 ):
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     dto = UpdateRecurringIncomeDTO(
         account_uuid=income_request.account_uuid,
         name=income_request.name,
@@ -207,7 +207,7 @@ async def activate_recurring_income(
     current_user: User = Depends(require_scope(APIKeyScope.INCOMES_WRITE.value)),
     handler: StateRecurringIncomeHandler = Depends(get_state_recurring_income_handler),
 ):
-    enforce_rate_limit(limiter_5_per_minute, request)
+    await enforce_rate_limit(limiter_5_per_minute, request)
     command = StateRecurringIncomeCommand(
         income_uuid=income_uuid, user_id=cast(int, current_user.id)
     )
@@ -225,7 +225,7 @@ async def delete_recurring_income(
         get_delete_recurring_income_handler
     ),
 ):
-    enforce_rate_limit(limiter_5_per_minute, request)
+    await enforce_rate_limit(limiter_5_per_minute, request)
     command = DeleteRecurringIncomeCommand(
         income_uuid=income_uuid, user_id=cast(int, current_user.id)
     )

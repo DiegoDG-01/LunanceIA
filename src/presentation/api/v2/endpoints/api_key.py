@@ -51,7 +51,7 @@ async def create_api_key(
     handler: CreateAPIKeyHandler = Depends(get_create_api_key_handler),
 ):
     """Crea una API key para el usuario autenticado. La key completa se devuelve UNA sola vez."""
-    enforce_rate_limit(limiter_10_per_minute, request)
+    await enforce_rate_limit(limiter_10_per_minute, request)
 
     dto = CreateAPIKeyDTO(
         user_id=cast(int, current_user.id),
@@ -71,7 +71,7 @@ async def list_api_keys(
     handler: ListAPIKeysHandler = Depends(get_list_api_keys_handler),
 ):
     """Lista las API keys del usuario autenticado (sin exponer la key ni el hash)."""
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
 
     query = ListAPIKeysQuery(user_id=cast(int, current_user.id))
     keys = await handler.handle(query)
@@ -88,7 +88,7 @@ async def revoke_api_key(
     """Revoca (desactiva) una API key del usuario sin borrarla: deja de autenticar
     pero se conserva en el listado para auditoría. 204 si revoca, 404 si no existe
     o no es suya."""
-    enforce_rate_limit(limiter_10_per_minute, request)
+    await enforce_rate_limit(limiter_10_per_minute, request)
 
     command = RevokeAPIKeyCommand(uuid=api_key_uuid, user_id=cast(int, current_user.id))
     revoked = await handler.handle(command)
@@ -108,7 +108,7 @@ async def delete_api_key(
 ):
     """Elimina permanentemente una API key del usuario (desaparece del listado).
     204 si elimina, 404 si no existe o no es suya."""
-    enforce_rate_limit(limiter_10_per_minute, request)
+    await enforce_rate_limit(limiter_10_per_minute, request)
 
     command = DeleteAPIKeyCommand(uuid=api_key_uuid, user_id=cast(int, current_user.id))
     deleted = await handler.handle(command)

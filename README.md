@@ -48,7 +48,7 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 - **Autenticación**: JWT propio HS256 (python-jose 3.5+) + Refresh tokens hasheados
 - **Validación**: Pydantic 2.13+ con `pydantic-settings` 2.14+
 - **Hashing de contraseñas**: bcrypt 5.0+
-- **Rate Limiting**: fastapi-advanced-rate-limiter 2.1+ (con Redis 7.4+)
+- **Rate Limiting**: ventana fija propia sobre Redis 7 (`redis.asyncio`)
 - **IA**: pydantic-ai-slim 2.16+ con extras `[google, openai]` (Google Gemini 2.x por defecto, compatible con OpenAI/Ollama vía `AI_BASE_URL`)
 - **Procesamiento de Imágenes**: Pillow 12.3+
 - **Cabeceras de seguridad**: `secure` 1.0+

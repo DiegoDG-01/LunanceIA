@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASSWORD: str
 
+    REDIS_URL: str = "redis://localhost:6379/0"
+    # Cabecera con la IP real del cliente detrás de un proxy (p. ej. "CF-Connecting-IP").
+    # Vacío: se usa la IP de la conexión. Configurarla solo si el origen acepta tráfico
+    # únicamente de ese proxy; si no, la cabecera se puede falsificar.
+    CLIENT_IP_HEADER: str = ""
+
     AI_PROVIDER: str
     AI_MODEL_ID: str
     AI_API_KEY: str = ""

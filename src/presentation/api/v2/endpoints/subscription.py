@@ -81,7 +81,7 @@ async def get_subscriptions(
     current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_READ.value)),
     handler: GetSubscriptionsHandler = Depends(get_subscriptions_handler),
 ):
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     query = GetSubscriptionsQuery(
         user_id=cast(int, current_user.id),
         account_uuid=account_uuid,
@@ -109,7 +109,7 @@ async def get_subscription_charges(
     Obtiene todos los cargos de suscripciones del usuario con detalles de transacciones,
     categorías y cuentas.
     """
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     query = GetSubscriptionChargesQuery(
         user_id=cast(int, current_user.id),
         limit=limit,
@@ -147,7 +147,7 @@ async def create_subscription(
     """
     Crear una nueva suscripción.
     """
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     # Convertir request → DTO
     dto = CreateSubscriptionDTO(
         user_id=cast(int, current_user.id),
@@ -181,7 +181,7 @@ async def update_subscription(
     current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_WRITE.value)),
     handler: UpdateSubscriptionHandler = Depends(get_update_subscription_handler),
 ):
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     dto = UpdateSubscriptionDTO(
         account_uuid=subscription_request.account_uuid,
         name=subscription_request.name,
@@ -212,7 +212,7 @@ async def activate_subscription(
     current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_WRITE.value)),
     handler: StateSubscriptionHandler = Depends(get_state_subscription_handler),
 ):
-    enforce_rate_limit(limiter_5_per_minute, request)
+    await enforce_rate_limit(limiter_5_per_minute, request)
     command = StateSubscriptionCommand(
         subscription_uuid=subscription_uuid, user_id=cast(int, current_user.id)
     )
@@ -228,7 +228,7 @@ async def delete_subscription(
     current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_WRITE.value)),
     handler: DeleteSubscriptionHandler = Depends(get_delete_subscription_handler),
 ):
-    enforce_rate_limit(limiter_5_per_minute, request)
+    await enforce_rate_limit(limiter_5_per_minute, request)
     command = DeleteSubscriptionCommand(
         subscription_uuid=subscription_uuid, user_id=cast(int, current_user.id)
     )
@@ -247,7 +247,7 @@ async def get_subscription_last_charge(
     current_user: User = Depends(require_scope(APIKeyScope.SUBSCRIPTIONS_READ.value)),
     handler: GetLastTransactionsHandler = Depends(get_last_transactions_handler),
 ):
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     query = GetLastTransactionsQuery(
         subscription_uuid=subscription_uuid, user_id=cast(int, current_user.id)
     )

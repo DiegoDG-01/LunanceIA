@@ -650,9 +650,12 @@ infrastructure/
 │   ├── __init__.py
 │   ├── jobs.py               # Definición de jobs (suscripciones, rendimientos, vencimientos de apartados, ingresos recurrentes)
 │   └── service.py            # SchedulerService (APScheduler wrapper)
-├── rate_limiting/            # Rate limiting por endpoint
+├── cache/                    # Cliente de Redis compartido (init/close en el lifespan)
+│   └── redis.py
+├── rate_limiting/            # Rate limiting por endpoint sobre Redis
 │   ├── __init__.py
-│   └── limiters.py           # Limiters FixedWindow predefinidos y helper enforce_rate_limit
+│   ├── client_ip.py          # IP real del cliente (CLIENT_IP_HEADER) e identidad por IP (IPv6 por /64)
+│   └── limiters.py           # RedisRateLimiter, reglas limiter_N_per_X y helper async enforce_rate_limit
 ├── logging/                  # Sistema de logging estructurado
 │   ├── __init__.py
 │   ├── context.py            # Request correlation IDs
@@ -774,7 +777,7 @@ presentation/
 - **API REST**: 17 módulos de endpoints organizados por dominio
 - **Validación**: Schemas Pydantic para entrada y salida
 - **Dependency Injection**: Sistema granular de DI de FastAPI (un archivo por feature)
-- **Rate Limiting**: Protección por endpoint con fastapi-advanced-rate-limiter (FixedWindowRateLimiter)
+- **Rate Limiting**: Protección por endpoint con ventana fija sobre Redis (`RedisRateLimiter`)
 - **Versionado**: API v2 para nueva arquitectura
 - **Middleware**: Logging de requests + manejo estandarizado de excepciones
 
@@ -1355,9 +1358,11 @@ Todas las respuestas incluyen cabeceras de seguridad (CSP, HSTS, X-Frame-Options
 
 ### Rate Limiting
 
-Protección contra abuso con límites configurables usando `fastapi-advanced-rate-limiter` (algoritmo Fixed Window):
-- **Por IP + ruta**: Clave compuesta `{ip}:{path}` para límites granulares por endpoint
-- **Límites en minutos/horas/días**: Ventanas configurables (desde 5/min hasta 1/día para endpoints de IA)
+Protección contra abuso con ventana fija sobre Redis (`INCR` + `EXPIRE` atómico por petición, en `infrastructure/rate_limiting/limiters.py`):
+- **Por usuario o IP + ruta**: clave `{usuario|ip}:{path}`. Autenticado cuenta por usuario; si no, por IP (IPv6 agrupado por /64)
+- **IP real detrás de un proxy**: `CLIENT_IP_HEADER` (p. ej. `CF-Connecting-IP`); configurarlo solo si el origen acepta tráfico únicamente de ese proxy
+- **Límites exactos**: `limiter_N_per_X` permite exactamente N peticiones por minuto, hora o día
+- **Si Redis no responde**: login y registro responden `503` (`fail_closed=True`); el resto deja pasar la petición y lo registra en el log
 - **Deshabilitado en TEST**: El rate limiting se omite automáticamente cuando `ENVIRONMENT=TEST`
 - **Headers informativos**: `X-RateLimit-Remaining`, `Retry-After`
 

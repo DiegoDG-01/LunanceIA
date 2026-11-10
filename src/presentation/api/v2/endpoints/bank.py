@@ -21,7 +21,7 @@ async def get_banks(
     current_user: User = Depends(require_scope(APIKeyScope.BANKS_READ.value)),
     handler: GetBanksHandler = Depends(get_banks_handler),
 ):
-    enforce_rate_limit(limiter_10_per_minute, request)
+    await enforce_rate_limit(limiter_10_per_minute, request)
     query = GetBanksQuery(only_active=only_active)
 
     banks = await handler.handle(query)

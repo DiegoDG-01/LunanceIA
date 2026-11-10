@@ -27,7 +27,7 @@ async def get_categories(
     current_user: User = Depends(require_scope(APIKeyScope.CATEGORIES_READ.value)),
     handler: GetCategoriesHandler = Depends(get_categories_handler),
 ):
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     query = GetCategoriesQuery(only_active=only_active)
 
     categories = await handler.handle(query)

@@ -135,10 +135,15 @@ class TestGetUserDualAuth:
         # enforce_rate_limit hace short-circuit con ENVIRONMENT=TEST; lo desactivamos
         # sustituyendo el settings del módulo (robusto ante la inmutabilidad de pydantic).
         monkeypatch.setattr(limiters_mod, "settings", SimpleNamespace(ENVIRONMENT="DEV"))
+        from fakeredis import FakeAsyncRedis
+
+        from infrastructure.cache.redis import set_redis
+
+        set_redis(FakeAsyncRedis(decode_responses=True))
 
         service = AsyncMock()
         service.authenticate.side_effect = UnauthorizedError("Invalid or expired API key")
-        # IP dedicada: el limitador es un singleton en memoria compartido por la sesión.
+        # IP dedicada para no compartir contador con otros tests.
         request = _request(ip="198.51.100.42")
 
         async def _attempt():
@@ -167,6 +172,7 @@ class TestGetUserDualAuth:
         with pytest.raises(HTTPException) as exc_info:
             await _attempt()
         assert exc_info.value.status_code == 429
+        set_redis(None)
 
 
 @pytest.mark.asyncio

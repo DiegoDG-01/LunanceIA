@@ -30,7 +30,7 @@ async def analyze_image(
     current_user: User = Depends(get_current_active_user),
     handler: AnalyzeImageHandler = Depends(get_analyze_image_handler),
 ):
-    enforce_rate_limit(limiter_1_per_day, request)
+    await enforce_rate_limit(limiter_1_per_day, request)
     query = AnalyzeImageQuery(file=file)
     return await handler.handle(query)
 
@@ -41,6 +41,6 @@ async def analyze(
     current_user: User = Depends(get_current_active_user),
     handler: GetExpenseAdvisorHandler = Depends(get_expense_advisor_handler),
 ):
-    enforce_rate_limit(limiter_1_per_day, request)
+    await enforce_rate_limit(limiter_1_per_day, request)
     query = GetExpenseAdvisorQuery(user_id=cast(int, current_user.id))
     return await handler.handle(query)
