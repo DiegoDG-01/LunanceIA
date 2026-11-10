@@ -4,6 +4,7 @@ from shared.exceptions.base import (
     BusinessRuleError,
     LunanceException,
     NotFoundError,
+    UnauthorizedError,
     ValidationError,
 )
 
@@ -28,6 +29,20 @@ class UserInactiveError(BusinessRuleError):
 
     def __init__(self):
         super().__init__("El usuario está inactivo")
+
+
+class SessionExpiredError(UnauthorizedError):
+    """La sesión no existe, se cerró o venció: hay que volver a iniciar sesión."""
+
+    def __init__(self, reason: str = "Session expired or revoked"):
+        super().__init__(reason)
+
+
+class SessionNotFoundError(NotFoundError):
+    """Sesión inexistente o de otro usuario."""
+
+    def __init__(self, session_uuid: str):
+        super().__init__(f"Sesión {session_uuid} no encontrada")
 
 
 class EmailAlreadyExistsError(ValidationError):

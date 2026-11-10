@@ -53,3 +53,11 @@ async def close_redis() -> None:
     if _client is not None:
         await _client.aclose()
         _client = None
+
+
+async def claim_once(key: str, ttl_seconds: int) -> bool:
+    """True solo para la primera llamada con `key` en `ttl_seconds`. Sin Redis, True."""
+    try:
+        return bool(await get_redis().set(key, "1", nx=True, ex=ttl_seconds))
+    except (RedisError, RuntimeError, OSError):
+        return True

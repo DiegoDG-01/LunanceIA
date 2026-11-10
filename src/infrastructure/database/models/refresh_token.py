@@ -1,19 +1,23 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey
-from sqlalchemy.dialects.mysql import VARCHAR
+from sqlalchemy import CHAR, DateTime, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.sql import func
 
 from infrastructure.database.connection import Base
+from infrastructure.database.types import BigIntId
 
 
 class RefreshTokenModel(Base):
-    __tablename__ = "refresh_tokens"
+    """Solo el SHA-256 del token opaco: una fuga de la tabla no expone sesiones vivas."""
 
-    id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    token_hash: Mapped[str] = mapped_column(VARCHAR(255))
-    is_revoked: Mapped[bool] = mapped_column(default=False)
-    expired_at: Mapped[datetime] = mapped_column(DateTime)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    __tablename__ = "refresh_tokens"
+    __table_args__ = (Index("ix_refresh_tokens_session_id", "session_id"),)
+
+    token_hash: Mapped[str] = mapped_column(CHAR(64), primary_key=True)
+    session_id: Mapped[int] = mapped_column(
+        BigIntId, ForeignKey("user_sessions.id", ondelete="CASCADE")
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    rotated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

@@ -19,10 +19,12 @@ from presentation.dependencies.auth_deps import (
 
 # Auth handlers
 from presentation.dependencies.auth_handler_deps import (
+    get_list_sessions_handler,
     get_login_handler,
     get_logout_handler,
-    get_refresh_token_handler,
+    get_refresh_session_handler,
     get_register_handler,
+    get_revoke_session_handler,
 )
 
 # Category handlers
@@ -46,11 +48,13 @@ from presentation.dependencies.recurring_income_deps import (
 )
 from presentation.dependencies.repositories import (
     get_account_repository,
-    get_auth_token_repository,
+    get_auth_event_repository,
     get_budget_repository,
     get_category_repository,
     get_credit_card_settings_repository,
     get_dashboard_repository,
+    get_refresh_token_repository,
+    get_session_repository,
     get_subscription_charge_repository,
     get_subscription_repository,
     get_transaction_repository,
@@ -58,10 +62,7 @@ from presentation.dependencies.repositories import (
 )
 
 # Services
-from presentation.dependencies.services import (
-    get_account_service,
-    get_jwt_service,
-)
+from presentation.dependencies.services import get_account_service
 
 # Subscription handlers
 from presentation.dependencies.subscription_deps import (
@@ -122,7 +123,7 @@ __all__ = [
     "get_activity_account_handler",
     # AI
     "get_analyze_image_handler",
-    "get_auth_token_repository",
+    "get_auth_event_repository",
     # Bank
     "get_banks_handler",
     "get_budget_by_id_handler",
@@ -161,8 +162,8 @@ __all__ = [
     "get_delete_transaction_handler",
     "get_expense_advisor_handler",
     "get_income_deposits_handler",
-    "get_jwt_service",
     "get_last_transactions_handler",
+    "get_list_sessions_handler",
     # Auth handlers
     "get_login_handler",
     "get_logout_handler",
@@ -171,10 +172,13 @@ __all__ = [
     "get_notifications_handler",
     "get_recurring_income_by_id_handler",
     "get_recurring_incomes_handler",
-    "get_refresh_token_handler",
+    "get_refresh_session_handler",
+    "get_refresh_token_repository",
     "get_register_handler",
+    "get_revoke_session_handler",
     "get_saving_goals_by_id_handler",
     "get_saving_goals_handler",
+    "get_session_repository",
     "get_state_account_handler",
     "get_state_budget_handler",
     "get_state_recurring_income_handler",

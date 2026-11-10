@@ -1,15 +1,17 @@
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from fastapi import Depends, HTTPException, Request, Security
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
-from jose import ExpiredSignatureError, JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.entities.users.user import User
-from infrastructure.config.settings import settings
 from infrastructure.database.connection import get_db
 from infrastructure.database.repositories.sqlalchemy_api_key_repository import (
     SQLAlchemyAPIKeyRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_session_repository import (
+    SQLAlchemySessionRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
     SQLAlchemyUnitOfWork,
@@ -23,53 +25,64 @@ from infrastructure.rate_limiting.limiters import (
     limiter_auth_failure,
 )
 from infrastructure.security.api_key_service import APIKeyService
+from presentation.dependencies.auth_services import (
+    build_session_revocations,
+    get_token_issuer,
+)
 from shared.exceptions.application import JWTValidationError
 from shared.exceptions.base import UnauthorizedError
-from shared.exceptions.domain import UserInactiveError
+from shared.exceptions.domain import SessionExpiredError, UserInactiveError
 
 security = HTTPBearer()
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 optional_bearer = HTTPBearer(auto_error=False)
 
 
-async def validate_local_user(token: str, db: AsyncSession) -> User:
-    try:
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
-        )
-    except ExpiredSignatureError:
-        raise JWTValidationError("Token expired")
-    except JWTError as e:
-        raise JWTValidationError(str(e))
-    if payload.get("iss") != "lunance":
-        raise JWTValidationError("Invalid token issuer")
+@dataclass(frozen=True)
+class AccessContext:
+    """Usuario del access token y la sesión (`sid`) desde la que llega la petición."""
 
-    user_uuid = payload.get("sub")
+    user: User
+    session_uuid: str
 
-    if not user_uuid:
-        raise UnauthorizedError("Invalid token: missing user")
 
-    user_repo = SQLAlchemyUserRepository(db)
-    user = await user_repo.get_by_uuid(user_uuid)
+async def authenticate_access_token(token: str, db: AsyncSession) -> AccessContext:
+    """Único camino para un access token: firma, sesión no revocada y usuario activo."""
+    claims = get_token_issuer().verify(token)
+
+    # La sesión pudo cerrarse desde otro dispositivo: su access token sigue firmado y vigente
+    # hasta 10 min, así que se comprueba en cada petición (Redis y, si no está, MySQL).
+    revocations = build_session_revocations(SQLAlchemySessionRepository(db))
+    if await revocations.is_revoked(claims.session_uuid):
+        raise SessionExpiredError()
+
+    user = await SQLAlchemyUserRepository(db).get_by_uuid(claims.user_uuid)
     if not user:
         raise UnauthorizedError("User not found")
-
     if not user.is_active:
         raise UserInactiveError()
 
-    return user
+    return AccessContext(user=user, session_uuid=claims.session_uuid)
 
 
-async def get_current_user(
+async def get_access_context(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db),
-):
+) -> AccessContext:
     try:
-        return await validate_local_user(credentials.credentials, db)
+        context = await authenticate_access_token(credentials.credentials, db)
     except (UnauthorizedError, JWTValidationError):
         await _throttle_auth_failure(request)
         raise
+    request.state.session_uuid = context.session_uuid
+    return context
+
+
+async def get_current_user(
+    context: AccessContext = Depends(get_access_context),
+) -> User:
+    return context.user
 
 
 async def get_current_active_user(
@@ -85,7 +98,7 @@ async def get_current_active_user_from_url_token(
     token: str,
     db: AsyncSession,
 ) -> User:
-    return await validate_local_user(token, db)
+    return (await authenticate_access_token(token, db)).user
 
 
 def get_api_key_service(

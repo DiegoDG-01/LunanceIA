@@ -1,36 +1,9 @@
+"""Servicios externos que necesitan los casos de uso de autenticación."""
+
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
-
-
-@dataclass(frozen=True)
-class AuthConfig:
-    access_token_expire_minutes: int
-    refresh_token_expire_days: int
-
-
-class AuthTokenServiceInterface(ABC):
-    @abstractmethod
-    def check_password(self, plain_password: str, hashed_password: str) -> bool: ...
-
-    @abstractmethod
-    def create_access_token(
-        self, user_uuid: str, expires_in: int | None = None
-    ) -> str: ...
-
-    @abstractmethod
-    def create_refresh_token(
-        self, user_uuid: str, expires_in: int | None = None
-    ) -> str: ...
-
-    @abstractmethod
-    async def verify_refresh_token(self, token: str) -> str | None: ...
-
-    @abstractmethod
-    def get_password_hash(self, password: str) -> str: ...
-
-    @abstractmethod
-    def hash_refresh_token(self, token: str) -> str: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,3 +49,13 @@ class PasswordHasher(ABC):
     async def verify_dummy(self, password: str) -> None:
         """Gasta lo mismo que una verificación real: el tiempo de respuesta no revela si el
         usuario existe."""
+
+
+class SessionRevocationList(ABC):
+    """Sesiones cerradas cuyo access token sigue firmado y vigente unos minutos."""
+
+    @abstractmethod
+    async def revoke(self, session_uuids: Iterable[str]) -> None: ...
+
+    @abstractmethod
+    async def is_revoked(self, session_uuid: str) -> bool: ...

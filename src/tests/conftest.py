@@ -12,6 +12,32 @@ from sqlalchemy.pool import StaticPool
 # Set environment to TEST before importing app
 os.environ["ENVIRONMENT"] = "TEST"
 
+
+def _test_auth_secrets() -> dict[str, str]:
+    """Claves de prueba generadas en cada ejecución: nunca hay secretos reales en el repo."""
+    import secrets
+
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    private_key = Ed25519PrivateKey.generate()
+    return {
+        "JWT_PRIVATE_KEY": private_key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        ).decode(),
+        "JWT_PUBLIC_KEY": private_key.public_key()
+        .public_bytes(
+            serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        .decode(),
+        "REFRESH_ROTATION_KEY": secrets.token_urlsafe(48),
+    }
+
+
+os.environ.update(_test_auth_secrets())
+
 from main import app
 from infrastructure.database.connection import Base, get_db
 from presentation.dependencies.auth_deps import (

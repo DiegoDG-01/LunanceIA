@@ -1,5 +1,6 @@
 from .account import AccountModel
 from .api_key import APIKeyModel
+from .auth_event import AuthEventModel
 from .bank import BankModel
 from .budget import BudgetModel
 from .category import CategoryModel
@@ -16,10 +17,12 @@ from .subscription import SubscriptionChargeModel, SubscriptionModel
 from .tag import TagModel
 from .transaction import TransactionModel
 from .user import UserModel
+from .user_session import UserSessionModel
 
 __all__ = [
     "APIKeyModel",
     "AccountModel",
+    "AuthEventModel",
     "BankModel",
     "BudgetModel",
     "CategoryModel",
@@ -39,4 +42,5 @@ __all__ = [
     "TagModel",
     "TransactionModel",
     "UserModel",
+    "UserSessionModel",
 ]

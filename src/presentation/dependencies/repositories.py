@@ -1,7 +1,9 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.repositories.auth.auth_token_repository import AuthTokenRepository
+from domain.repositories.auth.auth_event_repository import AuthEventRepository
+from domain.repositories.auth.refresh_token_repository import RefreshTokenRepository
+from domain.repositories.auth.session_repository import SessionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.database.connection import get_db
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
@@ -10,8 +12,8 @@ from infrastructure.database.repositories.sqlalchemy_account_repository import (
 from infrastructure.database.repositories.sqlalchemy_api_key_repository import (
     SQLAlchemyAPIKeyRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_auth_token_repository import (
-    SQLAlchemyAuthTokenRepository,
+from infrastructure.database.repositories.sqlalchemy_auth_event_repository import (
+    SQLAlchemyAuthEventRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_bank_repository import (
     SQLAlchemyBankRepository,
@@ -43,8 +45,14 @@ from infrastructure.database.repositories.sqlalchemy_notification_repository imp
 from infrastructure.database.repositories.sqlalchemy_recurring_income_repository import (
     SQLAlchemyRecurringIncomeRepository,
 )
+from infrastructure.database.repositories.sqlalchemy_refresh_token_repository import (
+    SQLAlchemyRefreshTokenRepository,
+)
 from infrastructure.database.repositories.sqlalchemy_saving_goal_repository import (
     SQLAlchemySavingGoalRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_session_repository import (
+    SQLAlchemySessionRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_subscription_charge_repository import (
     SQLAlchemySubscriptionChargeRepository,
@@ -109,10 +117,22 @@ def get_credit_card_settings_repository(
     return SQLAlchemyCreditCardSettingsRepository(db)
 
 
-def get_auth_token_repository(
+def get_session_repository(
     db: AsyncSession = Depends(get_db),
-) -> AuthTokenRepository:
-    return SQLAlchemyAuthTokenRepository(db)
+) -> SessionRepository:
+    return SQLAlchemySessionRepository(db)
+
+
+def get_refresh_token_repository(
+    db: AsyncSession = Depends(get_db),
+) -> RefreshTokenRepository:
+    return SQLAlchemyRefreshTokenRepository(db)
+
+
+def get_auth_event_repository(
+    db: AsyncSession = Depends(get_db),
+) -> AuthEventRepository:
+    return SQLAlchemyAuthEventRepository(db)
 
 
 def get_dashboard_repository(

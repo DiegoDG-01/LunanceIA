@@ -90,6 +90,7 @@ class SQLAlchemyUserRepository(UserRepository):
         model.name = user.name
         model.password = user.password
         model.is_active = user.is_active
+        model.last_login = user.last_login
 
         await self.db.flush()
         await self.db.refresh(model)

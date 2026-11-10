@@ -15,10 +15,10 @@ class TestRegisterHandler:
         return MagicMock()
 
     @pytest.fixture
-    def mock_jwt_service(self):
-        service = MagicMock()
-        service.get_password_hash = MagicMock(return_value="hashed-password-123")
-        return service
+    def mock_password_hasher(self):
+        hasher = MagicMock()
+        hasher.hash = AsyncMock(return_value="hashed-password-123")
+        return hasher
 
     @pytest.fixture
     def mock_uow(self):
@@ -28,10 +28,10 @@ class TestRegisterHandler:
         return uow
 
     @pytest.fixture
-    def handler(self, mock_user_repo, mock_jwt_service, mock_uow):
+    def handler(self, mock_user_repo, mock_password_hasher, mock_uow):
         return RegisterHandler(
             user_repository=mock_user_repo,
-            jwt_service=mock_jwt_service,
+            password_hasher=mock_password_hasher,
             uow=mock_uow,
         )
 
@@ -83,7 +83,7 @@ class TestRegisterHandler:
             await handler.handle(command)
 
     @pytest.mark.asyncio
-    async def test_register_hashes_password(self, handler, mock_user_repo, mock_jwt_service):
+    async def test_register_hashes_password(self, handler, mock_user_repo, mock_password_hasher):
         mock_user_repo.get_by_username = AsyncMock(return_value=None)
         saved_user = User(id=1, uuid="u-1", name="newuser", password="hashed-password-123")
         mock_user_repo.create = AsyncMock(return_value=saved_user)
@@ -91,7 +91,7 @@ class TestRegisterHandler:
         command = RegisterCommand(username="newuser", password="Password123!")
         await handler.handle(command)
 
-        mock_jwt_service.get_password_hash.assert_called_once_with("Password123!")
+        mock_password_hasher.hash.assert_awaited_once_with("Password123!")
         mock_user_repo.create.assert_called_once()
         created_user = mock_user_repo.create.call_args[0][0]
         assert created_user.password == "hashed-password-123"

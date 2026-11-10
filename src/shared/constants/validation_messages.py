@@ -132,10 +132,12 @@ HTTP_CODES_ERRORS = {
         # Códigos específicos de Lunance - Autenticación
         "AUTH_INVALID_CREDENTIALS": "Credenciales inválidas",
         "AUTH_USER_INACTIVE": "Usuario inactivo",
+        "AUTH_SESSION_EXPIRED": "La sesión expiró o se cerró; inicia sesión de nuevo",
         # JWT Validation error
         "JWT_VALIDATION_ERROR": "Token inválido: malformado o expirado",
         # Códigos específicos de Lunance - Recursos no encontrados
         "NOT_FOUND_USER": "Usuario no encontrado",
+        "NOT_FOUND_SESSION": "Sesión no encontrada",
         "NOT_FOUND_ACCOUNT": "Cuenta no encontrada",
         "NOT_FOUND_TRANSACTION": "Transacción no encontrada",
         "NOT_FOUND_CATEGORY": "Categoría no encontrada",
@@ -199,10 +201,12 @@ HTTP_CODES_ERRORS = {
         # Códigos específicos de Lunance - Autenticación
         "AUTH_INVALID_CREDENTIALS": "Invalid credentials",
         "AUTH_USER_INACTIVE": "Inactive user",
+        "AUTH_SESSION_EXPIRED": "The session expired or was closed; sign in again",
         # JWT Validation error
         "JWT_VALIDATION_ERROR": "Invalid token: malformed or expired",
         # Códigos específicos de Lunance - Recursos no encontrados
         "NOT_FOUND_USER": "User not found",
+        "NOT_FOUND_SESSION": "Session not found",
         "NOT_FOUND_ACCOUNT": "Account not found",
         "NOT_FOUND_TRANSACTION": "Transaction not found",
         "NOT_FOUND_CATEGORY": "Category not found",
