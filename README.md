@@ -174,7 +174,11 @@ cp .env.example .env
 # - DB_HOST=localhost
 # - ENVIRONMENT=DEV (importante para CORS y logs de desarrollo)
 # Claves de autenticación (JWT_PRIVATE_KEY, JWT_PUBLIC_KEY, REFRESH_ROTATION_KEY):
-uv run python scripts/generate_secrets.py >> .env
+openssl genpkey -algorithm ed25519 -out jwt_key.pem
+printf "JWT_PRIVATE_KEY='%s'\n" "$(awk '{printf "%s\\n", $0}' jwt_key.pem)" >> .env
+printf "JWT_PUBLIC_KEY='%s'\n" "$(openssl pkey -in jwt_key.pem -pubout | awk '{printf "%s\\n", $0}')" >> .env
+printf "REFRESH_ROTATION_KEY='%s'\n" "$(openssl rand -base64 48)" >> .env
+rm jwt_key.pem
 ```
 
 6. **Ejecutar migraciones y iniciar servidor**

@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Access token: JWT EdDSA (Ed25519). Claves PEM; en .env se aceptan en una línea con "\n".
-    # Se generan con `scripts/generate_secrets.py`.
+    # Cómo generarlas: README, «Configurar variables de entorno».
     JWT_PRIVATE_KEY: SecretStr
     JWT_PUBLIC_KEY: str
     JWT_ISSUER: str = "lunance"

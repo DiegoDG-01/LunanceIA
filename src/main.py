@@ -20,6 +20,7 @@ from infrastructure.rate_limiting.limiters import (
 )
 from infrastructure.scheduler.service import scheduler_service
 from presentation.api.v2.router import api_router
+from presentation.dependencies.idempotency_deps import IDEMPOTENT_REPLAYED_HEADER
 from presentation.middleware.exception_handler import (
     generic_exception_handler,
     http_exception_handler,
@@ -81,6 +82,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Para que la web sepa cuándo una respuesta es la repetición de un reintento.
+    expose_headers=[IDEMPOTENT_REPLAYED_HEADER],
 )
 app.add_middleware(RequestLoggingMiddleware)
 

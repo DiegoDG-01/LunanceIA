@@ -37,7 +37,7 @@ DB_USER=luna
 DB_PASSWORD=luna_root
 
 # Autenticación: la API firma sus propios tokens (EdDSA/Ed25519).
-# Genera estas tres con: uv run python scripts/generate_secrets.py >> .env
+# Genera estas tres con los comandos de openssl del README
 JWT_PRIVATE_KEY='-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----'
 JWT_PUBLIC_KEY='-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----'
 REFRESH_ROTATION_KEY=una_clave_larga_y_aleatoria_de_al_menos_32_caracteres
