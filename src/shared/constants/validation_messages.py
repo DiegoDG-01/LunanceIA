@@ -90,6 +90,7 @@ FIELD_SPECIFIC_MESSAGES = {
         "currency": "Código de moneda inválido",
         "account_type": "Tipo de cuenta inválido",
         "description": "La descripción es demasiado larga",
+        "Idempotency-Key": "El header Idempotency-Key es obligatorio y debe ser un UUID",
     },
     "en": {
         "email": "Invalid email format",
@@ -99,6 +100,7 @@ FIELD_SPECIFIC_MESSAGES = {
         "currency": "Invalid currency code",
         "account_type": "Invalid account type",
         "description": "Description is too long",
+        "Idempotency-Key": "The Idempotency-Key header is required and must be a UUID",
     },
 }
 
@@ -158,6 +160,9 @@ HTTP_CODES_ERRORS = {
         "FIXED_TERM_DEPOSIT_NOT_ALLOWED": "Un apartado a plazo fijo no admite depósitos después de creado",
         "FIXED_TERM_WITHDRAWAL_NOT_ALLOWED": "Un apartado a plazo fijo no admite retiros parciales; debe liquidarse por completo",
         "POSITION_ACCOUNT_TYPE_NOT_ALLOWED": "Este tipo de cuenta no admite apartados de inversión",
+        # Idempotencia (header Idempotency-Key)
+        "IDEMPOTENCY_KEY_REUSED": "Esta Idempotency-Key ya se usó con una petición distinta; genera una clave nueva por operación",
+        "IDEMPOTENCY_KEY_IN_USE": "Esta operación ya se recibió, pero su resultado aún no está disponible; consulta el recurso antes de reintentar",
         # Códigos específicos de Lunance - Validaciones y reglas de negocio
         "VALIDATION_ERROR": "Error de validación",
         "BUSINESS_RULE_VIOLATION": "Violación de regla de negocio",
@@ -226,6 +231,9 @@ HTTP_CODES_ERRORS = {
         "FIXED_TERM_DEPOSIT_NOT_ALLOWED": "A fixed-term position does not accept deposits after creation",
         "FIXED_TERM_WITHDRAWAL_NOT_ALLOWED": "A fixed-term position does not accept partial withdrawals; it must be liquidated in full",
         "POSITION_ACCOUNT_TYPE_NOT_ALLOWED": "This account type does not support investment positions",
+        # Idempotency (Idempotency-Key header)
+        "IDEMPOTENCY_KEY_REUSED": "This Idempotency-Key was already used with a different request; generate a new key per operation",
+        "IDEMPOTENCY_KEY_IN_USE": "This operation was already received but its result is not available yet; check the resource before retrying",
         # Códigos específicos de Lunance - Validaciones y reglas de negocio
         "VALIDATION_ERROR": "Validation error",
         "BUSINESS_RULE_VIOLATION": "Business rule violation",
