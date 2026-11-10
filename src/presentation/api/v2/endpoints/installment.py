@@ -59,7 +59,7 @@ async def get_installment_purchases(
         get_installment_purchases_handler
     ),
 ):
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     query = GetInstallmentPurchasesQuery(user_id=cast(int, current_user.id))
     result = await handler.handle(query)
     return [
@@ -80,7 +80,7 @@ async def create_installment_purchase(
     current_user: User = Depends(require_scope(APIKeyScope.INSTALLMENTS_WRITE.value)),
     handler: CreateInstallmentPurchaseHandler = Depends(get_create_installment_handler),
 ):
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     dto = CreateInstallmentPurchaseDTO(
         user_id=cast(int, current_user.id),
         account_uuid=body.account_uuid,
@@ -106,7 +106,7 @@ async def pay_installment_charge(
     current_user: User = Depends(require_scope(APIKeyScope.INSTALLMENTS_WRITE.value)),
     handler: PayInstallmentChargeHandler = Depends(get_pay_installment_charge_handler),
 ):
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     command = PayInstallmentChargeCommand(
         user_id=cast(int, current_user.id),
         charge_uuid=charge_uuid,
@@ -124,7 +124,7 @@ async def delete_installment_purchase(
     current_user: User = Depends(require_scope(APIKeyScope.INSTALLMENTS_WRITE.value)),
     handler: DeleteInstallmentPurchaseHandler = Depends(get_delete_installment_handler),
 ):
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     command = DeleteInstallmentPurchaseCommand(
         user_id=cast(int, current_user.id), purchase_uuid=purchase_uuid
     )
@@ -139,7 +139,7 @@ async def update_installment_purchase(
     current_user: User = Depends(require_scope(APIKeyScope.INSTALLMENTS_WRITE.value)),
     handler: UpdateInstallmentPurchaseHandler = Depends(get_update_installment_handler),
 ):
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     command = UpdateInstallmentPurchaseCommand(
         user_id=cast(int, current_user.id),
         purchase_uuid=purchase_uuid,

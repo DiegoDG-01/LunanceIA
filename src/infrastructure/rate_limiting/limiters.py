@@ -1,78 +1,148 @@
+"""Rate limits con ventana fija sobre Redis.
+
+Cada regla cuenta peticiones por (identidad, ruta) dentro de una ventana de tiempo fija: un
+`INCR` + `EXPIRE` atómico por petición. Los nombres `limiter_N_per_X` son exactos: N peticiones
+por minuto, hora o día.
+
+Si Redis no responde, cada llamada decide: `fail_closed=True` (login, registro, recuperación
+de contraseña) responde 503 para no quitar la protección contra fuerza bruta; el resto deja
+pasar la petición y lo registra en el log.
+"""
+
+import logging
+import math
 import time
+from collections.abc import Callable
+from dataclasses import dataclass
 
 from fastapi import HTTPException, Request
-from fastapi_advanced_rate_limiter.fixed_window import FixedWindowRateLimiter
+from redis.asyncio import Redis
+from redis.exceptions import RedisError
 
+from infrastructure.cache.redis import get_redis
 from infrastructure.config.settings import settings
+from infrastructure.rate_limiting.client_ip import ip_identity
 
-limiter_1_per_day = FixedWindowRateLimiter(
-    capacity=1, fill_rate=1 / 86400, scope="ip", backend="memory"
-)
-limiter_2_per_day = FixedWindowRateLimiter(
-    capacity=2, fill_rate=2 / 86400, scope="ip", backend="memory"
-)
-limiter_5_per_hour = FixedWindowRateLimiter(
-    capacity=5, fill_rate=5 / 3600, scope="ip", backend="memory"
-)
-limiter_5_per_minute = FixedWindowRateLimiter(
-    capacity=5, fill_rate=5 / 60, scope="ip", backend="memory"
-)
-limiter_10_per_minute = FixedWindowRateLimiter(
-    capacity=10, fill_rate=10 / 60, scope="ip", backend="memory"
-)
-limiter_15_per_minute = FixedWindowRateLimiter(
-    capacity=15, fill_rate=15 / 60, scope="ip", backend="memory"
-)
-limiter_20_per_minute = FixedWindowRateLimiter(
-    capacity=20, fill_rate=20 / 60, scope="ip", backend="memory"
-)
-limiter_30_per_minute = FixedWindowRateLimiter(
-    capacity=30, fill_rate=30 / 60, scope="ip", backend="memory"
-)
-limiter_50_per_minute = FixedWindowRateLimiter(
-    capacity=50, fill_rate=50 / 60, scope="ip", backend="memory"
-)
-limiter_100_per_minute = FixedWindowRateLimiter(
-    capacity=100, fill_rate=100 / 60, scope="ip", backend="memory"
-)
-limiter_auth_failure = FixedWindowRateLimiter(
-    capacity=20, fill_rate=20 / 60, scope="ip", backend="memory"
-)
+logger = logging.getLogger(__name__)
+
+UNAVAILABLE_RETRY_AFTER = 5
+
+_UNITS = {86400: "day", 3600: "hour", 60: "minute", 1: "second"}
 
 
-def enforce_rate_limit(
-    limiter: FixedWindowRateLimiter, request: Request, *, key: str | None = None
+@dataclass(frozen=True, slots=True)
+class RateLimitRule:
+    limit: int
+    window_seconds: int
+
+    def __post_init__(self) -> None:
+        if self.limit <= 0 or self.window_seconds <= 0:
+            raise ValueError("limit y window_seconds deben ser positivos")
+
+    @property
+    def description(self) -> str:
+        unit = _UNITS.get(self.window_seconds)
+        if unit is None:
+            return f"{self.limit} per {self.window_seconds} seconds"
+        return f"{self.limit} per 1 {unit}"
+
+
+@dataclass(frozen=True, slots=True)
+class RateLimitDecision:
+    allowed: bool
+    remaining: int
+    retry_after: int = 0
+
+
+class RateLimiterUnavailable(Exception):
+    """Redis no respondió: no se sabe si la petición entra en el límite."""
+
+
+class RedisRateLimiter:
+    def __init__(
+        self,
+        redis: Callable[[], Redis],
+        *,
+        prefix: str = "rl",
+        clock: Callable[[], float] = time.time,
+    ) -> None:
+        self._redis = redis
+        self._prefix = prefix
+        self._clock = clock
+
+    async def hit(self, key: str, rule: RateLimitRule) -> RateLimitDecision:
+        now = self._clock()
+        window = int(now // rule.window_seconds)
+        # La regla va en la clave: dos límites distintos sobre la misma ruta no comparten contador.
+        redis_key = f"{self._prefix}:{rule.limit}/{rule.window_seconds}:{key}:{window}"
+        try:
+            async with self._redis().pipeline(transaction=True) as pipe:
+                pipe.incr(redis_key)
+                pipe.expire(redis_key, rule.window_seconds, nx=True)
+                count, _ = await pipe.execute()
+        except (RedisError, OSError, RuntimeError) as error:
+            raise RateLimiterUnavailable from error
+
+        if count <= rule.limit:
+            return RateLimitDecision(allowed=True, remaining=rule.limit - count)
+        retry_after = max(1, math.ceil((window + 1) * rule.window_seconds - now))
+        return RateLimitDecision(allowed=False, remaining=0, retry_after=retry_after)
+
+
+rate_limiter = RedisRateLimiter(get_redis)
+
+limiter_1_per_day = RateLimitRule(limit=1, window_seconds=86400)
+limiter_2_per_day = RateLimitRule(limit=2, window_seconds=86400)
+limiter_5_per_hour = RateLimitRule(limit=5, window_seconds=3600)
+limiter_5_per_minute = RateLimitRule(limit=5, window_seconds=60)
+limiter_10_per_minute = RateLimitRule(limit=10, window_seconds=60)
+limiter_15_per_minute = RateLimitRule(limit=15, window_seconds=60)
+limiter_20_per_minute = RateLimitRule(limit=20, window_seconds=60)
+limiter_30_per_minute = RateLimitRule(limit=30, window_seconds=60)
+limiter_50_per_minute = RateLimitRule(limit=50, window_seconds=60)
+limiter_100_per_minute = RateLimitRule(limit=100, window_seconds=60)
+limiter_auth_failure = RateLimitRule(limit=20, window_seconds=60)
+
+
+async def enforce_rate_limit(
+    limiter: RateLimitRule,
+    request: Request,
+    *,
+    key: str | None = None,
+    fail_closed: bool = False,
 ) -> None:
     if settings.ENVIRONMENT.upper() == "TEST":
         return
 
     if key is None:
         # Si la petición está autenticada, limita por usuario (no por IP): el tráfico
-        # vía MCP llega siempre como 127.0.0.1 y compartiría un único bucket.
-        principal = getattr(request.state, "rate_limit_id", None)
-        if principal is None:
-            principal = request.client.host if request.client else "unknown"
+        # vía MCP llega siempre como 127.0.0.1 y compartiría un único contador.
+        principal = getattr(request.state, "rate_limit_id", None) or ip_identity(
+            request
+        )
         key = f"{principal}:{request.url.path}"
 
-    if not limiter.allow_request(key):
-        status = limiter.get_status(key)
-        window_size = status["window_size"]
-        current_window = status["window"]
-        wait_time = max(1, int((current_window + 1) * window_size - time.time() + 1))
+    try:
+        decision = await rate_limiter.hit(key, limiter)
+    except RateLimiterUnavailable:
+        if fail_closed:
+            logger.error(
+                "Rate limiter unavailable; rejecting request", extra={"key": key}
+            )
+            raise HTTPException(
+                status_code=503,
+                detail="Service temporarily unavailable",
+                headers={"Retry-After": str(UNAVAILABLE_RETRY_AFTER)},
+            ) from None
+        logger.warning("Rate limiter unavailable; allowing request", extra={"key": key})
+        return
 
-        if window_size >= 86400:
-            unit = "day"
-        elif window_size >= 3600:
-            unit = "hour"
-        else:
-            unit = "minute"
-        detail_msg = f"Rate limit exceeded: {limiter.capacity} per 1 {unit}"
-
+    if not decision.allowed:
         raise HTTPException(
             status_code=429,
-            detail=detail_msg,
+            detail=f"Rate limit exceeded: {limiter.description}",
             headers={
-                "Retry-After": str(int(wait_time)),
+                "Retry-After": str(decision.retry_after),
                 "X-RateLimit-Remaining": "0",
             },
         )

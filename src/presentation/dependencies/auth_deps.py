@@ -23,6 +23,7 @@ from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
 from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
+from infrastructure.rate_limiting.client_ip import ip_identity
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,
     limiter_auth_failure,
@@ -187,7 +188,7 @@ async def get_current_user(
 
         return await validate_auth0_user(token, db)
     except (UnauthorizedError, JWTValidationError):
-        _throttle_auth_failure(request)
+        await _throttle_auth_failure(request)
         raise
 
 
@@ -239,7 +240,7 @@ async def get_user_dual_auth(
         try:
             user, scopes = await service.authenticate(api_key)
         except UnauthorizedError:
-            _throttle_auth_failure(request)
+            await _throttle_auth_failure(request)
             raise
         request.state.auth_method = "api_key"
         request.state.api_key_scopes = scopes
@@ -256,14 +257,14 @@ async def get_user_dual_auth(
             if not user.is_active:
                 raise UserInactiveError()
         except (UnauthorizedError, JWTValidationError, UserInactiveError):
-            _throttle_auth_failure(request)
+            await _throttle_auth_failure(request)
             raise
 
         request.state.auth_method = "jwt"
         request.state.rate_limit_id = f"user:{user.id}"
         return user
 
-    _throttle_auth_failure(request)
+    await _throttle_auth_failure(request)
     raise UnauthorizedError("Missing authentication credentials")
 
 
@@ -285,8 +286,9 @@ def require_scope(scope: str) -> Callable:
     return checker
 
 
-def _throttle_auth_failure(request: Request) -> None:
+async def _throttle_auth_failure(request: Request) -> None:
     """Limita los intentos de auth inválidos por IP (M2): evita el flooding
     no autenticado contra la capa de auth + BD. Lanza 429 si se supera."""
-    client_ip = request.client.host if request.client else "unknown"
-    enforce_rate_limit(limiter_auth_failure, request, key=f"auth_failure:{client_ip}")
+    await enforce_rate_limit(
+        limiter_auth_failure, request, key=f"auth_failure:{ip_identity(request)}"
+    )

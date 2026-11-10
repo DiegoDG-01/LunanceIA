@@ -36,7 +36,7 @@ async def get_general_data(
     current_user: User = Depends(require_scope(APIKeyScope.DASHBOARD_READ.value)),
     handler: GetDashboardSummaryHandler = Depends(get_dashboard_summary_handler),
 ):
-    enforce_rate_limit(limiter_10_per_minute, request)
+    await enforce_rate_limit(limiter_10_per_minute, request)
     query = GetDashboardSummaryQuery(user_id=cast(int, current_user.id))
     summary = await handler.handle(query)
 
@@ -51,7 +51,7 @@ async def get_genera_data_mobile(
         get_mobile_dashboard_summary_handler
     ),
 ):
-    enforce_rate_limit(limiter_10_per_minute, request)
+    await enforce_rate_limit(limiter_10_per_minute, request)
     query = GetMobileDashboardSummaryQuery(user_id=cast(int, current_user.id))
     summary = await handler.handle(query)
 

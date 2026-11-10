@@ -88,7 +88,7 @@ async def create_position(
     current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_WRITE.value)),
     handler: CreatePositionHandler = Depends(get_create_position_handler),
 ):
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     cap = position_request.cap
     dto = CreatePositionDTO(
         user_id=cast(int, current_user.id),
@@ -120,7 +120,7 @@ async def list_positions(
     current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_READ.value)),
     handler: ListPositionsHandler = Depends(get_list_positions_handler),
 ):
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     result = await handler.handle(
         ListPositionsQuery(
             account_uuid=account_uuid,
@@ -146,7 +146,7 @@ async def get_position(
     current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_READ.value)),
     handler: GetPositionHandler = Depends(get_position_handler),
 ):
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     result = await handler.handle(
         GetPositionQuery(
             position_uuid=position_uuid, user_id=cast(int, current_user.id)
@@ -163,7 +163,7 @@ async def update_position(
     current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_WRITE.value)),
     handler: UpdatePositionHandler = Depends(get_update_position_handler),
 ):
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     cap = position_request.cap
     dto = UpdatePositionDTO(
         user_id=cast(int, current_user.id),
@@ -189,7 +189,7 @@ async def deposit_to_position(
     current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_WRITE.value)),
     handler: DepositToPositionHandler = Depends(get_deposit_to_position_handler),
 ):
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     dto = PositionMovementDTO(
         user_id=cast(int, current_user.id),
         position_uuid=position_uuid,
@@ -208,7 +208,7 @@ async def withdraw_from_position(
     current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_WRITE.value)),
     handler: WithdrawFromPositionHandler = Depends(get_withdraw_from_position_handler),
 ):
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     dto = PositionMovementDTO(
         user_id=cast(int, current_user.id),
         position_uuid=position_uuid,
@@ -226,7 +226,7 @@ async def liquidate_position(
     current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_WRITE.value)),
     handler: LiquidatePositionHandler = Depends(get_liquidate_position_handler),
 ):
-    enforce_rate_limit(limiter_10_per_minute, request)
+    await enforce_rate_limit(limiter_10_per_minute, request)
     dto = LiquidatePositionDTO(
         user_id=cast(int, current_user.id), position_uuid=position_uuid
     )
@@ -245,7 +245,7 @@ async def get_position_yields(
     current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_READ.value)),
     handler: GetPositionYieldsHandler = Depends(get_position_yields_handler),
 ):
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     yields = await handler.handle(
         GetPositionYieldsQuery(
             position_uuid=position_uuid,
@@ -270,7 +270,7 @@ async def get_position_projections(
     current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_READ.value)),
     handler: GetPositionProjectionsHandler = Depends(get_position_projections_handler),
 ):
-    enforce_rate_limit(limiter_30_per_minute, request)
+    await enforce_rate_limit(limiter_30_per_minute, request)
     result = await handler.handle(
         GetPositionProjectionsQuery(
             position_uuid=position_uuid,

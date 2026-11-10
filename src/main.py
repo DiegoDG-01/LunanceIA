@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from infrastructure.cache.redis import close_redis, init_redis, ping_redis
 from infrastructure.config.logging_config import setup_logging
 from infrastructure.config.settings import settings
 from infrastructure.database.connection import get_db
@@ -30,13 +31,20 @@ from shared.exceptions.base import LunanceException
 
 # Configurar logging
 setup_logging()
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    init_redis(settings.REDIS_URL)
+    if not await ping_redis():
+        # La app arranca igual: los rate limits dejan pasar (o responden 503 en login y
+        # registro) hasta que Redis vuelva.
+        logger.error("Redis is not reachable at startup")
     scheduler_service.start()
     yield
     scheduler_service.shutdown()
+    await close_redis()
 
     for handler in logging.getLogger().handlers:
         if hasattr(handler, "close"):
@@ -92,7 +100,7 @@ DOCS_PATHS = {"/docs", "/redoc", "/openapi.json"}
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     await secure_header.set_headers_async(response)
-    response.headers["Cache-Contro"] = "no-store"
+    response.headers["Cache-Control"] = "no-store"
     if request.url.path in DOCS_PATHS:
         del response.headers["Content-Security-Policy"]
     return response
@@ -104,7 +112,7 @@ app.include_router(api_router, prefix="/api/v2")
 
 @app.get("/")
 async def root(request: Request):
-    enforce_rate_limit(limiter_10_per_minute, request)
+    await enforce_rate_limit(limiter_10_per_minute, request)
     return {
         "message": "Hello World",
         "version": "1.0.0",
@@ -113,11 +121,17 @@ async def root(request: Request):
 
 @app.get("/health")
 async def health_check(request: Request, db: AsyncSession = Depends(get_db)):
-    enforce_rate_limit(limiter_5_per_minute, request)
+    await enforce_rate_limit(limiter_5_per_minute, request)
     try:
         await db.execute(text("SELECT 1"))
         db_status = {"status": "healthy"}
     except Exception:
         db_status = {"status": "unhealthy"}
+    redis_status = {"status": "healthy" if await ping_redis() else "unhealthy"}
 
-    return {"API": "healthy", "version": "1.0.0", "services": db_status}
+    return {
+        "API": "healthy",
+        "version": "1.0.0",
+        "services": db_status,
+        "redis": redis_status,
+    }

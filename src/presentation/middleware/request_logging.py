@@ -7,6 +7,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from infrastructure.logging.context import set_request_id
+from infrastructure.rate_limiting.client_ip import client_ip
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             extra={
                 "path": str(request.url.path),
                 "method": request.method,
-                "client_ip": request.client.host if request.client else "",
+                "client_ip": client_ip(request) or "",
                 "user_agent": request.headers.get("user-agent"),
             },
         )

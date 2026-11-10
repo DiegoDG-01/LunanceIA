@@ -42,7 +42,7 @@ async def register(
     register_request: RegisterRequest,
     handler: RegisterHandler = Depends(get_register_handler),
 ):
-    enforce_rate_limit(limiter_5_per_hour, request)
+    await enforce_rate_limit(limiter_5_per_hour, request, fail_closed=True)
     command = RegisterCommand(
         username=register_request.username,
         password=register_request.password,
@@ -58,7 +58,7 @@ async def register(
 
 @router.get("/me", response_model=UserInfoResponse)
 async def me(request: Request, current_user: User = Depends(get_current_active_user)):
-    enforce_rate_limit(limiter_100_per_minute, request)
+    await enforce_rate_limit(limiter_100_per_minute, request)
     return UserInfoResponse(
         user_uuid=current_user.uuid,
         username=current_user.name,
@@ -73,7 +73,7 @@ async def login(
     login_request: LoginRequest,
     handler: LoginHandler = Depends(get_login_handler),
 ):
-    enforce_rate_limit(limiter_10_per_minute, request)
+    await enforce_rate_limit(limiter_10_per_minute, request, fail_closed=True)
     command = LoginCommand(
         username=login_request.username, password=login_request.password
     )
@@ -103,7 +103,7 @@ async def refresh_token(
     response: Response,
     handler: RefreshTokenHandler = Depends(get_refresh_token_handler),
 ):
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     incoming_token = request.cookies.get("refresh_token")
     if not incoming_token:
         raise HTTPException(status_code=401, detail="Refresh token not found")
@@ -131,7 +131,7 @@ async def logout(
     response: Response,
     handler: LogoutHandler = Depends(get_logout_handler),
 ):
-    enforce_rate_limit(limiter_10_per_minute, request)
+    await enforce_rate_limit(limiter_10_per_minute, request)
     incoming_token = request.cookies.get("refresh_token")
 
     if not incoming_token:

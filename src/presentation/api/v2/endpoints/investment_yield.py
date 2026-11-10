@@ -41,7 +41,7 @@ async def get_investment_yields(
     current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_READ.value)),
     handler: GetInvestmentYieldsHandler = Depends(get_investment_yields_handler),
 ):
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     query = GetInvestmentYieldsQuery(
         account_uuid=account_id,
         user_id=cast(int, current_user.id),
@@ -67,7 +67,7 @@ async def get_investment_projections(
         get_investment_projections_handler
     ),
 ):
-    enforce_rate_limit(limiter_30_per_minute, request)
+    await enforce_rate_limit(limiter_30_per_minute, request)
     query = GetInvestmentProjectionsQuery(
         account_uuid=account_id,
         user_id=cast(int, current_user.id),

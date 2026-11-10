@@ -79,7 +79,7 @@ async def get_transactions(
     🌐 ENDPOINT HTTP: Punto de entrada para obtener transacciones
     ✨ Función: Valida input → crea query → ejecuta caso de uso → formatea response
     """
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     # 📦 Crear el query object con todos los filtros
     query = GetTransactionsQuery(
         user_id=cast(int, current_user.id),  # 🔒 Del token JWT
@@ -106,7 +106,7 @@ async def get_transaction_by_uuid(
     current_user: User = Depends(require_scope(APIKeyScope.TRANSACTIONS_READ.value)),
     handler: GetTransactionByUuidHandler = Depends(get_transaction_by_uuid_handler),
 ):
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     query = GetTransactionByUuidQuery(
         uuid=transaction_uuid, user_id=cast(int, current_user.id)
     )
@@ -122,7 +122,7 @@ async def create_transaction(
     current_user: User = Depends(require_scope(APIKeyScope.TRANSACTIONS_WRITE.value)),
     handler: CreateTransactionHandler = Depends(get_create_transaction_handler),
 ):
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     # Convertir request → DTO
     dto = CreateTransactionDTO(
         account_uuid=transaction_request.account_uuid,
@@ -149,7 +149,7 @@ async def update_transaction(
     current_user: User = Depends(require_scope(APIKeyScope.TRANSACTIONS_WRITE.value)),
     handler: UpdateTransactionCommandHandler = Depends(get_update_transaction_handler),
 ):
-    enforce_rate_limit(limiter_15_per_minute, request)
+    await enforce_rate_limit(limiter_15_per_minute, request)
     command = UpdateTransactionCommand(
         transaction_uuid=transaction_uuid,
         user_id=cast(int, current_user.id),
@@ -180,7 +180,7 @@ async def delete_transaction(
     - Requiere ownership: solo el dueño puede eliminar
     - Retorna 204 si exitoso, 404 si no encontrado
     """
-    enforce_rate_limit(limiter_10_per_minute, request)
+    await enforce_rate_limit(limiter_10_per_minute, request)
     command = DeleteTransactionCommand(
         uuid=transaction_uuid, user_id=cast(int, current_user.id)
     )

@@ -74,7 +74,7 @@ async def get_user_accounts(
     handler: GetUserAccountsHandler = Depends(get_user_accounts_handler),
 ):
     """Obtiene todas las cuentas del usuario."""
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     query = GetUserAccountsQuery(
         user_id=cast(int, current_user.id),
         only_active=only_active,
@@ -98,7 +98,7 @@ async def get_account(
     handler: GetAccountByIdHandler = Depends(get_account_by_id_handler),
 ):
     """Obtiene una cuenta específica."""
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     query = GetAccountByIdQuery(
         account_uuid=account_uuid, user_id=cast(int, current_user.id)
     )
@@ -116,7 +116,7 @@ async def create_account(
     handler: CreateAccountHandler = Depends(get_create_account_handler),
 ):
     """Crea una nueva cuenta."""
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     cc_settings_dto = None
     if account_request.credit_card_settings:
         cc_settings_dto = CreditCardSettingsDTO(
@@ -150,7 +150,7 @@ async def update_account(
     current_user: User = Depends(require_scope(APIKeyScope.ACCOUNTS_WRITE.value)),
     handler: UpdateAccountHandler = Depends(get_update_account_handler),
 ):
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     cc_settings_dto = None
     if update_request.credit_card_settings:
         cc_settings_dto = CreditCardSettingsDTO(
@@ -183,7 +183,7 @@ async def delete_account(
     handler: DeleteAccountHandler = Depends(get_delete_account_handler),
 ):
     """Elimina una cuenta."""
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     command = DeleteAccountCommand(
         account_uuid=account_uuid, user_id=cast(int, current_user.id)
     )
@@ -203,7 +203,7 @@ async def activate_account(
     handler: StateAccountHandler = Depends(get_state_account_handler),
 ):
     """Activa/desactiva una cuenta."""
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     command = StateAccountCommand(
         account_uuid=account_uuid,
         user_id=cast(int, current_user.id),
@@ -232,7 +232,7 @@ async def get_account_activity(
     current_user: User = Depends(require_scope(APIKeyScope.ACCOUNTS_READ.value)),
     handler: GetAccountActivitiesHandler = Depends(get_activity_account_handler),
 ):
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     query = GetAccountActivityQuery(
         user_id=cast(int, current_user.id), account_uuid=account_uuid
     )

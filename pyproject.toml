@@ -35,7 +35,6 @@ dependencies = [
     "google-api-python-client==2.200.0",
     "cachetools==7.2.0",
     "pydantic-ai-slim[google,openai]==2.46.0",
-    "fastapi-advanced-rate-limiter==2.1.0",
     "redis==8.1.0",
     "secure==2.0.1",
     "openai==3.16.2",
@@ -55,6 +54,7 @@ test = [
     "pytest-asyncio==1.4.0",
     "httpx==0.28.1",
     "pytest-cov==7.1.0",
+    "fakeredis==2.40.0",
 ]
 
 dev = [

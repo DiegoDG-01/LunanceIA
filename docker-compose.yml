@@ -10,8 +10,13 @@ services:
     depends_on:
       db:
         condition: service_healthy  # Wait until MySQL is ready to accept connections
+      redis:
+        condition: service_healthy  # Rate limits y sesiones
     env_file:
       - .env                   # Load environment variables from .env file
+    environment:
+      # Sobrescribe REDIS_URL de .env: dentro de Docker, Redis se alcanza por nombre de servicio
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-lunance_redis}@redis:6379/0
     networks:
       - lunance-net           # Connect to custom network
 
@@ -56,6 +61,31 @@ services:
       start_period: 30s
     networks:
       - lunance-net                 # Connect to custom network
+
+  # Redis: rate limits y, desde la fase 1, sesiones revocadas.
+  # Sin persistencia a propósito: lo importante de las sesiones vive en MySQL y que los
+  # contadores de rate limit se reinicien no importa. Sin puertos publicados: solo la red interna.
+  redis:
+    image: redis:7-alpine
+    container_name: lunance_redis
+    restart: always
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --requirepass
+      - ${REDIS_PASSWORD:-lunance_redis}
+    environment:
+      - REDISCLI_AUTH=${REDIS_PASSWORD:-lunance_redis}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - lunance-net
 
 # Named volumes for data persistence
 volumes:

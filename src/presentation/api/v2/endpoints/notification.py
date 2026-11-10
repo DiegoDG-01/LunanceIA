@@ -24,7 +24,7 @@ async def get_notifications(
     current_user: User = Depends(get_current_active_user),
     handler: GetAndClearNotificationsHandler = Depends(get_notifications_handler),
 ):
-    enforce_rate_limit(limiter_5_per_minute, request)
+    await enforce_rate_limit(limiter_5_per_minute, request)
     return await handler.handle(
         GetAndClearNotificationsQuery(user_id=cast(int, current_user.id))
     )

@@ -61,7 +61,7 @@ async def get_saving_goals(
     handler: GetSavingGoalsHandler = Depends(get_saving_goals_handler),
 ):
     """Obtiene todas las metas de ahorro del usuario autenticado."""
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     query = GetSavingGoalsQuery(
         user_id=cast(int, current_user.id),
         active_only=active_only,
@@ -78,7 +78,7 @@ async def get_saving_goal(
     handler: GetSavingGoalByIdHandler = Depends(get_saving_goals_by_id_handler),
 ):
     """Obtiene una meta de ahorro específica por su UUID."""
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     query = GetSavingGoalQuery(
         user_id=cast(int, current_user.id),
         goal_uuid=goal_uuid,
@@ -97,7 +97,7 @@ async def create_saving_goal(
     handler: CreateSavingGoalHandler = Depends(get_create_saving_goal_handler),
 ):
     """Crea una nueva meta de ahorro."""
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     dto = CreateSavingGoalDTO(
         user_id=cast(int, current_user.id),
         account_uuid=goal_request.account_uuid,
@@ -120,7 +120,7 @@ async def update_saving_goal(
     handler: UpdateSavingGoalHandler = Depends(get_update_saving_goal_handler),
 ):
     """Actualiza una meta de ahorro existente."""
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     dto = UpdateSavingGoalDTO(
         name=goal_request.name,
         target_amount=goal_request.target_amount,
@@ -144,7 +144,7 @@ async def toggle_saving_goal_status(
     handler: StateSavingGoalHandler = Depends(get_state_saving_goal_handler),
 ):
     """Activa o desactiva una meta de ahorro."""
-    enforce_rate_limit(limiter_5_per_minute, request)
+    await enforce_rate_limit(limiter_5_per_minute, request)
     command = StateSavingGoalCommand(
         goal_uuid=goal_uuid,
         user_id=cast(int, current_user.id),
@@ -161,7 +161,7 @@ async def delete_saving_goal(
     handler: DeleteSavingGoalHandler = Depends(get_delete_saving_goal_handler),
 ):
     """Elimina una meta de ahorro permanentemente."""
-    enforce_rate_limit(limiter_5_per_minute, request)
+    await enforce_rate_limit(limiter_5_per_minute, request)
     command = DeleteSavingGoalCommand(
         saving_goal_uuid=goal_uuid,
         user_id=cast(int, current_user.id),

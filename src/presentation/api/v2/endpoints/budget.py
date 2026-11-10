@@ -67,7 +67,7 @@ async def get_budgets(
     handler: GetBudgetsHandler = Depends(get_budgets_handler),
 ):
     """Obtiene todos los presupuestos del usuario autenticado."""
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     query = GetBudgetsQuery(
         user_id=cast(int, current_user.id),
         active_only=active_only,
@@ -85,7 +85,7 @@ async def get_budget(
     handler: GetBudgetByIdHandler = Depends(get_budget_by_id_handler),
 ):
     """Obtiene un presupuesto específico por su UUID."""
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     query = GetBudgetByIdQuery(
         budget_uuid=budget_uuid,
         user_id=cast(int, current_user.id),
@@ -105,7 +105,7 @@ async def get_budget_progress(
     Retorna el progreso del presupuesto para el periodo actual:
     cuánto se ha gastado, cuánto resta, si se disparó la alerta y si se superó el límite.
     """
-    enforce_rate_limit(limiter_50_per_minute, request)
+    await enforce_rate_limit(limiter_50_per_minute, request)
     query = GetBudgetProgressQuery(
         budget_uuid=budget_uuid,
         user_id=cast(int, current_user.id),
@@ -122,7 +122,7 @@ async def create_budget(
     handler: CreateBudgetHandler = Depends(get_create_budget_handler),
 ):
     """Crea un nuevo presupuesto."""
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     dto = CreateBudgetDTO(
         user_id=cast(int, current_user.id),
         name=budget_request.name,
@@ -151,7 +151,7 @@ async def update_budget(
     handler: UpdateBudgetHandler = Depends(get_update_budget_handler),
 ):
     """Actualiza un presupuesto existente."""
-    enforce_rate_limit(limiter_20_per_minute, request)
+    await enforce_rate_limit(limiter_20_per_minute, request)
     dto = UpdateBudgetDTO(
         name=budget_request.name,
         limit_amount=budget_request.limit_amount,
@@ -178,7 +178,7 @@ async def toggle_budget_status(
     handler: StateBudgetHandler = Depends(get_state_budget_handler),
 ):
     """Activa o desactiva un presupuesto."""
-    enforce_rate_limit(limiter_5_per_minute, request)
+    await enforce_rate_limit(limiter_5_per_minute, request)
     command = StateBudgetCommand(
         budget_uuid=budget_uuid,
         user_id=cast(int, current_user.id),
@@ -195,7 +195,7 @@ async def delete_budget(
     handler: DeleteBudgetHandler = Depends(get_delete_budget_handler),
 ):
     """Elimina un presupuesto permanentemente."""
-    enforce_rate_limit(limiter_5_per_minute, request)
+    await enforce_rate_limit(limiter_5_per_minute, request)
     command = DeleteBudgetCommand(
         budget_uuid=budget_uuid,
         user_id=cast(int, current_user.id),
