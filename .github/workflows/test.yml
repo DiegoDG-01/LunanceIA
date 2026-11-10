@@ -34,11 +34,7 @@ jobs:
       - name: Run tests
         run: uv run pytest
         env:
-          SECRET_KEY: "super-secret-test-key-of-at-least-32-characters"
-          SECRET_KEY_REFRESH: "super-secret-test-key-of-at-least-42-characters"
-          ALGORITHM: "HS256"
-          ACCESS_TOKEN_EXPIRE_MINUTES: 30
-          REFRESH_TOKEN_EXPIRE_DAYS: 7
+          # Las claves JWT y REFRESH_ROTATION_KEY las genera src/tests/conftest.py.
           BANXICO_TOKEN: "mock-token-123"
           AI_PROVIDER: "test"
           AI_MODEL_ID: "model_id"
