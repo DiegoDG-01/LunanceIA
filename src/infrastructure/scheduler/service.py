@@ -9,6 +9,7 @@ from infrastructure.scheduler.jobs import (
     process_position_maturity_job,
     process_recurring_income_job,
     process_subscriptions_job,
+    purge_auth_data_job,
 )
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,14 @@ class SchedulerService:
             trigger=CronTrigger(hour=0, minute=15),
             id="process_recurring_incomes_job",
             name="Process recurring incomes",
+            replace_existing=True,
+        )
+
+        self.scheduler.add_job(
+            purge_auth_data_job,
+            trigger=CronTrigger(hour=3, minute=0),
+            id="purge_auth_data_job",
+            name="Purge expired sessions and old auth events",
             replace_existing=True,
         )
 

@@ -1,6 +1,9 @@
 import logging
 from datetime import UTC, datetime
 
+from sqlalchemy.exc import SQLAlchemyError
+
+from application.auth.commands.purge_auth_data import PurgeAuthDataHandler
 from application.incomes.services.income_processor import IncomeProcessor
 from application.investments.commands.generate_daily_yields import (
     GenerateDailyYieldCommand,
@@ -18,6 +21,9 @@ from infrastructure.database.connection import AsyncSessionLocal
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
 )
+from infrastructure.database.repositories.sqlalchemy_auth_event_repository import (
+    SQLAlchemyAuthEventRepository,
+)
 from infrastructure.database.repositories.sqlalchemy_income_deposit_repository import (
     SQLAlchemyIncomeDepositRepository,
 )
@@ -33,6 +39,9 @@ from infrastructure.database.repositories.sqlalchemy_notification_repository imp
 from infrastructure.database.repositories.sqlalchemy_recurring_income_repository import (
     SQLAlchemyRecurringIncomeRepository,
 )
+from infrastructure.database.repositories.sqlalchemy_session_repository import (
+    SQLAlchemySessionRepository,
+)
 from infrastructure.database.repositories.sqlalchemy_subscription_charge_repository import (
     SQLAlchemySubscriptionChargeRepository,
 )
@@ -45,6 +54,7 @@ from infrastructure.database.repositories.sqlalchemy_transaction_repository impo
 from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
     SQLAlchemyUnitOfWork,
 )
+from shared.exceptions.application import RepositoryError
 
 logger = logging.getLogger(__name__)
 
@@ -169,3 +179,25 @@ async def process_recurring_income_job():
         except Exception as e:
             await db.rollback()
             logger.error(f"Error processing recurring income job: {e}")
+
+
+async def purge_auth_data_job():
+    """Borra sesiones vencidas o revocadas hace más de 30 días y la auditoría de más de 90."""
+    logger.info(f"Processing auth data purge job at {datetime.now(UTC)}")
+
+    async with AsyncSessionLocal() as db:
+        try:
+            handler = PurgeAuthDataHandler(
+                session_repository=SQLAlchemySessionRepository(db),
+                auth_event_repository=SQLAlchemyAuthEventRepository(db),
+                uow=SQLAlchemyUnitOfWork(db),
+            )
+            result = await handler.handle()
+
+            logger.info(
+                f"Job finished at {datetime.now(UTC)}: purged {result.sessions} sessions "
+                f"and {result.events} auth events"
+            )
+        except (RepositoryError, SQLAlchemyError) as e:
+            await db.rollback()
+            logger.error(f"Error processing auth data purge job: {e}")
