@@ -62,7 +62,7 @@ Este proyecto **no ofrece recompensas económicas** (bug bounty) por reportes de
 **Fuera del alcance:**
 
 - Vulnerabilidades en dependencias de terceros que ya tengan un aviso público: repórtalas al proyecto correspondiente. Si aquí falta actualizar la dependencia, abre un issue normal.
-- Servicios de terceros que integramos (Auth0, Google Gemini, OpenAI, Redis gestionado, proveedores de hosting): repórtalos a su programa de seguridad.
+- Servicios de terceros que integramos (Google Gemini, OpenAI, Redis gestionado, proveedores de hosting): repórtalos a su programa de seguridad.
 - Resultados de escáneres automáticos sin impacto demostrable.
 - Ausencia de cabeceras de seguridad o de buenas prácticas sin un vector de ataque concreto.
 - Ataques que requieran acceso físico al dispositivo, malware previo en la máquina de la víctima, o una cuenta ya comprometida.

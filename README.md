@@ -28,7 +28,7 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 
 ### 🔐 Seguridad y Autenticación
 - **Autenticación propia**: Registro y login con usuario y contraseña, sin depender de proveedores externos
-- **JWT Tokens**: La API emite y valida sus propios tokens (HS256); contraseñas hasheadas con bcrypt
+- **JWT Tokens**: La API emite y valida sus propios tokens (EdDSA/Ed25519) con una sesión por dispositivo; contraseñas hasheadas con Argon2id
 - **Refresh tokens rotativos**: Se almacenan solo como hash SHA-256 y se revocan al cerrar sesión
 - **API Keys**: Acceso programático con autenticación dual (JWT o `X-API-Key`) y permisos por scope; las keys se guardan hasheadas (SHA-256) y nunca permiten editar ni eliminar
 
@@ -45,9 +45,9 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 - **Performance Engine**: Rust (fincore) con PyO3 + Maturin
 - **Base de Datos**: MySQL con SQLAlchemy 2.0+ (aiomysql / pymysql)
 - **Migraciones**: Alembic 1.18+
-- **Autenticación**: JWT propio HS256 (python-jose 3.5+) + Refresh tokens hasheados
+- **Autenticación**: sesiones por dispositivo; access token JWT EdDSA/Ed25519 (PyJWT 2.13+) de 10 min y refresh token opaco rotativo (solo se guarda su SHA-256)
 - **Validación**: Pydantic 2.13+ con `pydantic-settings` 2.14+
-- **Hashing de contraseñas**: bcrypt 5.0+
+- **Hashing de contraseñas**: Argon2id (`argon2-cffi` 25+); los hashes bcrypt heredados se re-hashean en el siguiente login
 - **Rate Limiting**: ventana fija propia sobre Redis 7 (`redis.asyncio`)
 - **IA**: pydantic-ai-slim 2.16+ con extras `[google, openai]` (Google Gemini 2.x por defecto, compatible con OpenAI/Ollama vía `AI_BASE_URL`)
 - **Procesamiento de Imágenes**: Pillow 12.3+
@@ -173,9 +173,8 @@ cp .env.example .env
 # Editar .env para desarrollo local:
 # - DB_HOST=localhost
 # - ENVIRONMENT=DEV (importante para CORS y logs de desarrollo)
-# - AUTH0_DOMAIN y AUTH0_AUDIENCE: la app exige estas variables por
-#   compatibilidad con el fallback legado, pero el flujo activo es JWT propio.
-#   Puedes rellenarlas con cualquier valor no vacío si no usas Auth0.
+# Claves de autenticación (JWT_PRIVATE_KEY, JWT_PUBLIC_KEY, REFRESH_ROTATION_KEY):
+uv run python scripts/generate_secrets.py >> .env
 ```
 
 6. **Ejecutar migraciones y iniciar servidor**
@@ -191,7 +190,7 @@ uvicorn src.main:app --reload
 La API REST de Lunance IA v2 utiliza autenticación JWT y sigue los principios de Clean Architecture.
 
 ### Endpoints Principales
-- 🔐 **Autenticación**: `/api/v2/auth/` (register, login, refresh, logout, me)
+- 🔐 **Autenticación**: `/api/v2/auth/` (register, login, refresh, logout, me, sessions)
 - 💳 **Cuentas**: `/api/v2/account/` (CRUD completo + activación/desactivación)
 - 💰 **Transacciones**: `/api/v2/transaction/` (CRUD completo)
 - 🔄 **Suscripciones**: `/api/v2/subscription/` (CRUD completo + cargos + activación)
@@ -244,8 +243,10 @@ Lunance IA utiliza **Clean Architecture + Domain-Driven Design** para garantizar
 
 ## 🔒 Seguridad
 
-- **Autenticación propia**: Usuario y contraseña, con contraseñas hasheadas mediante bcrypt
-- **JWT Tokens**: Access tokens HS256 firmados por la API, con refresh tokens rotativos guardados como hash
+- **Autenticación propia**: Usuario y contraseña, con contraseñas hasheadas mediante Argon2id
+- **Sesiones por dispositivo**: access tokens EdDSA (Ed25519) de 10 min con `sid`; refresh tokens opacos rotativos (cookie httpOnly en web, body en ios/android), con detección de reuso
+- **Revocación inmediata**: cerrar una sesión desde otro dispositivo invalida su access token al instante (Redis + MySQL como autoridad)
+- **Auditoría**: registro de inicios de sesión y cierres de sesión en `auth_events`
 - **Rate limiting de autenticación**: Límites por endpoint y por IP ante intentos fallidos
 - **Validación robusta**: Schemas Pydantic en todos los endpoints
 - **CORS Configurado**: Según entorno (PROD: lista cerrada de dominios, DEV/TEST: `FRONTEND_URL`)

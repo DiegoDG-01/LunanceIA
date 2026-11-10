@@ -104,7 +104,7 @@ export TEST_TIMEOUT=30
 
 | Área | Suite | Cobertura |
 |---|---|---|
-| Auth (JWT propio, dual auth API Key) | `e2e/test_auth_api.py`, `unit/test_auth_commands.py`, `unit/test_auth_deps.py` | Registro, login, refresh, logout, `/auth/me`, scopes, Auth0 fallback (legado). |
+| Auth (sesiones por dispositivo, dual auth API Key) | `e2e/test_auth_api.py`, `e2e/test_sessions_api.py`, `unit/application/auth/`, `unit/domain/test_user_session.py`, `unit/test_auth_security.py`, `unit/test_auth_commands.py`, `unit/test_auth_deps.py` | Registro, login, rotación del refresh (gracia y reuso), cookie web vs body mobile, listar/cerrar sesiones, revocación inmediata (Redis y MySQL), rehash bcrypt → Argon2, `/auth/me`, scopes. |
 | Cuentas, transacciones, transferencias, suscripciones, presupuestos, metas, MSI, ingresos, dashboard, IA, bancos, categorías, API keys, notificaciones, edge cases, security headers | `e2e/test_*.py` | CRUD completo, enforcement de scopes, validaciones, race conditions. |
 | Dominio (Money, Bank, RecurringIncome, IncomeDeposit) | `unit/domain/` | Value objects y entidades puras. |
 | Handlers de aplicación (suscripciones, ingresos, MSI, cuentas, transactions) | `unit/application/` | Procesadores y casos de uso. |

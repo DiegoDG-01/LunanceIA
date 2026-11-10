@@ -145,7 +145,7 @@ graph TD
 | **MCP Container** | Docker (FastMCP, streamable-http) | Contenedor que expone la API como herramientas para agentes/LLM en `mcp.lunance.app` (puerto 8001). Actúa como **proxy**: reenvía cada llamada a la API por la red interna de Docker (`http://api:8000`) inyectando la `X-API-Key` del usuario y respetando sus scopes; no accede a la BD. Ver [MCP.md](MCP.md) |
 | **Base de Datos** | MySQL en IONOS VPS 2 | Solo acepta conexiones desde la IP del VPS 1 (puerto 3306) y SSH |
 | **Backups de BD** | Cloudflare R2 (S3-compatible) | Dockploy ejecuta dumps programados de MySQL y los sube a un bucket de R2, manteniendo las copias fuera de los VPS |
-| **Autenticación** | Propia (JWT HS256) | La API emite y valida sus propios tokens; no hay proveedor de identidad externo |
+| **Autenticación** | Propia (JWT EdDSA + refresh opaco) | La API emite y valida sus propios tokens, con una sesión por dispositivo; no hay proveedor de identidad externo |
 | **IA** | pydantic-ai multi-proveedor | Análisis de imágenes (recibos/tickets) y asesoría de gastos mediante agentes estructurados. Proveedor configurable vía `model_factory`: Google Gemini por defecto, con alternativas vía API compatible con OpenAI (Ollama, DeepSeek) |
 | **Logs** | Grafana Cloud (Loki) | Ingesta de logs estructurados desde la API |
 | **Métricas** | NetData | Métricas de infraestructura de ambos VPS |
@@ -306,7 +306,9 @@ domain/
 │   ├── investment_yield.py           # Entidad InvestmentYield (rendimientos diarios por apartado)
 │   ├── notification.py               # Entidad Notification (notificaciones al usuario)
 │   ├── recurring_income.py           # Entidad RecurringIncome (ingresos recurrentes)
-│   ├── refresh_token.py              # Entidad RefreshToken (tokens de refresco persistidos)
+│   ├── refresh_token.py              # Entidad RefreshToken (hash del refresh opaco y su rotación)
+│   ├── session.py                    # Entidad UserSession (una por dispositivo) y Platform
+│   ├── auth_event.py                 # Entidad AuthEvent (auditoría de login y sesiones)
 │   ├── saving_goal.py                # Entidad SavingGoal (metas de ahorro)
 │   ├── subscription.py              # Entidad Subscription (pagos recurrentes)
 │   ├── subscription_charge.py       # Entidad SubscriptionCharge (cargos individuales)
@@ -322,7 +324,9 @@ domain/
 │   ├── __init__.py
 │   ├── account_repository.py        # Interface para operaciones de Account
 │   ├── api_key_repository.py        # Interface para operaciones de APIKey
-│   ├── auth_token_repository.py     # Interface para tokens JWT/refresh
+│   ├── session_repository.py        # Interface para sesiones por dispositivo
+│   ├── refresh_token_repository.py  # Interface para refresh tokens (hash + rotación)
+│   ├── auth_event_repository.py     # Interface para la auditoría de autenticación
 │   ├── bank_repository.py           # Interface para operaciones de Bank
 │   ├── budget_repository.py         # Interface para operaciones de Budget
 │   ├── category_repository.py       # Interface para operaciones de Category
@@ -515,14 +519,22 @@ application/
 │   └── queries/
 │       ├── __init__.py
 │       └── get_banks.py
-├── auth/                     # Feature: Autenticación (JWT propio)
+├── auth/                     # Feature: Autenticación y sesiones por dispositivo
 │   ├── __init__.py
-│   └── commands/
-│       ├── __init__.py
-│       ├── login.py          # Autenticación de usuario
-│       ├── logout.py         # Cerrar sesión
-│       ├── refresh_token.py  # Renovar token
-│       └── register.py       # Registro de usuario
+│   ├── config.py             # AuthConfig: duración de sesiones, margen de gracia, clave de rotación
+│   ├── dto.py                # ClientContext (dispositivo, plataforma, IP) e IssuedSession
+│   ├── services/
+│   │   └── sessions.py       # SessionManager: abre sesiones y emite access + refresh
+│   ├── commands/
+│   │   ├── __init__.py
+│   │   ├── login.py          # Login: verifica contraseña, re-hashea bcrypt → Argon2, abre sesión
+│   │   ├── logout.py         # Cerrar esta sesión o todas (`all_devices`)
+│   │   ├── refresh_session.py # Rotación del refresh con gracia y detección de reuso
+│   │   ├── revoke_session.py # Cerrar una sesión propia desde otro dispositivo
+│   │   ├── purge_auth_data.py # Job diario: purga sesiones viejas y auditoría
+│   │   └── register.py       # Registro de usuario
+│   └── queries/
+│       └── list_sessions.py  # Sesiones activas, con la actual marcada
 ├── api_keys/                 # Feature: API keys (acceso programático / MCP)
 │   ├── __init__.py
 │   ├── commands/
@@ -605,7 +617,9 @@ infrastructure/
 │   │   ├── investment_yield.py    # Modelo InvestmentYield (rendimientos por apartado)
 │   │   ├── notifications.py  # Modelo Notification
 │   │   ├── recurring_income.py # Modelos RecurringIncome e IncomeDeposit
-│   │   ├── refresh_token.py  # Modelo RefreshToken
+│   │   ├── refresh_token.py  # Modelo RefreshToken (token_hash PK → user_sessions)
+│   │   ├── user_session.py   # Modelo UserSession (una por dispositivo)
+│   │   ├── auth_event.py     # Modelo AuthEvent (auditoría)
 │   │   ├── reminder.py       # Modelo Reminder
 │   │   ├── saving_goal.py    # Modelo SavingGoal
 │   │   ├── subscription.py   # Modelo Subscription
@@ -616,7 +630,7 @@ infrastructure/
 │       ├── __init__.py
 │       ├── sqlalchemy_account_repository.py
 │       ├── sqlalchemy_api_key_repository.py
-│       ├── sqlalchemy_auth_token_repository.py
+│       ├── sqlalchemy_auth_event_repository.py
 │       ├── sqlalchemy_bank_repository.py
 │       ├── sqlalchemy_budget_repository.py
 │       ├── sqlalchemy_category_repository.py
@@ -629,7 +643,9 @@ infrastructure/
 │       ├── sqlalchemy_investment_yield_repository.py
 │       ├── sqlalchemy_notification_repository.py
 │       ├── sqlalchemy_recurring_income_repository.py
+│       ├── sqlalchemy_refresh_token_repository.py
 │       ├── sqlalchemy_saving_goal_repository.py
+│       ├── sqlalchemy_session_repository.py
 │       ├── sqlalchemy_subscription_charge_repository.py
 │       ├── sqlalchemy_subscription_repository.py
 │       ├── sqlalchemy_transaction_repository.py
@@ -644,14 +660,16 @@ infrastructure/
 │       └── model_factory.py  # Factory multi-proveedor (Google Gemini; Ollama y DeepSeek vía API compatible con OpenAI)
 ├── security/                 # Servicios de seguridad
 │   ├── __init__.py
-│   ├── jwt_service.py        # JWTService: emisión y validación de tokens JWT
+│   ├── jwt_tokens.py         # EdDSATokenIssuer: access tokens JWT Ed25519 (sub + sid)
+│   ├── passwords.py          # Argon2PasswordHasher (verifica también bcrypt heredado)
 │   └── api_key_service.py    # APIKeyService: emisión y validación de API keys
 ├── scheduler/                # Tareas programadas
 │   ├── __init__.py
-│   ├── jobs.py               # Definición de jobs (suscripciones, rendimientos, vencimientos de apartados, ingresos recurrentes)
+│   ├── jobs.py               # Definición de jobs (suscripciones, rendimientos, vencimientos de apartados, ingresos recurrentes, purga de sesiones)
 │   └── service.py            # SchedulerService (APScheduler wrapper)
 ├── cache/                    # Cliente de Redis compartido (init/close en el lifespan)
-│   └── redis.py
+│   ├── redis.py
+│   └── session_revocations.py # Lista revoked_sid:<uuid> en Redis, con MySQL como autoridad
 ├── rate_limiting/            # Rate limiting por endpoint sobre Redis
 │   ├── __init__.py
 │   ├── client_ip.py          # IP real del cliente (CLIENT_IP_HEADER) e identidad por IP (IPv6 por /64)
@@ -1321,17 +1339,21 @@ def translate_validation_message(
 
 ## 🔒 Seguridad y Autenticación
 
-### Autenticación propia
+### Autenticación propia y sesiones por dispositivo
 
 Lunance IA gestiona la identidad por sí misma, sin proveedor externo:
 
 - **Registro y login**: `POST /api/v2/auth/register` y `POST /api/v2/auth/login`, con usuario y contraseña
-- **Contraseñas**: Hasheadas con `bcrypt`; se exige mayúscula, minúscula, dígito y carácter especial (mínimo 8 caracteres)
-- **Access token**: JWT firmado con `SECRET_KEY` (HS256), con claims `sub` (UUID del usuario) e `iss: "lunance"`
-- **Refresh token**: Firmado con una clave distinta (`SECRET_KEY_REFRESH`), persistido **solo como hash SHA-256** y **rotado en cada renovación**
-- **Logout**: Revoca el refresh token en base de datos
-
-> **Legado:** `validate_auth0_user()` sigue presente en `presentation/dependencies/auth_deps.py` como camino alternativo cuando el token no lleva `iss: "lunance"`. El flujo activo es el propio; las variables `AUTH0_DOMAIN` y `AUTH0_AUDIENCE` continúan siendo obligatorias en `settings.py` únicamente por esa dependencia.
+- **Contraseñas**: Argon2id (`argon2-cffi`, m=64 MiB, t=3, p=1) calculado en un hilo para no bloquear el event loop; se exige mayúscula, minúscula, dígito y carácter especial (mínimo 8 caracteres). Los hashes bcrypt heredados (`$2…`) se verifican con bcrypt y se re-hashean a Argon2 en el siguiente login correcto
+- **Una sesión por dispositivo** (`user_sessions`): el cliente manda `X-Lunance-Device: <uuid>` (obligatorio en login y refresh) y `X-Lunance-Client: <web|ios|android>/<versión>` (sin él, es la web). Volver a entrar desde el mismo dispositivo sustituye solo esa sesión
+- **Access token**: JWT EdDSA (Ed25519, PyJWT) de 10 minutos con `iss`, `aud`, `sub` (uuid del usuario), `sid` (uuid de la sesión), `iat` y `exp`. Claves en `JWT_PRIVATE_KEY`/`JWT_PUBLIC_KEY` (`scripts/generate_secrets.py`)
+- **Refresh token**: opaco (`rt_` + 256 bits); solo se guarda su SHA-256. Cada refresh lo canjea por un único sucesor derivado con HMAC (`REFRESH_ROTATION_KEY`), bajo `SELECT … FOR UPDATE` sobre la sesión. Repetir el token ya canjeado dentro del margen de gracia (`REFRESH_REUSE_GRACE_SECONDS`) devuelve el mismo sucesor; fuera de él se revoca la sesión entera (`refresh_reuse`)
+- **Transporte del refresh**: web → cookie `httpOnly` (`path=/api/v2/auth`, settings `COOKIE_*`); ios/android → en el body de la respuesta, y `/refresh` y `/logout` lo aceptan en el body
+- **Duración**: web 1 día de inactividad / 7 días como máximo; mobile 30 / 90 días (`SESSION_*`). Cada refresh renueva la inactividad sin pasar del máximo
+- **Revocación inmediata**: al cerrar una sesión se escribe `revoked_sid:<uuid>` en Redis (TTL ≈ vida del access token) y cada petición autenticada lo consulta; MySQL es la autoridad, así que si Redis falla o perdió la clave se consulta la sesión en la base
+- **Endpoints de sesión**: `GET /auth/sessions` (marca `is_current`), `DELETE /auth/sessions/{uuid}` (solo sesiones propias; 404 si no), `POST /auth/logout` (`all_devices` opcional)
+- **Auditoría** (`auth_events`): `login.succeeded`, `login.failed` (con el username intentado), `login.throttled`, `session.revoked` (motivo y quién) y `session.refresh_reuse_detected`. Nunca guarda contraseñas ni tokens
+- **Limpieza**: un job diario borra las sesiones vencidas o revocadas hace más de 30 días (con sus refresh tokens) y los eventos de más de 90
 
 ### Configuración CORS Basada en Entorno
 
@@ -1368,32 +1390,19 @@ Protección contra abuso con ventana fija sobre Redis (`INCR` + `EXPIRE` atómic
 
 ### JWT Token Validation
 
+Hay un solo camino para un access token (`presentation/dependencies/auth_deps.py`):
+
 ```python
-from fastapi import Depends, HTTPException
-from jose import jwt, JWTError
-
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    """
-    Valida el token JWT emitido por la propia API.
-
-    El token contiene:
-    - sub: UUID del usuario
-    - iss: "lunance" (distingue los tokens propios)
-    - iat / exp: Emisión y expiración
-    """
-    try:
-        payload = jwt.decode(
-            token,
-            settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]  # HS256
-        )
-        user_uuid = payload.get("sub")
-        if user_uuid is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        return payload
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+async def authenticate_access_token(token: str, db: AsyncSession) -> AccessContext:
+    claims = get_token_issuer().verify(token)  # firma EdDSA, iss, aud, exp, sub y sid
+    revocations = build_session_revocations(SQLAlchemySessionRepository(db))
+    if await revocations.is_revoked(claims.session_uuid):  # Redis y, si no, MySQL
+        raise SessionExpiredError()
+    user = await SQLAlchemyUserRepository(db).get_by_uuid(claims.user_uuid)
+    ...
 ```
+
+`get_current_active_user`, `get_user_dual_auth` (JWT o API key) y `require_scope` lo usan sin cambiar su firma.
 
 ## 🧪 Estrategia de Testing
 
@@ -1475,7 +1484,7 @@ sequenceDiagram
     CF->>Traefik: Proxy (TLS terminado)
     Traefik->>MW: HTTP Request
     MW->>MW: Asigna Correlation ID<br/>Logging de request
-    MW->>Auth: Valida JWT (HS256, iss lunance)
+    MW->>Auth: Valida JWT (EdDSA) y que su sesión (sid) no esté revocada
     Auth->>Endpoint: current_user inyectado
     Endpoint->>Endpoint: Valida Schema Pydantic
     Endpoint->>Handler: Command / Query
