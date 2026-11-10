@@ -74,6 +74,8 @@ from shared.exceptions.domain import (
     PositionAccountTypeNotAllowedError,
     PositionCapExceededError,
     SameAccountTransferError,
+    SessionExpiredError,
+    SessionNotFoundError,
     SubscriptionNotFoundError,
     TransactionNotActivityError,
     TransactionNotFoundError,
@@ -91,11 +93,13 @@ logger = logging.getLogger(__name__)
 EXCEPTION_MAP: dict[type[Exception], tuple[str, int]] = {
     # --- Autenticación y Autorización (401) ---
     InvalidCredentialsError: ("AUTH_INVALID_CREDENTIALS", 401),
+    SessionExpiredError: ("AUTH_SESSION_EXPIRED", 401),
     UnauthorizedError: ("AUTH_INVALID_CREDENTIALS", 401),
     UserInactiveError: ("AUTH_USER_INACTIVE", 401),
     JWTValidationError: ("JWT_VALIDATION_ERROR", 401),
     # --- Recursos No Encontrados (404) ---
     UserNotFoundError: ("NOT_FOUND_USER", 404),
+    SessionNotFoundError: ("NOT_FOUND_SESSION", 404),
     AccountNotFoundError: ("NOT_FOUND_ACCOUNT", 404),
     TransactionNotFoundError: ("NOT_FOUND_TRANSACTION", 404),
     CategoryNotFoundError: ("NOT_FOUND_CATEGORY", 404),

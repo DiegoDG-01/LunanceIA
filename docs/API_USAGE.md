@@ -16,27 +16,38 @@ Esta guía te mostrará cómo usar la API REST de Lunance IA v2, incluyendo aute
 
 ## 🔐 Autenticación JWT
 
-La API gestiona la autenticación **por sí misma**, con usuario y contraseña. Emite y valida sus propios tokens JWT: ese es el flujo principal. Existe además un *fallback* legado que acepta tokens de Auth0 (`validate_auth0_user`), por lo que las variables `AUTH0_DOMAIN` y `AUTH0_AUDIENCE` siguen siendo **obligatorias** en la configuración.
+La API gestiona la autenticación **por sí misma**, con usuario y contraseña, y abre **una sesión por dispositivo**: puedes tener la web, el iPhone y la tablet abiertos a la vez y cerrar cualquiera desde otro.
+
+### Cabeceras del dispositivo
+
+| Cabecera | Valor | Dónde |
+|---|---|---|
+| `X-Lunance-Device` | UUID que el cliente genera **una sola vez** y guarda | Obligatoria en `/login` y `/refresh` (`422` si falta o no es UUID) |
+| `X-Lunance-Client` | `<plataforma>/<versión>`: `web/…`, `ios/…` o `android/…` | Opcional; sin ella se trata como `web` |
+
+Volver a iniciar sesión desde el mismo dispositivo sustituye solo la sesión de ese dispositivo.
 
 ### Flujo de Autenticación
 
 1. **Registro**: `POST /api/v2/auth/register` con usuario y contraseña
-2. **Login**: `POST /api/v2/auth/login` devuelve un *access token* y un *refresh token*
+2. **Login**: `POST /api/v2/auth/login` devuelve un *access token* y abre la sesión del dispositivo
 3. **API Requests**: incluir el access token en el header `Authorization`
 4. **Renovación**: `POST /api/v2/auth/refresh` cuando el access token caduca
-5. **Cierre de sesión**: `POST /api/v2/auth/logout` revoca el refresh token
+5. **Cierre de sesión**: `POST /api/v2/auth/logout` (esta sesión o `all_devices`)
+6. **Sesiones**: `GET /api/v2/auth/sessions` y `DELETE /api/v2/auth/sessions/{uuid}`
 
 ### Características de los tokens
 
 | | Access token | Refresh token |
 |---|---|---|
-| Algoritmo | HS256 | HS256 |
-| Firmado con | `SECRET_KEY` | `SECRET_KEY_REFRESH` |
-| Vigencia | `ACCESS_TOKEN_EXPIRE_MINUTES` (60 min por defecto en `settings.py` y `.env.example`) | `REFRESH_TOKEN_EXPIRE_DAYS` (7 días por defecto) |
-| Se envía en | Header `Authorization: Bearer` | Cuerpo de `/refresh` y `/logout` |
+| Formato | JWT EdDSA (Ed25519) | Opaco: `rt_` + 256 bits aleatorios |
+| Vigencia | 10 min (`ACCESS_TOKEN_EXPIRE_MINUTES`) | La de la sesión: web 1 día sin uso / 7 días máximo; ios/android 30 / 90 días |
+| Se envía en | Header `Authorization: Bearer` | Web: cookie `httpOnly` (`path=/api/v2/auth`). ios/android: body de `/refresh` y `/logout` |
 | Almacenado en servidor | No | Sí, **solo su hash SHA-256** |
 
-El access token lleva las claims `sub` (UUID del usuario), `iss: "lunance"`, `iat` y `exp`. El refresh token **rota en cada uso**: `/refresh` devuelve uno nuevo y guarda su hash.
+El access token lleva `iss`, `aud`, `sub` (UUID del usuario), `sid` (UUID de la sesión), `iat` y `exp`. El refresh token **rota en cada uso**. Si la respuesta de un `/refresh` se pierde, repetirlo con el mismo token durante unos segundos (`REFRESH_REUSE_GRACE_SECONDS`) devuelve el mismo token nuevo; reutilizar un refresh ya canjeado fuera de ese margen se trata como robo y **cierra la sesión entera** de ese dispositivo.
+
+Cerrar una sesión (logout, `DELETE /auth/sessions/{uuid}` o reuso detectado) invalida su access token **al instante**, aunque no haya caducado: la siguiente petición responde `401 AUTH_SESSION_EXPIRED`.
 
 ### Registro
 
@@ -58,27 +69,34 @@ curl -X POST "http://localhost:8000/api/v2/auth/register" \
 }
 ```
 
-> **Requisitos de la contraseña**: mínimo 8 caracteres, con al menos una mayúscula, una minúscula, un dígito y un carácter especial (`!@#$%^&*(),.?":{}|<>`). Se almacena con `bcrypt`. Si no los cumple, la API responde `400 VALIDATION_ERROR` y el detalle incluye códigos como `PASSWORD_TOO_SHORT` o `PASSWORD_MISSING_UPPERCASE`.
+> **Requisitos de la contraseña**: mínimo 8 caracteres, con al menos una mayúscula, una minúscula, un dígito y un carácter especial (`!@#$%^&*(),.?":{}|<>`). Se almacena con Argon2id. Si no los cumple, la API responde `400 VALIDATION_ERROR` y el detalle incluye códigos como `PASSWORD_TOO_SHORT` o `PASSWORD_MISSING_UPPERCASE`.
 
 ### Login
 
 ```bash
+# App de iOS/Android: el refresh token llega en el body
 curl -X POST "http://localhost:8000/api/v2/auth/login" \
      -H "Content-Type: application/json" \
+     -H "X-Lunance-Device: 0b5f3c55-7f4e-4f0e-9a43-0d6c2d0d6b8e" \
+     -H "X-Lunance-Client: ios/1.4.0" \
      -d '{
        "username": "juanperez",
-       "password": "MiClave123!"
+       "password": "MiClave123!",
+       "device_name": "iPhone de Juan"
      }'
 ```
 
-**Respuesta:**
+**Respuesta (ios/android):**
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer"
+  "access_token": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_in": 600,
+  "refresh_token": "rt_Fo6BU0DC9Inbnp5l_4Lg0NQ0QebQJY_8PXrIQT-NYuc"
 }
 ```
+
+En la web (sin `X-Lunance-Client` o con `web/…`) la respuesta no trae `refresh_token`: llega en la cookie `refresh_token` (`HttpOnly`, `Path=/api/v2/auth`). `device_name` es opcional.
 
 Credenciales incorrectas devuelven `401 AUTH_INVALID_CREDENTIALS`; una cuenta desactivada devuelve `401 AUTH_USER_INACTIVE`.
 
@@ -94,14 +112,20 @@ curl -X GET "http://localhost:8000/api/v2/account/" \
 ### Renovar el Token
 
 ```bash
+# ios/android: refresh token en el body
 curl -X POST "http://localhost:8000/api/v2/auth/refresh" \
      -H "Content-Type: application/json" \
-     -d '{
-       "refresh_token": "<refresh_token>"
-     }'
+     -H "X-Lunance-Device: 0b5f3c55-7f4e-4f0e-9a43-0d6c2d0d6b8e" \
+     -H "X-Lunance-Client: ios/1.4.0" \
+     -d '{"refresh_token": "<refresh_token>"}'
+
+# web: sin body, el navegador manda la cookie
+curl -X POST "http://localhost:8000/api/v2/auth/refresh" \
+     -H "X-Lunance-Device: <uuid del navegador>" \
+     --cookie "refresh_token=<refresh_token>"
 ```
 
-**Respuesta:** un par nuevo de tokens. Descarta el refresh token anterior: ya no sirve.
+**Respuesta:** un access token nuevo y un refresh token nuevo (en el body o en la cookie, según la plataforma). Descarta el anterior. El refresh solo vale desde el mismo dispositivo y plataforma que abrió la sesión. Si la sesión venció o se cerró: `401 AUTH_SESSION_EXPIRED` (hay que volver a iniciar sesión).
 
 ### Obtener Información del Usuario
 
@@ -124,12 +148,46 @@ curl -X GET "http://localhost:8000/api/v2/auth/me" \
 ```bash
 curl -X POST "http://localhost:8000/api/v2/auth/logout" \
      -H "Content-Type: application/json" \
+     -H "X-Lunance-Client: ios/1.4.0" \
      -d '{
-       "refresh_token": "<refresh_token>"
+       "refresh_token": "<refresh_token>",
+       "all_devices": false
      }'
 ```
 
-Revoca ese refresh token en el servidor. El access token que ya tengas seguirá siendo válido hasta que expire por su cuenta.
+Cierra la sesión de este dispositivo (en la web, la del refresh de la cookie, y la borra). Con `"all_devices": true` cierra también las de los demás dispositivos. Es idempotente: un refresh desconocido o ya cerrado responde igual. Los access tokens de las sesiones cerradas dejan de valer al instante.
+
+### Sesiones abiertas
+
+```bash
+curl -X GET "http://localhost:8000/api/v2/auth/sessions" \
+     -H "Authorization: Bearer <access_token>"
+```
+
+**Respuesta:**
+```json
+[
+  {
+    "uuid": "279484a1-d2f6-40bc-9749-2e7750524fb7",
+    "platform": "ios",
+    "device_name": "iPhone de Juan",
+    "client": "ios/1.4.0",
+    "created_at": "2026-11-10T06:43:55Z",
+    "last_seen_at": "2026-11-10T08:10:02Z",
+    "last_ip": "203.0.113.5",
+    "is_current": false
+  }
+]
+```
+
+`is_current` marca la sesión del access token con el que se pide. Para cerrar una desde otro dispositivo:
+
+```bash
+curl -X DELETE "http://localhost:8000/api/v2/auth/sessions/279484a1-d2f6-40bc-9749-2e7750524fb7" \
+     -H "Authorization: Bearer <access_token>"
+```
+
+**Respuesta:** `204 No Content`. Solo se pueden cerrar sesiones propias y abiertas; cualquier otra responde `404`.
 
 ## 🔑 Autenticación con API Keys
 
@@ -228,45 +286,43 @@ Si el nombre de usuario ya existe, responde `400 VALIDATION_ERROR`.
 #### Login
 ```bash
 POST /api/v2/auth/login
+X-Lunance-Device: <uuid del dispositivo>     # obligatorio
+X-Lunance-Client: ios/1.4.0                  # opcional; sin él, web
 ```
 
 **Request:**
 ```json
 {
   "username": "juanperez",
-  "password": "MiClave123!"
+  "password": "MiClave123!",
+  "device_name": "iPhone de Juan"
 }
 ```
 
-**Response:**
+**Response:** en ios/android incluye `refresh_token`; en la web llega en la cookie `httpOnly`.
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer"
+  "access_token": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_in": 600,
+  "refresh_token": "rt_Fo6BU0DC9Inbnp5l_4Lg0NQ0QebQJY_8PXrIQT-NYuc"
 }
 ```
 
 #### Renovar Token
 ```bash
 POST /api/v2/auth/refresh
+X-Lunance-Device: <uuid del dispositivo>     # obligatorio, el mismo del login
 ```
 
-**Request:**
+**Request (solo ios/android; la web no manda body, usa la cookie):**
 ```json
 {
   "refresh_token": "<refresh_token>"
 }
 ```
 
-**Response:** un par nuevo de tokens. El refresh token anterior queda invalidado.
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer"
-}
-```
+**Response:** como la del login. El refresh token anterior queda invalidado.
 
 #### Obtener Información del Usuario
 ```bash
@@ -287,10 +343,11 @@ GET /api/v2/auth/me
 POST /api/v2/auth/logout
 ```
 
-**Request:**
+**Request** (`refresh_token` solo en ios/android; en la web se toma de la cookie):
 ```json
 {
-  "refresh_token": "<refresh_token>"
+  "refresh_token": "<refresh_token>",
+  "all_devices": false
 }
 ```
 
@@ -299,6 +356,12 @@ POST /api/v2/auth/logout
 {
   "message": "Logout exitoso"
 }
+```
+
+#### Sesiones abiertas
+```bash
+GET /api/v2/auth/sessions                 # lista las sesiones activas, marca is_current
+DELETE /api/v2/auth/sessions/{uuid}       # 204; 404 si no existe o es de otro usuario
 ```
 
 ### 🔑 API Keys - `/api/v2/api-keys/`
@@ -1699,6 +1762,8 @@ curl -X POST "http://localhost:8000/api/v2/auth/register" \
 # 2. Iniciar sesión y guardar los tokens
 RESPONSE=$(curl -s -X POST "http://localhost:8000/api/v2/auth/login" \
      -H "Content-Type: application/json" \
+     -H "X-Lunance-Device: $(uuidgen)" \
+     -H "X-Lunance-Client: ios/1.0.0" \
      -d '{
        "username": "juanperez",
        "password": "MiClave123!"
@@ -1980,6 +2045,8 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 | `POST /auth/login` | **10 requests/minuto** | Frena los ataques de fuerza bruta |
 | `POST /auth/refresh` | **20 requests/minuto** | Renovación de sesión |
 | `POST /auth/logout` | **10 requests/minuto** | Operación normal |
+| `GET /auth/sessions` | **30 requests/minuto** | Lista de sesiones |
+| `DELETE /auth/sessions/{uuid}` | **20 requests/minuto** | Cerrar una sesión |
 | `GET /auth/me` | **100 requests/minuto** | Lectura de perfil frecuente |
 
 > **Nota**: además de estos límites por endpoint, los intentos de autenticación fallidos se limitan por IP. Superarlos devuelve `429` aunque las credenciales acaben siendo correctas.
@@ -2247,20 +2314,28 @@ Configura las variables de entorno correspondientes.
 ### Cliente Python
 
 ```python
+import uuid
+
 import httpx
 
 class LunanceClient:
-    def __init__(self, base_url="http://localhost:8000", token=None):
+    def __init__(self, base_url="http://localhost:8000", token=None, device_id=None):
         self.base_url = base_url
         self.token = token
         self.refresh_token = None
+        # Genera el id del dispositivo una sola vez y guárdalo: identifica la sesión.
+        self.device = {
+            "X-Lunance-Device": device_id or str(uuid.uuid4()),
+            "X-Lunance-Client": "ios/1.0.0",  # el refresh llega en el body
+        }
         self.client = httpx.AsyncClient()
 
     async def login(self, username: str, password: str):
         """Inicia sesión y guarda el access token para las siguientes llamadas."""
         response = await self.client.post(
             f"{self.base_url}/api/v2/auth/login",
-            json={"username": username, "password": password}
+            json={"username": username, "password": password},
+            headers=self.device,
         )
         response.raise_for_status()
         data = response.json()
@@ -2272,7 +2347,8 @@ class LunanceClient:
         """Renueva el par de tokens. El refresh token anterior queda invalidado."""
         response = await self.client.post(
             f"{self.base_url}/api/v2/auth/refresh",
-            json={"refresh_token": self.refresh_token}
+            json={"refresh_token": self.refresh_token},
+            headers=self.device,
         )
         response.raise_for_status()
         data = response.json()

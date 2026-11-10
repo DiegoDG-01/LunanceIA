@@ -12,9 +12,6 @@ class UserModel(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
-    auth0_id: Mapped[str | None] = mapped_column(
-        String(255), unique=True, index=True, nullable=True
-    )
     uuid: Mapped[str] = mapped_column(
         CHAR(36), unique=True, index=True, default=lambda: str(uuid.uuid4())
     )

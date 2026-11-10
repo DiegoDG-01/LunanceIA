@@ -58,15 +58,24 @@ class TestLoginHandlerEnumeration:
     def _handler(self, user):
         user_repo = MagicMock()
         user_repo.get_by_username = AsyncMock(return_value=user)
-        jwt_service = MagicMock()
+        hasher = MagicMock()
         # Sólo debe llamarse para usuarios con contraseña local válida.
-        jwt_service.check_password = MagicMock(return_value=False)
+        hasher.verify = AsyncMock(return_value=False)
+        hasher.verify_dummy = AsyncMock()
+        uow = MagicMock()
+        uow.__aenter__ = AsyncMock(return_value=uow)
+        uow.__aexit__ = AsyncMock(return_value=False)
+        uow.commit = AsyncMock()
+        events = MagicMock()
+        events.record = AsyncMock()
+        self.hasher = hasher
         return LoginHandler(
-            user_repo=user_repo,
-            auth_token_repo=MagicMock(),
-            jwt_service=jwt_service,
-            uow=MagicMock(),
-            auth_config=MagicMock(),
+            user_repository=user_repo,
+            auth_event_repository=events,
+            session_manager=MagicMock(),
+            password_hasher=hasher,
+            revocations=MagicMock(),
+            uow=uow,
         )
 
     @pytest.mark.asyncio
@@ -76,27 +85,27 @@ class TestLoginHandlerEnumeration:
         with pytest.raises(InvalidCredentialsError):
             await handler.handle(LoginCommand(username="ghost", password="Whatever1!"))
 
+        # Mismo coste que una contraseña real: el tiempo no revela si existe.
+        self.hasher.verify_dummy.assert_awaited_once()
+
     @pytest.mark.asyncio
-    async def test_auth0_user_without_local_password_raises_invalid_credentials(self):
-        """Usuario Auth0 (password=None) no debe provocar 500 ni un error distinto."""
-        auth0_user = User(
+    async def test_user_without_local_password_raises_invalid_credentials(self):
+        """Usuario sin contraseña local no debe provocar 500 ni un error distinto."""
+        passwordless = User(
             id=1,
             uuid="u-1",
-            auth0_id="auth0|abc",
-            name="auth0user",
+            name="social",
             email="a@b.com",
             password=None,
             is_active=True,
         )
-        handler = self._handler(user=auth0_user)
+        handler = self._handler(user=passwordless)
 
         with pytest.raises(InvalidCredentialsError):
-            await handler.handle(
-                LoginCommand(username="auth0user", password="Whatever1!")
-            )
+            await handler.handle(LoginCommand(username="social", password="Whatever1!"))
 
         # Nunca se intenta verificar contra una contraseña inexistente.
-        handler.jwt_service.check_password.assert_not_called()
+        self.hasher.verify.assert_not_called()
 
 
 @pytest.mark.unit
@@ -108,8 +117,8 @@ class TestRegisterHandlerRace:
         user_repo.get_by_username = AsyncMock(return_value=None)
         user_repo.create = AsyncMock(side_effect=create_side_effect)
 
-        jwt_service = MagicMock()
-        jwt_service.get_password_hash = MagicMock(return_value="hashed")
+        password_hasher = MagicMock()
+        password_hasher.hash = AsyncMock(return_value="hashed")
 
         uow = MagicMock()
         uow.__aenter__ = AsyncMock(return_value=uow)
@@ -118,7 +127,7 @@ class TestRegisterHandlerRace:
 
         return RegisterHandler(
             user_repository=user_repo,
-            jwt_service=jwt_service,
+            password_hasher=password_hasher,
             uow=uow,
         )
 

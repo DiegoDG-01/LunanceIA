@@ -1,32 +1,61 @@
+"""Servicios externos que necesitan los casos de uso de autenticación."""
+
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import datetime
 
 
-@dataclass(frozen=True)
-class AuthConfig:
-    access_token_expire_minutes: int
-    refresh_token_expire_days: int
+@dataclass(frozen=True, slots=True)
+class AccessClaims:
+    user_uuid: str
+    session_uuid: str
+    expires_at: datetime
 
 
-class AuthTokenServiceInterface(ABC):
+@dataclass(frozen=True, slots=True)
+class IssuedAccessToken:
+    token: str
+    expires_in: int
+
+
+class AccessTokenIssuer(ABC):
+    """Firma y verifica el access token (JWT con `sub` = usuario y `sid` = sesión)."""
+
+    @property
     @abstractmethod
-    def check_password(self, plain_password: str, hashed_password: str) -> bool: ...
-
-    @abstractmethod
-    def create_access_token(
-        self, user_uuid: str, expires_in: int | None = None
-    ) -> str: ...
-
-    @abstractmethod
-    def create_refresh_token(
-        self, user_uuid: str, expires_in: int | None = None
-    ) -> str: ...
-
-    @abstractmethod
-    async def verify_refresh_token(self, token: str) -> str | None: ...
+    def ttl_seconds(self) -> int: ...
 
     @abstractmethod
-    def get_password_hash(self, password: str) -> str: ...
+    def issue(self, *, user_uuid: str, session_uuid: str) -> IssuedAccessToken: ...
 
     @abstractmethod
-    def hash_refresh_token(self, token: str) -> str: ...
+    def verify(self, token: str) -> AccessClaims:
+        """Lanza `JWTValidationError` si el token no es válido o ya caducó."""
+
+
+class PasswordHasher(ABC):
+    @abstractmethod
+    async def hash(self, password: str) -> str: ...
+
+    @abstractmethod
+    async def verify(self, password: str, password_hash: str) -> bool: ...
+
+    @abstractmethod
+    def needs_rehash(self, password_hash: str) -> bool:
+        """True si el hash usa otro algoritmo (bcrypt) o parámetros más débiles que los actuales."""
+
+    @abstractmethod
+    async def verify_dummy(self, password: str) -> None:
+        """Gasta lo mismo que una verificación real: el tiempo de respuesta no revela si el
+        usuario existe."""
+
+
+class SessionRevocationList(ABC):
+    """Sesiones cerradas cuyo access token sigue firmado y vigente unos minutos."""
+
+    @abstractmethod
+    async def revoke(self, session_uuids: Iterable[str]) -> None: ...
+
+    @abstractmethod
+    async def is_revoked(self, session_uuid: str) -> bool: ...

@@ -1,7 +1,12 @@
 """End-to-end tests for auth API endpoints."""
 
+import uuid
+
 import pytest
 import httpx
+
+# Cada test usa un dispositivo web (sin X-Lunance-Client = web).
+DEVICE = {"X-Lunance-Device": str(uuid.uuid4())}
 
 
 def _reforward_refresh_cookie(client: httpx.AsyncClient, response: httpx.Response) -> str:
@@ -88,13 +93,15 @@ class TestLogin:
         response = await http_client.post(
             "/auth/login",
             json={"username": "loginuser_e2e", "password": "Password123!"},
+            headers=DEVICE,
         )
 
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
         assert data["token_type"] == "bearer"
-        assert set(data.keys()) == {"access_token", "token_type"}
+        assert set(data.keys()) == {"access_token", "token_type", "expires_in"}
+        assert isinstance(data["expires_in"], int) and data["expires_in"] > 0
         assert isinstance(data["access_token"], str)
         assert "refresh_token" in response.cookies
         assert isinstance(response.cookies["refresh_token"], str)
@@ -104,6 +111,7 @@ class TestLogin:
         response = await http_client.post(
             "/auth/login",
             json={"username": "nonexistent_user", "password": "Password123!"},
+            headers=DEVICE,
         )
 
         assert response.status_code == 401
@@ -118,6 +126,7 @@ class TestLogin:
         response = await http_client.post(
             "/auth/login",
             json={"username": "wrongpwuser_e2e", "password": "WrongPassword1!"},
+            headers=DEVICE,
         )
 
         assert response.status_code == 401
@@ -127,13 +136,14 @@ class TestLogin:
         response = await http_client.post(
             "/auth/login",
             json={"username": "", "password": ""},
+            headers=DEVICE,
         )
 
         assert response.status_code == 422
 
     @pytest.mark.asyncio
     async def test_login_missing_fields(self, http_client: httpx.AsyncClient):
-        response = await http_client.post("/auth/login", json={})
+        response = await http_client.post("/auth/login", json={}, headers=DEVICE)
 
         assert response.status_code == 422
 
@@ -183,31 +193,43 @@ class TestRefreshToken:
         login_response = await http_client.post(
             "/auth/login",
             json={"username": "refreshuser_e2e", "password": "Password123!"},
+            headers=DEVICE,
         )
-        _reforward_refresh_cookie(http_client, login_response)
+        old_token = _reforward_refresh_cookie(http_client, login_response)
 
-        response = await http_client.post("/auth/refresh")
+        response = await http_client.post("/auth/refresh", headers=DEVICE)
 
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
         assert isinstance(data["access_token"], str)
         assert "refresh_token" in response.cookies
-        assert isinstance(response.cookies["refresh_token"], str)
+        assert response.cookies["refresh_token"].startswith("rt_")
+        assert response.cookies["refresh_token"] != old_token
+        assert "refresh_token" not in data
 
     @pytest.mark.asyncio
     async def test_refresh_invalid_token(self, http_client: httpx.AsyncClient):
         http_client.cookies.set("refresh_token", "not-a-valid-refresh-token")
 
-        response = await http_client.post("/auth/refresh")
+        response = await http_client.post("/auth/refresh", headers=DEVICE)
 
-        assert response.status_code in [400, 401]
+        assert response.status_code == 401
+        assert response.json()["error_code"] == "AUTH_SESSION_EXPIRED"
 
     @pytest.mark.asyncio
     async def test_refresh_missing_token(self, http_client: httpx.AsyncClient):
-        response = await http_client.post("/auth/refresh")
+        response = await http_client.post("/auth/refresh", headers=DEVICE)
 
         assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_refresh_missing_device_header(self, http_client: httpx.AsyncClient):
+        http_client.cookies.set("refresh_token", "rt_whatever")
+
+        response = await http_client.post("/auth/refresh")
+
+        assert response.status_code == 422
 
 
 class TestLogout:
@@ -224,6 +246,7 @@ class TestLogout:
         login_response = await http_client.post(
             "/auth/login",
             json={"username": "logoutuser_e2e", "password": "Password123!"},
+            headers=DEVICE,
         )
         _reforward_refresh_cookie(http_client, login_response)
 
@@ -233,8 +256,8 @@ class TestLogout:
         assert response.json() == {"message": "Logout exitoso"}
 
         # The revoked refresh token must no longer be usable.
-        refresh_response = await http_client.post("/auth/refresh")
-        assert refresh_response.status_code in [400, 401]
+        refresh_response = await http_client.post("/auth/refresh", headers=DEVICE)
+        assert refresh_response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_logout_missing_token(self, http_client: httpx.AsyncClient):

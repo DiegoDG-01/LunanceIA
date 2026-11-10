@@ -1,21 +1,17 @@
-import asyncio
-import json
 from collections.abc import Callable
-from datetime import UTC, datetime
+from dataclasses import dataclass
 
-import httpx
-from cachetools import TTLCache, cached
 from fastapi import Depends, HTTPException, Request, Security
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
-from jose import ExpiredSignatureError, JWTError, jwt
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.entities.users.user import User
-from infrastructure.config.settings import settings
 from infrastructure.database.connection import get_db
 from infrastructure.database.repositories.sqlalchemy_api_key_repository import (
     SQLAlchemyAPIKeyRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_session_repository import (
+    SQLAlchemySessionRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
     SQLAlchemyUnitOfWork,
@@ -29,167 +25,64 @@ from infrastructure.rate_limiting.limiters import (
     limiter_auth_failure,
 )
 from infrastructure.security.api_key_service import APIKeyService
-from shared.exceptions.application import (
-    ExternalServiceError,
-    JWTValidationError,
-    RepositoryError,
+from presentation.dependencies.auth_services import (
+    build_session_revocations,
+    get_token_issuer,
 )
+from shared.exceptions.application import JWTValidationError
 from shared.exceptions.base import UnauthorizedError
-from shared.exceptions.domain import EmailAlreadyExistsError, UserInactiveError
+from shared.exceptions.domain import SessionExpiredError, UserInactiveError
 
 security = HTTPBearer()
-jwks_cache = TTLCache(maxsize=1, ttl=3600)
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 optional_bearer = HTTPBearer(auto_error=False)
 
 
-@cached(cache=jwks_cache)
-def get_auth_jwtks():
-    try:
-        url = f"https://{settings.AUTH0_DOMAIN}/.well-known/jwks.json"
-        return httpx.get(url).json()
-    except httpx.HTTPError as e:
-        raise ExternalServiceError("Auth0", "jwks", str(e))
-    except json.JSONDecodeError as e:
-        raise ExternalServiceError("Auth0", "jwks", str(e))
+@dataclass(frozen=True)
+class AccessContext:
+    """Usuario del access token y la sesión (`sid`) desde la que llega la petición."""
+
+    user: User
+    session_uuid: str
 
 
-def get_user_info(access_token: str) -> dict:
-    try:
-        url = f"https://{settings.AUTH0_DOMAIN}/userinfo"
-        headers = {"Authorization": f"Bearer {access_token}"}
-        response = httpx.get(url, headers=headers)
-        response.raise_for_status()
+async def authenticate_access_token(token: str, db: AsyncSession) -> AccessContext:
+    """Único camino para un access token: firma, sesión no revocada y usuario activo."""
+    claims = get_token_issuer().verify(token)
 
-        return response.json()
-    except httpx.HTTPError as e:
-        raise ExternalServiceError("Auth0", "user_info", str(e))
-    except json.JSONDecodeError as e:
-        raise ExternalServiceError("Auth0", "user_info", str(e))
+    # La sesión pudo cerrarse desde otro dispositivo: su access token sigue firmado y vigente
+    # hasta 10 min, así que se comprueba en cada petición (Redis y, si no está, MySQL).
+    revocations = build_session_revocations(SQLAlchemySessionRepository(db))
+    if await revocations.is_revoked(claims.session_uuid):
+        raise SessionExpiredError()
 
-
-async def validate_token(token: str) -> dict:
-    try:
-        jwks = await asyncio.to_thread(get_auth_jwtks)
-
-        unverified_header = jwt.get_unverified_header(token)
-
-        rsa_key = []
-        for key in jwks["keys"]:
-            if key["kid"] == unverified_header["kid"]:
-                rsa_key = {
-                    "kty": key["kty"],
-                    "kid": key["kid"],
-                    "use": key["use"],
-                    "n": key["n"],
-                    "e": key["e"],
-                }
-                break
-
-        if not rsa_key:
-            raise UnauthorizedError("Invalid token")
-
-        payload = jwt.decode(
-            token,
-            rsa_key,
-            algorithms=["RS256"],
-            audience=settings.AUTH0_AUDIENCE,
-            issuer=f"https://{settings.AUTH0_DOMAIN}/",
-        )
-
-        return payload
-
-    except JWTError:
-        raise JWTValidationError("Invalid token")
-
-
-async def validate_local_user(token: str, db: AsyncSession) -> User:
-    try:
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
-        )
-    except JWTError as e:
-        raise JWTValidationError(str(e))
-
-    user_uuid = payload.get("sub")
-
-    if not user_uuid:
-        raise UnauthorizedError("Invalid token: missing user")
-
-    user_repo = SQLAlchemyUserRepository(db)
-    user = await user_repo.get_by_uuid(user_uuid)
+    user = await SQLAlchemyUserRepository(db).get_by_uuid(claims.user_uuid)
     if not user:
         raise UnauthorizedError("User not found")
-
     if not user.is_active:
         raise UserInactiveError()
 
-    return user
+    return AccessContext(user=user, session_uuid=claims.session_uuid)
 
 
-async def validate_auth0_user(token: str, db: AsyncSession) -> User:
-    try:
-        payload = await validate_token(token)
-
-        auth0_user_uuid = payload.get("sub")
-
-        if not auth0_user_uuid:
-            raise UnauthorizedError("Invalid token: missing user")
-
-        user_repo = SQLAlchemyUserRepository(db)
-        uow = SQLAlchemyUnitOfWork(db)
-        user = await user_repo.get_by_auth0_uuid(auth0_user_uuid)
-
-        if user is None:
-            user_info = await asyncio.to_thread(get_user_info, token)
-            new_user = User(
-                auth0_id=auth0_user_uuid,
-                name=user_info.get("name") or "",
-                email=user_info.get("email"),
-                picture=user_info.get("picture"),
-                email_verified=bool(user_info.get("email_verified", False)),
-                last_login=user_info.get("last_login") or datetime.now(UTC),
-            )
-            try:
-                async with uow:
-                    user = await user_repo.create(new_user)
-                    await uow.commit()
-            except IntegrityError:
-                # Carrera: otra petición concurrente ya creó este usuario.
-                user = await user_repo.get_by_auth0_uuid(auth0_user_uuid)
-                if user is None:
-                    # El conflicto no fue por auth0_id: el email ya
-                    # pertenece a otra cuenta. No se auto-vincula.
-                    raise EmailAlreadyExistsError(user_info.get("email") or "")
-
-        return user
-
-    except SQLAlchemyError as e:
-        raise RepositoryError("get_or_create", "User", str(e))
-
-
-async def get_current_user(
+async def get_access_context(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db),
-):
-    token = credentials.credentials
+) -> AccessContext:
     try:
-        try:
-            payload = jwt.decode(
-                token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
-            )
-            if payload.get("iss") == "lunance":
-                return await validate_local_user(token, db)
-        except ExpiredSignatureError:
-            raise JWTValidationError("Token expired")
-        except JWTError:
-            pass
-
-        return await validate_auth0_user(token, db)
+        context = await authenticate_access_token(credentials.credentials, db)
     except (UnauthorizedError, JWTValidationError):
         await _throttle_auth_failure(request)
         raise
+    request.state.session_uuid = context.session_uuid
+    return context
+
+
+async def get_current_user(
+    context: AccessContext = Depends(get_access_context),
+) -> User:
+    return context.user
 
 
 async def get_current_active_user(
@@ -205,18 +98,7 @@ async def get_current_active_user_from_url_token(
     token: str,
     db: AsyncSession,
 ) -> User:
-    try:
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
-        )
-        if payload.get("iss") == "lunance":
-            return await validate_local_user(token, db)
-    except ExpiredSignatureError:
-        raise JWTValidationError("Token expired")
-    except JWTError:
-        pass
-
-    return await validate_auth0_user(token, db)
+    return (await authenticate_access_token(token, db)).user
 
 
 def get_api_key_service(

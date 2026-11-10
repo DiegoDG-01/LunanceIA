@@ -117,12 +117,12 @@ pytest
 # API Configuration
 ENVIRONMENT=DEV  # DEV para desarrollo, PROD para producción
 
-# JWT Configuration (la API firma sus propios tokens)
-SECRET_KEY=una_clave_larga_y_aleatoria
-SECRET_KEY_REFRESH=otra_clave_distinta_y_aleatoria
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-REFRESH_TOKEN_EXPIRE_DAYS=7
+# Autenticación: la API firma sus propios tokens (EdDSA/Ed25519).
+# Genera estas tres con: uv run python scripts/generate_secrets.py >> .env
+JWT_PRIVATE_KEY='-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----'
+JWT_PUBLIC_KEY='-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----'
+REFRESH_ROTATION_KEY=una_clave_larga_y_aleatoria_de_al_menos_32_caracteres
+ACCESS_TOKEN_EXPIRE_MINUTES=10
 
 # Database Connection Details
 DB_HOST=localhost  # localhost para desarrollo local
@@ -136,18 +136,13 @@ AI_PROVIDER=google-gla
 AI_MODEL_ID=gemini-2.5-flash
 AI_API_KEY=tu_clave_api
 
-# Auth0 (legado: el flujo activo es el JWT propio, pero settings.py
-# sigue exigiendo estas dos variables para arrancar)
-AUTH0_DOMAIN=placeholder.auth0.com
-AUTH0_AUDIENCE=placeholder
-
 # Logging (opcional, los valores por defecto están en settings.py)
 LOG_PROVIDER=console
 LOG_LEVEL=INFO
 LOG_FORMAT=text
 ```
 
-> Ninguna de estas variables tiene valor por defecto en `settings.py` salvo `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS`, `ENVIRONMENT`, `FRONTEND_URL`, `BANXICO_TOKEN` y los defaults de DB: si falta `SECRET_KEY`, `SECRET_KEY_REFRESH`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `AI_PROVIDER`, `AI_MODEL_ID`, `AUTH0_DOMAIN` o `AUTH0_AUDIENCE`, la aplicación no arranca. Consulta [`.env.example`](../.env.example) para la lista completa, incluidas las opciones de logging y Grafana Loki.
+> Ninguna de estas variables tiene valor por defecto en `settings.py` salvo `ACCESS_TOKEN_EXPIRE_MINUTES`, la duración de las sesiones (`SESSION_*`), `ENVIRONMENT`, `FRONTEND_URL`, `BANXICO_TOKEN` y los defaults de DB: si falta `JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY`, `REFRESH_ROTATION_KEY`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `AI_PROVIDER` o `AI_MODEL_ID`, la aplicación no arranca. Consulta [`.env.example`](../.env.example) para la lista completa, incluidas las opciones de logging y Grafana Loki.
 
 **Nota sobre ENVIRONMENT:**
 - **DEV / TEST**: CORS permite únicamente el `FRONTEND_URL` definido en `.env`; logging detallado con stack traces

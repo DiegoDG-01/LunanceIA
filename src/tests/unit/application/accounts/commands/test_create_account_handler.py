@@ -66,7 +66,6 @@ class TestCreateAccountHandler:
         mock_user = User(
             id=user_id,
             uuid="u-1",
-            auth0_id="a-1",
             name="Test",
             email="t@t.com",
             is_active=True,
@@ -132,7 +131,7 @@ class TestCreateAccountHandler:
     async def test_handle_user_inactive_fails(self, handler, mock_user_repo):
         # 1. Setup Mock with inactive user
         mock_user = User(
-            id=1, uuid="u-1", auth0_id="a-1", name="T", email="t@t.com", is_active=False
+            id=1, uuid="u-1", name="T", email="t@t.com", is_active=False
         )
         mock_user_repo.get_by_id = AsyncMock(return_value=mock_user)
 

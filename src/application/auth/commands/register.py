@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.exc import IntegrityError
 
-from application.interfaces.auth_service import AuthTokenServiceInterface
+from application.interfaces.auth_service import PasswordHasher
 from domain.entities.users.user import User
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.repositories.users.user_repository import UserRepository
@@ -34,11 +34,11 @@ class RegisterHandler:
     def __init__(
         self,
         user_repository: UserRepository,
-        jwt_service: AuthTokenServiceInterface,
+        password_hasher: PasswordHasher,
         uow: AbstractUnitOfWork,
     ):
         self.user_repository = user_repository
-        self.jwt_service = jwt_service
+        self.password_hasher = password_hasher
         self.uow = uow
 
     async def handle(self, command: RegisterCommand) -> RegisterResponse:
@@ -55,7 +55,7 @@ class RegisterHandler:
             raise UsernameAlreadyExistsError()
 
         # Crear usuario
-        password_hash = self.jwt_service.get_password_hash(command.password)
+        password_hash = await self.password_hasher.hash(command.password)
         user = User.create_local_user(name=command.username, password=password_hash)
 
         async with self.uow:

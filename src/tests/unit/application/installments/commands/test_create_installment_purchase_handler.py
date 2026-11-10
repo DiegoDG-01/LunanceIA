@@ -53,7 +53,6 @@ class TestCreateInstallmentPurchaseHandler:
         return User(
             id=1,
             uuid="u-1",
-            auth0_id="a-1",
             name="Test",
             email="t@t.com",
             is_active=is_active,

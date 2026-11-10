@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from datetime import datetime
 
 
-@dataclass
+@dataclass(slots=True)
 class RefreshToken:
-    user_id: int
+    """Solo se guarda el SHA-256 del token. `rotated_at` marca que ya se canjeó por su sucesor."""
+
     token_hash: str
-    is_revoked: bool
-    expired_at: datetime
-    id: int | None = None
-    created_at: datetime | None = None
+    session_id: int
+    created_at: datetime
+    rotated_at: datetime | None = None

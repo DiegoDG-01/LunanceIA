@@ -19,7 +19,6 @@ class TestSecurityBoundaries:
         other_user = UserModel(
             id=999,
             uuid="other-user-uuid",
-            auth0_id="auth0|other",
             name="Other User",
             email="other@test.com"
         )

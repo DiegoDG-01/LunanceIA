@@ -16,6 +16,7 @@
 
    curl -s -X POST http://localhost:8000/api/v2/auth/login \
      -H "Content-Type: application/json" \
+     -H "X-Lunance-Device: $(uuidgen)" \
      -d '{"username": "loadtest", "password": "MiClave123!"}'
    ```
 2. Copia el `access_token` del JSON de respuesta.
@@ -24,8 +25,8 @@
    export LOCUST_AUTH_TOKEN="eyJhbGciOi..."
    ```
 
-> Los tokens de Auth0 ya no son el flujo activo (la API ahora firma sus propios
-> JWT), pero el `locustfile.py` acepta cualquier JWT Bearer válido.
+> El access token dura 10 minutos (`ACCESS_TOKEN_EXPIRE_MINUTES`); para pruebas más largas
+> vuelve a iniciar sesión o sube ese valor en el entorno de pruebas.
 
 ## Ejecución
 

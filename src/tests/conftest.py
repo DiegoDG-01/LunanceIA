@@ -12,6 +12,32 @@ from sqlalchemy.pool import StaticPool
 # Set environment to TEST before importing app
 os.environ["ENVIRONMENT"] = "TEST"
 
+
+def _test_auth_secrets() -> dict[str, str]:
+    """Claves de prueba generadas en cada ejecución: nunca hay secretos reales en el repo."""
+    import secrets
+
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    private_key = Ed25519PrivateKey.generate()
+    return {
+        "JWT_PRIVATE_KEY": private_key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        ).decode(),
+        "JWT_PUBLIC_KEY": private_key.public_key()
+        .public_bytes(
+            serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        .decode(),
+        "REFRESH_ROTATION_KEY": secrets.token_urlsafe(48),
+    }
+
+
+os.environ.update(_test_auth_secrets())
+
 from main import app
 from infrastructure.database.connection import Base, get_db
 from presentation.dependencies.auth_deps import (
@@ -44,7 +70,6 @@ def event_loop():
 # Mock User for tests
 MOCK_USER_ID = 1
 MOCK_USER_UUID = "test-user-uuid"
-MOCK_AUTH0_ID = "auth0|test-user-id"
 
 async def mock_get_current_user(request: Request, db: AsyncSession = Depends(get_db)) -> User:
     """Mock current user for testing, ensuring it exists in the database.
@@ -63,14 +88,13 @@ async def mock_get_current_user(request: Request, db: AsyncSession = Depends(get
     from infrastructure.database.models.user import UserModel
     from sqlalchemy import select
 
-    stmt = select(UserModel).where(UserModel.auth0_id == MOCK_AUTH0_ID)
+    stmt = select(UserModel).where(UserModel.uuid == MOCK_USER_UUID)
     result = await db.execute(stmt)
     user_model = result.scalar_one_or_none()
     if not user_model:
         user_model = UserModel(
             id=MOCK_USER_ID,
             uuid=MOCK_USER_UUID,
-            auth0_id=MOCK_AUTH0_ID,
             name="Test User",
             email="testuser@gmail.com",
             is_active=True
@@ -82,7 +106,6 @@ async def mock_get_current_user(request: Request, db: AsyncSession = Depends(get
     return User(
         id=user_model.id,
         uuid=user_model.uuid,
-        auth0_id=user_model.auth0_id if user_model.auth0_id else None,
         name=user_model.name,
         email=user_model.email if user_model.email else None,
         is_active=user_model.is_active,
