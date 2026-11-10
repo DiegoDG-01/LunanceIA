@@ -20,6 +20,8 @@ dependencies = [
     "pymysql==1.2.3",
     "python-dotenv==1.2.3",
     "python-jose[cryptography]==3.5.0",
+    "pyjwt[crypto]==2.13.0",
+    "argon2-cffi==25.1.0",
     "sqlalchemy==2.0.54",
     "uvicorn==0.53.0",
     "cryptography==50.0.1",
