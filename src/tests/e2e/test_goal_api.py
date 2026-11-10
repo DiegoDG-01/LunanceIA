@@ -6,6 +6,7 @@ import pytest
 import httpx
 
 from ..conftest import AuthTokens
+from ..idempotency import with_idempotency_key
 
 
 @pytest.mark.e2e
@@ -23,7 +24,7 @@ class TestSavingGoalCRUD:
                 "initial_balance": 1000.00,
                 "currency": "MXN",
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         return response.json()
 
@@ -43,8 +44,7 @@ class TestSavingGoalCRUD:
         }
         payload.update(overrides)
         return await http_client.post(
-            "/goals/", json=payload, headers=auth_tokens.get_auth_headers()
-        )
+            "/goals/", json=payload, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
 
     @pytest.mark.asyncio
     async def test_create_goal_success(self, http_client, auth_tokens, test_account):

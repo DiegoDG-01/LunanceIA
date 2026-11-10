@@ -6,6 +6,7 @@ import pytest
 import httpx
 
 from ..conftest import AuthTokens
+from ..idempotency import with_idempotency_key
 
 
 @pytest.mark.e2e
@@ -24,7 +25,7 @@ class TestTransferCRUD:
                 "initial_balance": balance,
                 "currency": "MXN",
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         return response.json()
 
@@ -50,7 +51,7 @@ class TestTransferCRUD:
                 "description": "Pago tarjeta",
                 "transfer_date": str(date.today()),
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
 
         assert response.status_code == 201
@@ -77,7 +78,7 @@ class TestTransferCRUD:
                     "amount": 200.00,
                     "transfer_date": str(date.today()),
                 },
-                headers=auth_tokens.get_auth_headers(),
+                headers=with_idempotency_key(auth_tokens.get_auth_headers()),
             )
         ).json()
 
@@ -102,7 +103,7 @@ class TestTransferCRUD:
                 "amount": -50.00,
                 "transfer_date": str(date.today()),
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         assert response.status_code == 422
 

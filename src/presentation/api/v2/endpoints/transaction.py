@@ -48,6 +48,11 @@ from presentation.dependencies import (
     get_update_transaction_handler,
 )
 from presentation.dependencies.auth_deps import require_scope
+from presentation.dependencies.idempotency_deps import (
+    Idempotency,
+    accept_idempotency_key,
+    require_idempotency_key,
+)
 from presentation.schemas.requests.transaction import (
     CreateTransactionRequest,
     UpdateTransactionRequest,
@@ -121,6 +126,7 @@ async def create_transaction(
     transaction_request: CreateTransactionRequest,
     current_user: User = Depends(require_scope(APIKeyScope.TRANSACTIONS_WRITE.value)),
     handler: CreateTransactionHandler = Depends(get_create_transaction_handler),
+    idempotency: Idempotency = Depends(require_idempotency_key),
 ):
     await enforce_rate_limit(limiter_20_per_minute, request)
     # Convertir request → DTO
@@ -136,9 +142,13 @@ async def create_transaction(
     )
 
     command = CreateTransactionCommand(dto=dto)
-    result = await handler.handle(command)
 
-    return TransactionResponse(**result.__dict__)
+    async def operation():
+        result = await handler.handle(command)
+
+        return TransactionResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.put("/{transaction_uuid}/", response_model=TransactionResponse)
@@ -148,6 +158,7 @@ async def update_transaction(
     update_request: UpdateTransactionRequest,
     current_user: User = Depends(require_scope(APIKeyScope.TRANSACTIONS_WRITE.value)),
     handler: UpdateTransactionCommandHandler = Depends(get_update_transaction_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     await enforce_rate_limit(limiter_15_per_minute, request)
     command = UpdateTransactionCommand(
@@ -162,8 +173,11 @@ async def update_transaction(
         account_uuid=update_request.account_uuid,
     )
 
-    updated_transaction = await handler.handle(command)
-    return TransactionResponse(**updated_transaction.__dict__)
+    async def operation():
+        updated_transaction = await handler.handle(command)
+        return TransactionResponse(**updated_transaction.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.delete("/{transaction_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
@@ -172,6 +186,7 @@ async def delete_transaction(
     transaction_uuid: str,
     current_user: User = Depends(require_scope(APIKeyScope.TRANSACTIONS_WRITE.value)),
     handler: DeleteTransactionHandler = Depends(get_delete_transaction_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     """
     Elimina una transacción específica.
@@ -185,10 +200,13 @@ async def delete_transaction(
         uuid=transaction_uuid, user_id=cast(int, current_user.id)
     )
 
-    deleted = await handler.handle(command)
+    async def operation():
+        deleted = await handler.handle(command)
 
-    if not deleted:
-        raise TransactionNotFoundError(command.uuid)
+        if not deleted:
+            raise TransactionNotFoundError(command.uuid)
 
-    # 204 No Content - successful deletion
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+        # 204 No Content - successful deletion
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    return await idempotency.run(cast(int, current_user.id), operation)

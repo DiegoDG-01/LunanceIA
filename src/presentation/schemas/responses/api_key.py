@@ -6,7 +6,9 @@ from pydantic import BaseModel
 class APIKeyCreatedResponse(BaseModel):
     """Respuesta al crear una key. Es la única vez que se devuelve `raw_key`."""
 
-    raw_key: str
+    # null solo en el reintento de un POST con la misma Idempotency-Key: la key en
+    # claro no se guarda para reintentos (ver endpoint `create_api_key`).
+    raw_key: str | None
     uuid: str
     name: str
     key_prefix: str

@@ -3,6 +3,7 @@
 import pytest
 import httpx
 from ..conftest import AuthTokens
+from ..idempotency import with_idempotency_key
 from datetime import date
 
 
@@ -23,8 +24,7 @@ class TestRecurringIncomeCRUD:
             "currency": "MXN",
         }
         response = await http_client.post(
-            "/account", json=account_data, headers=auth_tokens.get_auth_headers()
-        )
+            "/account", json=account_data, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
         return response.json()
 
     @pytest.fixture
@@ -41,8 +41,7 @@ class TestRecurringIncomeCRUD:
             "description": "Nómina quincenal",
         }
         response = await http_client.post(
-            "/incomes", json=income_data, headers=auth_tokens.get_auth_headers()
-        )
+            "/incomes", json=income_data, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
         return response.json()
 
     @pytest.mark.asyncio
@@ -60,8 +59,7 @@ class TestRecurringIncomeCRUD:
         }
 
         response = await http_client.post(
-            "/incomes", json=income_data, headers=auth_tokens.get_auth_headers()
-        )
+            "/incomes", json=income_data, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
 
         assert response.status_code == 201
         data = response.json()
@@ -87,8 +85,7 @@ class TestRecurringIncomeCRUD:
         }
 
         response = await http_client.post(
-            "/incomes", json=income_data, headers=auth_tokens.get_auth_headers()
-        )
+            "/incomes", json=income_data, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
 
         assert response.status_code in (400, 422)
 
@@ -148,7 +145,7 @@ class TestRecurringIncomeUpdateAndState:
                 "initial_balance": 5000.0,
                 "currency": "MXN",
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         income_res = await http_client.post(
             "/incomes",
@@ -160,7 +157,7 @@ class TestRecurringIncomeUpdateAndState:
                 "frequency": "MONTHLY",
                 "start_date": str(date.today()),
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         return income_res.json()
 
@@ -256,7 +253,7 @@ class TestIncomeDeposits:
                 "initial_balance": 0.0,
                 "currency": "MXN",
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         income_res = await http_client.post(
             "/incomes",
@@ -268,7 +265,7 @@ class TestIncomeDeposits:
                 "frequency": "MONTHLY",
                 "start_date": str(date.today()),
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         return income_res.json()
 

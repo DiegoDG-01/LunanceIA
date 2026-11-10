@@ -10,6 +10,7 @@ from infrastructure.scheduler.jobs import (
     process_recurring_income_job,
     process_subscriptions_job,
     purge_auth_data_job,
+    purge_idempotency_keys_job,
 )
 
 logger = logging.getLogger(__name__)
@@ -59,6 +60,14 @@ class SchedulerService:
             trigger=CronTrigger(hour=3, minute=0),
             id="purge_auth_data_job",
             name="Purge expired sessions and old auth events",
+            replace_existing=True,
+        )
+
+        self.scheduler.add_job(
+            purge_idempotency_keys_job,
+            trigger=CronTrigger(hour=3, minute=30),
+            id="purge_idempotency_keys_job",
+            name="Purge idempotency keys older than 24 h",
             replace_existing=True,
         )
 

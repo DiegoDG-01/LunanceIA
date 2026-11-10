@@ -276,7 +276,9 @@ Exponer un endpoint nuevo por MCP requiere **4 pasos** (no basta con crear la to
 2. **Enforcement** — aplica `require_scope(APIKeyScope.X.value)` en el endpoint
    (read → `:read`, create → `:write`). Sin esto, el endpoint no acepta la API Key.
 3. **Tool** — define la función con `@mcp.tool()` en `server.py` y llama a
-   `request_api(method, path, get_api_key(ctx), ...)`.
+   `request_api(method, path, get_api_key(ctx), ...)`. Para `POST`/`PUT`/`PATCH`/`DELETE`,
+   `request_api` manda un `Idempotency-Key` nuevo en cada llamada de tool y lo reutiliza
+   si reintenta por un fallo de red, así que la tool no tiene que hacer nada más.
 4. **Tests + frontend** — agrega el test de enforcement en
    `src/tests/e2e/test_api_key_api.py` y añade el scope al type `ApiKeyScope` del
    frontend.

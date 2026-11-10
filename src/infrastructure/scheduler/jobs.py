@@ -4,6 +4,10 @@ from datetime import UTC, datetime
 from sqlalchemy.exc import SQLAlchemyError
 
 from application.auth.commands.purge_auth_data import PurgeAuthDataHandler
+from application.idempotency.commands.purge_idempotency_keys import (
+    PurgeIdempotencyKeysCommand,
+    PurgeIdempotencyKeysHandler,
+)
 from application.incomes.services.income_processor import IncomeProcessor
 from application.investments.commands.generate_daily_yields import (
     GenerateDailyYieldCommand,
@@ -23,6 +27,9 @@ from infrastructure.database.repositories.sqlalchemy_account_repository import (
 )
 from infrastructure.database.repositories.sqlalchemy_auth_event_repository import (
     SQLAlchemyAuthEventRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_idempotency_repository import (
+    SQLAlchemyIdempotencyRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_income_deposit_repository import (
     SQLAlchemyIncomeDepositRepository,
@@ -201,3 +208,20 @@ async def purge_auth_data_job():
         except (RepositoryError, SQLAlchemyError) as e:
             await db.rollback()
             logger.error(f"Error processing auth data purge job: {e}")
+
+
+async def purge_idempotency_keys_job():
+    """Borra las Idempotency-Key de más de 24 h: ya no protegen ningún reintento."""
+    async with AsyncSessionLocal() as db:
+        try:
+            handler = PurgeIdempotencyKeysHandler(
+                repository=SQLAlchemyIdempotencyRepository(db),
+                uow=SQLAlchemyUnitOfWork(db),
+            )
+            deleted = await handler.handle(
+                PurgeIdempotencyKeysCommand(now=datetime.now(UTC))
+            )
+            logger.info(f"Purged {deleted} expired idempotency keys")
+        except Exception:
+            await db.rollback()
+            logger.exception("Error purging idempotency keys")

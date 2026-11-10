@@ -52,6 +52,11 @@ from presentation.dependencies import (
     get_update_recurring_income_handler,
 )
 from presentation.dependencies.auth_deps import require_scope
+from presentation.dependencies.idempotency_deps import (
+    Idempotency,
+    accept_idempotency_key,
+    require_idempotency_key,
+)
 from presentation.schemas.requests.recurring_income import (
     CreateRecurringIncomeRequest,
     UpdateRecurringIncomeRequest,
@@ -141,6 +146,7 @@ async def create_recurring_income(
     handler: CreateRecurringIncomeHandler = Depends(
         get_create_recurring_income_handler
     ),
+    idempotency: Idempotency = Depends(require_idempotency_key),
 ):
     """Crear un nuevo ingreso recurrente (nómina, renta, etc.)."""
     await enforce_rate_limit(limiter_20_per_minute, request)
@@ -158,9 +164,13 @@ async def create_recurring_income(
     )
 
     command = CreateRecurringIncomeCommand(dto=dto)
-    result = await handler.handle(command)
 
-    return RecurringIncomeResponse(**result.__dict__)
+    async def operation():
+        result = await handler.handle(command)
+
+        return RecurringIncomeResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.patch(
@@ -176,6 +186,7 @@ async def update_recurring_income(
     handler: UpdateRecurringIncomeHandler = Depends(
         get_update_recurring_income_handler
     ),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     await enforce_rate_limit(limiter_20_per_minute, request)
     dto = UpdateRecurringIncomeDTO(
@@ -196,8 +207,11 @@ async def update_recurring_income(
         dto=dto,
     )
 
-    updated_income = await handler.handle(command)
-    return RecurringIncomeResponse(**updated_income.__dict__)
+    async def operation():
+        updated_income = await handler.handle(command)
+        return RecurringIncomeResponse(**updated_income.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.patch("/{income_uuid}/activate/", response_model=RecurringIncomeResponse)
@@ -206,14 +220,18 @@ async def activate_recurring_income(
     income_uuid: str,
     current_user: User = Depends(require_scope(APIKeyScope.INCOMES_WRITE.value)),
     handler: StateRecurringIncomeHandler = Depends(get_state_recurring_income_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     await enforce_rate_limit(limiter_5_per_minute, request)
     command = StateRecurringIncomeCommand(
         income_uuid=income_uuid, user_id=cast(int, current_user.id)
     )
 
-    income = await handler.handle(command)
-    return RecurringIncomeResponse(**income.__dict__)
+    async def operation():
+        income = await handler.handle(command)
+        return RecurringIncomeResponse(**income.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.delete("/{income_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
@@ -224,11 +242,15 @@ async def delete_recurring_income(
     handler: DeleteRecurringIncomeHandler = Depends(
         get_delete_recurring_income_handler
     ),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     await enforce_rate_limit(limiter_5_per_minute, request)
     command = DeleteRecurringIncomeCommand(
         income_uuid=income_uuid, user_id=cast(int, current_user.id)
     )
 
-    await handler.handle(command)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    async def operation():
+        await handler.handle(command)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    return await idempotency.run(cast(int, current_user.id), operation)

@@ -3,6 +3,7 @@
 import pytest
 import httpx
 from ..conftest import AuthTokens
+from ..idempotency import with_idempotency_key
 from infrastructure.database.models.account import AccountModel
 from infrastructure.database.models.user import UserModel
 from domain.objects.enums import AccountType
@@ -89,7 +90,7 @@ class TestBusinessLogicEdges:
             "bank_id": 1,
             "initial_balance": 10.00,
             "currency": "MXN"
-        }, headers=auth_tokens.get_auth_headers())
+        }, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
         account_uuid = acc_res.json()["account_uuid"]
 
         # 2. Try to spend more than 10.00
@@ -99,7 +100,7 @@ class TestBusinessLogicEdges:
             "transaction_type": "EXPENSE",
             "amount": 100.00,
             "description": "Too expensive"
-        }, headers=auth_tokens.get_auth_headers())
+        }, headers=with_idempotency_key(auth_tokens.get_auth_headers()))
 
         # Should return 400 (Bad Request) or 422 (Unprocessable) with business error
         assert response.status_code in [400, 409, 422]

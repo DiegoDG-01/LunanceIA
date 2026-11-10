@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 import httpx
 from mcp.server.mcpserver import Context
 
@@ -23,13 +25,39 @@ def get_api_key(ctx: Context) -> str:
     return api_key
 
 
+# Un intento más si la conexión falla (incluido un timeout sin respuesta). Las
+# escrituras reintentan con la misma Idempotency-Key, así que la API devuelve la
+# respuesta original en lugar de repetir el movimiento.
+MAX_ATTEMPTS = 2
+_SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+
+
+def build_headers(method: str, api_key: str) -> dict[str, str]:
+    """Headers de una llamada de tool: una Idempotency-Key nueva por cada escritura."""
+    headers = {"X-API-Key": api_key}
+    if method.upper() not in _SAFE_METHODS:
+        headers["Idempotency-Key"] = str(uuid4())
+    return headers
+
+
+async def _send(
+    method: str, path: str, headers: dict[str, str], **kwargs
+) -> httpx.Response:
+    for _ in range(MAX_ATTEMPTS - 1):
+        try:
+            return await _client.request(method, path, headers=headers, **kwargs)
+        except httpx.TransportError:
+            continue
+    return await _client.request(method, path, headers=headers, **kwargs)
+
+
 async def request_api(method: str, path: str, api_key: str, **kwargs) -> str:
     """Llama a la API de Lunance inyectando la X-API-Key del usuario y traduce
     los errores HTTP a texto entendible para el modelo."""
+    # Se generan una sola vez por llamada de tool: los reintentos reutilizan la clave.
+    headers = build_headers(method, api_key)
     try:
-        resp = await _client.request(
-            method, path, headers={"X-API-Key": api_key}, **kwargs
-        )
+        resp = await _send(method, path, headers, **kwargs)
         resp.raise_for_status()
         return resp.text
     except httpx.HTTPStatusError as e:

@@ -30,6 +30,9 @@ from infrastructure.database.repositories.sqlalchemy_credit_card_repository impo
 from infrastructure.database.repositories.sqlalchemy_dashboard_repository import (
     SQLAlchemyDashboardRepository,
 )
+from infrastructure.database.repositories.sqlalchemy_idempotency_repository import (
+    SQLAlchemyIdempotencyRepository,
+)
 from infrastructure.database.repositories.sqlalchemy_income_deposit_repository import (
     SQLAlchemyIncomeDepositRepository,
 )
@@ -75,6 +78,12 @@ def get_unit_of_work_repository(
     db: AsyncSession = Depends(get_db),
 ) -> AbstractUnitOfWork:
     return SQLAlchemyUnitOfWork(db)
+
+
+def get_idempotency_repository(
+    db: AsyncSession = Depends(get_db),
+) -> SQLAlchemyIdempotencyRepository:
+    return SQLAlchemyIdempotencyRepository(db)
 
 
 def get_account_repository(

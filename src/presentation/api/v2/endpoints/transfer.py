@@ -19,6 +19,11 @@ from infrastructure.rate_limiting.limiters import (
     limiter_20_per_minute,
 )
 from presentation.dependencies.auth_deps import require_scope
+from presentation.dependencies.idempotency_deps import (
+    Idempotency,
+    accept_idempotency_key,
+    require_idempotency_key,
+)
 from presentation.dependencies.transfer_deps import (
     get_create_transfer_handler,
     get_delete_transfer_handler,
@@ -35,6 +40,7 @@ async def create_transfer(
     transfer_request: CreateTransferRequest,
     current_user: User = Depends(require_scope(APIKeyScope.TRANSFERS_WRITE.value)),
     handler: CreateTransferHandler = Depends(get_create_transfer_handler),
+    idempotency: Idempotency = Depends(require_idempotency_key),
 ):
     await enforce_rate_limit(limiter_20_per_minute, request)
     dto = CreateTransferDTO(
@@ -47,8 +53,12 @@ async def create_transfer(
         transfer_date=transfer_request.transfer_date,
     )
     command = CreateTransferCommand(dto=dto)
-    result = await handler.handle(command)
-    return TransferResponse(**result.__dict__)
+
+    async def operation():
+        result = await handler.handle(command)
+        return TransferResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.delete("/{transfer_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
@@ -57,11 +67,16 @@ async def delete_transfer(
     transfer_uuid: str,
     current_user: User = Depends(require_scope(APIKeyScope.TRANSFERS_WRITE.value)),
     handler: DeleteTransferHandler = Depends(get_delete_transfer_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     await enforce_rate_limit(limiter_10_per_minute, request)
     command = DeleteTransferCommand(
         transfer_uuid=transfer_uuid,
         user_id=cast(int, current_user.id),
     )
-    await handler.handle(command)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    async def operation():
+        await handler.handle(command)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    return await idempotency.run(cast(int, current_user.id), operation)

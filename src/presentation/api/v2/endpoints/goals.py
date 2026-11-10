@@ -36,6 +36,11 @@ from infrastructure.rate_limiting.limiters import (
     limiter_50_per_minute,
 )
 from presentation.dependencies.auth_deps import require_scope
+from presentation.dependencies.idempotency_deps import (
+    Idempotency,
+    accept_idempotency_key,
+    require_idempotency_key,
+)
 from presentation.dependencies.saving_goal_deps import (
     get_create_saving_goal_handler,
     get_delete_saving_goal_handler,
@@ -95,6 +100,7 @@ async def create_saving_goal(
     goal_request: SavingGoalRequest,
     current_user: User = Depends(require_scope(APIKeyScope.GOALS_WRITE.value)),
     handler: CreateSavingGoalHandler = Depends(get_create_saving_goal_handler),
+    idempotency: Idempotency = Depends(require_idempotency_key),
 ):
     """Crea una nueva meta de ahorro."""
     await enforce_rate_limit(limiter_20_per_minute, request)
@@ -107,8 +113,12 @@ async def create_saving_goal(
         description=goal_request.description,
     )
     command = CreateSavingGoalCommand(dto=dto)
-    result = await handler.handle(command)
-    return SavingGoalResponse(**result.__dict__)
+
+    async def operation():
+        result = await handler.handle(command)
+        return SavingGoalResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.put("/{goal_uuid}/", response_model=SavingGoalResponse)
@@ -118,6 +128,7 @@ async def update_saving_goal(
     goal_request: UpdateSavingGoalRequest,
     current_user: User = Depends(require_scope(APIKeyScope.GOALS_WRITE.value)),
     handler: UpdateSavingGoalHandler = Depends(get_update_saving_goal_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     """Actualiza una meta de ahorro existente."""
     await enforce_rate_limit(limiter_20_per_minute, request)
@@ -132,8 +143,12 @@ async def update_saving_goal(
         user_id=cast(int, current_user.id),
         dto=dto,
     )
-    result = await handler.handle(command)
-    return SavingGoalResponse(**result.__dict__)
+
+    async def operation():
+        result = await handler.handle(command)
+        return SavingGoalResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.patch("/{goal_uuid}/activate/", response_model=SavingGoalResponse)
@@ -142,6 +157,7 @@ async def toggle_saving_goal_status(
     goal_uuid: str,
     current_user: User = Depends(require_scope(APIKeyScope.GOALS_WRITE.value)),
     handler: StateSavingGoalHandler = Depends(get_state_saving_goal_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     """Activa o desactiva una meta de ahorro."""
     await enforce_rate_limit(limiter_5_per_minute, request)
@@ -149,8 +165,12 @@ async def toggle_saving_goal_status(
         goal_uuid=goal_uuid,
         user_id=cast(int, current_user.id),
     )
-    result = await handler.handle(command)
-    return SavingGoalResponse(**result.__dict__)
+
+    async def operation():
+        result = await handler.handle(command)
+        return SavingGoalResponse(**result.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.delete("/{goal_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
@@ -159,6 +179,7 @@ async def delete_saving_goal(
     goal_uuid: str,
     current_user: User = Depends(require_scope(APIKeyScope.GOALS_WRITE.value)),
     handler: DeleteSavingGoalHandler = Depends(get_delete_saving_goal_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     """Elimina una meta de ahorro permanentemente."""
     await enforce_rate_limit(limiter_5_per_minute, request)
@@ -166,5 +187,9 @@ async def delete_saving_goal(
         saving_goal_uuid=goal_uuid,
         user_id=cast(int, current_user.id),
     )
-    await handler.handle(command)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    async def operation():
+        await handler.handle(command)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    return await idempotency.run(cast(int, current_user.id), operation)

@@ -53,3 +53,27 @@ class ExternalServiceError(LunanceException):
         if details:
             message += f": {details}"
         super().__init__(message)
+
+
+class IdempotencyKeyReusedError(LunanceException):
+    """La misma Idempotency-Key llegó con otra petición (método, ruta o cuerpo).
+
+    Es un error del cliente, no un reintento: la clave identifica una operación concreta.
+    """
+
+    def __init__(self):
+        super().__init__("Idempotency-Key reutilizada con una petición distinta")
+
+
+class IdempotencyKeyInUseError(LunanceException):
+    """La clave existe pero su respuesta no está guardada.
+
+    O la petición original sigue en curso, o el proceso murió entre el commit del
+    cambio y el guardado de la respuesta. El cliente debe consultar el recurso antes
+    de decidir si reintenta con una clave nueva.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "La operación de esta Idempotency-Key no tiene respuesta guardada"
+        )

@@ -3,6 +3,7 @@
 import pytest
 import httpx
 from ..conftest import AuthTokens
+from ..idempotency import with_idempotency_key
 
 
 @pytest.mark.e2e
@@ -21,7 +22,7 @@ class TestGetInvestmentYields:
                 "initial_balance": 10000.0,
                 "currency": "MXN",
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         assert response.status_code in [200, 201], f"Account creation failed: {response.text}"
         return response.json()
@@ -88,7 +89,7 @@ class TestGetInvestmentProjections:
                 "initial_balance": 50000.0,
                 "currency": "MXN",
             },
-            headers=auth_tokens.get_auth_headers(),
+            headers=with_idempotency_key(auth_tokens.get_auth_headers()),
         )
         assert response.status_code in [200, 201], f"Account creation failed: {response.text}"
         return response.json()

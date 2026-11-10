@@ -5,6 +5,7 @@ from .bank import BankModel
 from .budget import BudgetModel
 from .category import CategoryModel
 from .credit_card import CreditCardSettingsModel
+from .idempotency_key import IdempotencyKeyModel
 from .installment import InstallmentChargeModel, InstallmentPurchaseModel
 from .investment_position import InvestmentPositionModel
 from .investment_yield import InvestmentYieldModel
@@ -27,6 +28,7 @@ __all__ = [
     "BudgetModel",
     "CategoryModel",
     "CreditCardSettingsModel",
+    "IdempotencyKeyModel",
     "IncomeDepositModel",
     "InstallmentChargeModel",
     "InstallmentPurchaseModel",

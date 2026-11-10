@@ -51,6 +51,11 @@ from presentation.dependencies import (
     get_user_accounts_handler,
 )
 from presentation.dependencies.auth_deps import require_scope
+from presentation.dependencies.idempotency_deps import (
+    Idempotency,
+    accept_idempotency_key,
+    require_idempotency_key,
+)
 from presentation.schemas.requests.account import (
     CreateAccountRequest,
     UpdateAccountRequest,
@@ -114,6 +119,7 @@ async def create_account(
     account_request: CreateAccountRequest,
     current_user: User = Depends(require_scope(APIKeyScope.ACCOUNTS_WRITE.value)),
     handler: CreateAccountHandler = Depends(get_create_account_handler),
+    idempotency: Idempotency = Depends(require_idempotency_key),
 ):
     """Crea una nueva cuenta."""
     await enforce_rate_limit(limiter_50_per_minute, request)
@@ -137,9 +143,13 @@ async def create_account(
     )
 
     command = CreateAccountCommand(dto=dto)
-    account = await handler.handle(command)
 
-    return AccountResponse(**account.__dict__)
+    async def operation():
+        account = await handler.handle(command)
+
+        return AccountResponse(**account.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.patch("/{account_uuid}/", response_model=AccountResponse)
@@ -149,6 +159,7 @@ async def update_account(
     update_request: UpdateAccountRequest,
     current_user: User = Depends(require_scope(APIKeyScope.ACCOUNTS_WRITE.value)),
     handler: UpdateAccountHandler = Depends(get_update_account_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     await enforce_rate_limit(limiter_50_per_minute, request)
     cc_settings_dto = None
@@ -171,8 +182,11 @@ async def update_account(
 
     command = UpdateAccountCommand(dto=dto)
 
-    account = await handler.handle(command)
-    return AccountResponse(**account.__dict__)
+    async def operation():
+        account = await handler.handle(command)
+        return AccountResponse(**account.__dict__)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.delete("/{account_uuid}/", status_code=status.HTTP_204_NO_CONTENT)
@@ -181,6 +195,7 @@ async def delete_account(
     account_uuid: str,
     current_user: User = Depends(require_scope(APIKeyScope.ACCOUNTS_WRITE.value)),
     handler: DeleteAccountHandler = Depends(get_delete_account_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     """Elimina una cuenta."""
     await enforce_rate_limit(limiter_50_per_minute, request)
@@ -188,11 +203,14 @@ async def delete_account(
         account_uuid=account_uuid, user_id=cast(int, current_user.id)
     )
 
-    success = await handler.handle(command)
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Cuenta no encontrada"
-        )
+    async def operation():
+        success = await handler.handle(command)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Cuenta no encontrada"
+            )
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.patch("/{account_uuid}/status/", response_model=AccountResponse)
@@ -201,6 +219,7 @@ async def activate_account(
     account_uuid: str,
     current_user: User = Depends(require_scope(APIKeyScope.ACCOUNTS_WRITE.value)),
     handler: StateAccountHandler = Depends(get_state_account_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
 ):
     """Activa/desactiva una cuenta."""
     await enforce_rate_limit(limiter_50_per_minute, request)
@@ -209,18 +228,21 @@ async def activate_account(
         user_id=cast(int, current_user.id),
     )
 
-    account = await handler.handle(command)
-    return AccountResponse(
-        bank_id=account.bank_id,
-        bank_name=account.bank_name,
-        bank_code=account.bank_code,
-        account_uuid=cast(str, account.uuid),
-        name=account.name,
-        account_type=account.account_type,
-        current_balance=account.current_balance.amount,
-        currency=account.current_balance.currency,
-        is_active=account.is_active,
-    )
+    async def operation():
+        account = await handler.handle(command)
+        return AccountResponse(
+            bank_id=account.bank_id,
+            bank_name=account.bank_name,
+            bank_code=account.bank_code,
+            account_uuid=cast(str, account.uuid),
+            name=account.name,
+            account_type=account.account_type,
+            current_balance=account.current_balance.amount,
+            currency=account.current_balance.currency,
+            is_active=account.is_active,
+        )
+
+    return await idempotency.run(cast(int, current_user.id), operation)
 
 
 @router.get(

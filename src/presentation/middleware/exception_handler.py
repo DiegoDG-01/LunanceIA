@@ -17,6 +17,8 @@ from shared.constants.validation_messages import (
 from shared.exceptions.application import (
     CommandValidationError,
     ExternalServiceError,
+    IdempotencyKeyInUseError,
+    IdempotencyKeyReusedError,
     JWTValidationError,
     QueryValidationError,
     RepositoryError,
@@ -130,8 +132,11 @@ EXCEPTION_MAP: dict[type[Exception], tuple[str, int]] = {
     PositionCapExceededError: ("POSITION_CAP_EXCEEDED", 409),
     InvalidOverflowTargetError: ("INVALID_OVERFLOW_TARGET", 409),
     FixedTermCapNotAllowedError: ("FIXED_TERM_CAP_NOT_ALLOWED", 409),
+    # La clave existe sin respuesta guardada: el cliente debe consultar el recurso.
+    IdempotencyKeyInUseError: ("IDEMPOTENCY_KEY_IN_USE", 409),
     # --- Errores de Validación y Reglas de Negocio (400 / 422) ---
     InsufficientFundsError: ("INSUFFICIENT_FUNDS", 422),
+    IdempotencyKeyReusedError: ("IDEMPOTENCY_KEY_REUSED", 422),
     AccountInactiveError: ("BUSINESS_RULE_VIOLATION", 400),
     InvalidTransactionAmountError: ("VALIDATION_INVALID_AMOUNT", 400),
     NegativeAmountError: ("VALIDATION_INVALID_AMOUNT", 400),
