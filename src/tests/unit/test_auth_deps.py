@@ -3,12 +3,10 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-import httpx
 import pytest
 from fastapi import HTTPException
 
 from presentation.dependencies import auth_deps
-from shared.exceptions.application import ExternalServiceError
 from shared.exceptions.base import UnauthorizedError
 from shared.exceptions.domain import UserInactiveError
 
@@ -23,39 +21,6 @@ def _request(ip: str = "203.0.113.10") -> SimpleNamespace:
         client=SimpleNamespace(host=ip),
         url=SimpleNamespace(path="/api/v2/test"),
     )
-
-
-def _response(status_code: int, json_data: dict | None = None) -> httpx.Response:
-    return httpx.Response(
-        status_code=status_code,
-        json=json_data or {},
-        request=httpx.Request("GET", "https://auth0.test/userinfo"),
-    )
-
-
-class TestGetUserInfo:
-    def test_returns_payload_on_success(self, monkeypatch):
-        monkeypatch.setattr(
-            httpx, "get", lambda *a, **k: _response(200, {"sub": "auth0|123"})
-        )
-
-        assert auth_deps.get_user_info("token")["sub"] == "auth0|123"
-
-    def test_raises_external_service_error_on_http_error_status(self, monkeypatch):
-        """Regresión M3: un status != 200 debe fallar, no devolver None."""
-        monkeypatch.setattr(httpx, "get", lambda *a, **k: _response(401))
-
-        with pytest.raises(ExternalServiceError):
-            auth_deps.get_user_info("token")
-
-    def test_raises_external_service_error_on_network_error(self, monkeypatch):
-        def _network_error(*a, **k):
-            raise httpx.ConnectError("connection refused")
-
-        monkeypatch.setattr(httpx, "get", _network_error)
-
-        with pytest.raises(ExternalServiceError):
-            auth_deps.get_user_info("token")
 
 
 @pytest.mark.asyncio

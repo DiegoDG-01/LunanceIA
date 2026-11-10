@@ -15,7 +15,6 @@ from presentation.dependencies.account_deps import (
 from presentation.dependencies.auth_deps import (
     get_current_active_user,
     get_current_user,
-    validate_token,
 )
 
 # Auth handlers
@@ -198,5 +197,4 @@ __all__ = [
     "get_update_transaction_handler",
     "get_user_accounts_handler",
     "get_user_repository",
-    "validate_token",
 ]

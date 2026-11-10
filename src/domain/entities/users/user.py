@@ -11,7 +11,6 @@ from shared.exceptions.domain import InvalidEmailError
 @dataclass
 class User:
     name: str
-    auth0_id: str | None = None
     email: EmailStr | None = None
     password: str | None = None
     picture: str | None = None
@@ -25,24 +24,6 @@ class User:
         default_factory=lambda: datetime.now(UTC)
     )  # ← Auto-genera
     is_active: bool = True
-
-    @classmethod
-    def create_auth0_user(
-        cls,
-        auth0_id: str,
-        name: str,
-        email: str,
-        picture: str,
-        email_verified: bool,
-    ):
-        """Factory method to create a new user"""
-        return cls(
-            auth0_id=auth0_id,
-            name=name,
-            email=email,
-            picture=picture,
-            email_verified=email_verified,
-        )
 
     @classmethod
     def create_local_user(

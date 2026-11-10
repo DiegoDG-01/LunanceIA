@@ -17,9 +17,6 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = ""
     BANXICO_TOKEN: str = ""
 
-    AUTH0_DOMAIN: str
-    AUTH0_AUDIENCE: str
-
     DB_HOST: str = "localhost"
     DB_PORT: str = "3306"
     DB_NAME: str

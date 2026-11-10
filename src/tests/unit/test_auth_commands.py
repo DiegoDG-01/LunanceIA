@@ -77,12 +77,11 @@ class TestLoginHandlerEnumeration:
             await handler.handle(LoginCommand(username="ghost", password="Whatever1!"))
 
     @pytest.mark.asyncio
-    async def test_auth0_user_without_local_password_raises_invalid_credentials(self):
-        """Usuario Auth0 (password=None) no debe provocar 500 ni un error distinto."""
+    async def test_user_without_local_password_raises_invalid_credentials(self):
+        """Usuario sin contraseña local no debe provocar 500 ni un error distinto."""
         auth0_user = User(
             id=1,
             uuid="u-1",
-            auth0_id="auth0|abc",
             name="auth0user",
             email="a@b.com",
             password=None,

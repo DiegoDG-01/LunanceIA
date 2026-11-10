@@ -20,7 +20,6 @@ class SQLAlchemyUserRepository(UserRepository):
         return User(
             id=model.id,
             uuid=model.uuid,
-            auth0_id=model.auth0_id,
             name=model.name,
             email=model.email,
             password=model.password,
@@ -36,7 +35,6 @@ class SQLAlchemyUserRepository(UserRepository):
         return UserModel(
             id=entity.id,
             uuid=entity.uuid,
-            auth0_id=entity.auth0_id,
             name=entity.name,
             email=entity.email,
             password=entity.password,
@@ -62,12 +60,6 @@ class SQLAlchemyUserRepository(UserRepository):
         model = result.scalar_one_or_none()
 
         return self._model_to_entity(model) if model else None
-
-    async def get_by_auth0_uuid(self, id: str) -> User | None:
-        stmt = select(UserModel).where(UserModel.auth0_id == id)
-        result = await self.db.execute(stmt)
-        user_model = result.scalar_one_or_none()
-        return self._model_to_entity(user_model) if user_model else None
 
     async def get_by_email(self, email: str) -> User | None:
         """Obtiene usuario por email."""

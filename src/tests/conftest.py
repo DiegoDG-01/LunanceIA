@@ -44,7 +44,6 @@ def event_loop():
 # Mock User for tests
 MOCK_USER_ID = 1
 MOCK_USER_UUID = "test-user-uuid"
-MOCK_AUTH0_ID = "auth0|test-user-id"
 
 async def mock_get_current_user(request: Request, db: AsyncSession = Depends(get_db)) -> User:
     """Mock current user for testing, ensuring it exists in the database.
@@ -63,14 +62,13 @@ async def mock_get_current_user(request: Request, db: AsyncSession = Depends(get
     from infrastructure.database.models.user import UserModel
     from sqlalchemy import select
 
-    stmt = select(UserModel).where(UserModel.auth0_id == MOCK_AUTH0_ID)
+    stmt = select(UserModel).where(UserModel.uuid == MOCK_USER_UUID)
     result = await db.execute(stmt)
     user_model = result.scalar_one_or_none()
     if not user_model:
         user_model = UserModel(
             id=MOCK_USER_ID,
             uuid=MOCK_USER_UUID,
-            auth0_id=MOCK_AUTH0_ID,
             name="Test User",
             email="testuser@gmail.com",
             is_active=True
@@ -82,7 +80,6 @@ async def mock_get_current_user(request: Request, db: AsyncSession = Depends(get
     return User(
         id=user_model.id,
         uuid=user_model.uuid,
-        auth0_id=user_model.auth0_id if user_model.auth0_id else None,
         name=user_model.name,
         email=user_model.email if user_model.email else None,
         is_active=user_model.is_active,
