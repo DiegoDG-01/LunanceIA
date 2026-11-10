@@ -2,12 +2,12 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import String, DateTime, ForeignKey, Enum, DECIMAL, CHAR
-from sqlalchemy.sql import func
+from sqlalchemy import CHAR, DECIMAL, DateTime, Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
 
-from infrastructure.database.connection import Base
 from domain.objects.enums import AccountType
+from infrastructure.database.connection import Base
 
 
 class AccountModel(Base):

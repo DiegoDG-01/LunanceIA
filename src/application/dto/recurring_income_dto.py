@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-from decimal import Decimal
-from typing import Optional
 from datetime import date, datetime
+from decimal import Decimal
 
 from domain.objects.enums import Frequency, TransactionStatus
 
@@ -15,36 +14,36 @@ class CreateRecurringIncomeDTO:
     amount: Decimal
     frequency: Frequency
     start_date: date
-    end_date: Optional[date] = None
-    next_payment_date: Optional[date] = None
-    description: Optional[str] = None
+    end_date: date | None = None
+    next_payment_date: date | None = None
+    description: str | None = None
     currency: str = "MXN"
 
 
 @dataclass
 class RecurringIncomeResponseDTO:
     uuid: str
-    account_uuid: Optional[str]
-    account_name: Optional[str]
-    category_name: Optional[str]
+    account_uuid: str | None
+    account_name: str | None
+    category_name: str | None
     name: str
     amount: Decimal
     currency: str
     frequency: Frequency
     start_date: date
-    end_date: Optional[date]
+    end_date: date | None
     next_payment_date: date
     is_active: bool
-    description: Optional[str]
+    description: str | None
     creation_date: datetime
 
     @classmethod
     def from_entity(
         cls,
         income,
-        account_uuid: Optional[str],
-        account_name: Optional[str],
-        category_name: Optional[str],
+        account_uuid: str | None,
+        account_name: str | None,
+        category_name: str | None,
     ):
         return cls(
             uuid=income.uuid,
@@ -66,16 +65,16 @@ class RecurringIncomeResponseDTO:
 
 @dataclass
 class UpdateRecurringIncomeDTO:
-    account_uuid: Optional[str] = None
-    name: Optional[str] = None
-    amount: Optional[Decimal] = None
-    frequency: Optional[Frequency] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    next_payment_date: Optional[date] = None
-    is_active: Optional[bool] = None
-    description: Optional[str] = None
-    category_id: Optional[int] = None
+    account_uuid: str | None = None
+    name: str | None = None
+    amount: Decimal | None = None
+    frequency: Frequency | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    next_payment_date: date | None = None
+    is_active: bool | None = None
+    description: str | None = None
+    category_id: int | None = None
 
 
 @dataclass
@@ -85,10 +84,10 @@ class IncomeDepositResponseDTO:
     amount: Decimal
     currency: str
     status: TransactionStatus
-    transaction_uuid: Optional[str]
+    transaction_uuid: str | None
 
     @classmethod
-    def from_entity(cls, deposit, transaction_uuid: Optional[str] = None):
+    def from_entity(cls, deposit, transaction_uuid: str | None = None):
         return cls(
             uuid=deposit.uuid,
             deposit_date=deposit.deposit_date,

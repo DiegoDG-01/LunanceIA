@@ -1,6 +1,6 @@
-from pydantic import BaseModel
-from typing import Optional
 from datetime import datetime
+
+from pydantic import BaseModel
 
 
 class APIKeyCreatedResponse(BaseModel):
@@ -11,7 +11,7 @@ class APIKeyCreatedResponse(BaseModel):
     name: str
     key_prefix: str
     scopes: list[str]
-    expires_at: Optional[datetime]
+    expires_at: datetime | None
     created_at: datetime
 
 
@@ -23,6 +23,6 @@ class APIKeyResponse(BaseModel):
     key_prefix: str
     scopes: list[str]
     is_active: bool
-    expires_at: Optional[datetime]
-    last_used_at: Optional[datetime]
+    expires_at: datetime | None
+    last_used_at: datetime | None
     created_at: datetime

@@ -1,11 +1,10 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
-from sqlalchemy import String, DateTime, ForeignKey, Enum, Text
-from datetime import timezone
+from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from infrastructure.database.connection import Base
 from domain.objects.enums import NotificationType
+from infrastructure.database.connection import Base
 
 
 class NotificationModel(Base):
@@ -21,6 +20,6 @@ class NotificationModel(Base):
     is_read: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),  # TIMESTAMP WITH TIME ZONE
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         index=True,
     )

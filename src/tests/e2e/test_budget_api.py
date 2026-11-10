@@ -1,9 +1,9 @@
 """End-to-end tests for budget API endpoints."""
 
-from datetime import date
+from datetime import UTC, datetime
 
-import pytest
 import httpx
+import pytest
 
 from ..conftest import AuthTokens
 
@@ -19,7 +19,7 @@ class TestBudgetCRUD:
             "name": "Comida mensual",
             "limit_amount": 5000.00,
             "period": "mensual",
-            "start_date": str(date.today()),
+            "start_date": str(datetime.now(UTC).astimezone().date()),
             "category_id": 1,
             "alert_percentage": 80,
         }
@@ -45,6 +45,25 @@ class TestBudgetCRUD:
     async def test_create_budget_invalid_amount(self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens):
         response = await self._create_budget(http_client, auth_tokens, limit_amount=-100)
         assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_create_budget_without_validity_dates(
+        self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens
+    ):
+        response = await http_client.post(
+            "/budgets/",
+            json={
+                "name": "Budget sin vigencia",
+                "limit_amount": 5000.00,
+                "period": "mensual",
+                "category_id": 1,
+            },
+            headers=auth_tokens.get_auth_headers(),
+        )
+
+        assert response.status_code == 201
+        assert response.json()["start_date"] is None
+        assert response.json()["end_date"] is None
 
     @pytest.mark.asyncio
     async def test_get_budgets_list(self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens):

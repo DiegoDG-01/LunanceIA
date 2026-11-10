@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 
-from domain.entities.income_deposit import IncomeDeposit
+from domain.entities.incomes.income_deposit import IncomeDeposit
 from domain.objects.enums import TransactionStatus
 from domain.objects.money import Money
 

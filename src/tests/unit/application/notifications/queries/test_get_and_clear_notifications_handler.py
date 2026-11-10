@@ -6,7 +6,7 @@ from application.notifications.queries.get_and_clear_notifications import (
     GetAndClearNotificationsQuery,
     GetAndClearNotificationsHandler,
 )
-from domain.entities.notification import Notification
+from domain.entities.notifications.notification import Notification
 from domain.objects.enums import NotificationType
 
 

@@ -1,9 +1,10 @@
 from pydantic import EmailStr
+
 from shared.exceptions.base import (
-    ValidationError,
-    NotFoundError,
     BusinessRuleError,
     LunanceException,
+    NotFoundError,
+    ValidationError,
 )
 
 
@@ -127,6 +128,15 @@ class InvalidTransactionTypeError(ValidationError):
         super().__init__(f"Tipo de transacción inválido: {transaction_type}")
 
 
+class InstallmentTransactionModificationError(BusinessRuleError):
+    """Evita modificar movimientos que forman parte de una compra a meses."""
+
+    def __init__(self):
+        super().__init__(
+            "La transacción inicial de una compra a meses no puede editarse ni eliminarse por separado"
+        )
+
+
 class CategoryNotFoundError(NotFoundError):
     """Categoría no encontrada."""
 
@@ -140,11 +150,6 @@ class InvalidCurrencyError(ValidationError):
 
     def __init__(self, currency: str):
         super().__init__(f"Moneda inválida: {currency}")
-
-
-class InvestmentSettingsNotFoundError(NotFoundError):
-    def __init__(self, investment_uuid: str):
-        super().__init__(f"Investment con UUID {investment_uuid} no encontrada")
 
 
 class CreditCardSettingsNotFoundError(NotFoundError):
@@ -229,11 +234,6 @@ class InvalidInvestmentRateError(ValidationError):
 class InvalidPenaltyPercentageError(ValidationError):
     def __init__(self, penalty_percentage: str):
         super().__init__(f"Penalty percentage invalido: {penalty_percentage}")
-
-
-class InvalidInvestmentTypeError(ValidationError):
-    def __init__(self, investment_type: str):
-        super().__init__(f"Investment type invalido: {investment_type}")
 
 
 class InvalidBillingCycleDayError(ValidationError):
@@ -382,4 +382,109 @@ class InvalidSubscriptionDateRangeError(ValidationError):
     def __init__(self, start_date: str, end_date: str):
         super().__init__(
             f"La fecha de fin ({end_date}) no puede ser anterior a la de inicio ({start_date})"
+        )
+
+
+# Investment Position Exceptions
+class InvestmentPositionNotFoundError(NotFoundError):
+    """Apartado de inversión no encontrado."""
+
+    def __init__(self, position_uuid: str):
+        super().__init__(f"Apartado de inversión con ID {position_uuid} no encontrado")
+
+
+class InvestmentPositionNotActiveError(BusinessRuleError):
+    """Apartado de inversión no activo."""
+
+    def __init__(self, position_uuid: str, status: str):
+        super().__init__(
+            f"El apartado {position_uuid} no admite esta operación (estado: {status})"
+        )
+
+
+class InvestmentPositionLockedError(BusinessRuleError):
+    """Apartado de inversión bloqueado por periodo de permanencia."""
+
+    def __init__(self, position_uuid: str, lock_period_end_date: str):
+        super().__init__(
+            f"El apartado {position_uuid} está bloqueado hasta {lock_period_end_date}"
+        )
+
+
+class FixedTermDepositNotAllowedError(BusinessRuleError):
+    """Depósito no permitido en apartado a plazo fijo."""
+
+    def __init__(self, position_uuid: str):
+        super().__init__(
+            f"El apartado {position_uuid} es a plazo fijo y no admite depósitos después de creado"
+        )
+
+
+class FixedTermWithdrawalNotAllowedError(BusinessRuleError):
+    """Retiro parcial no permitido en apartado a plazo fijo."""
+
+    def __init__(self, position_uuid: str):
+        super().__init__(
+            f"El apartado {position_uuid} es a plazo fijo y no admite retiros parciales; debe liquidarse por completo"
+        )
+
+
+class InvalidFixedTermConfigError(ValidationError):
+    """Configuración de plazo fijo inválida."""
+
+    def __init__(self):
+        super().__init__(
+            "Un apartado a plazo fijo requiere 'term_days' o 'maturity_date'"
+        )
+
+
+class InvestmentPositionNotMaturedError(BusinessRuleError):
+    """Apartado de inversión aún no vencido."""
+
+    def __init__(self, position_uuid: str, maturity_date: str):
+        super().__init__(
+            f"El apartado {position_uuid} aún no vence (vencimiento: {maturity_date})"
+        )
+
+
+class PositionAccountTypeNotAllowedError(BusinessRuleError):
+    """Tipo de cuenta no admite apartados de inversión."""
+
+    def __init__(self, account_type: str):
+        super().__init__(
+            f"Las cuentas de tipo {account_type} no admiten apartados de inversión"
+        )
+
+
+class InvalidPositionCapError(ValidationError):
+    """Configuración de tope y desbordamiento inválida."""
+
+    def __init__(self, reason: str):
+        super().__init__(f"Configuración de tope inválida: {reason}")
+
+
+class PositionCapExceededError(BusinessRuleError):
+    """El monto inicial del apartado supera su propio tope."""
+
+    def __init__(self, amount: str, max_balance: str):
+        super().__init__(
+            f"El monto {amount} supera el tope {max_balance} del apartado; "
+            f"crea el apartado dentro del tope y deposita el resto después"
+        )
+
+
+class InvalidOverflowTargetError(BusinessRuleError):
+    """Destino de desbordamiento inválido."""
+
+    def __init__(self, reason: str):
+        super().__init__(f"Destino de desbordamiento inválido: {reason}")
+
+
+class FixedTermCapNotAllowedError(BusinessRuleError):
+    """Tope y desbordamiento no aplican a apartados a plazo fijo."""
+
+    def __init__(self):
+        super().__init__(
+            "Un apartado a plazo fijo no admite tope ni desbordamiento: "
+            "su monto queda fijo hasta el vencimiento"
         )

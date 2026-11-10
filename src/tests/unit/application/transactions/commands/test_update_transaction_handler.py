@@ -7,8 +7,8 @@ from application.transactions.commands.update_transaction import (
     UpdateTransactionCommand,
     UpdateTransactionCommandHandler,
 )
-from domain.entities.account import Account
-from domain.entities.transaction import Transaction
+from domain.entities.accounts.account import Account
+from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import AccountType, TransactionType
 from domain.objects.money import Money
 from application.dto.transaction_dto import TransactionResponseDTO
@@ -22,17 +22,23 @@ class TestUpdateTransactionCommandHandler:
         uow = AsyncMock()
         uow.__aenter__ = AsyncMock(return_value=uow)
         uow.__aexit__ = AsyncMock(return_value=False)
-        return {
+        mocks = {
             "transaction_repo": MagicMock(),
             "account_repo": MagicMock(),
+            "purchase_repo": MagicMock(),
             "uow": uow,
         }
+        mocks["purchase_repo"].get_by_initial_transaction_id = AsyncMock(
+            return_value=None
+        )
+        return mocks
 
     @pytest.fixture
     def handler(self, mocks):
         return UpdateTransactionCommandHandler(
             transaction_repository=mocks["transaction_repo"],
             account_repository=mocks["account_repo"],
+            installment_purchase_repository=mocks["purchase_repo"],
             uow=mocks["uow"],
         )
 

@@ -1,0 +1,1 @@
+"""Budget domain entities."""

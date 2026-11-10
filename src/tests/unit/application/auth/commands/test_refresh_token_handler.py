@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, AsyncMock
 from application.auth.commands.refresh_token import RefreshTokenCommand, RefreshTokenHandler
 from application.auth.commands.login import LoginResponse
 from application.interfaces.auth_service import AuthConfig
-from domain.entities.user import User
-from domain.entities.refresh_token import RefreshToken
+from domain.entities.users.user import User
+from domain.entities.auth.refresh_token import RefreshToken
 from shared.exceptions.application import CommandValidationError, JWTValidationError
 from datetime import datetime, timedelta, timezone
 

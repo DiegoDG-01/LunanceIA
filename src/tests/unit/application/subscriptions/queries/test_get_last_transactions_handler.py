@@ -8,8 +8,8 @@ from application.subscriptions.queries.get_last_transactions import (
     GetLastTransactionsQuery,
     GetLastTransactionsHandler,
 )
-from domain.entities.subscription import Subscription
-from domain.entities.subscription_charge import SubscriptionCharge
+from domain.entities.subscriptions.subscription import Subscription
+from domain.entities.subscriptions.subscription_charge import SubscriptionCharge
 from domain.objects.enums import Frequency, TransactionStatus
 from domain.objects.money import Money
 from shared.exceptions.domain import SubscriptionNotFoundError

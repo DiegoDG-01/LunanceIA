@@ -1,19 +1,26 @@
-from typing import cast
-from datetime import date, timezone, datetime
-
 import logging
-from domain.entities.recurring_income import RecurringIncome
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.income_deposit_repository import IncomeDepositRepository
-from domain.repositories.notification_repository import NotificationRepository
-from domain.repositories.recurring_income_repository import RecurringIncomeRepository
-from domain.repositories.transaction_repository import TransactionRepository
-from shared.exceptions.domain import AccountNotFoundError
-from domain.entities.income_deposit import IncomeDeposit
-from domain.entities.transaction import Transaction
-from domain.objects.enums import NotificationType, TransactionType
-from domain.entities.notification import Notification
+from datetime import UTC, date, datetime
+from typing import cast
 
+from domain.entities.incomes.income_deposit import IncomeDeposit
+from domain.entities.incomes.recurring_income import RecurringIncome
+from domain.entities.notifications.notification import Notification
+from domain.entities.transactions.transaction import Transaction
+from domain.objects.enums import NotificationType, TransactionType
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.incomes.income_deposit_repository import (
+    IncomeDepositRepository,
+)
+from domain.repositories.incomes.recurring_income_repository import (
+    RecurringIncomeRepository,
+)
+from domain.repositories.notifications.notification_repository import (
+    NotificationRepository,
+)
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
+from shared.exceptions.domain import AccountNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +43,7 @@ class IncomeProcessor:
     async def process_due_incomes(self) -> dict:
         logger.info("Processing due incomes")
 
-        today = datetime.now(timezone.utc).date()
+        today = datetime.now(UTC).date()
 
         stats = {
             "processed": 0,
@@ -53,14 +60,12 @@ class IncomeProcessor:
                     created = await self._process_income(income, today)
                     stats["created"] += created
                 except Exception as e:
-                    logger.error(
-                        f"Error processing income {income.id}: {e}", exc_info=True
-                    )
+                    logger.exception(f"Error processing income {income.id}: {e}")
                     stats["failed"] += 1
 
             logger.info(f"Processed {stats['processed']} incomes")
         except Exception as e:
-            logger.error(f"Error processing due incomes: {e}", exc_info=True)
+            logger.exception(f"Error processing due incomes: {e}")
             raise
 
         return stats

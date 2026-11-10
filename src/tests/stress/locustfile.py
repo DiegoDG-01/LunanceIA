@@ -110,23 +110,14 @@ class LunanceUser(HttpUser):
 
     @task(2)
     def create_investment_account(self):
-        maturity = date.today() + timedelta(days=random.randint(90, 730))
-        lock_end = date.today() + timedelta(days=random.randint(30, 365))
-
+        initial_balance = float(Decimal(random.uniform(1_000, 500_000)).quantize(Decimal("0.01")))
         payload = {
             "bank_id": random.randint(1, 21),
             "name": f"Stress Investment {random.randint(1, 100_000)}",
             "account_type": "INVESTMENT",
-            "initial_balance": float(Decimal(random.uniform(1_000, 500_000)).quantize(Decimal("0.01"))),
+            "initial_balance": initial_balance,
             "currency": "MXN",
             "is_active": True,
-            "investment_settings": {
-                "investment_type": random.choice(["fixed_term", "stocks", "bonds", "mutual_fund", "etf", "other"]),
-                "investment_rate": float(Decimal(random.uniform(4, 15)).quantize(Decimal("0.01"))),
-                "lock_period_end_date": lock_end.isoformat(),
-                "maturity_date": maturity.isoformat(),
-                "early_withdrawal_penalty": float(Decimal(random.uniform(0, 5)).quantize(Decimal("0.01"))),
-            },
         }
 
         with self.client.post(
@@ -141,9 +132,33 @@ class LunanceUser(HttpUser):
                 if account_uuid:
                     self.account_uuids.append(account_uuid)
                     self.investment_uuids.append(account_uuid)
+                    self._create_position(account_uuid, initial_balance)
                 response.success()  # type: ignore[union-attr]
             else:
                 response.failure(f"Status {response.status_code}: {response.text}")  # type: ignore[union-attr]
+
+    def _create_position(self, account_uuid: str, available_balance: float):
+        """El rendimiento se configura por apartado, no por cuenta."""
+        position_type = random.choice(["ON_DEMAND", "FIXED_TERM"])
+        payload = {
+            "account_uuid": account_uuid,
+            "name": f"Stress Position {random.randint(1, 100_000)}",
+            "position_type": position_type,
+            "amount": round(available_balance * random.uniform(0.3, 0.9), 2),
+            "annual_rate": float(Decimal(random.uniform(4, 15)).quantize(Decimal("0.01"))),
+        }
+        if position_type == "FIXED_TERM":
+            payload["term_days"] = random.randint(30, 730)
+            payload["early_withdrawal_penalty"] = float(
+                Decimal(random.uniform(0, 5)).quantize(Decimal("0.01"))
+            )
+            payload["on_maturity"] = random.choice(["AUTO_RENEW", "LIQUIDATE", "HOLD"])
+
+        self.client.post(
+            f"{API_PREFIX}/positions/",
+            json=payload,
+            name="/positions/ [POST]",
+        )
 
     @task(5)
     def get_investment_yields(self):

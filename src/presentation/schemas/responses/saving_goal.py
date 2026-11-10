@@ -1,6 +1,5 @@
-from decimal import Decimal
-from typing import Optional
 from datetime import date, datetime
+from decimal import Decimal
 
 from pydantic import BaseModel
 
@@ -13,8 +12,8 @@ class SavingGoalResponse(BaseModel):
     target_amount: Decimal
     current_amount: Decimal
     progress_percentage: float
-    target_date: Optional[date] = None
-    description: Optional[str] = None
+    target_date: date | None = None
+    description: str | None = None
     is_active: bool = True
-    completion_date: Optional[date] = None
+    completion_date: date | None = None
     creation_date: datetime

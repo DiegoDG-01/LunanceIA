@@ -1,16 +1,17 @@
 """Esquemas de respuesta para errores estandarizados."""
 
-from typing import Optional, Any, List
-from pydantic import BaseModel
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict
 
 
 class ErrorDetail(BaseModel):
     """Detalle específico de un error."""
 
-    loc: Optional[List[str]] = None  # Ubicación del error (para validaciones)
+    loc: list[str] | None = None  # Ubicación del error (para validaciones)
     msg: str  # Mensaje descriptivo del error
     type: str  # Tipo de error
-    input: Optional[Any] = None  # Valor que causó el error (opcional)
+    input: Any | None = None  # Valor que causó el error (opcional)
 
 
 class StandardErrorResponse(BaseModel):
@@ -19,10 +20,10 @@ class StandardErrorResponse(BaseModel):
     error: bool = True
     error_code: str  # Código único del error
     message: str  # Mensaje principal del error
-    details: Optional[List[ErrorDetail]] = None  # Detalles específicos (validaciones)
+    details: list[ErrorDetail] | None = None  # Detalles específicos (validaciones)
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "error": True,
@@ -51,3 +52,4 @@ class StandardErrorResponse(BaseModel):
                 },
             ]
         }
+    )

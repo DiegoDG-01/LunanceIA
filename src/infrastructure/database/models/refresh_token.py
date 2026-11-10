@@ -2,8 +2,8 @@ from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.dialects.mysql import VARCHAR
-from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
 
 from infrastructure.database.connection import Base
 

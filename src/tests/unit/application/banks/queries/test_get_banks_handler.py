@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import MagicMock, AsyncMock
 
 from application.banks.queries.get_banks import GetBanksQuery, GetBanksHandler
-from domain.entities.bank import Bank
+from domain.entities.banks.bank import Bank
 
 
 @pytest.mark.unit

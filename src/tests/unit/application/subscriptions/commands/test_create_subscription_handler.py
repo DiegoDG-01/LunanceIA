@@ -8,10 +8,10 @@ from application.subscriptions.commands.create_subscription import (
     CreateSubscriptionHandler,
 )
 from application.dto.subscription_dto import CreateSubscriptionDTO
-from domain.entities.account import Account
-from domain.entities.category import Category
-from domain.entities.subscription import Subscription
-from domain.entities.user import User
+from domain.entities.accounts.account import Account
+from domain.entities.categories.category import Category
+from domain.entities.subscriptions.subscription import Subscription
+from domain.entities.users.user import User
 from domain.objects.enums import AccountType, Frequency
 from domain.objects.money import Money
 from shared.exceptions.domain import UserNotFoundError, AccountNotFoundError

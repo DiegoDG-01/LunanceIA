@@ -1,7 +1,5 @@
 """Mensajes de validación multiidioma."""
 
-from typing import Optional
-
 # Mapeo de mensajes de validación de Pydantic por idioma
 PYDANTIC_ERROR_MESSAGES = {
     "es": {
@@ -143,13 +141,23 @@ HTTP_CODES_ERRORS = {
         "NOT_FOUND_CATEGORY": "Categoría no encontrada",
         "NOT_FOUND_SUBSCRIPTION": "Suscripción no encontrada",
         "NOT_FOUND_ACTIVITY": "No se encontró ningún movimiento",
-        "INVESTMENT_SETTINGS_NOT_FOUND": "Configuración de cuenta no encontrada",
+        "NOT_FOUND_INVESTMENT_POSITION": "Apartado de inversión no encontrado",
         # Códigos específicos de Lunance - Conflictos de negocio
         "BUSINESS_EMAIL_EXISTS": "El email ya está registrado",
         "BUSINESS_ACCOUNT_HAS_BALANCE": "La cuenta tiene saldo pendiente",
         "BUSINESS_ACCOUNT_HAS_TRANSACTIONS": "La cuenta tiene transacciones asociadas",
         "INSTALLMENT_CHARGE_ALREADY_PAID": "El cargo de la compra a plazos ya fue pagado",
+        "INSTALLMENT_TRANSACTION_LOCKED": "Este movimiento pertenece a una compra a meses; edítala o elimínala desde la compra",
+        "SAME_ACCOUNT_TRANSFER": "La cuenta origen y destino no pueden ser la misma",
+        "TRANSFER_ACCOUNT_TYPE_NOT_ALLOWED": "Este tipo de cuenta no puede ser el origen de una transferencia",
+        "TRANSFER_NOT_ALLOWED": "Esta transferencia no puede realizarse",
         "INVALID_ACCOUNT_SETTINGS": "Los datos adicionales para configurar tu cuenta no son los correctos",
+        "INVESTMENT_POSITION_NOT_ACTIVE": "El apartado ya no admite esta operación",
+        "INVESTMENT_POSITION_LOCKED": "El apartado está bloqueado por su periodo de permanencia",
+        "INVESTMENT_POSITION_NOT_MATURED": "El apartado aún no llega a su vencimiento",
+        "FIXED_TERM_DEPOSIT_NOT_ALLOWED": "Un apartado a plazo fijo no admite depósitos después de creado",
+        "FIXED_TERM_WITHDRAWAL_NOT_ALLOWED": "Un apartado a plazo fijo no admite retiros parciales; debe liquidarse por completo",
+        "POSITION_ACCOUNT_TYPE_NOT_ALLOWED": "Este tipo de cuenta no admite apartados de inversión",
         # Códigos específicos de Lunance - Validaciones y reglas de negocio
         "VALIDATION_ERROR": "Error de validación",
         "BUSINESS_RULE_VIOLATION": "Violación de regla de negocio",
@@ -162,7 +170,11 @@ HTTP_CODES_ERRORS = {
         "INSUFFICIENT_FUNDS": "Fondos insuficientes",
         "VALIDATION_INVALID_INVESTMENT_RATE": "La tasa de inversión debe ser no negativa",
         "VALIDATION_INVALID_PENALTY_PERCENTAGE": "El porcentaje de penalización debe estar entre 0 y 100",
-        "VALIDATION_INVALID_INVESTMENT_TYPE": "Tipo de inversión inválido",
+        "VALIDATION_INVALID_FIXED_TERM_CONFIG": "Un apartado a plazo fijo requiere un plazo en días o una fecha de vencimiento válidos",
+        "VALIDATION_INVALID_POSITION_CAP": "La configuración de tope del apartado no es válida",
+        "POSITION_CAP_EXCEEDED": "El monto supera el tope del apartado",
+        "INVALID_OVERFLOW_TARGET": "El apartado destino del excedente no es válido",
+        "FIXED_TERM_CAP_NOT_ALLOWED": "Un apartado a plazo fijo no admite tope ni desbordamiento",
         "VALIDATION_INVALID_BILLING_CYCLE_DAY": "El día de ciclo de facturación debe estar entre 1 y 31",
         "VALIDATION_INVALID_PAYMENT_DUE_DAY": "El día de vencimiento de pago debe estar entre 1 y  31",
         "VALIDATION_INVALID_CREDIT_LIMIT": "El límite de crédito debe ser positivo",
@@ -195,15 +207,25 @@ HTTP_CODES_ERRORS = {
         "NOT_FOUND_TRANSACTION": "Transaction not found",
         "NOT_FOUND_CATEGORY": "Category not found",
         "NOT_FOUND_SUBSCRIPTION": "Subscription not found",
-        "INVESTMENT_SETTINGS_NOT_FOUND": "Account settings not found",
         "NOT_FOUND_ACTIVITY": "No movement was found",
+        "NOT_FOUND_INVESTMENT_POSITION": "Investment position not found",
         # Códigos específicos de Lunance - Conflictos de negocio
         "INVALID_CREDENTIALS": "Invalid credentials",
         "BUSINESS_EMAIL_EXISTS": "Email already registered",
         "BUSINESS_ACCOUNT_HAS_BALANCE": "Account has pending balance",
         "BUSINESS_ACCOUNT_HAS_TRANSACTIONS": "Account has associated transactions",
         "INSTALLMENT_CHARGE_ALREADY_PAID": "The installment charge has already been paid",
+        "INSTALLMENT_TRANSACTION_LOCKED": "This transaction belongs to an installment purchase; edit or delete it from the purchase",
+        "SAME_ACCOUNT_TRANSFER": "Source and destination accounts cannot be the same",
+        "TRANSFER_ACCOUNT_TYPE_NOT_ALLOWED": "This account type cannot be the source of a transfer",
+        "TRANSFER_NOT_ALLOWED": "This transfer cannot be completed",
         "INVALID_ACCOUNT_SETTINGS": "The additional information you provided to set up your account is incorrect",
+        "INVESTMENT_POSITION_NOT_ACTIVE": "The position no longer accepts this operation",
+        "INVESTMENT_POSITION_LOCKED": "The position is locked by its commitment period",
+        "INVESTMENT_POSITION_NOT_MATURED": "The position has not reached its maturity date yet",
+        "FIXED_TERM_DEPOSIT_NOT_ALLOWED": "A fixed-term position does not accept deposits after creation",
+        "FIXED_TERM_WITHDRAWAL_NOT_ALLOWED": "A fixed-term position does not accept partial withdrawals; it must be liquidated in full",
+        "POSITION_ACCOUNT_TYPE_NOT_ALLOWED": "This account type does not support investment positions",
         # Códigos específicos de Lunance - Validaciones y reglas de negocio
         "VALIDATION_ERROR": "Validation error",
         "BUSINESS_RULE_VIOLATION": "Business rule violation",
@@ -216,7 +238,11 @@ HTTP_CODES_ERRORS = {
         "INSUFFICIENT_FUNDS": "Insufficient funds",
         "VALIDATION_INVALID_INVESTMENT_RATE": "Interest rate must be non negative",
         "VALIDATION_INVALID_PENALTY_PERCENTAGE": "Early withdrawal penalty must be between 0 and 100",
-        "VALIDATION_INVALID_INVESTMENT_TYPE": "Invalid investment type",
+        "VALIDATION_INVALID_FIXED_TERM_CONFIG": "A fixed-term position requires a valid term in days or maturity date",
+        "VALIDATION_INVALID_POSITION_CAP": "The position cap configuration is not valid",
+        "POSITION_CAP_EXCEEDED": "The amount exceeds the position cap",
+        "INVALID_OVERFLOW_TARGET": "The overflow destination position is not valid",
+        "FIXED_TERM_CAP_NOT_ALLOWED": "A fixed-term position does not support a cap or overflow",
         "VALIDATION_INVALID_BILLING_CYCLE_DAY": "Billing cycle day must be between 1 and 31",
         "VALIDATION_INVALID_PAYMENT_DUE_DAY": "Payment due day must be between 1 and 31",
         "VALIDATION_INVALID_CREDIT_LIMIT": "Credit limit must be positive",
@@ -278,7 +304,7 @@ def get_error_detail_message(code: str, language: str = "es") -> str:
 
 
 def translate_validation_message(
-    error_type: str, field_name: Optional[str] = None, language: str = "es", **context
+    error_type: str, field_name: str | None = None, language: str = "es", **context
 ) -> str:
     """
     Translates a Pydantic validation error message into the specified language, formatting it with provided context.

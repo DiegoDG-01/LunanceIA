@@ -3,22 +3,22 @@ from fastapi import Depends
 from application.incomes.commands.create_recurring_income import (
     CreateRecurringIncomeHandler,
 )
-from application.incomes.commands.update_recurring_income import (
-    UpdateRecurringIncomeHandler,
-)
 from application.incomes.commands.delete_recurring_income import (
     DeleteRecurringIncomeHandler,
 )
 from application.incomes.commands.state_recurring_income import (
     StateRecurringIncomeHandler,
 )
-from application.incomes.queries.get_recurring_incomes import (
-    GetRecurringIncomesHandler,
+from application.incomes.commands.update_recurring_income import (
+    UpdateRecurringIncomeHandler,
 )
+from application.incomes.queries.get_income_deposits import GetIncomeDepositsHandler
 from application.incomes.queries.get_recurring_income_by_id import (
     GetRecurringIncomeByIdHandler,
 )
-from application.incomes.queries.get_income_deposits import GetIncomeDepositsHandler
+from application.incomes.queries.get_recurring_incomes import (
+    GetRecurringIncomesHandler,
+)
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
@@ -26,23 +26,22 @@ from infrastructure.database.repositories.sqlalchemy_account_repository import (
 from infrastructure.database.repositories.sqlalchemy_category_repository import (
     SQLAlchemyCategoryRepository,
 )
-from infrastructure.database.repositories.sqlalchemy_recurring_income_repository import (
-    SQLAlchemyRecurringIncomeRepository,
-)
 from infrastructure.database.repositories.sqlalchemy_income_deposit_repository import (
     SQLAlchemyIncomeDepositRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_recurring_income_repository import (
+    SQLAlchemyRecurringIncomeRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
-
 from presentation.dependencies.repositories import (
     get_account_repository,
-    get_user_repository,
     get_category_repository,
-    get_recurring_income_repository,
     get_income_deposit_repository,
+    get_recurring_income_repository,
     get_unit_of_work_repository,
+    get_user_repository,
 )
 
 

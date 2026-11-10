@@ -1,12 +1,11 @@
 from datetime import date, datetime
-from typing import Optional
 
-from sqlalchemy import String, DateTime, ForeignKey, Enum, Text, Date
-from sqlalchemy.sql import func
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
 
-from infrastructure.database.connection import Base
 from domain.objects.enums import ReminderType
+from infrastructure.database.connection import Base
 
 
 class ReminderModel(Base):
@@ -17,7 +16,7 @@ class ReminderModel(Base):
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     title: Mapped[str] = mapped_column(String(100))
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     reminder_date: Mapped[date] = mapped_column(Date, index=True)
     type: Mapped[ReminderType] = mapped_column(
         Enum(ReminderType), default=ReminderType.OTRO

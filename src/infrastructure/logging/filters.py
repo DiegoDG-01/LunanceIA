@@ -1,4 +1,5 @@
 import logging
+
 from infrastructure.logging.context import get_request_id, get_user_id
 
 

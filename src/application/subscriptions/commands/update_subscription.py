@@ -1,21 +1,23 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, datetime
 from typing import cast
 
-from domain.objects.money import Money
-from domain.repositories.subscription_repository import SubscriptionRepository
-from domain.repositories.category_repository import CategoryRepository
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.unit_of_work import AbstractUnitOfWork
 from application.dto.subscription_dto import (
-    UpdateSubscriptionDTO,
     SubscriptionResponseDTO,
+    UpdateSubscriptionDTO,
 )
+from domain.objects.money import Money
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.categories.category_repository import CategoryRepository
+from domain.repositories.subscriptions.subscription_repository import (
+    SubscriptionRepository,
+)
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.exceptions.domain import (
-    SubscriptionNotFoundError,
-    CategoryNotFoundError,
     AccountNotFoundError,
+    CategoryNotFoundError,
     InvalidSubscriptionDateRangeError,
+    SubscriptionNotFoundError,
 )
 
 
@@ -102,7 +104,7 @@ class UpdateSubscriptionHandler:
             )
 
         if schedule_changed:
-            subscription.reschedule(date.today())
+            subscription.reschedule(datetime.now(UTC).date())
 
         async with self.uow:
             updated_subscription = await self.subscription_repository.update(

@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, AsyncMock
 
 from application.auth.commands.login import LoginCommand, LoginHandler, LoginResponse
 from application.interfaces.auth_service import AuthConfig
-from domain.entities.user import User
+from domain.entities.users.user import User
 from shared.exceptions.application import CommandValidationError
 from shared.exceptions.domain import InvalidCredentialsError, UserInactiveError
 

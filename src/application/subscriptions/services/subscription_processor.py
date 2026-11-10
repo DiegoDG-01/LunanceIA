@@ -1,21 +1,25 @@
-from datetime import date
-
 import logging
+from datetime import UTC, date, datetime
 from typing import cast
 
-from domain.entities.subscription import Subscription
-from domain.entities.transaction import Transaction
-from domain.entities.subscription_charge import SubscriptionCharge
-from domain.repositories.account_repository import AccountRepository
-from domain.repositories.subscription_repository import SubscriptionRepository
-from domain.repositories.subscription_charge_repository import (
+from domain.entities.notifications.notification import Notification
+from domain.entities.subscriptions.subscription import Subscription
+from domain.entities.subscriptions.subscription_charge import SubscriptionCharge
+from domain.entities.transactions.transaction import Transaction
+from domain.objects.enums import NotificationType, TransactionType
+from domain.repositories.accounts.account_repository import AccountRepository
+from domain.repositories.notifications.notification_repository import (
+    NotificationRepository,
+)
+from domain.repositories.subscriptions.subscription_charge_repository import (
     SubscriptionChargeRepository,
 )
-from domain.repositories.transaction_repository import TransactionRepository
-from domain.objects.enums import TransactionType
-from domain.repositories.notification_repository import NotificationRepository
-from domain.entities.notification import Notification
-from domain.objects.enums import NotificationType
+from domain.repositories.subscriptions.subscription_repository import (
+    SubscriptionRepository,
+)
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
 from shared.exceptions.domain import AccountNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -40,7 +44,7 @@ class SubscriptionProcessor:
 
     async def process_due_subscriptions(self) -> dict:
         logger.info("Processing due subscriptions")
-        today = date.today()
+        today = datetime.now(UTC).date()
 
         stats = {
             "processed": 0,
@@ -63,15 +67,14 @@ class SubscriptionProcessor:
                     if created == 0:
                         stats["skipped"] += 1
                 except Exception as e:
-                    logger.error(
-                        f"Error processing due subscription {subscription.uuid}: {e}",
-                        exc_info=True,
+                    logger.exception(
+                        f"Error processing due subscription {subscription.uuid}: {e}"
                     )
                     stats["failed"] += 1
 
             logger.info(f"Processed {stats['processed']} subscriptions")
         except Exception as e:
-            logger.error(f"Error processing due subscriptions: {e}", exc_info=True)
+            logger.exception(f"Error processing due subscriptions: {e}")
             stats["failed"] = 1
             raise
 

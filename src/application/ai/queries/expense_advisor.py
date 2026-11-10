@@ -1,12 +1,18 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, datetime
+
+from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
 
 from application.ai.schemas.expense_analysis import ExpenseAnalysis
 from application.interfaces.ai_agent import AIAgentInterface
-from domain.repositories.transaction_repository import TransactionRepository
-from shared.exceptions.domain import TransactionNotActivityError
-from pydantic_ai.exceptions import UnexpectedModelBehavior, ModelHTTPError
-from shared.exceptions.domain import AIInvalidResponseError, AIServiceError
+from domain.repositories.transactions.transaction_repository import (
+    TransactionRepository,
+)
+from shared.exceptions.domain import (
+    AIInvalidResponseError,
+    AIServiceError,
+    TransactionNotActivityError,
+)
 
 
 @dataclass
@@ -26,8 +32,8 @@ class GetExpenseAdvisorHandler:
     async def handle(self, query: GetExpenseAdvisorQuery) -> ExpenseAnalysis:
         transactions = await self.transaction_repository.get_by_date_range(
             query.user_id,
-            start_date=date.today().replace(day=1),
-            end_date=date.today(),
+            start_date=datetime.now(UTC).date().replace(day=1),
+            end_date=datetime.now(UTC).date(),
         )
 
         if not transactions:

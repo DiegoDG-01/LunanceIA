@@ -1,5 +1,4 @@
 import time
-from typing import Optional
 
 from fastapi import HTTPException, Request
 from fastapi_advanced_rate_limiter.fixed_window import FixedWindowRateLimiter
@@ -42,7 +41,7 @@ limiter_auth_failure = FixedWindowRateLimiter(
 
 
 def enforce_rate_limit(
-    limiter: FixedWindowRateLimiter, request: Request, *, key: Optional[str] = None
+    limiter: FixedWindowRateLimiter, request: Request, *, key: str | None = None
 ) -> None:
     if settings.ENVIRONMENT.upper() == "TEST":
         return

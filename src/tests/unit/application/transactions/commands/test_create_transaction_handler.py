@@ -5,10 +5,10 @@ from application.transactions.commands.create_transaction import (
     CreateTransactionHandler,
 )
 from application.dto.transaction_dto import CreateTransactionDTO
-from domain.entities.user import User
-from domain.entities.account import Account
-from domain.entities.transaction import Transaction
-from domain.entities.category import Category
+from domain.entities.users.user import User
+from domain.entities.accounts.account import Account
+from domain.entities.transactions.transaction import Transaction
+from domain.entities.categories.category import Category
 from domain.objects.money import Money
 from domain.objects.enums import TransactionType, AccountType
 from shared.exceptions.domain import (
@@ -35,7 +35,6 @@ class TestCreateTransactionHandler:
             "transaction_repo": MagicMock(),
             "category_repo": MagicMock(),
             "bank_repo": bank_repo,
-            "investment_settings_repo": MagicMock(),
             "uow": uow,
         }
 
@@ -47,7 +46,6 @@ class TestCreateTransactionHandler:
             mocks["transaction_repo"],
             mocks["category_repo"],
             mocks["bank_repo"],
-            mocks["investment_settings_repo"],
             mocks["uow"],
         )
 

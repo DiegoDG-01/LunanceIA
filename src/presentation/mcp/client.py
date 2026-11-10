@@ -1,8 +1,7 @@
 import httpx
+from mcp.server.mcpserver import Context
 
 from presentation.mcp.config import mcp_settings
-from mcp.server.fastmcp import Context
-
 
 _client = httpx.AsyncClient(
     base_url=f"{mcp_settings.LUNANCE_API_BASE_URL}/api/v2",

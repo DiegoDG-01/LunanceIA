@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from domain.repositories.api_key_repository import APIKeyRepository
+from domain.repositories.auth.api_key_repository import APIKeyRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 
 

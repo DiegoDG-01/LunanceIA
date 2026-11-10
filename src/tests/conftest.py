@@ -29,7 +29,7 @@ from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
     SQLAlchemyUnitOfWork,
 )
 from infrastructure.security.api_key_service import APIKeyService
-from domain.entities.user import User
+from domain.entities.users.user import User
 
 # Import models to register them with Base.metadata
 import infrastructure.database.models  # noqa: F401

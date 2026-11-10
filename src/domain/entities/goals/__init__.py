@@ -1,0 +1,1 @@
+"""Saving-goal domain entities."""

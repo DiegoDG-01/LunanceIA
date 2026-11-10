@@ -1,0 +1,1 @@
+"""Investment repository contracts."""

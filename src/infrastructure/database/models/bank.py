@@ -1,5 +1,3 @@
-from typing import Optional
-
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -13,6 +11,6 @@ class BankModel(Base):
     name: Mapped[str] = mapped_column(String(100))
     code: Mapped[str] = mapped_column(String(3), unique=True, index=True)
     country: Mapped[str] = mapped_column(String(2), default="MX")
-    logo_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
+    logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    color: Mapped[str | None] = mapped_column(String(7), nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)

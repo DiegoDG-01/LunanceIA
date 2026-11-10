@@ -13,11 +13,13 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 ### 💰 Gestión Financiera Completa
 - **Seguimiento de Transacciones**: Registro detallado de ingresos y gastos
 - **Gestión de Cuentas**: Soporte para múltiples tipos de cuenta (efectivo, débito, crédito, ahorros, inversión)
-- **Inversiones**: Cálculo automático de rendimientos diarios (interés simple y compuesto) con proyecciones
+- **Apartados de Inversión**: Varios apartados dentro de una misma cuenta (como las cajitas de las apps bancarias y SOFIPOs), a la vista o a plazo fijo, cada uno con su tasa y su propio saldo; el saldo de la cuenta queda como disponible y el dinero apartado no se puede gastar hasta regresarlo
+- **Topes y tramos por monto**: Cada apartado a la vista puede tener un tope y un destino para el excedente (el saldo disponible u otro apartado). Encadenarlos reproduce las tasas por tramo de las SOFIPOs: los primeros 25,000 al 10% y el resto al 5%
+- **Inversiones**: Cálculo automático de rendimientos diarios por apartado (interés simple y compuesto), proyecciones y vencimientos automáticos (renovar, liquidar o dejar pendiente)
 - **Suscripciones**: Control de pagos recurrentes con generación automática de cargos
 - **Presupuestos Inteligentes**: Configuración de límites de gasto por categoría con alertas automáticas
 - **Metas de Ahorro**: Establecimiento y seguimiento de objetivos financieros
-- **Tareas Programadas**: Procesamiento diario automático de suscripciones y rendimientos de inversión
+- **Tareas Programadas**: Procesamiento diario automático de suscripciones, ingresos, rendimientos de inversión y vencimientos de apartados
 
 ### 🤖 Agentes IA
 - **Análisis de Imagen**: Extrae datos (monto, categoría, descripción, fecha) de imágenes de recibos/tickets (límite: 2 por día)
@@ -50,7 +52,7 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 - **IA**: pydantic-ai-slim 2.16+ con extras `[google, openai]` (Google Gemini 2.x por defecto, compatible con OpenAI/Ollama vía `AI_BASE_URL`)
 - **Procesamiento de Imágenes**: Pillow 12.3+
 - **Cabeceras de seguridad**: `secure` 1.0+
-- **Tareas programadas**: APScheduler 3.11+ (suscripciones, ingresos, rendimientos)
+- **Tareas programadas**: APScheduler 3.11+ (suscripciones, ingresos, rendimientos, vencimientos de apartados)
 - **Internacionalización**: i18n propio (es/en)
 
 ### 🦀 Motor de Cálculo Rust (Beta)
@@ -193,7 +195,8 @@ La API REST de Lunance IA v2 utiliza autenticación JWT y sigue los principios d
 - 💳 **Cuentas**: `/api/v2/account/` (CRUD completo + activación/desactivación)
 - 💰 **Transacciones**: `/api/v2/transaction/` (CRUD completo)
 - 🔄 **Suscripciones**: `/api/v2/subscription/` (CRUD completo + cargos + activación)
-- 📈 **Inversiones**: `/api/v2/investments/` (rendimientos históricos + proyecciones)
+- 📈 **Inversiones**: `/api/v2/investments/` (rendimientos históricos + proyecciones por cuenta)
+- 🐷 **Apartados de inversión**: `/api/v2/positions/` (crear apartados, configurar topes, depositar, retirar, liquidar + rendimientos y proyecciones por apartado)
 - 🏦 **Bancos**: `/api/v2/bank/` (catálogo de bancos)
 - 🏷️ **Categorías**: `/api/v2/category/` (listado de categorías)
 - 📊 **Dashboard**: `/api/v2/dashboard/` (resumen financiero)

@@ -5,7 +5,7 @@ from application.accounts.commands.delete_account import (
     DeleteAccountCommand,
     DeleteAccountHandler,
 )
-from domain.entities.account import Account
+from domain.entities.accounts.account import Account
 from domain.objects.enums import AccountType
 from domain.objects.money import Money
 from domain.services.account_service import AccountService

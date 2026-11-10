@@ -5,7 +5,6 @@ class TokenResponse(BaseModel):
     """Schema de respuesta para tokens."""
 
     access_token: str = Field(..., description="Access token")
-    refresh_token: str = Field(..., description="Refresh token")
     token_type: str = Field(default="bearer", description="Tipo de token")
 
 

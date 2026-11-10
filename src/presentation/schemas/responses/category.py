@@ -1,14 +1,13 @@
 from pydantic import BaseModel
-from typing import List, Optional
 
 
 class CategoryResponse(BaseModel):
     id: int
     name: str
     type: str
-    description: Optional[str]
-    color: Optional[str]
-    icon: Optional[str]
+    description: str | None
+    color: str | None
+    icon: str | None
     is_active: bool
 
     class config:
@@ -16,5 +15,5 @@ class CategoryResponse(BaseModel):
 
 
 class CategoryListResponse(BaseModel):
-    categories: List[CategoryResponse]
+    categories: list[CategoryResponse]
     total: int

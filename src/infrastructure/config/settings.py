@@ -5,8 +5,13 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     SECRET_KEY_REFRESH: str
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    COOKIE_DOMAIN: str = ""
+    COOKIE_SECURE: bool = True
+    COOKIE_SAMESITE: str = "Lax"
+    COOKIE_HTTPONLY: bool = True
 
     ENVIRONMENT: str = "PROD"
     FRONTEND_URL: str = ""

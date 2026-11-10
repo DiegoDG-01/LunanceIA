@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 
-from domain.entities.recurring_income import RecurringIncome
+from domain.entities.incomes.recurring_income import RecurringIncome
 from domain.objects.enums import Frequency
 from domain.objects.money import Money
 from shared.exceptions.domain import InvalidIncomeDateRangeError
