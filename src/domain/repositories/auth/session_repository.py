@@ -37,8 +37,16 @@ class SessionRepository(ABC):
         reason: RevocationReason,
         *,
         device_id: str | None = None,
+        except_uuid: str | None = None,
     ) -> list[UserSession]:
-        """Revoca las sesiones abiertas del usuario (o solo las de un dispositivo) y las devuelve."""
+        """Revoca las sesiones abiertas del usuario (o solo las de un dispositivo) y las devuelve.
+
+        `except_uuid` conserva esa sesión (cambiar la contraseña no cierra la actual)."""
+
+    @abstractmethod
+    async def has_device(self, user_id: int, device_id: str) -> bool:
+        """True si el dispositivo tuvo alguna vez sesión en la cuenta (aunque ya esté cerrada
+        y mientras no se purgue)."""
 
     @abstractmethod
     async def purge(self, *, expired_before: datetime, revoked_before: datetime) -> int:

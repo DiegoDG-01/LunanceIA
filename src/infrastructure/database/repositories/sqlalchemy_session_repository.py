@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import cast
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, exists, or_, select
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -115,6 +115,7 @@ class SQLAlchemySessionRepository(SessionRepository):
         reason: RevocationReason,
         *,
         device_id: str | None = None,
+        except_uuid: str | None = None,
     ) -> list[UserSession]:
         # MySQL no tiene UPDATE … RETURNING: se bloquean las filas, se cambian y se devuelven.
         stmt = (
@@ -128,12 +129,23 @@ class SQLAlchemySessionRepository(SessionRepository):
         )
         if device_id is not None:
             stmt = stmt.where(UserSessionModel.device_id == device_id)
+        if except_uuid is not None:
+            stmt = stmt.where(UserSessionModel.uuid != except_uuid)
         models = (await self.db.execute(stmt)).scalars().all()
         for model in models:
             model.revoked_at = now
             model.revoked_reason = reason.value
         await self.db.flush()
         return [self._model_to_entity(model) for model in models]
+
+    async def has_device(self, user_id: int, device_id: str) -> bool:
+        stmt = select(
+            exists().where(
+                UserSessionModel.user_id == user_id,
+                UserSessionModel.device_id == device_id,
+            )
+        )
+        return bool((await self.db.execute(stmt)).scalar())
 
     async def purge(self, *, expired_before: datetime, revoked_before: datetime) -> int:
         purgeable = or_(

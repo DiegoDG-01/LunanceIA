@@ -18,11 +18,11 @@ class UserRepository(ABC):
 
     @abstractmethod
     async def get_by_email(self, email: EmailStr) -> User | None:
-        """Get user by email"""
+        """Usuario por correo, ya normalizado (`shared.utils.emails.normalize_email`)."""
 
     @abstractmethod
-    async def get_by_id(self, user_id: int) -> User | None:
-        """Get user by ID."""
+    async def get_by_id(self, user_id: int, *, for_update: bool = False) -> User | None:
+        """Get user by ID. `for_update` bloquea la fila hasta el fin de la transacción."""
 
     @abstractmethod
     async def update(self, user: User) -> User:

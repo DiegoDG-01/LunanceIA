@@ -20,6 +20,8 @@ class RevocationReason(StrEnum):
     REPLACED = "replaced"
     REVOKED_BY_USER = "revoked_by_user"
     REFRESH_REUSE = "refresh_reuse"
+    PASSWORD_RESET = "password_reset"
+    PASSWORD_CHANGE = "password_change"
 
 
 @dataclass(frozen=True, slots=True)

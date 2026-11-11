@@ -16,7 +16,8 @@ class UserModel(Base):
         CHAR(36), unique=True, index=True, default=lambda: str(uuid.uuid4())
     )
     name: Mapped[str] = mapped_column(String(100), unique=True, index=True)
-    email: Mapped[str | None] = mapped_column(String(100), unique=True, nullable=True)
+    # Identificador de login: obligatorio, único y normalizado (sin espacios, minúsculas).
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     password: Mapped[str | None] = mapped_column(String(255), nullable=True)
     picture: Mapped[str | None] = mapped_column(String(500), nullable=True)
     email_verified: Mapped[bool] = mapped_column(default=False)

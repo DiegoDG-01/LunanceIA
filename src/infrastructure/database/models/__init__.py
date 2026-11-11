@@ -10,6 +10,8 @@ from .installment import InstallmentChargeModel, InstallmentPurchaseModel
 from .investment_position import InvestmentPositionModel
 from .investment_yield import InvestmentYieldModel
 from .notifications import NotificationModel
+from .password_reset_token import PasswordResetTokenModel
+from .pending_signup import EmailVerificationTokenModel, PendingSignupModel
 from .recurring_income import IncomeDepositModel, RecurringIncomeModel
 from .refresh_token import RefreshTokenModel
 from .reminder import ReminderModel
@@ -28,6 +30,7 @@ __all__ = [
     "BudgetModel",
     "CategoryModel",
     "CreditCardSettingsModel",
+    "EmailVerificationTokenModel",
     "IdempotencyKeyModel",
     "IncomeDepositModel",
     "InstallmentChargeModel",
@@ -35,6 +38,8 @@ __all__ = [
     "InvestmentPositionModel",
     "InvestmentYieldModel",
     "NotificationModel",
+    "PasswordResetTokenModel",
+    "PendingSignupModel",
     "RecurringIncomeModel",
     "RefreshTokenModel",
     "ReminderModel",

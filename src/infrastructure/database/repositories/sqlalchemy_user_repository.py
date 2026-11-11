@@ -53,9 +53,11 @@ class SQLAlchemyUserRepository(UserRepository):
         await self.db.refresh(model)
         return self._model_to_entity(model)
 
-    async def get_by_id(self, user_id: int) -> User | None:
+    async def get_by_id(self, user_id: int, *, for_update: bool = False) -> User | None:
         """Obtiene usuario por ID."""
         stmt = select(UserModel).where(UserModel.id == user_id)
+        if for_update:
+            stmt = stmt.with_for_update().execution_options(populate_existing=True)
         result = await self.db.execute(stmt)
         model = result.scalar_one_or_none()
 
@@ -88,6 +90,9 @@ class SQLAlchemyUserRepository(UserRepository):
 
         # Actualizar campos
         model.name = user.name
+        if user.email is not None:
+            model.email = user.email
+        model.email_verified = user.email_verified
         model.password = user.password
         model.is_active = user.is_active
         model.last_login = user.last_login

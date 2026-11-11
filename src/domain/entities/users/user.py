@@ -30,11 +30,15 @@ class User:
         cls,
         name: str,
         password: str,
+        email: str,
+        email_verified: bool = False,
     ):
-        """Factory method to create a new user"""
+        """Usuario con correo y contraseña (el correo ya normalizado)."""
         return cls(
             name=name,
             password=password,
+            email=email,
+            email_verified=email_verified,
         )
 
     def deactivate(self):

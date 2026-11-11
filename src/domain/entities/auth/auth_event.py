@@ -10,6 +10,12 @@ class AuthAction(StrEnum):
     LOGIN_THROTTLED = "login.throttled"
     SESSION_REVOKED = "session.revoked"
     SESSION_REFRESH_REUSE_DETECTED = "session.refresh_reuse_detected"
+    SIGNUP_REQUESTED = "signup.requested"
+    SIGNUP_VERIFICATION_RESENT = "signup.verification_resent"
+    SIGNUP_VERIFIED = "signup.verified"
+    PASSWORD_RESET_REQUESTED = "password.reset_requested"
+    PASSWORD_RESET = "password.reset"
+    PASSWORD_CHANGED = "password.changed"
 
 
 @dataclass(frozen=True, slots=True)
