@@ -147,6 +147,7 @@ HTTP_CODES_ERRORS = {
         "AUTH_PROVIDER_IN_USE": "Esa cuenta de Google o Apple ya está vinculada a otro usuario",
         "AUTH_LAST_LOGIN_METHOD": "No puedes quitar el único método de acceso de tu cuenta; crea una contraseña o vincula otro proveedor antes",
         "AUTH_PASSWORD_NOT_SET": "Tu cuenta no tiene contraseña; crea una con «Olvidé mi contraseña»",
+        "AUTH_REAUTH_REQUIRED": "Confirma que eres tú: escribe tu contraseña o vuelve a iniciar sesión",
         # JWT Validation error
         "JWT_VALIDATION_ERROR": "Token inválido: malformado o expirado",
         # Códigos específicos de Lunance - Recursos no encontrados
@@ -232,6 +233,7 @@ HTTP_CODES_ERRORS = {
         "AUTH_PROVIDER_IN_USE": "That Google or Apple account is already linked to another user",
         "AUTH_LAST_LOGIN_METHOD": "You cannot remove the only sign-in method of your account; set a password or link another provider first",
         "AUTH_PASSWORD_NOT_SET": "Your account has no password; create one with 'Forgot password'",
+        "AUTH_REAUTH_REQUIRED": "Confirm it is you: enter your password or sign in again",
         # JWT Validation error
         "JWT_VALIDATION_ERROR": "Invalid token: malformed or expired",
         # Códigos específicos de Lunance - Recursos no encontrados

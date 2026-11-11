@@ -133,6 +133,28 @@ class AppleTokenRequest(ProviderTokenRequest):
     )
 
 
+_CURRENT_PASSWORD_DESCRIPTION = (
+    "Contraseña actual; obligatoria si la cuenta tiene una. Sin contraseña, la sesión debe "
+    "haberse iniciado hace menos de 10 minutos"
+)
+
+
+class LinkGoogleRequest(ProviderTokenRequest):
+    current_password: str | None = Field(
+        default=None,
+        max_length=PASSWORD_MAX_LENGTH,
+        description=_CURRENT_PASSWORD_DESCRIPTION,
+    )
+
+
+class LinkAppleRequest(AppleTokenRequest):
+    current_password: str | None = Field(
+        default=None,
+        max_length=PASSWORD_MAX_LENGTH,
+        description=_CURRENT_PASSWORD_DESCRIPTION,
+    )
+
+
 class AppleSignInRequest(AppleTokenRequest):
     name: str | None = Field(
         default=None,

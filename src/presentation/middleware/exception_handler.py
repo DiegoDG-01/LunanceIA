@@ -88,6 +88,7 @@ from shared.exceptions.domain import (
     ProviderAccountConflictError,
     ProviderAlreadyLinkedError,
     ProviderLinkRequiredError,
+    RecentLoginRequiredError,
     SameAccountTransferError,
     SessionExpiredError,
     SessionNotFoundError,
@@ -127,6 +128,7 @@ EXCEPTION_MAP: dict[type[Exception], tuple[str, int]] = {
     ProviderAlreadyLinkedError: ("AUTH_PROVIDER_IN_USE", 409),
     LastLoginMethodError: ("AUTH_LAST_LOGIN_METHOD", 409),
     PasswordNotSetError: ("AUTH_PASSWORD_NOT_SET", 409),
+    RecentLoginRequiredError: ("AUTH_REAUTH_REQUIRED", 403),
     # --- Recursos No Encontrados (404) ---
     UserNotFoundError: ("NOT_FOUND_USER", 404),
     SessionNotFoundError: ("NOT_FOUND_SESSION", 404),

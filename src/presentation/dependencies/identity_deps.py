@@ -26,7 +26,7 @@ from application.auth.services.apple_tokens import (
 )
 from application.auth.services.external_accounts import ExternalAccounts
 from application.auth.services.sessions import SessionManager
-from application.interfaces.auth_service import SessionRevocationList
+from application.interfaces.auth_service import PasswordHasher, SessionRevocationList
 from application.interfaces.email import EmailQueue
 from application.interfaces.identity_providers import (
     AppleSignInGateway,
@@ -50,6 +50,7 @@ from infrastructure.security.secret_cipher import AesGcmSecretCipher
 from presentation.dependencies.auth_handler_deps import get_session_manager
 from presentation.dependencies.auth_services import (
     get_email_auth_config,
+    get_password_hasher,
     get_session_revocations,
 )
 from presentation.dependencies.email_deps import get_email_queue
@@ -163,9 +164,13 @@ def get_link_provider_handler(
     email_config: EmailAuthConfig = Depends(get_email_auth_config),
     uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
     apple_tokens: AppleTokenVault | None = Depends(get_apple_token_vault),
+    session_repo: SessionRepository = Depends(get_session_repository),
+    password_hasher: PasswordHasher = Depends(get_password_hasher),
 ) -> LinkProviderHandler:
     return LinkProviderHandler(
         gate=gate,
+        session_repository=session_repo,
+        password_hasher=password_hasher,
         apple_tokens=apple_tokens,
         user_repository=user_repo,
         auth_event_repository=auth_event_repo,

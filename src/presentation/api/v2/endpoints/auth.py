@@ -105,13 +105,13 @@ from presentation.dependencies.identity_deps import (
 from presentation.schemas.requests.auth import (
     AppleNotificationRequest,
     AppleSignInRequest,
-    AppleTokenRequest,
     ChangePasswordRequest,
     EmailRequest,
     GoogleSignInRequest,
+    LinkAppleRequest,
+    LinkGoogleRequest,
     LoginRequest,
     LogoutRequest,
-    ProviderTokenRequest,
     RefreshRequest,
     RegisterRequest,
     ResetPasswordRequest,
@@ -596,12 +596,13 @@ async def _limit_provider_change(request: Request, user_id: int) -> None:
 @router.post("/providers/google", response_model=LoginMethodsResponse)
 async def link_google(
     request: Request,
-    body: ProviderTokenRequest,
+    body: LinkGoogleRequest,
     auth: AccessContext = Depends(get_access_context),
     context: ClientContext = Depends(get_client_context),
     handler: LinkProviderHandler = Depends(get_link_provider_handler),
 ):
-    """Vincula una cuenta de Google a la cuenta con sesión iniciada (desde ajustes)."""
+    """Vincula una cuenta de Google a la cuenta con sesión iniciada (desde ajustes). Pide la
+    contraseña actual o, sin contraseña, una sesión reciente (403 AUTH_REAUTH_REQUIRED)."""
     user_id = cast(int, auth.user.id)
     await _limit_provider_change(request, user_id)
     user = await handler.handle(
@@ -611,6 +612,7 @@ async def link_google(
             provider=IdentityProvider.GOOGLE,
             id_token=body.id_token,
             nonce=body.nonce,
+            current_password=body.current_password,
             context=context,
         )
     )
@@ -620,12 +622,13 @@ async def link_google(
 @router.post("/providers/apple", response_model=LoginMethodsResponse)
 async def link_apple(
     request: Request,
-    body: AppleTokenRequest,
+    body: LinkAppleRequest,
     auth: AccessContext = Depends(get_access_context),
     context: ClientContext = Depends(get_client_context),
     handler: LinkProviderHandler = Depends(get_link_provider_handler),
 ):
-    """Vincula una cuenta de Apple a la cuenta con sesión iniciada (desde ajustes)."""
+    """Vincula una cuenta de Apple a la cuenta con sesión iniciada (desde ajustes). Pide la
+    contraseña actual o, sin contraseña, una sesión reciente (403 AUTH_REAUTH_REQUIRED)."""
     user_id = cast(int, auth.user.id)
     await _limit_provider_change(request, user_id)
     user = await handler.handle(
@@ -636,6 +639,7 @@ async def link_apple(
             id_token=body.id_token,
             nonce=body.nonce,
             authorization_code=body.authorization_code,
+            current_password=body.current_password,
             context=context,
         )
     )

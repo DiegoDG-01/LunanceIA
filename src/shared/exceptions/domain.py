@@ -584,6 +584,14 @@ class LastLoginMethodError(BusinessRuleError):
         super().__init__("No puedes quitar el único método de acceso de tu cuenta")
 
 
+class RecentLoginRequiredError(BusinessRuleError):
+    """Vincular Google o Apple pide confirmar que quien tiene la sesión es el dueño: la
+    contraseña actual o, en cuentas sin contraseña, un inicio de sesión reciente."""
+
+    def __init__(self):
+        super().__init__("Confirma tu identidad para vincular la cuenta")
+
+
 class PasswordNotSetError(BusinessRuleError):
     """La cuenta (creada con Google o Apple) no tiene contraseña que cambiar: se crea una
     con "Olvidé mi contraseña", que además prueba que el correo es suyo."""

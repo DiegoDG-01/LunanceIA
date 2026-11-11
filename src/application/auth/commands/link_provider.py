@@ -1,13 +1,16 @@
 """Vincular y desvincular Google o Apple desde una cuenta con sesión iniciada.
 
-Vincular no exige que el correo del proveedor coincida con el de la cuenta: quien tiene la
-sesión prueba que la cuenta es suya y el ID token, que la del proveedor también. Se avisa al
-correo de la cuenta. Desvincular nunca deja la cuenta sin forma de entrar.
+Vincular no exige que el correo del proveedor coincida con el de la cuenta: el ID token
+prueba que la cuenta del proveedor es de quien vincula. Como un access token robado bastaría
+para meter un Google ajeno y quedarse con la cuenta, también se pide confirmar la identidad:
+la contraseña actual o, si la cuenta no tiene, una sesión iniciada hace menos de
+`RECENT_LOGIN_MAX_AGE`. Se avisa al correo de la cuenta. Desvincular nunca deja la cuenta
+sin forma de entrar.
 """
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy.exc import IntegrityError
 
@@ -28,21 +31,28 @@ from application.auth.services.external_accounts import (
     linked_subject,
     set_subject,
 )
+from application.interfaces.auth_service import PasswordHasher
 from application.interfaces.email import EmailQueue
 from application.interfaces.identity_providers import AppleTokens, IdentityProvider
 from domain.entities.auth.auth_event import AuthAction, AuthEvent
 from domain.entities.users.user import User
 from domain.repositories.auth.auth_event_repository import AuthEventRepository
+from domain.repositories.auth.session_repository import SessionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.repositories.users.user_repository import UserRepository
 from shared.exceptions.application import InvalidProviderTokenError
 from shared.exceptions.domain import (
+    InvalidCurrentPasswordError,
     LastLoginMethodError,
     ProviderAccountConflictError,
     ProviderAlreadyLinkedError,
+    RecentLoginRequiredError,
     UserNotFoundError,
 )
 from shared.utils.time import utc_now
+
+# Sin contraseña, la prueba de identidad es haber iniciado sesión (con Google o Apple) hace poco.
+RECENT_LOGIN_MAX_AGE = timedelta(minutes=10)
 
 
 @dataclass
@@ -53,6 +63,7 @@ class LinkProviderCommand:
     id_token: str
     nonce: str | None = None
     authorization_code: str | None = None
+    current_password: str | None = None
     context: ClientContext = field(default_factory=ClientContext)
 
 
@@ -110,15 +121,52 @@ class LinkProviderHandler(_ProviderAccountHandler):
         self,
         *,
         gate: ProviderTokenGate,
+        session_repository: SessionRepository,
+        password_hasher: PasswordHasher,
         apple_tokens: AppleTokenVault | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.gate = gate
+        self.session_repository = session_repository
+        self.password_hasher = password_hasher
         self.apple_tokens = apple_tokens
+
+    async def _confirm_identity(self, command: LinkProviderCommand) -> None:
+        """Va antes de verificar el ID token, que es de un solo uso: si falta la confirmación,
+        la app la pide y reintenta con el mismo token."""
+        user = await self.user_repository.get_by_id(command.user_id)
+        if user is None:
+            raise UserNotFoundError()
+        if user.password is not None:
+            if not command.current_password:
+                raise RecentLoginRequiredError()
+            if not await self.password_hasher.verify(
+                command.current_password, user.password
+            ):
+                async with self.uow:
+                    await self._record(
+                        AuthAction.LOGIN_FAILED,
+                        command.user_id,
+                        command.context,
+                        {
+                            "method": "password",
+                            "reason": "invalid_password",
+                            "mode": "link",
+                            "provider": command.provider.value,
+                        },
+                        self._now(),
+                    )
+                    await self.uow.commit()
+                raise InvalidCurrentPasswordError()
+            return
+        session = await self.session_repository.get_by_uuid(command.session_uuid)
+        if session is None or self._now() - session.created_at > RECENT_LOGIN_MAX_AGE:
+            raise RecentLoginRequiredError()
 
     async def handle(self, command: LinkProviderCommand) -> User:
         provider = command.provider
+        await self._confirm_identity(command)
         try:
             identity = await self.gate.verify(provider, command.id_token, command.nonce)
             apple_tokens = await self.gate.exchange_apple_code(
