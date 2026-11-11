@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import exists, select
+from sqlalchemy import exists, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.entities.users.user import User
@@ -28,6 +28,8 @@ class SQLAlchemyUserRepository(UserRepository):
             last_login=model.last_login or datetime.now(UTC),
             registration_date=model.registration_date,
             is_active=model.is_active,
+            google_sub=model.google_sub,
+            apple_sub=model.apple_sub,
         )
 
     def _entity_to_model(self, entity: User) -> UserModel:
@@ -43,6 +45,8 @@ class SQLAlchemyUserRepository(UserRepository):
             last_login=entity.last_login,
             registration_date=entity.registration_date,
             is_active=entity.is_active,
+            google_sub=entity.google_sub,
+            apple_sub=entity.apple_sub,
         )
 
     async def create(self, user: User) -> User:
@@ -96,6 +100,8 @@ class SQLAlchemyUserRepository(UserRepository):
         model.password = user.password
         model.is_active = user.is_active
         model.last_login = user.last_login
+        model.google_sub = user.google_sub
+        model.apple_sub = user.apple_sub
 
         await self.db.flush()
         await self.db.refresh(model)
@@ -143,3 +149,26 @@ class SQLAlchemyUserRepository(UserRepository):
         result = await self.db.execute(stmt)
         model = result.scalar_one_or_none()
         return self._model_to_entity(model) if model else None
+
+    async def get_by_google_sub(self, subject: str) -> User | None:
+        stmt = select(UserModel).where(UserModel.google_sub == subject)
+        model = (await self.db.execute(stmt)).scalar_one_or_none()
+        return self._model_to_entity(model) if model else None
+
+    async def get_by_apple_sub(self, subject: str) -> User | None:
+        stmt = select(UserModel).where(UserModel.apple_sub == subject)
+        model = (await self.db.execute(stmt)).scalar_one_or_none()
+        return self._model_to_entity(model) if model else None
+
+    async def get_apple_refresh_token(self, user_id: int) -> str | None:
+        stmt = select(UserModel.apple_refresh_token).where(UserModel.id == user_id)
+        return (await self.db.execute(stmt)).scalar_one_or_none()
+
+    async def set_apple_refresh_token(
+        self, user_id: int, encrypted_token: str | None
+    ) -> None:
+        await self.db.execute(
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values(apple_refresh_token=encrypted_token)
+        )

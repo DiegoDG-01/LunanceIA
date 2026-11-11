@@ -24,6 +24,21 @@ class User:
         default_factory=lambda: datetime.now(UTC)
     )  # ← Auto-genera
     is_active: bool = True
+    # Cuentas de Google y Apple vinculadas (claim `sub` de su ID token).
+    google_sub: str | None = None
+    apple_sub: str | None = None
+
+    @property
+    def login_methods(self) -> list[str]:
+        """Formas de entrar: `password`, `google` y/o `apple`. Nunca debería quedar vacía."""
+        methods = []
+        if self.password is not None:
+            methods.append("password")
+        if self.google_sub is not None:
+            methods.append("google")
+        if self.apple_sub is not None:
+            methods.append("apple")
+        return methods
 
     @classmethod
     def create_local_user(
@@ -39,6 +54,26 @@ class User:
             password=password,
             email=email,
             email_verified=email_verified,
+        )
+
+    @classmethod
+    def create_external_user(
+        cls,
+        name: str,
+        email: str,
+        *,
+        google_sub: str | None = None,
+        apple_sub: str | None = None,
+    ):
+        """Usuario creado al entrar con Google o Apple: el proveedor ya verificó el correo y
+        no tiene contraseña (puede crear una con "Olvidé mi contraseña")."""
+        return cls(
+            name=name,
+            email=email,
+            password=None,
+            email_verified=True,
+            google_sub=google_sub,
+            apple_sub=apple_sub,
         )
 
     def deactivate(self):
