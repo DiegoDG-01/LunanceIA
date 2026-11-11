@@ -17,7 +17,7 @@ Esta guía te mostrará cómo usar la API REST de Lunance IA v2, incluyendo aute
 
 ## 🔐 Autenticación JWT
 
-La API gestiona la autenticación **por sí misma**, con usuario y contraseña, y abre **una sesión por dispositivo**: puedes tener la web, el iPhone y la tablet abiertos a la vez y cerrar cualquiera desde otro.
+La API gestiona la autenticación **por sí misma**, con correo y contraseña, y abre **una sesión por dispositivo**: puedes tener la web, el iPhone y la tablet abiertos a la vez y cerrar cualquiera desde otro.
 
 ### Cabeceras del dispositivo
 
@@ -30,12 +30,14 @@ Volver a iniciar sesión desde el mismo dispositivo sustituye solo la sesión de
 
 ### Flujo de Autenticación
 
-1. **Registro**: `POST /api/v2/auth/register` con usuario y contraseña
-2. **Login**: `POST /api/v2/auth/login` devuelve un *access token* y abre la sesión del dispositivo
-3. **API Requests**: incluir el access token en el header `Authorization`
-4. **Renovación**: `POST /api/v2/auth/refresh` cuando el access token caduca
-5. **Cierre de sesión**: `POST /api/v2/auth/logout` (esta sesión o `all_devices`)
-6. **Sesiones**: `GET /api/v2/auth/sessions` y `DELETE /api/v2/auth/sessions/{uuid}`
+1. **Registro**: `POST /api/v2/auth/register` con correo, username y contraseña → `202`; llega un correo con un enlace de verificación
+2. **Confirmar el correo**: la web abre el enlace y llama a `POST /api/v2/auth/email/verify` con el token → se crea la cuenta
+3. **Login**: `POST /api/v2/auth/login` con **correo** y contraseña devuelve un *access token* y abre la sesión del dispositivo
+4. **API Requests**: incluir el access token en el header `Authorization`
+5. **Renovación**: `POST /api/v2/auth/refresh` cuando el access token caduca
+6. **Cierre de sesión**: `POST /api/v2/auth/logout` (esta sesión o `all_devices`)
+7. **Sesiones**: `GET /api/v2/auth/sessions` y `DELETE /api/v2/auth/sessions/{uuid}`
+8. **Contraseña**: `POST /api/v2/auth/password/forgot` + `/password/reset` (con el enlace del correo) o `/password/change` (con sesión iniciada)
 
 ### Características de los tokens
 
@@ -56,9 +58,36 @@ Cerrar una sesión (logout, `DELETE /auth/sessions/{uuid}` o reuso detectado) in
 curl -X POST "http://localhost:8000/api/v2/auth/register" \
      -H "Content-Type: application/json" \
      -d '{
+       "email": "juan@example.com",
        "username": "juanperez",
        "password": "MiClave123!"
      }'
+```
+
+**Respuesta:** `202 Accepted`
+```json
+{
+  "message": "Si el correo es válido, te enviamos un enlace para confirmar tu cuenta. Revisa tu bandeja de entrada y la carpeta de spam."
+}
+```
+
+La cuenta **todavía no existe**: el registro queda pendiente (`pending_signups`, 7 días) y al correo llega un enlace `<EMAIL_LINK_BASE_URL>/verify-email?token=…` que vale 24 horas. El correo se guarda normalizado (sin espacios y en minúsculas) y el username debe ser único.
+
+- **Anti-enumeración**: la respuesta es la misma tenga o no cuenta el correo. Si ya la tiene, no se guarda nada y al buzón le llega un aviso ("ya tienes una cuenta") en lugar del enlace.
+- **Volver a registrarse** con un correo pendiente sustituye el registro (username y contraseña nuevos) e invalida los enlaces anteriores.
+- **Username ocupado** (por una cuenta o por otro registro pendiente): `409 BUSINESS_USERNAME_EXISTS`. Es el único caso distinto, y no depende del correo.
+- **Límites**: 5 registros por hora por IP y 5 correos de registro/reenvío por hora por buzón (`429`). Si Redis no responde: `503`.
+
+> **Requisitos de la contraseña**: mínimo 8 caracteres (máximo 256), con al menos una mayúscula, una minúscula, un dígito y un carácter especial (`!@#$%^&*(),.?":{}|<>`). Solo se guarda su hash Argon2id. Si no los cumple, la API responde `400 VALIDATION_ERROR` y el detalle incluye códigos como `PASSWORD_TOO_SHORT` o `PASSWORD_MISSING_UPPERCASE`.
+
+### Confirmar el correo
+
+La web (ruta `/verify-email`) lee el `token` de la URL y lo manda:
+
+```bash
+curl -X POST "http://localhost:8000/api/v2/auth/email/verify" \
+     -H "Content-Type: application/json" \
+     -d '{"token": "<token del enlace>"}'
 ```
 
 **Respuesta:** `200 OK`
@@ -66,11 +95,14 @@ curl -X POST "http://localhost:8000/api/v2/auth/register" \
 {
   "user_uuid": "550e8400-e29b-41d4-a716-446655440000",
   "username": "juanperez",
-  "message": "Usuario registrado exitosamente"
+  "email": "juan@example.com",
+  "message": "Correo confirmado. Ya puedes iniciar sesión."
 }
 ```
 
-> **Requisitos de la contraseña**: mínimo 8 caracteres, con al menos una mayúscula, una minúscula, un dígito y un carácter especial (`!@#$%^&*(),.?":{}|<>`). Se almacena con Argon2id. Si no los cumple, la API responde `400 VALIDATION_ERROR` y el detalle incluye códigos como `PASSWORD_TOO_SHORT` o `PASSWORD_MISSING_UPPERCASE`.
+Crea la cuenta ya verificada; **no abre sesión** (después se hace login). Cada enlace sirve una vez: repetido, caducado o inventado → `400 AUTH_INVALID_TOKEN`. Si alguien tomó el username mientras tanto → `409 BUSINESS_USERNAME_EXISTS` (hay que volver a registrarse).
+
+**Reenviar el enlace** ("no me llegó el correo"): `POST /api/v2/auth/email/verify/resend` con `{"email": "…"}` → siempre `202` con el mismo mensaje. Solo se manda algo si hay un registro pendiente; los enlaces anteriores siguen valiendo hasta caducar.
 
 ### Login
 
@@ -81,7 +113,7 @@ curl -X POST "http://localhost:8000/api/v2/auth/login" \
      -H "X-Lunance-Device: 0b5f3c55-7f4e-4f0e-9a43-0d6c2d0d6b8e" \
      -H "X-Lunance-Client: ios/1.4.0" \
      -d '{
-       "username": "juanperez",
+       "email": "juan@example.com",
        "password": "MiClave123!",
        "device_name": "iPhone de Juan"
      }'
@@ -97,9 +129,50 @@ curl -X POST "http://localhost:8000/api/v2/auth/login" \
 }
 ```
 
-En la web (sin `X-Lunance-Client` o con `web/…`) la respuesta no trae `refresh_token`: llega en la cookie `refresh_token` (`HttpOnly`, `Path=/api/v2/auth`). `device_name` es opcional.
+En la web (sin `X-Lunance-Client` o con `web/…`) la respuesta no trae `refresh_token`: llega en la cookie `refresh_token` (`HttpOnly`, `Path=/api/v2/auth`). `device_name` es opcional. El login es **por correo** (mayúsculas y espacios dan igual); el username ya no sirve para entrar.
 
-Credenciales incorrectas devuelven `401 AUTH_INVALID_CREDENTIALS`; una cuenta desactivada devuelve `401 AUTH_USER_INACTIVE`.
+| Caso | Respuesta |
+|---|---|
+| Correo inexistente o contraseña incorrecta | `401 AUTH_INVALID_CREDENTIALS` (misma respuesta y mismo coste) |
+| Contraseña correcta de un registro sin confirmar | `403 AUTH_EMAIL_NOT_VERIFIED` (solo lo ve quien conoce esa contraseña) |
+| Cuenta desactivada (tras validar la contraseña) | `401 AUTH_USER_INACTIVE` |
+| Bloqueo por intentos fallidos | `429 AUTH_TOO_MANY_ATTEMPTS` con `Retry-After` |
+| Redis no responde | `503 SERVICE_UNAVAILABLE` con `Retry-After: 5` |
+
+**Bloqueo por intentos fallidos** (en Redis, la clave es un hash del correo):
+- **Correo + IP**: tras 5 fallos seguidos, 1 minuto; cada fallo más lo duplica hasta 15 minutos. Frena a quien prueba desde una IP sin dejar fuera al dueño, que entra desde otra.
+- **Correo** (desde cualquier IP): 30 fallos en una hora bloquean 15 minutos. Un dispositivo (`X-Lunance-Device`) que ya tuvo sesión en la cuenta se lo salta.
+- Un login correcto reinicia los contadores; restablecer la contraseña quita el bloqueo del correo.
+- Aparte sigue el rate limit de 10 intentos por minuto por IP.
+
+### Recuperar la contraseña
+
+```bash
+# 1. Pedir el enlace (siempre 204, exista o no la cuenta)
+curl -X POST "http://localhost:8000/api/v2/auth/password/forgot" \
+     -H "Content-Type: application/json" \
+     -d '{"email": "juan@example.com"}'
+
+# 2. La web (ruta /reset-password) manda el token del enlace y la contraseña nueva
+curl -X POST "http://localhost:8000/api/v2/auth/password/reset" \
+     -H "Content-Type: application/json" \
+     -d '{"token": "<token del enlace>", "password": "OtraClave456!"}'
+```
+
+- `/password/forgot` responde **siempre `204`**, también al llegar al límite del buzón (3 por hora; entonces no se manda nada). Si el correo tiene un registro sin confirmar, le llegan instrucciones para confirmarlo en lugar del enlace.
+- El enlace (`<EMAIL_LINK_BASE_URL>/reset-password?token=…`) vale 1 hora y **una sola vez**; usarlo invalida los demás enlaces pendientes. Repetido o caducado → `400 AUTH_INVALID_TOKEN`.
+- `/password/reset` responde `204` y **cierra todas las sesiones** de la cuenta (motivo `password_reset`): sus access tokens dejan de valer al instante. Después se inicia sesión con la contraseña nueva. Al buzón le llega un aviso de que la contraseña cambió.
+
+### Cambiar la contraseña (con sesión iniciada)
+
+```bash
+curl -X POST "http://localhost:8000/api/v2/auth/password/change" \
+     -H "Authorization: Bearer <access_token>" \
+     -H "Content-Type: application/json" \
+     -d '{"current_password": "MiClave123!", "new_password": "OtraClave456!"}'
+```
+
+**Respuesta:** `204`. Cierra las **demás** sesiones (motivo `password_change`); la de este access token sigue abierta. También invalida los enlaces de recuperación pendientes. Contraseña actual incorrecta → `400 AUTH_INVALID_CURRENT_PASSWORD` (la sesión no se cierra); igual a la actual → `400 VALIDATION_ERROR` (`PASSWORD_SAME_AS_CURRENT`). Solo con access token (no con API key); límite de 5 por minuto por usuario.
 
 ### Usar Token en Requests
 
@@ -140,6 +213,8 @@ curl -X GET "http://localhost:8000/api/v2/auth/me" \
 {
   "user_uuid": "550e8400-e29b-41d4-a716-446655440000",
   "username": "juanperez",
+  "email": "juan@example.com",
+  "email_verified": true,
   "is_active": true
 }
 ```
@@ -314,6 +389,7 @@ POST /api/v2/auth/register
 **Request:**
 ```json
 {
+  "email": "juan@example.com",
   "username": "juanperez",
   "password": "MiClave123!"
 }
@@ -321,19 +397,49 @@ POST /api/v2/auth/register
 
 | Campo | Tipo | Requerido | Descripción |
 |-------|------|-----------|-------------|
+| `email` | string | ✅ | Correo válido (máx. 254); se guarda en minúsculas y es el identificador de login |
 | `username` | string | ✅ | 1–100 caracteres, único |
-| `password` | string | ✅ | Mínimo 8 caracteres, con mayúscula, minúscula, dígito y carácter especial |
+| `password` | string | ✅ | 8–256 caracteres, con mayúscula, minúscula, dígito y carácter especial |
 
-**Response:**
-```json
-{
-  "user_uuid": "550e8400-e29b-41d4-a716-446655440000",
-  "username": "juanperez",
-  "message": "Usuario registrado exitosamente"
-}
+**Response:** `202 Accepted` con `{"message": "…"}`, exista o no el correo. La cuenta se crea al confirmar el correo. Username ocupado → `409 BUSINESS_USERNAME_EXISTS`.
+
+#### Confirmar el correo
+```bash
+POST /api/v2/auth/email/verify
 ```
 
-Si el nombre de usuario ya existe, responde `400 VALIDATION_ERROR`.
+**Request:** `{"token": "<token del enlace>"}`
+
+**Response:** `200` con `user_uuid`, `username`, `email` y `message`. Token repetido, caducado o desconocido → `400 AUTH_INVALID_TOKEN`.
+
+#### Reenviar el enlace de verificación
+```bash
+POST /api/v2/auth/email/verify/resend
+```
+
+**Request:** `{"email": "juan@example.com"}` → siempre `202` con `{"message": "…"}`.
+
+#### Olvidé mi contraseña
+```bash
+POST /api/v2/auth/password/forgot
+```
+
+**Request:** `{"email": "juan@example.com"}` → siempre `204`.
+
+#### Restablecer la contraseña
+```bash
+POST /api/v2/auth/password/reset
+```
+
+**Request:** `{"token": "<token del enlace>", "password": "OtraClave456!"}` → `204`; cierra todas las sesiones. Token repetido o caducado → `400 AUTH_INVALID_TOKEN`.
+
+#### Cambiar la contraseña
+```bash
+POST /api/v2/auth/password/change
+Authorization: Bearer <access_token>
+```
+
+**Request:** `{"current_password": "MiClave123!", "new_password": "OtraClave456!"}` → `204`; cierra las demás sesiones y conserva esta. Contraseña actual incorrecta → `400 AUTH_INVALID_CURRENT_PASSWORD`.
 
 #### Login
 ```bash
@@ -345,7 +451,7 @@ X-Lunance-Client: ios/1.4.0                  # opcional; sin él, web
 **Request:**
 ```json
 {
-  "username": "juanperez",
+  "email": "juan@example.com",
   "password": "MiClave123!",
   "device_name": "iPhone de Juan"
 }
@@ -360,6 +466,8 @@ X-Lunance-Client: ios/1.4.0                  # opcional; sin él, web
   "refresh_token": "rt_Fo6BU0DC9Inbnp5l_4Lg0NQ0QebQJY_8PXrIQT-NYuc"
 }
 ```
+
+Errores: `401 AUTH_INVALID_CREDENTIALS`, `403 AUTH_EMAIL_NOT_VERIFIED`, `429 AUTH_TOO_MANY_ATTEMPTS` (con `Retry-After`), `503` si Redis no responde.
 
 #### Renovar Token
 ```bash
@@ -386,6 +494,8 @@ GET /api/v2/auth/me
 {
   "user_uuid": "550e8400-e29b-41d4-a716-446655440000",
   "username": "juanperez",
+  "email": "juan@example.com",
+  "email_verified": true,
   "is_active": true
 }
 ```
@@ -1805,32 +1915,39 @@ Retorna las notificaciones pendientes del usuario y las limpia (una vez leídas,
 ### Flujo Completo desde Cero
 
 ```bash
-# 1. Registrar el usuario
+# 1. Registrar el usuario (202: llega un correo con el enlace de verificación;
+#    en local, en Mailpit: http://localhost:8025)
 curl -X POST "http://localhost:8000/api/v2/auth/register" \
      -H "Content-Type: application/json" \
      -d '{
+       "email": "juan@example.com",
        "username": "juanperez",
        "password": "MiClave123!"
      }'
 
-# 2. Iniciar sesión y guardar los tokens
+# 2. Confirmar el correo con el token del enlace (crea la cuenta)
+curl -X POST "http://localhost:8000/api/v2/auth/email/verify" \
+     -H "Content-Type: application/json" \
+     -d '{"token": "<token del enlace>"}'
+
+# 3. Iniciar sesión con el correo y guardar los tokens
 RESPONSE=$(curl -s -X POST "http://localhost:8000/api/v2/auth/login" \
      -H "Content-Type: application/json" \
      -H "X-Lunance-Device: $(uuidgen)" \
      -H "X-Lunance-Client: ios/1.0.0" \
      -d '{
-       "username": "juanperez",
+       "email": "juan@example.com",
        "password": "MiClave123!"
      }')
 
 export ACCESS_TOKEN=$(echo "$RESPONSE" | jq -r .access_token)
 export REFRESH_TOKEN=$(echo "$RESPONSE" | jq -r .refresh_token)
 
-# 3. Verificar usuario autenticado
+# 4. Verificar usuario autenticado
 curl -X GET "http://localhost:8000/api/v2/auth/me" \
      -H "Authorization: Bearer $ACCESS_TOKEN"
 
-# 4. Crear primera cuenta
+# 5. Crear primera cuenta
 curl -X POST "http://localhost:8000/api/v2/account/" \
      -H "Authorization: Bearer $ACCESS_TOKEN" \
      -H "Idempotency-Key: $(uuidgen)" \
@@ -1842,7 +1959,7 @@ curl -X POST "http://localhost:8000/api/v2/account/" \
        "initial_balance": 5000.00
      }'
 
-# 5. Listar todas las cuentas
+# 6. Listar todas las cuentas
 curl -X GET "http://localhost:8000/api/v2/account/" \
      -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
@@ -2101,10 +2218,13 @@ curl -X GET "http://localhost:8000/api/v2/account/" \
 | 401 | Unauthorized | Token inválido o faltante |
 | 403 | Forbidden | Sin permisos para el recurso |
 | 404 | Not Found | Recurso no encontrado |
-| 409 | Conflict | Regla de negocio en conflicto, o `IDEMPOTENCY_KEY_IN_USE` |
+| 202 | Accepted | Registro o reenvío de verificación recibido (la respuesta no revela si el correo existe) |
+| 204 | No Content | Operación sin cuerpo de respuesta (p. ej. `/auth/password/*`) |
+| 409 | Conflict | Regla de negocio en conflicto, `BUSINESS_USERNAME_EXISTS` o `IDEMPOTENCY_KEY_IN_USE` |
 | 422 | Unprocessable Entity | Error de validación de datos |
-| 429 | Too Many Requests | Se excedió el límite de rate limiting |
+| 429 | Too Many Requests | Se excedió el límite de rate limiting, o `AUTH_TOO_MANY_ATTEMPTS` (bloqueo del login) |
 | 500 | Internal Server Error | Error interno del servidor |
+| 503 | Service Unavailable | Redis no responde en login, registro o recuperación de contraseña (con `Retry-After`) |
 
 ## 📄 Límites y Paginación
 
@@ -2116,15 +2236,20 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 
 | Endpoint | Límite | Razón |
 |----------|--------|-------|
-| `POST /auth/register` | **5 requests/hora** | Evita el alta masiva de cuentas |
-| `POST /auth/login` | **10 requests/minuto** | Frena los ataques de fuerza bruta |
+| `POST /auth/register` | **5 requests/hora** por IP + **5 correos/hora por buzón** (compartido con el reenvío) | Evita el alta masiva y llenar el buzón de otro |
+| `POST /auth/email/verify` | **10 requests/minuto** | Confirmación del correo |
+| `POST /auth/email/verify/resend` | **5 requests/minuto** por IP + límite por buzón | Reenvío del enlace |
+| `POST /auth/password/forgot` | **5 requests/minuto** por IP + **3 correos/hora por buzón** (al pasarlo responde 204 sin mandar nada) | Recuperación de contraseña |
+| `POST /auth/password/reset` | **10 requests/minuto** | Recuperación de contraseña |
+| `POST /auth/password/change` | **5 requests/minuto** por usuario | Comprueba la contraseña actual |
+| `POST /auth/login` | **10 requests/minuto** + bloqueo por correo (ver [Login](#login)) | Frena los ataques de fuerza bruta |
 | `POST /auth/refresh` | **20 requests/minuto** | Renovación de sesión |
 | `POST /auth/logout` | **10 requests/minuto** | Operación normal |
 | `GET /auth/sessions` | **30 requests/minuto** | Lista de sesiones |
 | `DELETE /auth/sessions/{uuid}` | **20 requests/minuto** | Cerrar una sesión |
 | `GET /auth/me` | **100 requests/minuto** | Lectura de perfil frecuente |
 
-> **Nota**: además de estos límites por endpoint, los intentos de autenticación fallidos se limitan por IP. Superarlos devuelve `429` aunque las credenciales acaben siendo correctas.
+> **Nota**: además de estos límites por endpoint, los intentos de autenticación fallidos se limitan por IP, y el login se bloquea por correo (+ IP) tras varios fallos (`429 AUTH_TOO_MANY_ATTEMPTS`). Superarlos devuelve `429` aunque las credenciales acaben siendo correctas. Si Redis no responde, login, registro, verificación y recuperación de contraseña responden `503`.
 
 #### Endpoints de Cuentas
 
@@ -2405,11 +2530,11 @@ class LunanceClient:
         }
         self.client = httpx.AsyncClient()
 
-    async def login(self, username: str, password: str):
+    async def login(self, email: str, password: str):
         """Inicia sesión y guarda el access token para las siguientes llamadas."""
         response = await self.client.post(
             f"{self.base_url}/api/v2/auth/login",
-            json={"username": username, "password": password},
+            json={"email": email, "password": password},
             headers=self.device,
         )
         response.raise_for_status()

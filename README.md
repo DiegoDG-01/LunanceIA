@@ -27,7 +27,8 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 - **Servidor MCP**: Expone la API como herramientas para agentes/LLM (consultar y registrar finanzas en lenguaje natural), autenticado por API Key con permisos por scope. Ver [MCP.md](docs/MCP.md)
 
 ### 🔐 Seguridad y Autenticación
-- **Autenticación propia**: Registro y login con usuario y contraseña, sin depender de proveedores externos
+- **Autenticación propia**: Registro con verificación de correo y login con correo y contraseña, sin depender de proveedores externos
+- **Recuperación de contraseña**: Enlaces de un solo uso por correo (Resend en producción, Mailpit en local); restablecer o cambiar la contraseña cierra las demás sesiones
 - **JWT Tokens**: La API emite y valida sus propios tokens (EdDSA/Ed25519) con una sesión por dispositivo; contraseñas hasheadas con Argon2id
 - **Refresh tokens rotativos**: Se almacenan solo como hash SHA-256 y se revocan al cerrar sesión
 - **API Keys**: Acceso programático con autenticación dual (JWT o `X-API-Key`) y permisos por scope; las keys se guardan hasheadas (SHA-256) y nunca permiten editar ni eliminar
@@ -113,6 +114,8 @@ cp .env.example .env
 3. **Ejecutar con Docker Compose**
 ```bash
 docker-compose up --build -d
+# En desarrollo, con Mailpit para ver los correos (http://localhost:8025):
+docker compose --profile dev up --build -d
 ```
 
 4. **Verificar la instalación**
@@ -181,7 +184,14 @@ printf "REFRESH_ROTATION_KEY='%s'\n" "$(openssl rand -base64 48)" >> .env
 rm jwt_key.pem
 ```
 
-6. **Ejecutar migraciones y iniciar servidor**
+6. **Correo en local (Mailpit)**
+```bash
+# Buzón falso para ver los correos de verificación y recuperación: http://localhost:8025
+docker run -d --name lunance-mailpit -p 127.0.0.1:8025:8025 -p 127.0.0.1:1025:1025 axllent/mailpit:v1.33.1
+```
+Con `ENVIRONMENT=DEV` la API manda los correos por SMTP a `localhost:1025` (valores por defecto de `SMTP_HOST`/`SMTP_PORT`). Los enlaces apuntan a `EMAIL_LINK_BASE_URL` o, si está vacío, a `FRONTEND_URL`. En producción hacen falta `RESEND_API_KEY`, `EMAIL_FROM` con un dominio verificado en Resend y `EMAIL_LINK_BASE_URL` https. Ver [DOCKER_SETUP.md](docs/DOCKER_SETUP.md#-correo-en-local-con-mailpit).
+
+7. **Ejecutar migraciones y iniciar servidor**
 ```bash
 alembic upgrade head
 uvicorn src.main:app --reload
@@ -194,7 +204,7 @@ uvicorn src.main:app --reload
 La API REST de Lunance IA v2 utiliza autenticación JWT y sigue los principios de Clean Architecture.
 
 ### Endpoints Principales
-- 🔐 **Autenticación**: `/api/v2/auth/` (register, login, refresh, logout, me, sessions)
+- 🔐 **Autenticación**: `/api/v2/auth/` (register, email/verify, email/verify/resend, login, refresh, logout, me, sessions, password/forgot, password/reset, password/change)
 - 💳 **Cuentas**: `/api/v2/account/` (CRUD completo + activación/desactivación)
 - 💰 **Transacciones**: `/api/v2/transaction/` (CRUD completo)
 - 🔄 **Suscripciones**: `/api/v2/subscription/` (CRUD completo + cargos + activación)
@@ -247,10 +257,12 @@ Lunance IA utiliza **Clean Architecture + Domain-Driven Design** para garantizar
 
 ## 🔒 Seguridad
 
-- **Autenticación propia**: Usuario y contraseña, con contraseñas hasheadas mediante Argon2id
+- **Autenticación propia**: Correo y contraseña (el correo se verifica antes de crear la cuenta), con contraseñas hasheadas mediante Argon2id
+- **Anti-enumeración**: registro, reenvío y recuperación de contraseña responden igual exista o no el correo
+- **Bloqueo del login**: por correo + IP y por correo en Redis tras varios intentos fallidos; si Redis cae, login, registro y recuperación responden `503`
 - **Sesiones por dispositivo**: access tokens EdDSA (Ed25519) de 10 min con `sid`; refresh tokens opacos rotativos (cookie httpOnly en web, body en ios/android), con detección de reuso
 - **Revocación inmediata**: cerrar una sesión desde otro dispositivo invalida su access token al instante (Redis + MySQL como autoridad)
-- **Auditoría**: registro de inicios de sesión y cierres de sesión en `auth_events`
+- **Auditoría**: registro de inicios de sesión, cierres de sesión, registros y cambios de contraseña en `auth_events`
 - **Rate limiting de autenticación**: Límites por endpoint y por IP ante intentos fallidos
 - **Validación robusta**: Schemas Pydantic en todos los endpoints
 - **CORS Configurado**: Según entorno (PROD: lista cerrada de dominios, DEV/TEST: `FRONTEND_URL`)

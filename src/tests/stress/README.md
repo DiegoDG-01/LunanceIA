@@ -8,16 +8,21 @@
 
 ## Obtener Token de la API
 
-1. Crea un usuario o inicia sesión con la API:
+1. Crea un usuario (registro + confirmación del correo) o inicia sesión con la API:
    ```bash
    curl -s -X POST http://localhost:8000/api/v2/auth/register \
      -H "Content-Type: application/json" \
-     -d '{"username": "loadtest", "password": "MiClave123!"}'
+     -d '{"email": "loadtest@example.com", "username": "loadtest", "password": "MiClave123!"}'
+
+   # Abre el enlace del correo (en local, en Mailpit: http://localhost:8025) o manda su token:
+   curl -s -X POST http://localhost:8000/api/v2/auth/email/verify \
+     -H "Content-Type: application/json" \
+     -d '{"token": "<token del enlace>"}'
 
    curl -s -X POST http://localhost:8000/api/v2/auth/login \
      -H "Content-Type: application/json" \
      -H "X-Lunance-Device: $(uuidgen)" \
-     -d '{"username": "loadtest", "password": "MiClave123!"}'
+     -d '{"email": "loadtest@example.com", "password": "MiClave123!"}'
    ```
 2. Copia el `access_token` del JSON de respuesta.
 3. Expórtalo como variable de entorno:

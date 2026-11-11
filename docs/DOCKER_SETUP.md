@@ -6,6 +6,7 @@ Esta guía te ayudará a configurar y gestionar los servicios de Docker para el 
 
 - [Configuración con Docker Compose](#configuración-con-docker-compose)
 - [Configuración de MySQL con Docker](#configuración-de-mysql-con-docker)
+- [Correo en local con Mailpit](#-correo-en-local-con-mailpit)
 - [Gestión de Contenedores](#gestión-de-contenedores)
 - [Troubleshooting](#troubleshooting)
 
@@ -47,6 +48,13 @@ ACCESS_TOKEN_EXPIRE_MINUTES=10
 AI_PROVIDER=google-gla
 AI_MODEL_ID=gemini-2.5-flash
 AI_API_KEY=tu_clave_api
+
+# Correo (verificación de correo y recuperación de contraseña)
+# PROD: Resend, obligatorio (la API no arranca sin RESEND_API_KEY y un enlace https).
+EMAIL_FROM="Lunance <no-reply@tu-dominio>"   # dominio verificado en Resend
+RESEND_API_KEY=re_xxxxxxxx
+EMAIL_LINK_BASE_URL=https://tu-frontend      # la web que abre /verify-email y /reset-password
+# DEV: sin EMAIL_BACKEND se usa SMTP; docker-compose apunta SMTP_HOST al servicio `mailpit`.
 ```
 
 **Configuración de ENVIRONMENT:**
@@ -65,6 +73,7 @@ docker-compose up --build -d
 - **API**: http://localhost:8000
 - **Documentación**: http://localhost:8000/docs
 - **Base de datos**: localhost:3306
+- **Mailpit** (solo con `--profile dev`): http://localhost:8025
 
 > ✅ **Las migraciones se ejecutan automáticamente al iniciar el contenedor.**
 
@@ -102,6 +111,27 @@ DB_NAME=lunance
 DB_USER=luna
 DB_PASSWORD=luna_root
 ```
+
+## 📬 Correo en local con Mailpit
+
+En desarrollo (`ENVIRONMENT=DEV`) la API manda los correos (verificación de registro, recuperación y cambio de contraseña) por SMTP a [Mailpit](https://mailpit.axllent.org/), un buzón falso: nada sale a Internet y todo se ve en su interfaz web.
+
+**Con Docker Compose**, Mailpit es el servicio `mailpit` del perfil `dev` (no arranca en producción):
+
+```bash
+docker compose --profile dev up --build -d
+```
+
+- UI: http://localhost:8025 (publicada solo en `127.0.0.1`)
+- SMTP: `mailpit:1025`, solo dentro de la red de Docker; el servicio `api` ya tiene `SMTP_HOST=mailpit` y `SMTP_PORT=1025`
+
+**Con la API fuera de Docker** (`uvicorn` en tu máquina), levanta Mailpit publicando también el SMTP en local; los valores por defecto (`SMTP_HOST=localhost`, `SMTP_PORT=1025`) ya apuntan ahí:
+
+```bash
+docker run -d --name lunance-mailpit -p 127.0.0.1:8025:8025 -p 127.0.0.1:1025:1025 axllent/mailpit:v1.33.1
+```
+
+Los enlaces de los correos apuntan a `EMAIL_LINK_BASE_URL` (o, si está vacío, a `FRONTEND_URL`). En producción se usa Resend (`EMAIL_BACKEND=resend`); falta verificar el dominio del remitente en Resend (SPF, DKIM y DMARC).
 
 ## 🛠️ Gestión de Contenedores
 

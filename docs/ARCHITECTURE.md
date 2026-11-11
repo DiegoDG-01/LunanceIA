@@ -308,7 +308,9 @@ domain/
 │   ├── recurring_income.py           # Entidad RecurringIncome (ingresos recurrentes)
 │   ├── refresh_token.py              # Entidad RefreshToken (hash del refresh opaco y su rotación)
 │   ├── session.py                    # Entidad UserSession (una por dispositivo) y Platform
-│   ├── auth_event.py                 # Entidad AuthEvent (auditoría de login y sesiones)
+│   ├── auth_event.py                 # Entidad AuthEvent (auditoría de login, sesiones y cuenta)
+│   ├── pending_signup.py             # PendingSignup (registro sin confirmar) y EmailVerificationToken
+│   ├── password_reset_token.py       # PasswordResetToken (enlace de un solo uso)
 │   ├── saving_goal.py                # Entidad SavingGoal (metas de ahorro)
 │   ├── subscription.py              # Entidad Subscription (pagos recurrentes)
 │   ├── subscription_charge.py       # Entidad SubscriptionCharge (cargos individuales)
@@ -327,6 +329,8 @@ domain/
 │   ├── session_repository.py        # Interface para sesiones por dispositivo
 │   ├── refresh_token_repository.py  # Interface para refresh tokens (hash + rotación)
 │   ├── auth_event_repository.py     # Interface para la auditoría de autenticación
+│   ├── pending_signup_repository.py # Interface para registros pendientes y sus enlaces
+│   ├── password_reset_token_repository.py # Interface para enlaces de recuperación (canje atómico)
 │   ├── bank_repository.py           # Interface para operaciones de Bank
 │   ├── budget_repository.py         # Interface para operaciones de Budget
 │   ├── category_repository.py       # Interface para operaciones de Category
@@ -521,18 +525,24 @@ application/
 │       └── get_banks.py
 ├── auth/                     # Feature: Autenticación y sesiones por dispositivo
 │   ├── __init__.py
-│   ├── config.py             # AuthConfig: duración de sesiones, margen de gracia, clave de rotación
+│   ├── config.py             # AuthConfig (sesiones) y EmailAuthConfig (enlaces y vigencias)
 │   ├── dto.py                # ClientContext (dispositivo, plataforma, IP) e IssuedSession
+│   ├── emails.py             # Plantillas de los correos de cuenta (texto + HTML, en español)
 │   ├── services/
-│   │   └── sessions.py       # SessionManager: abre sesiones y emite access + refresh
+│   │   ├── sessions.py       # SessionManager: abre sesiones y emite access + refresh
+│   │   ├── login_guard.py    # LoginGuard: bloqueo por correo + IP y por correo
+│   │   └── signups.py        # Emite el enlace de verificación de un registro pendiente
 │   ├── commands/
 │   │   ├── __init__.py
-│   │   ├── login.py          # Login: verifica contraseña, re-hashea bcrypt → Argon2, abre sesión
+│   │   ├── login.py          # Login por correo: throttle, verifica contraseña, re-hashea bcrypt → Argon2, abre sesión
 │   │   ├── logout.py         # Cerrar esta sesión o todas (`all_devices`)
 │   │   ├── refresh_session.py # Rotación del refresh con gracia y detección de reuso
 │   │   ├── revoke_session.py # Cerrar una sesión propia desde otro dispositivo
-│   │   ├── purge_auth_data.py # Job diario: purga sesiones viejas y auditoría
-│   │   └── register.py       # Registro de usuario
+│   │   ├── purge_auth_data.py # Job diario: sesiones viejas, auditoría, registros y enlaces vencidos
+│   │   ├── register.py       # Registro pendiente + correo de verificación (anti-enumeración)
+│   │   ├── verify_email.py   # Confirmar el correo (crea la cuenta) y reenviar el enlace
+│   │   ├── password_reset.py # "Olvidé mi contraseña" y restablecerla (cierra todas las sesiones)
+│   │   └── change_password.py # Cambiar la contraseña con sesión (cierra las demás)
 │   └── queries/
 │       └── list_sessions.py  # Sesiones activas, con la actual marcada
 ├── api_keys/                 # Feature: API keys (acceso programático / MCP)
@@ -580,7 +590,8 @@ application/
 │   └── transaction_dto.py
 └── interfaces/               # Interfaces de aplicación
     ├── ai_agent.py           # Contrato del agente IA (AIAgentInterface)
-    ├── auth_service.py       # Contrato del servicio de tokens de autenticación (AuthTokenServiceInterface)
+    ├── auth_service.py       # Contratos de auth: AccessTokenIssuer, PasswordHasher, SessionRevocationList, LoginThrottle
+    ├── email.py              # OutgoingEmail, EmailSender (puerto de envío) y EmailQueue (envío tras el commit)
     └── uploaded_file.py      # Contrato de archivo subido (UploadedFileInterface)
 ```
 
@@ -620,6 +631,8 @@ infrastructure/
 │   │   ├── refresh_token.py  # Modelo RefreshToken (token_hash PK → user_sessions)
 │   │   ├── user_session.py   # Modelo UserSession (una por dispositivo)
 │   │   ├── auth_event.py     # Modelo AuthEvent (auditoría)
+│   │   ├── pending_signup.py # Modelos PendingSignup y EmailVerificationToken
+│   │   ├── password_reset_token.py # Modelo PasswordResetToken
 │   │   ├── reminder.py       # Modelo Reminder
 │   │   ├── saving_goal.py    # Modelo SavingGoal
 │   │   ├── subscription.py   # Modelo Subscription
@@ -642,6 +655,8 @@ infrastructure/
 │       ├── sqlalchemy_investment_position_repository.py
 │       ├── sqlalchemy_investment_yield_repository.py
 │       ├── sqlalchemy_notification_repository.py
+│       ├── sqlalchemy_password_reset_token_repository.py
+│       ├── sqlalchemy_pending_signup_repository.py
 │       ├── sqlalchemy_recurring_income_repository.py
 │       ├── sqlalchemy_refresh_token_repository.py
 │       ├── sqlalchemy_saving_goal_repository.py
@@ -653,11 +668,17 @@ infrastructure/
 │       └── sqlalchemy_user_repository.py
 ├── external_services/         # Integraciones con servicios externos
 │   ├── __init__.py
-│   └── agents/               # Agentes IA estructurados (pydantic-ai)
-│       ├── __init__.py
-│       ├── image.py          # Agente de análisis de imágenes (recibos/tickets)
-│       ├── expense.py        # Agente asesor de gastos del mes
-│       └── model_factory.py  # Factory multi-proveedor (Google Gemini; Ollama y DeepSeek vía API compatible con OpenAI)
+│   ├── agents/               # Agentes IA estructurados (pydantic-ai)
+│   │   ├── __init__.py
+│   │   ├── image.py          # Agente de análisis de imágenes (recibos/tickets)
+│   │   ├── expense.py        # Agente asesor de gastos del mes
+│   │   └── model_factory.py  # Factory multi-proveedor (Google Gemini; Ollama y DeepSeek vía API compatible con OpenAI)
+│   └── email/                # Implementaciones de EmailSender
+│       ├── resend.py         # ResendEmailSender: API HTTP de Resend con httpx (producción)
+│       ├── smtp.py           # SmtpEmailSender: SMTP (Mailpit en local), smtplib en un hilo
+│       ├── memory.py         # InMemoryEmailSender: buzón en memoria (tests)
+│       ├── delivery.py       # deliver(): envío en segundo plano; los fallos solo van al log
+│       └── factory.py        # build_email_sender(settings) según EMAIL_BACKEND
 ├── security/                 # Servicios de seguridad
 │   ├── __init__.py
 │   ├── jwt_tokens.py         # EdDSATokenIssuer: access tokens JWT Ed25519 (sub + sid)
@@ -665,10 +686,11 @@ infrastructure/
 │   └── api_key_service.py    # APIKeyService: emisión y validación de API keys
 ├── scheduler/                # Tareas programadas
 │   ├── __init__.py
-│   ├── jobs.py               # Definición de jobs (suscripciones, rendimientos, vencimientos de apartados, ingresos recurrentes, purga de sesiones)
+│   ├── jobs.py               # Definición de jobs (suscripciones, rendimientos, vencimientos de apartados, ingresos recurrentes, purga de sesiones, registros y enlaces)
 │   └── service.py            # SchedulerService (APScheduler wrapper)
 ├── cache/                    # Cliente de Redis compartido (init/close en el lifespan)
 │   ├── redis.py
+│   ├── login_throttle.py     # RedisLoginThrottle: bloqueo progresivo del login (fail-closed)
 │   └── session_revocations.py # Lista revoked_sid:<uuid> en Redis, con MySQL como autoridad
 ├── rate_limiting/            # Rate limiting por endpoint sobre Redis
 │   ├── __init__.py
@@ -690,7 +712,7 @@ infrastructure/
 ```
 
 #### Características de Infraestructura:
-- **Implementaciones concretas**: 20 repositorios SQLAlchemy + Unit of Work implementando interfaces del dominio
+- **Implementaciones concretas**: 22 repositorios SQLAlchemy + Unit of Work implementando interfaces del dominio
 - **Adaptadores**: Para servicios externos (agentes IA con pydantic-ai multi-proveedor)
 - **Scheduler**: APScheduler con AsyncIOScheduler para jobs diarios (suscripciones 00:00, ingresos 00:15, rendimientos 12:00 y vencimientos de apartados 12:30, en UTC; los vencimientos corren después de los rendimientos para que el día del vencimiento aún genere interés)
 - **Logging estructurado**: Correlation IDs, filtros personalizados, integración Grafana Loki
@@ -762,6 +784,8 @@ presentation/
 │   ├── __init__.py
 │   ├── auth_deps.py             # Dependencias de autenticación (JWT, usuario activo)
 │   ├── auth_handler_deps.py     # Factories de handlers de auth
+│   ├── auth_services.py         # Issuer JWT, hasher, AuthConfig/EmailAuthConfig y LoginGuard
+│   ├── email_deps.py            # EmailSender (lru_cache) y cola de correo con BackgroundTasks
 │   ├── repositories.py          # Factories de repositorios
 │   ├── services.py              # Factories de servicios
 │   ├── account_deps.py          # Factories de handlers de cuentas
@@ -1390,7 +1414,13 @@ def translate_validation_message(
 
 Lunance IA gestiona la identidad por sí misma, sin proveedor externo:
 
-- **Registro y login**: `POST /api/v2/auth/register` y `POST /api/v2/auth/login`, con usuario y contraseña
+- **Registro con verificación de correo**: `POST /api/v2/auth/register` (correo, username y contraseña) responde `202` y guarda el registro en `pending_signups` (solo el hash de la contraseña); la cuenta (`users`) se crea al abrir el enlace del correo (`POST /auth/email/verify`). Los enlaces (`email_verification_tokens`) guardan solo el SHA-256 del token, caducan (24 h, sin pasar de los 7 días del registro) y se borran con el registro al confirmar, así que cada uno sirve una vez. `POST /auth/email/verify/resend` manda otro
+- **Anti-enumeración**: registro, reenvío y "Olvidé mi contraseña" responden lo mismo exista o no el correo. Si el correo ya tiene cuenta, el registro no guarda nada y manda al buzón un aviso en lugar del enlace; el hash de la contraseña se calcula igual para que el tiempo no lo delate. Volver a registrarse con un correo pendiente sustituye el registro e invalida sus enlaces
+- **Login por correo**: `POST /api/v2/auth/login` con correo (normalizado: sin espacios y en minúsculas; `users.email` es obligatorio y único) y contraseña. El username sigue siendo obligatorio y único, pero ya no sirve para entrar. La contraseña correcta de un registro sin confirmar responde `403 AUTH_EMAIL_NOT_VERIFIED`
+- **Bloqueo del login** (`LoginGuard` + `RedisLoginThrottle`): por correo + IP (5 fallos → 1 min, duplicando hasta 15 min) y por correo desde cualquier IP (30 fallos/h → 15 min; los dispositivos que ya tuvieron sesión en la cuenta se lo saltan). Responde `429 AUTH_TOO_MANY_ATTEMPTS` con `Retry-After`. Las claves de Redis llevan un hash del correo, nunca el correo
+- **Recuperación de contraseña**: `POST /auth/password/forgot` (siempre `204`; con un registro pendiente manda instrucciones para confirmarlo) y `POST /auth/password/reset` con el enlace (`password_reset_tokens`: SHA-256, 1 hora, un solo uso por `UPDATE` condicional; usar uno invalida los demás). El reset cierra **todas** las sesiones (`password_reset`) y quita el bloqueo del correo
+- **Cambio de contraseña**: `POST /auth/password/change` (access token + contraseña actual) cierra las **demás** sesiones (`password_change`) y conserva la actual. Reset y cambio usan la revocación de la fase 1 (MySQL + `revoked_sid:<uuid>` en Redis) y avisan por correo. El login comparte el lock de la fila del usuario: una contraseña validada justo antes de cambiarla no abre sesión después
+- **Correo saliente** (`EmailSender`): `ResendEmailSender` (API HTTP de Resend con httpx) en producción, `SmtpEmailSender` hacia Mailpit en local y `InMemoryEmailSender` en tests, según `EMAIL_BACKEND`. Los handlers encolan el correo después del commit (`EmailQueue`) y se manda con `BackgroundTasks` de FastAPI después de responder; un fallo del proveedor solo queda en el log (sin destinatario). En PROD la app no arranca sin Resend, `RESEND_API_KEY` y `EMAIL_LINK_BASE_URL` https
 - **Contraseñas**: Argon2id (`argon2-cffi`, m=64 MiB, t=3, p=1) calculado en un hilo para no bloquear el event loop; se exige mayúscula, minúscula, dígito y carácter especial (mínimo 8 caracteres). Los hashes bcrypt heredados (`$2…`) se verifican con bcrypt y se re-hashean a Argon2 en el siguiente login correcto
 - **Una sesión por dispositivo** (`user_sessions`): el cliente manda `X-Lunance-Device: <uuid>` (obligatorio en login y refresh) y `X-Lunance-Client: <web|ios|android>/<versión>` (sin él, es la web). Volver a entrar desde el mismo dispositivo sustituye solo esa sesión
 - **Access token**: JWT EdDSA (Ed25519, PyJWT) de 10 minutos con `iss`, `aud`, `sub` (uuid del usuario), `sid` (uuid de la sesión), `iat` y `exp`. Claves en `JWT_PRIVATE_KEY`/`JWT_PUBLIC_KEY` (se generan con `openssl`, ver el README)
@@ -1399,8 +1429,8 @@ Lunance IA gestiona la identidad por sí misma, sin proveedor externo:
 - **Duración**: web 1 día de inactividad / 7 días como máximo; mobile 30 / 90 días (`SESSION_*`). Cada refresh renueva la inactividad sin pasar del máximo
 - **Revocación inmediata**: al cerrar una sesión se escribe `revoked_sid:<uuid>` en Redis (TTL ≈ vida del access token) y cada petición autenticada lo consulta; MySQL es la autoridad, así que si Redis falla o perdió la clave se consulta la sesión en la base
 - **Endpoints de sesión**: `GET /auth/sessions` (marca `is_current`), `DELETE /auth/sessions/{uuid}` (solo sesiones propias; 404 si no), `POST /auth/logout` (`all_devices` opcional)
-- **Auditoría** (`auth_events`): `login.succeeded`, `login.failed` (con el username intentado), `login.throttled`, `session.revoked` (motivo y quién) y `session.refresh_reuse_detected`. Nunca guarda contraseñas ni tokens
-- **Limpieza**: un job diario borra las sesiones vencidas o revocadas hace más de 30 días (con sus refresh tokens) y los eventos de más de 90
+- **Auditoría** (`auth_events`): `login.succeeded`, `login.failed` (con el correo intentado y el motivo), `login.throttled` (rate limit, bloqueo por IP o por cuenta), `session.revoked` (motivo y quién), `session.refresh_reuse_detected`, `signup.requested`, `signup.verification_resent`, `signup.verified`, `password.reset_requested`, `password.reset` y `password.changed`. Nunca guarda contraseñas ni tokens
+- **Limpieza**: un job diario borra las sesiones vencidas o revocadas hace más de 30 días (con sus refresh tokens), los eventos de más de 90, los registros sin confirmar caducados (con sus enlaces) y los enlaces de recuperación vencidos o usados
 
 ### Configuración CORS Basada en Entorno
 
@@ -1431,7 +1461,8 @@ Protección contra abuso con ventana fija sobre Redis (`INCR` + `EXPIRE` atómic
 - **Por usuario o IP + ruta**: clave `{usuario|ip}:{path}`. Autenticado cuenta por usuario; si no, por IP (IPv6 agrupado por /64)
 - **IP real detrás de un proxy**: `CLIENT_IP_HEADER` (p. ej. `CF-Connecting-IP`); configurarlo solo si el origen acepta tráfico únicamente de ese proxy
 - **Límites exactos**: `limiter_N_per_X` permite exactamente N peticiones por minuto, hora o día
-- **Si Redis no responde**: login y registro responden `503` (`fail_closed=True`); el resto deja pasar la petición y lo registra en el log
+- **Si Redis no responde**: login, registro, verificación de correo y recuperación/cambio de contraseña responden `503` (`fail_closed=True`, y el bloqueo del login también falla cerrado); el resto deja pasar la petición y lo registra en el log
+- **Por buzón**: registro y reenvío comparten 5 correos por hora por correo, y "Olvidé mi contraseña" 3 por hora (al pasarlo responde `204` sin mandar nada). La clave es un hash del correo
 - **Deshabilitado en TEST**: El rate limiting se omite automáticamente cuando `ENVIRONMENT=TEST`
 - **Headers informativos**: `X-RateLimit-Remaining`, `Retry-After`
 
