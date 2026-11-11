@@ -44,7 +44,7 @@ pytestmark = [pytest.mark.e2e, pytest.mark.asyncio]
 
 
 @pytest_asyncio.fixture
-async def sessionmaker() -> AsyncGenerator[async_sessionmaker, None]:
+async def sessionmaker() -> AsyncGenerator[async_sessionmaker]:
     engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -57,7 +57,7 @@ async def sessionmaker() -> AsyncGenerator[async_sessionmaker, None]:
 
 
 @pytest_asyncio.fixture
-async def client(sessionmaker) -> AsyncGenerator[httpx.AsyncClient, None]:
+async def client(sessionmaker) -> AsyncGenerator[httpx.AsyncClient]:
     """Una sesión de BD por petición, Redis falso, buzón en memoria y proveedores falsos."""
 
     async def override_get_db():
@@ -256,7 +256,9 @@ class TestConfigurationAndOutages:
         assert response.headers["Retry-After"] == "5"
 
     async def test_rate_limit_fails_closed(self, client, monkeypatch):
-        monkeypatch.setattr(limiters_mod, "settings", SimpleNamespace(ENVIRONMENT="DEV"))
+        monkeypatch.setattr(
+            limiters_mod, "settings", SimpleNamespace(ENVIRONMENT="DEV")
+        )
         set_redis(BrokenRedis())  # type: ignore[arg-type]
 
         # Con un token inválido, sin el límite respondería 401: el 503 viene del limiter.
@@ -268,7 +270,9 @@ class TestConfigurationAndOutages:
 
 class TestAppleSignIn:
     async def test_sign_in_with_code_stores_the_refresh_token_encrypted(self, client):
-        token = client.apple.identity_token(email="ana@icloud.com", is_private_email=None)
+        token = client.apple.identity_token(
+            email="ana@icloud.com", is_private_email=None
+        )
 
         response = await _apple(
             client, token, authorization_code="code-1", name="Ana Pérez"
@@ -327,7 +331,10 @@ class TestLinkingFromSettings:
 
         linked = await client.post(
             "/auth/providers/google",
-            json={"id_token": client.google.id_token(sub="g-77", email="otra@gmail.com")},
+            json={
+                "id_token": client.google.id_token(sub="g-77", email="otra@gmail.com"),
+                "current_password": PASSWORD,
+            },
             headers=auth,
         )
         sign_in = await _google(
@@ -349,6 +356,7 @@ class TestLinkingFromSettings:
                 "id_token": client.apple.identity_token(),
                 "nonce": NONCE,
                 "authorization_code": "code-5",
+                "current_password": PASSWORD,
             },
             headers=auth,
         )
@@ -362,7 +370,10 @@ class TestLinkingFromSettings:
 
         response = await client.post(
             "/auth/providers/google",
-            json={"id_token": client.google.id_token(sub="g-taken")},
+            json={
+                "id_token": client.google.id_token(sub="g-taken"),
+                "current_password": PASSWORD,
+            },
             headers=auth,
         )
 
@@ -383,6 +394,42 @@ class TestLinkingFromSettings:
         response = await client.delete("/auth/providers/facebook", headers=auth)
 
         assert response.status_code == 422
+
+    async def test_password_account_gets_403_without_its_password(self, client):
+        auth = await self._password_user(client)
+        token = client.google.id_token(sub="g-88", email="otra@gmail.com")
+
+        missing = await client.post(
+            "/auth/providers/google", json={"id_token": token}, headers=auth
+        )
+        wrong = await client.post(
+            "/auth/providers/google",
+            json={"id_token": token, "current_password": "Otra!clave2026"},
+            headers=auth,
+        )
+        confirmed = await client.post(
+            "/auth/providers/google",
+            json={"id_token": token, "current_password": PASSWORD},
+            headers=auth,
+        )
+
+        assert missing.status_code == 403
+        assert missing.json()["error_code"] == "AUTH_REAUTH_REQUIRED"
+        assert wrong.status_code == 400
+        assert wrong.json()["error_code"] == "AUTH_INVALID_CURRENT_PASSWORD"
+        assert confirmed.status_code == 200
+
+    async def test_account_without_password_links_right_after_signing_in(self, client):
+        auth = _bearer(await _google(client, client.google.id_token(sub="g-1")))
+
+        response = await client.post(
+            "/auth/providers/apple",
+            json={"id_token": client.apple.identity_token(), "nonce": NONCE},
+            headers=auth,
+        )
+
+        assert response.status_code == 200
+        assert response.json()["login_methods"] == ["google", "apple"]
 
     async def test_requires_a_session(self, client):
         response = await client.post(
@@ -408,7 +455,9 @@ class TestAccountsWithoutPassword:
     async def test_username_can_be_changed(self, client):
         auth = _bearer(await _google(client, client.google.id_token(name="Ana")))
 
-        renamed = await client.patch("/auth/me", json={"username": "ana_nueva"}, headers=auth)
+        renamed = await client.patch(
+            "/auth/me", json={"username": "ana_nueva"}, headers=auth
+        )
 
         assert renamed.status_code == 200
         assert renamed.json()["username"] == "ana_nueva"

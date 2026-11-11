@@ -54,11 +54,13 @@ from shared.exceptions.application import (
 )
 from shared.exceptions.domain import (
     InvalidCredentialsError,
+    InvalidCurrentPasswordError,
     LastLoginMethodError,
     PasswordNotSetError,
     ProviderAccountConflictError,
     ProviderAlreadyLinkedError,
     ProviderLinkRequiredError,
+    RecentLoginRequiredError,
     UserInactiveError,
     UsernameAlreadyExistsError,
 )
@@ -70,7 +72,6 @@ from tests.identity_providers import (
     FakeGoogle,
     apple_client,
     google_verifier,
-    sha256,
 )
 
 from .conftest import PASSWORD, AuthKit, BrokenRedis, context
@@ -96,7 +97,9 @@ class Providers:
             username_suffix=lambda: next(suffixes),
         )
 
-    def sign_in_handler(self, gate: ProviderTokenGate | None = None) -> ProviderSignInHandler:
+    def sign_in_handler(
+        self, gate: ProviderTokenGate | None = None
+    ) -> ProviderSignInHandler:
         kit = self.kit
         return ProviderSignInHandler(
             gate=gate or self.gate,
@@ -116,6 +119,8 @@ class Providers:
         kit = self.kit
         return LinkProviderHandler(
             gate=self.gate,
+            session_repository=kit.sessions,
+            password_hasher=kit.hasher,
             apple_tokens=self.vault,
             user_repository=kit.users,
             auth_event_repository=kit.events,
@@ -350,7 +355,11 @@ class TestExistingAccounts:
 
     @pytest.mark.parametrize(
         ("email", "hd"),
-        [("ana@empresa.com", None), ("ana@icloud.com", None), ("ana@empresa.com", "otra.com")],
+        [
+            ("ana@empresa.com", None),
+            ("ana@icloud.com", None),
+            ("ana@empresa.com", "otra.com"),
+        ],
     )
     async def test_other_mailboxes_require_linking_from_settings(
         self, providers, email, hd
@@ -359,7 +368,9 @@ class TestExistingAccounts:
         user_id = await _committed_user(kit, email=email)
 
         with pytest.raises(ProviderLinkRequiredError) as caught:
-            await providers.google_sign_in(providers.google.id_token(email=email, hd=hd))
+            await providers.google_sign_in(
+                providers.google.id_token(email=email, hd=hd)
+            )
 
         assert caught.value.login_methods == ["password"]
         assert (await _user(kit, user_id)).google_sub is None
@@ -374,7 +385,9 @@ class TestExistingAccounts:
         relay = await kit.create_user(email="x1y2@privaterelay.appleid.com")
 
         first = await providers.apple_sign_in(
-            providers.apple.identity_token(email="ana@icloud.com", is_private_email=None)
+            providers.apple.identity_token(
+                email="ana@icloud.com", is_private_email=None
+            )
         )
         second = await providers.apple_sign_in(
             providers.apple.identity_token(email="x1y2@privaterelay.appleid.com")
@@ -415,8 +428,12 @@ class TestExistingAccounts:
     async def test_same_device_replaces_its_session(self, providers):
         kit = providers.kit
         ctx = context()
-        first = await providers.google_sign_in(providers.google.id_token(sub="g-3"), ctx)
-        second = await providers.google_sign_in(providers.google.id_token(sub="g-3"), ctx)
+        first = await providers.google_sign_in(
+            providers.google.id_token(sub="g-3"), ctx
+        )
+        second = await providers.google_sign_in(
+            providers.google.id_token(sub="g-3"), ctx
+        )
 
         active = await kit.sessions.list_active(first.user.id, kit.clock.now)
         assert [s.uuid for s in active] == [second.issued.session.uuid]
@@ -552,6 +569,7 @@ class TestAppleRefreshToken:
 
 class TestLinkFromSettings:
     async def _link(self, providers, user, provider, token, **extra):
+        extra.setdefault("current_password", PASSWORD)
         return await providers.link_handler().handle(
             LinkProviderCommand(
                 user_id=user.id,
@@ -562,6 +580,66 @@ class TestLinkFromSettings:
                 **extra,
             )
         )
+
+    async def test_password_account_must_confirm_with_its_password(self, providers):
+        kit = providers.kit
+        user = await kit.create_user()
+        token = providers.google.id_token(sub="g-9")
+
+        with pytest.raises(RecentLoginRequiredError):
+            await self._link(
+                providers, user, IdentityProvider.GOOGLE, token, current_password=None
+            )
+        # El ID token no se gastó: con la contraseña, el mismo token vincula.
+        linked = await self._link(providers, user, IdentityProvider.GOOGLE, token)
+
+        assert linked.login_methods == ["password", "google"]
+
+    async def test_wrong_password_is_rejected_and_audited(self, providers):
+        kit = providers.kit
+        user = await kit.create_user()
+
+        with pytest.raises(InvalidCurrentPasswordError):
+            await self._link(
+                providers,
+                user,
+                IdentityProvider.GOOGLE,
+                providers.google.id_token(),
+                current_password="Otra!clave2026",
+            )
+
+        assert (await _user(kit, user.id)).google_sub is None
+        [event] = await _events(kit, AuthAction.LOGIN_FAILED)
+        assert event.details == {
+            "method": "password",
+            "reason": "invalid_password",
+            "mode": "link",
+            "provider": "google",
+        }
+
+    async def test_account_without_password_needs_a_recent_login(self, providers):
+        kit = providers.kit
+        result = await providers.apple_sign_in(providers.apple.identity_token())
+        session_uuid = result.issued.session.uuid
+
+        async def link():
+            return await providers.link_handler().handle(
+                LinkProviderCommand(
+                    user_id=result.user.id,
+                    session_uuid=session_uuid,
+                    provider=IdentityProvider.GOOGLE,
+                    id_token=providers.google.id_token(),
+                    context=context(),
+                )
+            )
+
+        kit.clock.advance(minutes=11)
+        with pytest.raises(RecentLoginRequiredError):
+            await link()
+        kit.clock.advance(minutes=-2)  # 9 minutos después del login
+        linked = await link()
+
+        assert linked.login_methods == ["google", "apple"]
 
     async def test_links_google_with_any_email_and_notifies(self, providers):
         kit = providers.kit
@@ -576,7 +654,11 @@ class TestLinkFromSettings:
 
         assert linked.login_methods == ["password", "google"]
         [event] = await _events(kit, AuthAction.PROVIDER_LINKED)
-        assert event.details == {"provider": "google", "mode": "manual", "session_uuid": "s-1"}
+        assert event.details == {
+            "provider": "google",
+            "mode": "manual",
+            "session_uuid": "s-1",
+        }
         assert kit.queue.to("ana@empresa.com")[0].tag == "provider-linked"
 
     async def test_links_apple_and_stores_its_token(self, providers):
@@ -623,7 +705,10 @@ class TestLinkFromSettings:
         user = await kit.create_user(google_sub="g-mine")
 
         await self._link(
-            providers, user, IdentityProvider.GOOGLE, providers.google.id_token(sub="g-mine")
+            providers,
+            user,
+            IdentityProvider.GOOGLE,
+            providers.google.id_token(sub="g-mine"),
         )
 
         assert await _events(kit, AuthAction.PROVIDER_LINKED) == []
@@ -641,7 +726,10 @@ class TestUnlink:
     async def _unlink(self, providers, user, provider):
         return await providers.unlink_handler().handle(
             UnlinkProviderCommand(
-                user_id=user.id, session_uuid="s-1", provider=provider, context=context()
+                user_id=user.id,
+                session_uuid="s-1",
+                provider=provider,
+                context=context(),
             )
         )
 
@@ -669,7 +757,7 @@ class TestUnlink:
         result = await providers.apple_sign_in(
             providers.apple.identity_token(), authorization_code="code-3"
         )
-        await self._link_google(providers, result.user)
+        await self._link_google(providers, result)
 
         methods = await self._unlink(providers, result.user, IdentityProvider.APPLE)
 
@@ -685,11 +773,12 @@ class TestUnlink:
 
         assert await _events(kit, AuthAction.PROVIDER_UNLINKED) == []
 
-    async def _link_google(self, providers, user):
+    async def _link_google(self, providers, result):
+        # Cuenta sin contraseña: vale porque la sesión del login es reciente.
         await providers.link_handler().handle(
             LinkProviderCommand(
-                user_id=user.id,
-                session_uuid="s-0",
+                user_id=result.user.id,
+                session_uuid=result.issued.session.uuid,
                 provider=IdentityProvider.GOOGLE,
                 id_token=providers.google.id_token(),
                 context=context(),
@@ -765,8 +854,12 @@ class TestAppleNotifications:
         from tests.identity_providers import rsa_key
 
         forged = providers.apple.sign(
-            {"iss": "https://appleid.apple.com", "aud": "app.lunance.ios", "iat": 1,
-             "events": json.dumps({"type": "account-delete", "sub": "x"})},
+            {
+                "iss": "https://appleid.apple.com",
+                "aud": "app.lunance.ios",
+                "iat": 1,
+                "events": json.dumps({"type": "account-delete", "sub": "x"}),
+            },
             key=rsa_key(),
         )
 
@@ -784,7 +877,9 @@ class TestAccountsWithoutPassword:
 
         with pytest.raises(InvalidCredentialsError):
             await providers.kit.login_handler().handle(
-                LoginCommand(email="ana@gmail.com", password=PASSWORD, context=context())
+                LoginCommand(
+                    email="ana@gmail.com", password=PASSWORD, context=context()
+                )
             )
         assert result.user.password is None
 
@@ -805,14 +900,18 @@ class TestAccountsWithoutPassword:
         kit = providers.kit
         await providers.google_sign_in(providers.google.id_token(email="ana@gmail.com"))
 
-        await kit.forgot_handler().handle(RequestPasswordResetCommand(email="ana@gmail.com"))
+        await kit.forgot_handler().handle(
+            RequestPasswordResetCommand(email="ana@gmail.com")
+        )
         link = kit.queue.to("ana@gmail.com")[-1].text
         token = link.split("token=", 1)[1].split()[0]
         await kit.reset_handler().handle(
             ResetPasswordCommand(token=token, password=NEW_PASSWORD, context=context())
         )
         issued = await kit.login_handler().handle(
-            LoginCommand(email="ana@gmail.com", password=NEW_PASSWORD, context=context())
+            LoginCommand(
+                email="ana@gmail.com", password=NEW_PASSWORD, context=context()
+            )
         )
 
         assert issued.access_token
@@ -823,7 +922,10 @@ class TestAccountsWithoutPassword:
 
         await kit.register_handler().handle(
             RegisterCommand(
-                email="ana@gmail.com", username="ana2", password=PASSWORD, context=context()
+                email="ana@gmail.com",
+                username="ana2",
+                password=PASSWORD,
+                context=context(),
             )
         )
 
@@ -856,7 +958,10 @@ class TestChangeUsername:
         await kit.create_user(name="ocupado")
         await kit.register_handler().handle(
             RegisterCommand(
-                email="p@example.com", username="apartado", password=PASSWORD, context=context()
+                email="p@example.com",
+                username="apartado",
+                password=PASSWORD,
+                context=context(),
             )
         )
         user_id = await _committed_user(kit)
