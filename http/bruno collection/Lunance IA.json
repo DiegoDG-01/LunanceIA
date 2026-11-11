@@ -17,100 +17,958 @@
         "meta": {
           "name": "Auth",
           "seq": 2
-        }
+        },
+        "docs": "Variables del entorno: EMAIL, PASSWORD, DEVICE_ID (UUID fijo), CLIENT (ios/1.0.0 para recibir el refresh en el body). Login, Refresh y los de Google/Apple guardan AUTH_TOKEN y REFRESH_TOKEN solos."
       },
       "items": [
         {
-          "type": "http",
-          "name": "Logout",
-          "filename": "Logout.bru",
+          "type": "folder",
+          "name": "1 Correo y contraseña",
+          "filename": "1 Correo y contraseña",
           "seq": 1,
-          "settings": {},
-          "tags": [],
           "examples": [],
-          "request": {
-            "url": "http://{{URL_HOST}}/api/v2/auth/logout",
-            "method": "POST",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              },
-              {
-                "name": "Authorization",
-                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
-                "enabled": true
-              },
-              {
-                "name": "Accept-Language",
-                "value": "{{LANG}}",
-                "enabled": true
+          "root": {
+            "request": {
+              "auth": {
+                "mode": "inherit"
               }
-            ],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"refresh_token\":\"68687\"\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
             },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "inherit"
+            "meta": {
+              "name": "1 Correo y contraseña",
+              "seq": 1
+            },
+            "docs": ""
+          },
+          "items": [
+            {
+              "type": "http",
+              "name": "Register",
+              "filename": "Register.bru",
+              "seq": 1,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/register",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Client",
+                    "value": "{{CLIENT}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"email\": \"{{EMAIL}}\",\n  \"username\": \"\",\n  \"password\": \"{{PASSWORD}}\"\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "202 siempre (salvo username ocupado → 409). Llega un correo con /verify-email?token=… (en local, Mailpit: http://127.0.0.1:8025). Copia el token a VERIFY_TOKEN.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Verify Email",
+              "filename": "Verify Email.bru",
+              "seq": 2,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/email/verify",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Client",
+                    "value": "{{CLIENT}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"token\": \"{{VERIFY_TOKEN}}\"\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "Crea la cuenta. No abre sesión.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Resend Verification",
+              "filename": "Resend Verification.bru",
+              "seq": 3,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/email/verify/resend",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Client",
+                    "value": "{{CLIENT}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"email\": \"{{EMAIL}}\"\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "Siempre 202.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Login",
+              "filename": "Login.bru",
+              "seq": 4,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/login",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Device",
+                    "value": "{{DEVICE_ID}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Client",
+                    "value": "{{CLIENT}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"email\": \"{{EMAIL}}\",\n  \"password\": \"{{PASSWORD}}\",\n  \"device_name\": \"Bruno\"\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {
+                  "res": "// Guarda los tokens para el resto de la colección\nif (res.status === 200) {\n  bru.setEnvVar(\"AUTH_TOKEN\", res.body.access_token);\n  if (res.body.refresh_token) bru.setEnvVar(\"REFRESH_TOKEN\", res.body.refresh_token);\n}"
+                },
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "Guarda AUTH_TOKEN y REFRESH_TOKEN. Con CLIENT=web/… el refresh llega en cookie en lugar del body.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Forgot Password",
+              "filename": "Forgot Password.bru",
+              "seq": 5,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/password/forgot",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Client",
+                    "value": "{{CLIENT}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"email\": \"{{EMAIL}}\"\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "Siempre 204. Copia el token del correo a RESET_TOKEN.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Reset Password",
+              "filename": "Reset Password.bru",
+              "seq": 6,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/password/reset",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Client",
+                    "value": "{{CLIENT}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"token\": \"{{RESET_TOKEN}}\",\n  \"password\": \"OtraClave456!\"\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "204; cierra todas las sesiones.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Change Password",
+              "filename": "Change Password.bru",
+              "seq": 7,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/password/change",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Client",
+                    "value": "{{CLIENT}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"current_password\": \"{{PASSWORD}}\",\n  \"new_password\": \"OtraClave456!\"\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "204; cierra las demás sesiones y conserva esta.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
             }
-          }
+          ]
         },
         {
-          "type": "http",
-          "name": "Me",
-          "filename": "Me.bru",
-          "seq": 8,
-          "settings": {},
-          "tags": [],
+          "type": "folder",
+          "name": "2 Sesión",
+          "filename": "2 Sesión",
+          "seq": 2,
           "examples": [],
-          "request": {
-            "url": "http://{{URL_HOST}}/api/v2/auth/me",
-            "method": "GET",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              },
-              {
-                "name": "Authorization",
-                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
-                "enabled": true
-              },
-              {
-                "name": "Accept-Language",
-                "value": "{{LANG}}",
-                "enabled": true
+          "root": {
+            "request": {
+              "auth": {
+                "mode": "inherit"
               }
-            ],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
             },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "inherit"
+            "meta": {
+              "name": "2 Sesión",
+              "seq": 2
+            },
+            "docs": ""
+          },
+          "items": [
+            {
+              "type": "http",
+              "name": "Me",
+              "filename": "Me.bru",
+              "seq": 1,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/me",
+                "method": "GET",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "none",
+                  "json": "",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "Incluye email, email_verified y login_methods.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Update Me",
+              "filename": "Update Me.bru",
+              "seq": 2,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/me",
+                "method": "PATCH",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Client",
+                    "value": "{{CLIENT}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"username\": \"nuevo_username\"\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "Cambia el username.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Refresh",
+              "filename": "Refresh.bru",
+              "seq": 3,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/refresh",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Device",
+                    "value": "{{DEVICE_ID}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Client",
+                    "value": "{{CLIENT}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"refresh_token\": \"{{REFRESH_TOKEN}}\"\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {
+                  "res": "// Guarda los tokens para el resto de la colección\nif (res.status === 200) {\n  bru.setEnvVar(\"AUTH_TOKEN\", res.body.access_token);\n  if (res.body.refresh_token) bru.setEnvVar(\"REFRESH_TOKEN\", res.body.refresh_token);\n}"
+                },
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "Mismo X-Lunance-Device que el login. En web no se manda body (usa la cookie).",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Sessions",
+              "filename": "Sessions.bru",
+              "seq": 4,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/sessions",
+                "method": "GET",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "none",
+                  "json": "",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "Sesiones abiertas; is_current marca la actual. Copia un uuid a SESSION_UUID.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Revoke Session",
+              "filename": "Revoke Session.bru",
+              "seq": 5,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/sessions/{{SESSION_UUID}}",
+                "method": "DELETE",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Client",
+                    "value": "{{CLIENT}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "none",
+                  "json": "",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "204; cierra esa sesión al instante.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Logout",
+              "filename": "Logout.bru",
+              "seq": 6,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/logout",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Client",
+                    "value": "{{CLIENT}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"refresh_token\": \"{{REFRESH_TOKEN}}\",\n  \"all_devices\": false\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "all_devices: true cierra todas.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
             }
-          }
+          ]
+        },
+        {
+          "type": "folder",
+          "name": "3 Google y Apple",
+          "filename": "3 Google y Apple",
+          "seq": 3,
+          "examples": [],
+          "root": {
+            "request": {
+              "auth": {
+                "mode": "inherit"
+              }
+            },
+            "meta": {
+              "name": "3 Google y Apple",
+              "seq": 3
+            },
+            "docs": ""
+          },
+          "items": [
+            {
+              "type": "http",
+              "name": "Google Sign In",
+              "filename": "Google Sign In.bru",
+              "seq": 1,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/google",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Device",
+                    "value": "{{DEVICE_ID}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Client",
+                    "value": "{{CLIENT}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"id_token\": \"{{GOOGLE_ID_TOKEN}}\",\n  \"device_name\": \"Bruno\"\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {
+                  "res": "// Guarda los tokens para el resto de la colección\nif (res.status === 200) {\n  bru.setEnvVar(\"AUTH_TOKEN\", res.body.access_token);\n  if (res.body.refresh_token) bru.setEnvVar(\"REFRESH_TOKEN\", res.body.refresh_token);\n}"
+                },
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "id_token del SDK de Google (o de OAuth Playground con scopes 'openid email profile'). Cada token sirve una vez.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Apple Sign In",
+              "filename": "Apple Sign In.bru",
+              "seq": 2,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/apple",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Device",
+                    "value": "{{DEVICE_ID}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Client",
+                    "value": "{{CLIENT}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"id_token\": \"{{APPLE_ID_TOKEN}}\",\n  \"authorization_code\": \"\",\n  \"nonce\": \"\",\n  \"name\": \"\"\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {
+                  "res": "// Guarda los tokens para el resto de la colección\nif (res.status === 200) {\n  bru.setEnvVar(\"AUTH_TOKEN\", res.body.access_token);\n  if (res.body.refresh_token) bru.setEnvVar(\"REFRESH_TOKEN\", res.body.refresh_token);\n}"
+                },
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "identityToken y authorizationCode de Sign in with Apple. name solo la primera vez.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Link Google",
+              "filename": "Link Google.bru",
+              "seq": 3,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/providers/google",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Client",
+                    "value": "{{CLIENT}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"id_token\": \"{{GOOGLE_ID_TOKEN}}\"\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "Vincula desde una sesión iniciada → {login_methods}.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Link Apple",
+              "filename": "Link Apple.bru",
+              "seq": 4,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/providers/apple",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Client",
+                    "value": "{{CLIENT}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"id_token\": \"{{APPLE_ID_TOKEN}}\",\n  \"authorization_code\": \"\"\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "Vincula desde una sesión iniciada → {login_methods}.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            },
+            {
+              "type": "http",
+              "name": "Unlink Provider",
+              "filename": "Unlink Provider.bru",
+              "seq": 5,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/auth/providers/google",
+                "method": "DELETE",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "X-Lunance-Client",
+                    "value": "{{CLIENT}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "none",
+                  "json": "",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "google o apple. 409 AUTH_LAST_LOGIN_METHOD si es el único método.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
+            }
+          ]
         }
       ]
     },
@@ -248,6 +1106,11 @@
                 "name": "Accept-Language",
                 "value": "{{LANG}}",
                 "enabled": true
+              },
+              {
+                "name": "Idempotency-Key",
+                "value": "{{$randomUUID}}",
+                "enabled": true
               }
             ],
             "params": [],
@@ -293,6 +1156,11 @@
                 "name": "Accept-Language",
                 "value": "{{LANG}}",
                 "enabled": true
+              },
+              {
+                "name": "Idempotency-Key",
+                "value": "{{$randomUUID}}",
+                "enabled": true
               }
             ],
             "params": [],
@@ -337,6 +1205,11 @@
               {
                 "name": "Accept-Language",
                 "value": "{{LANG}}",
+                "enabled": true
+              },
+              {
+                "name": "Idempotency-Key",
+                "value": "{{$randomUUID}}",
                 "enabled": true
               }
             ],
@@ -402,6 +1275,11 @@
                     "name": "Accept-Language",
                     "value": "{{LANG}}",
                     "enabled": true
+                  },
+                  {
+                    "name": "Idempotency-Key",
+                    "value": "{{$randomUUID}}",
+                    "enabled": true
                   }
                 ],
                 "params": [],
@@ -448,6 +1326,11 @@
                     "name": "Accept-Language",
                     "value": "{{LANG}}",
                     "enabled": true
+                  },
+                  {
+                    "name": "Idempotency-Key",
+                    "value": "{{$randomUUID}}",
+                    "enabled": true
                   }
                 ],
                 "params": [],
@@ -493,6 +1376,11 @@
                   {
                     "name": "Accept-Language",
                     "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Idempotency-Key",
+                    "value": "{{$randomUUID}}",
                     "enabled": true
                   }
                 ],
@@ -656,168 +1544,6 @@
     },
     {
       "type": "folder",
-      "name": "Deprecated",
-      "filename": "Deprecated",
-      "seq": 6,
-      "examples": [],
-      "root": {
-        "request": {
-          "auth": {
-            "mode": "inherit"
-          }
-        },
-        "meta": {
-          "name": "Deprecated",
-          "seq": 6
-        }
-      },
-      "items": [
-        {
-          "type": "http",
-          "name": "Login",
-          "filename": "Login.bru",
-          "seq": 2,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "http://{{URL_HOST}}/api/v2/auth/login",
-            "method": "POST",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              },
-              {
-                "name": "Accept-Language",
-                "value": "{{LANG}}",
-                "enabled": true
-              }
-            ],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"email\":\"\",\n  \"password\":\"\"\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "inherit"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Refresh Token",
-          "filename": "Refresh Token.bru",
-          "seq": 1,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "http://{{URL_HOST}}/api/v2/auth/refresh",
-            "method": "POST",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              },
-              {
-                "name": "Authorization",
-                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
-                "enabled": true
-              },
-              {
-                "name": "Accept-Language",
-                "value": "{{LANG}}",
-                "enabled": true
-              }
-            ],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"refresh_token\":\"\"\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "inherit"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Registrate",
-          "filename": "Registrate.bru",
-          "seq": 1,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "http://{{URL_HOST}}/api/v2/auth/register",
-            "method": "POST",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              },
-              {
-                "name": "Authorization",
-                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
-                "enabled": true
-              },
-              {
-                "name": "Accept-Language",
-                "value": "{{LANG}}",
-                "enabled": true
-              }
-            ],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"name\": \"\",\n  \"email\":\"\",\n  \"password\":\"\"\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {
-              "req": [
-                {
-                  "name": "",
-                  "value": "",
-                  "enabled": true,
-                  "local": false
-                }
-              ]
-            },
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "inherit"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "type": "folder",
       "name": "Healthy",
       "filename": "Healthy",
       "seq": 8,
@@ -846,7 +1572,7 @@
           "tags": [],
           "examples": [],
           "request": {
-            "url": "http://localhost:8000/health",
+            "url": "http://{{URL_HOST}}/health",
             "method": "GET",
             "headers": [],
             "params": [],
@@ -878,7 +1604,7 @@
           "tags": [],
           "examples": [],
           "request": {
-            "url": "http://localhost:8000/",
+            "url": "http://{{URL_HOST}}/",
             "method": "GET",
             "headers": [],
             "params": [],
@@ -947,6 +1673,11 @@
                 "name": "Content-Type",
                 "value": "application/json",
                 "enabled": true
+              },
+              {
+                "name": "Idempotency-Key",
+                "value": "{{$randomUUID}}",
+                "enabled": true
               }
             ],
             "params": [],
@@ -995,6 +1726,11 @@
               {
                 "name": "Content-Type",
                 "value": "application/json",
+                "enabled": true
+              },
+              {
+                "name": "Idempotency-Key",
+                "value": "{{$randomUUID}}",
                 "enabled": true
               }
             ],
@@ -1188,6 +1924,11 @@
                 "name": "Content-Type",
                 "value": "application/json",
                 "enabled": true
+              },
+              {
+                "name": "Idempotency-Key",
+                "value": "{{$randomUUID}}",
+                "enabled": true
               }
             ],
             "params": [],
@@ -1295,7 +2036,7 @@
               "tags": [],
               "examples": [],
               "request": {
-                "url": "http://localhost:8000/api/v1/transactions/ia/",
+                "url": "http://{{URL_HOST}}/api/v1/transactions/ia/",
                 "method": "DELETE",
                 "headers": [
                   {
@@ -1557,6 +2298,11 @@
                 "name": "Content-Type",
                 "value": "application/json",
                 "enabled": true
+              },
+              {
+                "name": "Idempotency-Key",
+                "value": "{{$randomUUID}}",
+                "enabled": true
               }
             ],
             "params": [],
@@ -1622,6 +2368,11 @@
                 "name": "Accept-Language",
                 "value": "{{LANG}}",
                 "enabled": true
+              },
+              {
+                "name": "Idempotency-Key",
+                "value": "{{$randomUUID}}",
+                "enabled": true
               }
             ],
             "params": [],
@@ -1667,6 +2418,11 @@
               {
                 "name": "Accept-Language",
                 "value": "{{LANG}}",
+                "enabled": true
+              },
+              {
+                "name": "Idempotency-Key",
+                "value": "{{$randomUUID}}",
                 "enabled": true
               }
             ],
@@ -1804,6 +2560,11 @@
                 "name": "Accept-Language",
                 "value": "{{LANG}}",
                 "enabled": true
+              },
+              {
+                "name": "Idempotency-Key",
+                "value": "{{$randomUUID}}",
+                "enabled": true
               }
             ],
             "params": [],
@@ -1858,6 +2619,76 @@
           "enabled": true,
           "secret": true,
           "type": "text"
+        },
+        {
+          "name": "DEVICE_ID",
+          "value": "697dc6fa-55e3-4911-a05b-479344e991b3",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "CLIENT",
+          "value": "ios/1.0.0",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "EMAIL",
+          "value": "",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "PASSWORD",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
+        },
+        {
+          "name": "REFRESH_TOKEN",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
+        },
+        {
+          "name": "VERIFY_TOKEN",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
+        },
+        {
+          "name": "RESET_TOKEN",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
+        },
+        {
+          "name": "SESSION_UUID",
+          "value": "",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "GOOGLE_ID_TOKEN",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
+        },
+        {
+          "name": "APPLE_ID_TOKEN",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
         }
       ],
       "name": "Lunance Local"
@@ -1891,6 +2722,76 @@
           "enabled": true,
           "secret": true,
           "type": "text"
+        },
+        {
+          "name": "DEVICE_ID",
+          "value": "c8a5e054-2d3f-4620-af01-08dc3a3328ac",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "CLIENT",
+          "value": "ios/1.0.0",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "EMAIL",
+          "value": "",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "PASSWORD",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
+        },
+        {
+          "name": "REFRESH_TOKEN",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
+        },
+        {
+          "name": "VERIFY_TOKEN",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
+        },
+        {
+          "name": "RESET_TOKEN",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
+        },
+        {
+          "name": "SESSION_UUID",
+          "value": "",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "GOOGLE_ID_TOKEN",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
+        },
+        {
+          "name": "APPLE_ID_TOKEN",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
         }
       ],
       "name": "Lunance Local Server"
@@ -1905,7 +2806,7 @@
       ".git"
     ],
     "size": 0.011059761047363281,
-    "filesCount": 43
+    "filesCount": 48
   },
   "exportedAt": "2026-02-03T02:21:36.396Z",
   "exportedUsing": "Bruno/3.0.2"
