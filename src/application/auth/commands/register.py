@@ -118,6 +118,7 @@ class RegisterHandler:
                     to=email,
                     login_link=app_link(base, LOGIN_PATH),
                     forgot_link=app_link(base, FORGOT_PASSWORD_PATH),
+                    login_methods=existing.login_methods,
                 )
 
             signup = await self._save_signup(email, username, password_hash, now)

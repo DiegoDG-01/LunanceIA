@@ -128,7 +128,10 @@ class ResetPasswordCommand:
 class ResetPasswordHandler:
     """Cambia la contraseña con el enlace del correo y cierra todas las sesiones de la
     cuenta: si alguien la conocía, pierde el acceso al instante. El enlace sirve una vez y
-    deja sin efecto los demás enlaces pendientes."""
+    deja sin efecto los demás enlaces pendientes.
+
+    Es también como una cuenta creada con Google o Apple (sin contraseña) elige una: el
+    enlace prueba que el correo es suyo."""
 
     def __init__(
         self,

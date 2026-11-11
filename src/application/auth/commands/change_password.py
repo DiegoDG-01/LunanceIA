@@ -19,6 +19,7 @@ from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.repositories.users.user_repository import UserRepository
 from shared.exceptions.domain import (
     InvalidCurrentPasswordError,
+    PasswordNotSetError,
     PasswordUnchangedError,
     UserNotFoundError,
 )
@@ -69,7 +70,11 @@ class ChangePasswordHandler:
         user = await self.user_repository.get_by_id(command.user_id)
         if user is None:
             raise UserNotFoundError()
-        if user.password is None or not await self.password_hasher.verify(
+        if user.password is None:
+            # Cuenta creada con Google o Apple: la contraseña se crea con "Olvidé mi
+            # contraseña", que prueba que el correo es suyo (la sesión sola no basta).
+            raise PasswordNotSetError()
+        if not await self.password_hasher.verify(
             command.current_password or "", user.password
         ):
             raise InvalidCurrentPasswordError()

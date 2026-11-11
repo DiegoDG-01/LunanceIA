@@ -137,6 +137,7 @@ class LoginHandler:
                     details={
                         "session_uuid": issued.session.uuid,
                         "platform": issued.session.platform.value,
+                        "method": "password",
                     },
                 )
             )
