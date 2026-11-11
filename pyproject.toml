@@ -41,6 +41,7 @@ dependencies = [
     "openai==3.16.2",
     "python-dateutil>=2.9.0.post0",
     "numpy==2.5.3",
+    "httpx==0.28.1",
 ]
 
 [project.urls]
