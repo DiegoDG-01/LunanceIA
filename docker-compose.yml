@@ -17,6 +17,9 @@ services:
     environment:
       # Sobrescribe REDIS_URL de .env: dentro de Docker, Redis se alcanza por nombre de servicio
       - REDIS_URL=redis://:${REDIS_PASSWORD:-lunance_redis}@redis:6379/0
+      # Con EMAIL_BACKEND=smtp (DEV), el correo va al servicio `mailpit` (perfil dev).
+      - SMTP_HOST=mailpit
+      - SMTP_PORT=1025
     networks:
       - lunance-net           # Connect to custom network
 
@@ -84,6 +87,25 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    networks:
+      - lunance-net
+
+  # Mailpit: buzón falso para desarrollo. Recibe por SMTP todo lo que manda la API con
+  # EMAIL_BACKEND=smtp (verificación de correo, recuperación de contraseña) y lo muestra en
+  # http://localhost:8025. El SMTP (1025) solo se alcanza desde la red interna.
+  # Solo arranca con el perfil dev: `docker compose --profile dev up`. En producción el correo
+  # sale por Resend.
+  mailpit:
+    image: axllent/mailpit:v1.33.1
+    container_name: lunance_mailpit
+    profiles: ["dev"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"   # UI web, solo en esta máquina
+    environment:
+      - MP_MAX_MESSAGES=500
+      - MP_SMTP_AUTH_ACCEPT_ANY=1
+      - MP_SMTP_AUTH_ALLOW_INSECURE=1
     networks:
       - lunance-net
 
