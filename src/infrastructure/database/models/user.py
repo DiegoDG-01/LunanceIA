@@ -8,7 +8,6 @@ from sqlalchemy.sql import func
 
 from infrastructure.database.connection import Base
 
-
 _SUBJECT = String(255).with_variant(
     mysql.VARCHAR(255, charset="utf8mb4", collation="utf8mb4_bin"), "mysql"
 )

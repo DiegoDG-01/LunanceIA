@@ -50,7 +50,7 @@ SIGN_IN_ATTEMPTS = 2
 
 
 class ProviderVerifier(Protocol):
-    async def verify(self, token: str, *, nonce: str | None) -> ProviderIdentity: ...
+    async def verify(self, token: str, /, *, nonce: str | None) -> ProviderIdentity: ...
 
 
 @dataclass

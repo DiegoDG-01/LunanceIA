@@ -202,7 +202,8 @@ class AppleSignInClient(AppleSignInGateway):
         return response
 
     def client_secret(self, client_id: str) -> str:
-        if not self.can_exchange_codes:
+        private_key = self._private_key
+        if private_key is None or not self.can_exchange_codes:
             raise RuntimeError("Falta APPLE_TEAM_ID, APPLE_KEY_ID o APPLE_PRIVATE_KEY")
         now = datetime.now(UTC)
         claims = {
@@ -213,7 +214,7 @@ class AppleSignInClient(AppleSignInGateway):
             "sub": client_id,
         }
         return jwt.encode(
-            claims, self._private_key, algorithm="ES256", headers={"kid": self._key_id}
+            claims, private_key, algorithm="ES256", headers={"kid": self._key_id}
         )
 
 
