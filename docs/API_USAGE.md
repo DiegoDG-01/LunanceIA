@@ -252,21 +252,30 @@ curl -X POST "http://localhost:8000/api/v2/auth/apple" \
 ### Vincular y desvincular Google o Apple (ajustes)
 
 ```bash
-# Vincular (con sesión iniciada; el correo del proveedor puede ser otro)
+# Vincular (con sesión iniciada y confirmando la identidad; el correo del proveedor puede ser otro)
 curl -X POST "http://localhost:8000/api/v2/auth/providers/google" \
      -H "Authorization: Bearer <access_token>" \
      -H "Content-Type: application/json" \
-     -d '{"id_token": "<id token de Google>"}'
+     -d '{"id_token": "<id token de Google>", "current_password": "MiClave123!"}'
 
 curl -X POST "http://localhost:8000/api/v2/auth/providers/apple" \
      -H "Authorization: Bearer <access_token>" \
      -H "Content-Type: application/json" \
-     -d '{"id_token": "<identityToken>", "authorization_code": "<authorizationCode>", "nonce": "<nonce>"}'
+     -d '{"id_token": "<identityToken>", "authorization_code": "<authorizationCode>", "nonce": "<nonce>", "current_password": "MiClave123!"}'
 
 # Desvincular
 curl -X DELETE "http://localhost:8000/api/v2/auth/providers/google" \
      -H "Authorization: Bearer <access_token>"
 ```
+
+**Confirmar la identidad para vincular**: un access token robado bastaría para meter un Google ajeno y quedarse con la cuenta, así que vincular pide además una prueba de que quien tiene la sesión es el dueño:
+
+| La cuenta… | Qué hay que mandar | Si falta |
+|---|---|---|
+| Tiene contraseña (`"password"` en `login_methods`) | `current_password` en el body | `403 AUTH_REAUTH_REQUIRED`; contraseña incorrecta → `400 AUTH_INVALID_CURRENT_PASSWORD` |
+| No tiene contraseña (solo Google/Apple) | Nada: la sesión debe haberse iniciado hace **menos de 10 minutos** | `403 AUTH_REAUTH_REQUIRED`: volver a iniciar sesión con Google/Apple y reintentar |
+
+La comprobación va **antes** de usar el ID token, así que tras un `403` se puede pedir la contraseña y reintentar con el mismo token. Desvincular no pide confirmación (no da acceso a nadie y nunca deja la cuenta sin forma de entrar).
 
 **Respuesta:** `200` con `{"login_methods": ["password", "google"]}`. Errores: esa cuenta del proveedor ya está en otro usuario → `409 AUTH_PROVIDER_IN_USE`; tu cuenta ya tiene otra cuenta de ese proveedor → `409 AUTH_PROVIDER_CONFLICT`; desvincular el único método de acceso → `409 AUTH_LAST_LOGIN_METHOD`. Desvincular algo que no está vinculado no hace nada. Ambas cosas se avisan por correo. Límite de 5 por minuto por usuario.
 
@@ -640,8 +649,8 @@ DELETE /api/v2/auth/sessions/{uuid}       # 204; 404 si no existe o es de otro u
 POST /api/v2/auth/google                  # {id_token, nonce?, device_name?} → tokens + account_created/provider_linked
 POST /api/v2/auth/apple                   # {id_token, authorization_code?, nonce?, name?, device_name?}
 POST /api/v2/auth/apple/notifications     # avisos servidor a servidor de Apple ({payload}); responde 200
-POST /api/v2/auth/providers/google        # vincular desde ajustes (con sesión) → {login_methods}
-POST /api/v2/auth/providers/apple         # vincular desde ajustes (con sesión) → {login_methods}
+POST /api/v2/auth/providers/google        # vincular desde ajustes: {id_token, nonce?, current_password?} → {login_methods}
+POST /api/v2/auth/providers/apple         # vincular desde ajustes: {id_token, authorization_code?, nonce?, current_password?}
 DELETE /api/v2/auth/providers/{provider}  # desvincular google|apple → {login_methods}
 PATCH /api/v2/auth/me                     # {username} → cambiar el username
 ```
@@ -650,6 +659,7 @@ PATCH /api/v2/auth/me                     # {username} → cambiar el username
 |---|---|---|
 | `AUTH_INVALID_PROVIDER_TOKEN` | 401 | Firma, emisor, audiencia, caducidad, nonce o correo sin verificar; token ya usado; código de Apple rechazado |
 | `AUTH_PROVIDER_LINK_REQUIRED` | 409 | Hay una cuenta con ese correo y el buzón no permite vincular solo (`details[0].input`: métodos de esa cuenta) |
+| `AUTH_REAUTH_REQUIRED` | 403 | Vincular sin `current_password` (cuenta con contraseña) o con una sesión de más de 10 minutos (cuenta sin contraseña) |
 | `AUTH_PROVIDER_CONFLICT` | 409 | La cuenta ya tiene otra cuenta del mismo proveedor |
 | `AUTH_PROVIDER_IN_USE` | 409 | Esa cuenta del proveedor está vinculada a otro usuario |
 | `AUTH_LAST_LOGIN_METHOD` | 409 | Desvincular dejaría la cuenta sin forma de entrar |
@@ -2218,6 +2228,7 @@ La API retorna errores en un formato estándar con soporte de internacionalizaci
 - `AUTH_USER_INACTIVE` (401): usuario inactivo
 - `AUTH_INVALID_PROVIDER_TOKEN` (401): ID token de Google/Apple inválido o ya usado
 - `AUTH_EMAIL_NOT_VERIFIED` (403): el correo del registro aún no se confirma
+- `AUTH_REAUTH_REQUIRED` (403): para vincular Google/Apple hay que confirmar la identidad (contraseña actual o un login reciente)
 - `AUTH_INVALID_TOKEN` (400): enlace de verificación o de recuperación inválido, caducado o ya usado
 - `AUTH_INVALID_CURRENT_PASSWORD` (400): la contraseña actual no coincide
 - `AUTH_TOO_MANY_ATTEMPTS` (429): login bloqueado por intentos fallidos (`Retry-After`)
@@ -2358,7 +2369,7 @@ curl -X GET "http://localhost:8000/api/v2/account/" \
 | 204 | No Content | Operación sin cuerpo de respuesta (p. ej. `/auth/password/*`) |
 | 400 | Bad Request | Error de validación en el request |
 | 401 | Unauthorized | Token inválido o faltante |
-| 403 | Forbidden | Sin permisos para el recurso, o `AUTH_EMAIL_NOT_VERIFIED` |
+| 403 | Forbidden | Sin permisos para el recurso, `AUTH_EMAIL_NOT_VERIFIED` o `AUTH_REAUTH_REQUIRED` |
 | 404 | Not Found | Recurso no encontrado |
 | 409 | Conflict | Regla de negocio en conflicto, `BUSINESS_USERNAME_EXISTS` o `IDEMPOTENCY_KEY_IN_USE` |
 | 422 | Unprocessable Entity | Error de validación de datos |

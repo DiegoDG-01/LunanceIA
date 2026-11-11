@@ -851,7 +851,7 @@
                 "params": [],
                 "body": {
                   "mode": "json",
-                  "json": "{\n  \"id_token\": \"{{GOOGLE_ID_TOKEN}}\"\n}",
+                  "json": "{\n  \"id_token\": \"{{GOOGLE_ID_TOKEN}}\",\n  \"current_password\": \"{{PASSWORD}}\"\n}",
                   "formUrlEncoded": [],
                   "multipartForm": [],
                   "file": []
@@ -860,7 +860,7 @@
                 "vars": {},
                 "assertions": [],
                 "tests": "",
-                "docs": "Vincula desde una sesión iniciada → {login_methods}.",
+                "docs": "Vincula desde una sesión iniciada → {login_methods}. Con contraseña en la cuenta, current_password es obligatorio; sin contraseña, quita el campo y vincula en los 10 minutos siguientes al login (si no, 403 AUTH_REAUTH_REQUIRED).",
                 "auth": {
                   "mode": "inherit"
                 }
@@ -902,7 +902,7 @@
                 "params": [],
                 "body": {
                   "mode": "json",
-                  "json": "{\n  \"id_token\": \"{{APPLE_ID_TOKEN}}\",\n  \"authorization_code\": \"\"\n}",
+                  "json": "{\n  \"id_token\": \"{{APPLE_ID_TOKEN}}\",\n  \"authorization_code\": \"\",\n  \"current_password\": \"{{PASSWORD}}\"\n}",
                   "formUrlEncoded": [],
                   "multipartForm": [],
                   "file": []
@@ -911,7 +911,7 @@
                 "vars": {},
                 "assertions": [],
                 "tests": "",
-                "docs": "Vincula desde una sesión iniciada → {login_methods}.",
+                "docs": "Igual que Link Google: current_password si la cuenta tiene contraseña; si no, un login de hace menos de 10 minutos.",
                 "auth": {
                   "mode": "inherit"
                 }
