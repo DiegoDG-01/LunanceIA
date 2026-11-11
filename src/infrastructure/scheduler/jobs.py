@@ -43,6 +43,12 @@ from infrastructure.database.repositories.sqlalchemy_investment_yield_repository
 from infrastructure.database.repositories.sqlalchemy_notification_repository import (
     SQLAlchemyNotificationRepository,
 )
+from infrastructure.database.repositories.sqlalchemy_password_reset_token_repository import (
+    SQLAlchemyPasswordResetTokenRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_pending_signup_repository import (
+    SQLAlchemyPendingSignupRepository,
+)
 from infrastructure.database.repositories.sqlalchemy_recurring_income_repository import (
     SQLAlchemyRecurringIncomeRepository,
 )
@@ -189,7 +195,8 @@ async def process_recurring_income_job():
 
 
 async def purge_auth_data_job():
-    """Borra sesiones vencidas o revocadas hace más de 30 días y la auditoría de más de 90."""
+    """Borra sesiones vencidas o revocadas hace más de 30 días, la auditoría de más de 90,
+    los registros sin confirmar caducados y los enlaces de recuperación vencidos o usados."""
     logger.info(f"Processing auth data purge job at {datetime.now(UTC)}")
 
     async with AsyncSessionLocal() as db:
@@ -198,12 +205,15 @@ async def purge_auth_data_job():
                 session_repository=SQLAlchemySessionRepository(db),
                 auth_event_repository=SQLAlchemyAuthEventRepository(db),
                 uow=SQLAlchemyUnitOfWork(db),
+                pending_signup_repository=SQLAlchemyPendingSignupRepository(db),
+                reset_token_repository=SQLAlchemyPasswordResetTokenRepository(db),
             )
             result = await handler.handle()
 
             logger.info(
-                f"Job finished at {datetime.now(UTC)}: purged {result.sessions} sessions "
-                f"and {result.events} auth events"
+                f"Job finished at {datetime.now(UTC)}: purged {result.sessions} sessions, "
+                f"{result.events} auth events, {result.pending_signups} pending signups "
+                f"and {result.password_reset_tokens} password reset tokens"
             )
         except (RepositoryError, SQLAlchemyError) as e:
             await db.rollback()

@@ -59,7 +59,7 @@ class SchedulerService:
             purge_auth_data_job,
             trigger=CronTrigger(hour=3, minute=0),
             id="purge_auth_data_job",
-            name="Purge expired sessions and old auth events",
+            name="Purge expired sessions, auth events, pending signups and reset tokens",
             replace_existing=True,
         )
 
