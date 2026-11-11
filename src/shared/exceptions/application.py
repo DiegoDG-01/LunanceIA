@@ -77,3 +77,25 @@ class IdempotencyKeyInUseError(LunanceException):
         super().__init__(
             "La operación de esta Idempotency-Key no tiene respuesta guardada"
         )
+
+
+class TooManyAttemptsError(LunanceException):
+    """Demasiados intentos fallidos: el sujeto (correo, IP) está bloqueado unos segundos."""
+
+    def __init__(self, retry_after: int):
+        self.retry_after = max(1, int(retry_after))
+        super().__init__(
+            f"Demasiados intentos; vuelve a intentarlo en {self.retry_after} s"
+        )
+
+
+class ServiceTemporarilyUnavailableError(LunanceException):
+    """Un servicio del que depende la protección de la ruta (Redis) no responde.
+
+    Login, registro y recuperación de contraseña no se atienden sin su protección contra
+    fuerza bruta: responden 503 con `Retry-After`.
+    """
+
+    def __init__(self, service_name: str, retry_after: int = 5):
+        self.retry_after = retry_after
+        super().__init__(f"Servicio {service_name} no disponible")

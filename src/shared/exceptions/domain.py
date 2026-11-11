@@ -1,5 +1,3 @@
-from pydantic import EmailStr
-
 from shared.exceptions.base import (
     BusinessRuleError,
     LunanceException,
@@ -45,11 +43,48 @@ class SessionNotFoundError(NotFoundError):
         super().__init__(f"Sesión {session_uuid} no encontrada")
 
 
-class EmailAlreadyExistsError(ValidationError):
-    """Email ya existe."""
+class EmailNotVerifiedError(BusinessRuleError):
+    """La contraseña es la de un registro pendiente: falta abrir el enlace del correo."""
 
-    def __init__(self, email: EmailStr):
-        super().__init__(f"El email {email} ya está registrado")
+    def __init__(self):
+        super().__init__("El correo aún no está confirmado")
+
+
+class InvalidEmailTokenError(ValidationError):
+    """Enlace de verificación o de recuperación inexistente, ya usado o caducado."""
+
+    def __init__(self):
+        super().__init__("El enlace no es válido o ya caducó")
+
+
+class InvalidCurrentPasswordError(BusinessRuleError):
+    """La contraseña actual no coincide al cambiarla (o la cuenta no tiene contraseña)."""
+
+    def __init__(self):
+        super().__init__("La contraseña actual no es correcta")
+
+
+class PasswordUnchangedError(ValidationError):
+    """La contraseña nueva es igual a la actual."""
+
+    def __init__(self):
+        super().__init__(
+            "La contraseña nueva debe ser distinta de la actual",
+            [
+                {
+                    "loc": ["body", "new_password"],
+                    "msg": "",
+                    "type": "PASSWORD_SAME_AS_CURRENT",
+                }
+            ],
+        )
+
+
+class EmailAlreadyExistsError(ValidationError):
+    """Email ya existe. El mensaje no lleva el correo: acaba en los logs."""
+
+    def __init__(self):
+        super().__init__("El email ya está registrado")
 
 
 # Account Exceptions

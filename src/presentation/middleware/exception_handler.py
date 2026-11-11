@@ -22,6 +22,8 @@ from shared.exceptions.application import (
     JWTValidationError,
     QueryValidationError,
     RepositoryError,
+    ServiceTemporarilyUnavailableError,
+    TooManyAttemptsError,
 )
 from shared.exceptions.base import (
     BusinessRuleError,
@@ -44,6 +46,7 @@ from shared.exceptions.domain import (
     CreditCardSettingsNotFoundError,
     CurrencyMismatchError,
     EmailAlreadyExistsError,
+    EmailNotVerifiedError,
     FixedTermCapNotAllowedError,
     FixedTermDepositNotAllowedError,
     FixedTermWithdrawalNotAllowedError,
@@ -57,7 +60,9 @@ from shared.exceptions.domain import (
     InvalidCredentialsError,
     InvalidCreditLimitError,
     InvalidCurrencyError,
+    InvalidCurrentPasswordError,
     InvalidEmailError,
+    InvalidEmailTokenError,
     InvalidFixedTermConfigError,
     InvalidImageError,
     InvalidInvestmentRateError,
@@ -84,6 +89,7 @@ from shared.exceptions.domain import (
     TransferAccountTypeNotAllowedError,
     TransferNotAllowedError,
     UserInactiveError,
+    UsernameAlreadyExistsError,
     UserNotFoundError,
 )
 from shared.i18n.messages import get_error_message
@@ -99,6 +105,11 @@ EXCEPTION_MAP: dict[type[Exception], tuple[str, int]] = {
     UnauthorizedError: ("AUTH_INVALID_CREDENTIALS", 401),
     UserInactiveError: ("AUTH_USER_INACTIVE", 401),
     JWTValidationError: ("JWT_VALIDATION_ERROR", 401),
+    # Contraseña correcta de un registro sin confirmar: falta abrir el enlace del correo.
+    EmailNotVerifiedError: ("AUTH_EMAIL_NOT_VERIFIED", 403),
+    # --- Bloqueo por intentos fallidos (429) y protección no disponible (503) ---
+    TooManyAttemptsError: ("AUTH_TOO_MANY_ATTEMPTS", 429),
+    ServiceTemporarilyUnavailableError: ("SERVICE_UNAVAILABLE", 503),
     # --- Recursos No Encontrados (404) ---
     UserNotFoundError: ("NOT_FOUND_USER", 404),
     SessionNotFoundError: ("NOT_FOUND_SESSION", 404),
@@ -115,6 +126,7 @@ EXCEPTION_MAP: dict[type[Exception], tuple[str, int]] = {
     NotFoundError: ("NOT_FOUND", 404),
     # --- Conflictos de Negocio (409) ---
     EmailAlreadyExistsError: ("BUSINESS_EMAIL_EXISTS", 409),
+    UsernameAlreadyExistsError: ("BUSINESS_USERNAME_EXISTS", 409),
     AccountHasBalanceError: ("BUSINESS_ACCOUNT_HAS_BALANCE", 409),
     AccountHasTransactionsError: ("BUSINESS_ACCOUNT_HAS_TRANSACTIONS", 409),
     InstallmentChargeAlreadyPaidError: ("INSTALLMENT_CHARGE_ALREADY_PAID", 409),
@@ -162,6 +174,9 @@ EXCEPTION_MAP: dict[type[Exception], tuple[str, int]] = {
     InvalidCreditLimitError: ("VALIDATION_INVALID_CREDIT_LIMIT", 400),
     InvalidMinimumPaymentError: ("VALIDATION_INVALID_MINIMUM_PAYMENT", 400),
     InvalidEmailError: ("VALIDATION_INVALID_EMAIL", 400),
+    # Enlaces del correo (verificación, recuperación) y cambio de contraseña.
+    InvalidEmailTokenError: ("AUTH_INVALID_TOKEN", 400),
+    InvalidCurrentPasswordError: ("AUTH_INVALID_CURRENT_PASSWORD", 400),
     InvalidBalanceUpdateError: ("VALIDATION_INVALID_BALANCE_UPDATE", 400),
     InvalidFixedTermConfigError: ("VALIDATION_INVALID_FIXED_TERM_CONFIG", 400),
     InvalidPositionCapError: ("VALIDATION_INVALID_POSITION_CAP", 400),
@@ -260,7 +275,13 @@ async def lunance_exception_handler(
         error_code=error_code, message=translated_message, details=details_list
     )
 
-    return JSONResponse(status_code=status_code, content=error_response.model_dump())
+    response = JSONResponse(
+        status_code=status_code, content=error_response.model_dump()
+    )
+    retry_after = getattr(exc, "retry_after", None)
+    if retry_after:
+        response.headers["Retry-After"] = str(retry_after)
+    return response
 
 
 async def validation_exception_handler(

@@ -135,6 +135,10 @@ HTTP_CODES_ERRORS = {
         "AUTH_INVALID_CREDENTIALS": "Credenciales inválidas",
         "AUTH_USER_INACTIVE": "Usuario inactivo",
         "AUTH_SESSION_EXPIRED": "La sesión expiró o se cerró; inicia sesión de nuevo",
+        "AUTH_TOO_MANY_ATTEMPTS": "Demasiados intentos fallidos; espera un momento antes de volver a intentarlo",
+        "AUTH_EMAIL_NOT_VERIFIED": "Confirma tu correo con el enlace que te enviamos antes de iniciar sesión",
+        "AUTH_INVALID_TOKEN": "El enlace no es válido o ya caducó; pide uno nuevo",
+        "AUTH_INVALID_CURRENT_PASSWORD": "La contraseña actual no es correcta",
         # JWT Validation error
         "JWT_VALIDATION_ERROR": "Token inválido: malformado o expirado",
         # Códigos específicos de Lunance - Recursos no encontrados
@@ -148,6 +152,7 @@ HTTP_CODES_ERRORS = {
         "NOT_FOUND_INVESTMENT_POSITION": "Apartado de inversión no encontrado",
         # Códigos específicos de Lunance - Conflictos de negocio
         "BUSINESS_EMAIL_EXISTS": "El email ya está registrado",
+        "BUSINESS_USERNAME_EXISTS": "Ese nombre de usuario ya está en uso",
         "BUSINESS_ACCOUNT_HAS_BALANCE": "La cuenta tiene saldo pendiente",
         "BUSINESS_ACCOUNT_HAS_TRANSACTIONS": "La cuenta tiene transacciones asociadas",
         "INSTALLMENT_CHARGE_ALREADY_PAID": "El cargo de la compra a plazos ya fue pagado",
@@ -207,6 +212,10 @@ HTTP_CODES_ERRORS = {
         "AUTH_INVALID_CREDENTIALS": "Invalid credentials",
         "AUTH_USER_INACTIVE": "Inactive user",
         "AUTH_SESSION_EXPIRED": "The session expired or was closed; sign in again",
+        "AUTH_TOO_MANY_ATTEMPTS": "Too many failed attempts; wait a moment before trying again",
+        "AUTH_EMAIL_NOT_VERIFIED": "Confirm your email with the link we sent you before signing in",
+        "AUTH_INVALID_TOKEN": "The link is invalid or has expired; request a new one",
+        "AUTH_INVALID_CURRENT_PASSWORD": "The current password is not correct",
         # JWT Validation error
         "JWT_VALIDATION_ERROR": "Invalid token: malformed or expired",
         # Códigos específicos de Lunance - Recursos no encontrados
@@ -221,6 +230,7 @@ HTTP_CODES_ERRORS = {
         # Códigos específicos de Lunance - Conflictos de negocio
         "INVALID_CREDENTIALS": "Invalid credentials",
         "BUSINESS_EMAIL_EXISTS": "Email already registered",
+        "BUSINESS_USERNAME_EXISTS": "That username is already taken",
         "BUSINESS_ACCOUNT_HAS_BALANCE": "Account has pending balance",
         "BUSINESS_ACCOUNT_HAS_TRANSACTIONS": "Account has associated transactions",
         "INSTALLMENT_CHARGE_ALREADY_PAID": "The installment charge has already been paid",
@@ -274,6 +284,7 @@ ERROR_DETAIL_MESSAGES = {
         "PASSWORD_MISSING_LOWERCASE": "La contraseña debe incluir al menos una minúscula",
         "PASSWORD_MISSING_DIGIT": "La contraseña debe incluir al menos un número",
         "PASSWORD_MISSING_SPECIAL": "La contraseña debe incluir al menos un carácter especial",
+        "PASSWORD_SAME_AS_CURRENT": "La contraseña nueva debe ser distinta de la actual",
         "REFRESH_TOKEN_INVALID": "El token de refresco es inválido",
         "INSUFFICIENT_FUNDS": "Fondos insuficientes",
         "INVALID_TYPE": "Tipo de valor invalido",
@@ -289,6 +300,7 @@ ERROR_DETAIL_MESSAGES = {
         "PASSWORD_MISSING_LOWERCASE": "Password must include at least one lowercase letter",
         "PASSWORD_MISSING_DIGIT": "Password must include at least one number",
         "PASSWORD_MISSING_SPECIAL": "Password must include at least one special character",
+        "PASSWORD_SAME_AS_CURRENT": "The new password must be different from the current one",
         "REFRESH_TOKEN_INVALID": "Refresh token is invalid",
         "INSUFFICIENT_FUNDS": "Insufficient funds",
         "INVALID_TYPE": "Invalid typo of value",
