@@ -53,6 +53,20 @@ El access token lleva `iss`, `aud`, `sub` (UUID del usuario), `sid` (UUID de la 
 
 Cerrar una sesión (logout, `DELETE /auth/sessions/{uuid}` o reuso detectado) invalida su access token **al instante**, aunque no haya caducado: la siguiente petición responde `401 AUTH_SESSION_EXPIRED`.
 
+### Guía para integrar un cliente (web y móvil)
+
+1. **Identificador del dispositivo**: genera un UUID v4 la primera vez que se abre la app y guárdalo para siempre (web: `localStorage`; iOS: Keychain; Android: almacenamiento cifrado). Mándalo en `X-Lunance-Device` en `/login`, `/google`, `/apple` y `/refresh`. Si cambia, el servidor lo trata como otro dispositivo.
+2. **`X-Lunance-Client`**: mándalo en **todas** las peticiones a `/auth/*` (`web/1.0.0`, `ios/1.4.0`, `android/1.4.0`). Decide dónde viaja el refresh token y qué duración tiene la sesión.
+3. **Dónde guardar los tokens**:
+   - Access token (10 min): en memoria. No hace falta persistirlo.
+   - Refresh token: **web** → no lo toques, va en la cookie `httpOnly`; las peticiones a `/auth/refresh` y `/auth/logout` deben enviarse con credenciales (`fetch(..., {credentials: "include"})` o `withCredentials: true` en axios). **Móvil** → guárdalo en Keychain / almacenamiento cifrado y reemplázalo por el nuevo en cada `/refresh`.
+4. **Al recibir un `401`**:
+   - `JWT_VALIDATION_ERROR` (access token vencido o inválido) → llama a `/auth/refresh` **una sola vez** y repite la petición. Si varias peticiones fallan a la vez, comparte una misma llamada a `/refresh`: cada refresh token rota en cada uso y, pasado el margen de gracia de unos segundos, reusar uno ya canjeado cierra la sesión.
+   - `AUTH_SESSION_EXPIRED` (sesión cerrada, vencida o revocada desde otro dispositivo) → borra los tokens y manda al usuario al login. No reintentes.
+5. **`429` y `503`**: respeta el header `Retry-After` (segundos) antes de reintentar. `503` en login/registro significa que el servidor no puede comprobar los límites en ese momento.
+6. **Rutas de la web que abren los correos**: `/verify-email?token=…`, `/reset-password?token=…` y `/verify-email/resend` (pantalla para pedir otro enlace). La web lee el `token` de la URL y llama al endpoint correspondiente.
+7. **Escrituras**: los `POST` que crean recursos exigen `Idempotency-Key` (ver [Idempotencia](#-idempotencia-idempotency-key)); en la web, el header `Idempotent-Replayed` está expuesto por CORS para saber si una respuesta es la repetición de un reintento.
+
 ### Registro
 
 ```bash
@@ -2199,8 +2213,15 @@ La API retorna errores en un formato estándar con soporte de internacionalizaci
 ```
 
 **Otros códigos de autenticación:**
-- `AUTH_USER_INACTIVE`: Usuario inactivo
-- `JWT_VALIDATION_ERROR`: Token JWT inválido, expirado o mal formado
+- `JWT_VALIDATION_ERROR` (401): access token inválido, expirado o mal formado → renovar con `/auth/refresh`
+- `AUTH_SESSION_EXPIRED` (401): la sesión se cerró, venció o el refresh token no es válido → volver a iniciar sesión
+- `AUTH_USER_INACTIVE` (401): usuario inactivo
+- `AUTH_INVALID_PROVIDER_TOKEN` (401): ID token de Google/Apple inválido o ya usado
+- `AUTH_EMAIL_NOT_VERIFIED` (403): el correo del registro aún no se confirma
+- `AUTH_INVALID_TOKEN` (400): enlace de verificación o de recuperación inválido, caducado o ya usado
+- `AUTH_INVALID_CURRENT_PASSWORD` (400): la contraseña actual no coincide
+- `AUTH_TOO_MANY_ATTEMPTS` (429): login bloqueado por intentos fallidos (`Retry-After`)
+- Google/Apple y vinculación: `AUTH_PROVIDER_LINK_REQUIRED`, `AUTH_PROVIDER_CONFLICT`, `AUTH_PROVIDER_IN_USE`, `AUTH_LAST_LOGIN_METHOD`, `AUTH_PASSWORD_NOT_SET` (409) y `AUTH_PROVIDER_NOT_CONFIGURED`, `AUTH_PROVIDER_UNAVAILABLE` (503); ver [Google y Apple](#google-y-apple)
 
 ### Errores de Validación (422)
 
@@ -2251,7 +2272,8 @@ La API retorna errores en un formato estándar con soporte de internacionalizaci
 ```
 
 **Otros códigos de negocio:**
-- `BUSINESS_EMAIL_EXISTS` (409): Email ya registrado
+- `BUSINESS_EMAIL_EXISTS` (409): al confirmar un registro, el correo ya tiene una cuenta
+- `BUSINESS_USERNAME_EXISTS` (409): el username está ocupado (registro, confirmación o `PATCH /auth/me`)
 - `BUSINESS_ACCOUNT_HAS_TRANSACTIONS` (409): Cuenta tiene transacciones
 - `BUSINESS_RULE_VIOLATION` (400): Violación de regla de negocio genérica
 - `INSUFFICIENT_FUNDS` (422): Fondos insuficientes (en apartados se compara siempre contra el **saldo disponible**, no contra el total de la cuenta)
@@ -2332,17 +2354,17 @@ curl -X GET "http://localhost:8000/api/v2/account/" \
 |--------|-------------|-----|
 | 200 | OK | Operación exitosa |
 | 201 | Created | Recurso creado exitosamente |
-| 400 | Bad Request | Error de validación en el request |
-| 401 | Unauthorized | Token inválido o faltante |
-| 403 | Forbidden | Sin permisos para el recurso |
-| 404 | Not Found | Recurso no encontrado |
 | 202 | Accepted | Registro o reenvío de verificación recibido (la respuesta no revela si el correo existe) |
 | 204 | No Content | Operación sin cuerpo de respuesta (p. ej. `/auth/password/*`) |
+| 400 | Bad Request | Error de validación en el request |
+| 401 | Unauthorized | Token inválido o faltante |
+| 403 | Forbidden | Sin permisos para el recurso, o `AUTH_EMAIL_NOT_VERIFIED` |
+| 404 | Not Found | Recurso no encontrado |
 | 409 | Conflict | Regla de negocio en conflicto, `BUSINESS_USERNAME_EXISTS` o `IDEMPOTENCY_KEY_IN_USE` |
 | 422 | Unprocessable Entity | Error de validación de datos |
 | 429 | Too Many Requests | Se excedió el límite de rate limiting, o `AUTH_TOO_MANY_ATTEMPTS` (bloqueo del login) |
 | 500 | Internal Server Error | Error interno del servidor |
-| 503 | Service Unavailable | Redis no responde en login, registro o recuperación de contraseña (con `Retry-After`) |
+| 503 | Service Unavailable | Redis no responde en login, registro o recuperación de contraseña, o Google/Apple no está disponible o configurado (con `Retry-After`) |
 
 ## 📄 Límites y Paginación
 
@@ -2366,6 +2388,10 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 | `GET /auth/sessions` | **30 requests/minuto** | Lista de sesiones |
 | `DELETE /auth/sessions/{uuid}` | **20 requests/minuto** | Cerrar una sesión |
 | `GET /auth/me` | **100 requests/minuto** | Lectura de perfil frecuente |
+| `PATCH /auth/me` | **5 requests/minuto** por usuario | Cambiar el username |
+| `POST /auth/google`, `POST /auth/apple` | **10 requests/minuto** (`503` si Redis no responde) | Login con proveedor |
+| `POST /auth/providers/{google,apple}`, `DELETE /auth/providers/{provider}` | **5 requests/minuto** por usuario (compartido) | Vincular y desvincular |
+| `POST /auth/apple/notifications` | **100 requests/minuto** | Avisos de Apple (servidor a servidor) |
 
 > **Nota**: además de estos límites por endpoint, los intentos de autenticación fallidos se limitan por IP, y el login se bloquea por correo (+ IP) tras varios fallos (`429 AUTH_TOO_MANY_ATTEMPTS`). Superarlos devuelve `429` aunque las credenciales acaben siendo correctas. Si Redis no responde, login, registro, verificación y recuperación de contraseña responden `503`.
 
