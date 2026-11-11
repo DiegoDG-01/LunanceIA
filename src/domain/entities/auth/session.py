@@ -22,6 +22,8 @@ class RevocationReason(StrEnum):
     REFRESH_REUSE = "refresh_reuse"
     PASSWORD_RESET = "password_reset"
     PASSWORD_CHANGE = "password_change"
+    # Aviso de Apple: el usuario dejó de usar su Apple ID con Lunance o lo borró.
+    APPLE_REVOKED = "apple_revoked"
 
 
 @dataclass(frozen=True, slots=True)

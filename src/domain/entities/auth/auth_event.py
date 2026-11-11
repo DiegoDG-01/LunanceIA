@@ -16,6 +16,11 @@ class AuthAction(StrEnum):
     PASSWORD_RESET_REQUESTED = "password.reset_requested"
     PASSWORD_RESET = "password.reset"
     PASSWORD_CHANGED = "password.changed"
+    PROVIDER_LINKED = "provider.linked"
+    PROVIDER_UNLINKED = "provider.unlinked"
+    PROVIDER_TOKEN_REPLAY = "provider.token_replay"
+    APPLE_NOTIFICATION = "apple.notification"
+    USERNAME_CHANGED = "account.username_changed"
 
 
 @dataclass(frozen=True, slots=True)

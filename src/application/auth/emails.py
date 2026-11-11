@@ -154,11 +154,30 @@ def email_verification(
     )
 
 
+_METHOD_LABELS = {"google": "Google", "apple": "Apple"}
+
+
 def account_already_exists(
-    *, to: str, login_link: str, forgot_link: str
+    *,
+    to: str,
+    login_link: str,
+    forgot_link: str,
+    login_methods: list[str] | None = None,
 ) -> OutgoingEmail:
     """Alguien intentó registrarse con un correo que ya tiene cuenta. No se revela en la
     respuesta de la API: solo lo sabe quien lee el buzón."""
+    methods = login_methods or ["password"]
+    if "password" in methods:
+        how = (
+            "Si fuiste tú, inicia sesión con tu correo y contraseña. Si no la "
+            f"recuerdas, puedes restablecerla aquí: {forgot_link}"
+        )
+    else:
+        providers = " o con ".join(_METHOD_LABELS.get(m, m) for m in methods)
+        how = (
+            f"Si fuiste tú, inicia sesión con {providers}. Si prefieres entrar con tu "
+            f"correo, crea una contraseña aquí: {forgot_link}"
+        )
     return _email(
         to=to,
         subject=f"Ya tienes una cuenta en {APP_NAME}",
@@ -169,10 +188,7 @@ def account_already_exists(
                 f"Alguien intentó crear una cuenta en {APP_NAME} con este correo, pero "
                 "ya tiene una. No hemos cambiado nada."
             ),
-            (
-                "Si fuiste tú, inicia sesión con tu correo y contraseña. Si no la "
-                f"recuerdas, puedes restablecerla aquí: {forgot_link}"
-            ),
+            how,
         ],
         action=_Action("Iniciar sesión", login_link),
         notice="Si no fuiste tú, ignora este correo: tu cuenta sigue igual.",
@@ -240,4 +256,48 @@ def password_changed(*, to: str, username: str, forgot_link: str) -> OutgoingEma
         notice="Si no fuiste tú, restablece tu contraseña cuanto antes desde "
         f"{forgot_link}.",
         tag="password-changed",
+    )
+
+
+def provider_linked(
+    *, to: str, username: str, provider: str, automatic: bool, forgot_link: str
+) -> OutgoingEmail:
+    """Una cuenta de Google o Apple quedó vinculada: al entrar con ella (mismo correo) o
+    desde ajustes."""
+    how = (
+        f"Acabas de iniciar sesión con {provider} usando el correo de tu cuenta, así que la "
+        "vinculamos automáticamente."
+        if automatic
+        else f"Vinculaste una cuenta de {provider} desde los ajustes de tu cuenta."
+    )
+    return _email(
+        to=to,
+        subject=f"Vinculaste {provider} a tu cuenta de {APP_NAME}",
+        title=f"{provider} quedó vinculado",
+        greeting=f"Hola, {username}:",
+        paragraphs=[
+            how,
+            f"A partir de ahora también puedes entrar a {APP_NAME} con {provider}.",
+        ],
+        notice="Si no fuiste tú, cambia tu contraseña cuanto antes desde "
+        f"{forgot_link}, cierra las sesiones que no reconozcas y desvincula {provider} "
+        "desde los ajustes.",
+        tag="provider-linked",
+    )
+
+
+def provider_unlinked(
+    *, to: str, username: str, provider: str, forgot_link: str
+) -> OutgoingEmail:
+    return _email(
+        to=to,
+        subject=f"Desvinculaste {provider} de tu cuenta de {APP_NAME}",
+        title=f"{provider} ya no está vinculado",
+        greeting=f"Hola, {username}:",
+        paragraphs=[
+            f"Tu cuenta de {APP_NAME} ya no se puede abrir con {provider}.",
+        ],
+        notice="Si no fuiste tú, cambia tu contraseña cuanto antes desde "
+        f"{forgot_link} y cierra las sesiones que no reconozcas.",
+        tag="provider-unlinked",
     )

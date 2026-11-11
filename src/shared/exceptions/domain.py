@@ -538,3 +538,55 @@ class FixedTermCapNotAllowedError(BusinessRuleError):
             "Un apartado a plazo fijo no admite tope ni desbordamiento: "
             "su monto queda fijo hasta el vencimiento"
         )
+
+
+class ProviderLinkRequiredError(BusinessRuleError):
+    """Hay una cuenta con el correo del proveedor, pero ese buzón no prueba que sea del mismo
+    dueño: hay que entrar con el método de siempre y vincular el proveedor desde ajustes."""
+
+    def __init__(self, provider: str, login_methods: list[str]):
+        self.provider = provider
+        self.login_methods = login_methods
+        super().__init__(
+            f"Ya existe una cuenta con ese correo; inicia sesión con "
+            f"{', '.join(login_methods) or 'tu método actual'} y vincula {provider} "
+            "desde ajustes",
+            details=[
+                {
+                    "loc": ["account", "login_methods"],
+                    "type": "LOGIN_METHODS",
+                    "input": login_methods,
+                }
+            ],
+        )
+
+
+class ProviderAccountConflictError(BusinessRuleError):
+    """La cuenta de Lunance ya tiene vinculada otra cuenta de ese proveedor."""
+
+    def __init__(self, provider: str):
+        self.provider = provider
+        super().__init__(f"La cuenta ya está vinculada a otra cuenta de {provider}")
+
+
+class ProviderAlreadyLinkedError(BusinessRuleError):
+    """Esa cuenta de Google/Apple ya está vinculada a otra cuenta de Lunance."""
+
+    def __init__(self, provider: str):
+        self.provider = provider
+        super().__init__(f"Esa cuenta de {provider} ya está vinculada a otro usuario")
+
+
+class LastLoginMethodError(BusinessRuleError):
+    """Desvincular dejaría la cuenta sin ninguna forma de entrar."""
+
+    def __init__(self):
+        super().__init__("No puedes quitar el único método de acceso de tu cuenta")
+
+
+class PasswordNotSetError(BusinessRuleError):
+    """La cuenta (creada con Google o Apple) no tiene contraseña que cambiar: se crea una
+    con "Olvidé mi contraseña", que además prueba que el correo es suyo."""
+
+    def __init__(self):
+        super().__init__("La cuenta no tiene contraseña")
