@@ -59,3 +59,21 @@ class SessionRevocationList(ABC):
 
     @abstractmethod
     async def is_revoked(self, session_uuid: str) -> bool: ...
+
+
+class LoginThrottle(ABC):
+    """Bloqueo progresivo de un sujeto (correo + IP, o solo correo) tras varios fallos.
+
+    Si el almacén (Redis) no responde, los métodos lanzan
+    `ServiceTemporarilyUnavailableError`: el login no se atiende sin esta protección.
+    """
+
+    @abstractmethod
+    async def retry_after(self, subject: str) -> int | None:
+        """Segundos que quedan de bloqueo, o None si puede intentarlo."""
+
+    @abstractmethod
+    async def record_failure(self, subject: str) -> None: ...
+
+    @abstractmethod
+    async def reset(self, subject: str) -> None: ...

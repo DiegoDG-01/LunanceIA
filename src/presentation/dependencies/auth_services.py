@@ -6,7 +6,8 @@ from functools import lru_cache
 
 from fastapi import Depends
 
-from application.auth.config import AuthConfig
+from application.auth.config import AuthConfig, EmailAuthConfig
+from application.auth.services.login_guard import LoginGuard
 from application.interfaces.auth_service import (
     AccessTokenIssuer,
     PasswordHasher,
@@ -14,6 +15,7 @@ from application.interfaces.auth_service import (
 )
 from domain.entities.auth.session import SessionLifetime
 from domain.repositories.auth.session_repository import SessionRepository
+from infrastructure.cache.login_throttle import RedisLoginThrottle
 from infrastructure.cache.redis import get_redis
 from infrastructure.cache.session_revocations import PersistentSessionRevocations
 from infrastructure.config.settings import settings
@@ -56,6 +58,25 @@ def get_auth_config() -> AuthConfig:
             b"lunance:refresh-rotation-key:v1",
             "sha256",
         ),
+    )
+
+
+@lru_cache
+def get_email_auth_config() -> EmailAuthConfig:
+    return EmailAuthConfig(
+        link_base_url=settings.email_link_base_url,
+        email_verification_ttl=timedelta(hours=settings.EMAIL_VERIFICATION_TTL_HOURS),
+        pending_signup_ttl=timedelta(days=settings.PENDING_SIGNUP_TTL_DAYS),
+        password_reset_ttl=timedelta(minutes=settings.PASSWORD_RESET_TTL_MINUTES),
+    )
+
+
+@lru_cache
+def get_login_guard() -> LoginGuard:
+    # Los throttles leen el cliente de Redis en cada uso (se abre en el lifespan).
+    return LoginGuard(
+        per_ip=RedisLoginThrottle(get_redis),
+        per_account=RedisLoginThrottle.per_account(get_redis),
     )
 
 

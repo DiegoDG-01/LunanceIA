@@ -16,3 +16,16 @@ class AuthConfig:
 
     def lifetime_for(self, platform: Platform) -> SessionLifetime:
         return self.mobile_session if platform.is_mobile else self.web_session
+
+
+@dataclass(frozen=True, slots=True)
+class EmailAuthConfig:
+    """Registro con correo y recuperación de contraseña."""
+
+    # Base de los enlaces de los correos: `<base>/verify-email?token=…`.
+    link_base_url: str
+    # Lo que vale cada enlace de verificación (sin pasar de la vida del registro).
+    email_verification_ttl: timedelta
+    # Sin confirmar, el registro se olvida: el correo y el username quedan libres.
+    pending_signup_ttl: timedelta
+    password_reset_ttl: timedelta
