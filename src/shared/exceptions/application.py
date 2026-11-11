@@ -99,3 +99,30 @@ class ServiceTemporarilyUnavailableError(LunanceException):
     def __init__(self, service_name: str, retry_after: int = 5):
         self.retry_after = retry_after
         super().__init__(f"Servicio {service_name} no disponible")
+
+
+class InvalidProviderTokenError(LunanceException):
+    """El ID token (o el aviso) de Google/Apple no es válido, ya se usó o no trae lo
+    necesario. `reason` solo va a la auditoría: la respuesta es siempre la misma."""
+
+    def __init__(self, provider: str, reason: str):
+        self.provider = provider
+        self.reason = reason
+        super().__init__(f"Token de {provider} no válido: {reason}")
+
+
+class ProviderNotConfiguredError(LunanceException):
+    """El proveedor no tiene client IDs configurados: su login está apagado."""
+
+    def __init__(self, provider: str):
+        self.provider = provider
+        super().__init__(f"El inicio de sesión con {provider} no está configurado")
+
+
+class IdentityProviderUnavailableError(LunanceException):
+    """Google o Apple no respondieron (claves públicas, canje o revocación)."""
+
+    def __init__(self, provider: str, retry_after: int = 5):
+        self.provider = provider
+        self.retry_after = retry_after
+        super().__init__(f"{provider} no responde")
