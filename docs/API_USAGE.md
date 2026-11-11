@@ -380,7 +380,7 @@ curl -X DELETE "http://localhost:8000/api/v2/auth/sessions/279484a1-d2f6-40bc-97
      -H "Authorization: Bearer <access_token>"
 ```
 
-**Respuesta:** `204 No Content`. Solo se pueden cerrar sesiones propias y abiertas; cualquier otra responde `404`.
+**Respuesta:** `204 No Content`. Solo se pueden cerrar sesiones propias y abiertas; cualquier otra responde `404` con `NOT_FOUND_SESSION`.
 
 ## 🔑 Autenticación con API Keys
 
@@ -2270,6 +2270,7 @@ La API retorna errores en un formato estándar con soporte de internacionalizaci
 - `NOT_FOUND_USER`: Usuario no encontrado
 - `NOT_FOUND_TRANSACTION`: Transacción no encontrada
 - `NOT_FOUND_CATEGORY`: Categoría no encontrada
+- `NOT_FOUND_SESSION`: Sesión no encontrada, ya cerrada o de otro usuario (`DELETE /auth/sessions/{uuid}`)
 - `NOT_FOUND`: Recurso genérico no encontrado
 
 ### Errores de Negocio (409 o 400)
