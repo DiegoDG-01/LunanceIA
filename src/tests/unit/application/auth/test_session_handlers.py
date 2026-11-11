@@ -109,28 +109,30 @@ class TestLogin:
         assert _details(revoked)["reason"] == "replaced"
         assert _details(revoked)["revoked_by"] == "system"
 
-    async def test_wrong_password_records_failure_with_username(self, kit: AuthKit):
+    async def test_wrong_password_records_failure_with_email(self, kit: AuthKit):
         user = await kit.create_user()
 
         with pytest.raises(InvalidCredentialsError):
             await kit.login_handler().handle(
-                LoginCommand(username=user.name, password="Wrong-pass1", context=context())
+                LoginCommand(email=user.email, password="Wrong-pass1", context=context())
             )
 
         [event] = await _events(kit, AuthAction.LOGIN_FAILED)
         assert event.user_id == user.id
-        assert event.details == {"username": user.name, "reason": "invalid_credentials"}
+        assert event.details == {"email": user.email, "reason": "invalid_credentials"}
         assert await kit.sessions.list_active(user.id, kit.clock.now) == []
 
     async def test_unknown_user_records_failure_without_user(self, kit: AuthKit):
         with pytest.raises(InvalidCredentialsError):
             await kit.login_handler().handle(
-                LoginCommand(username="ghost", password=PASSWORD, context=context())
+                LoginCommand(
+                    email="Ghost@Example.com", password=PASSWORD, context=context()
+                )
             )
 
         [event] = await _events(kit, AuthAction.LOGIN_FAILED)
         assert event.user_id is None
-        assert _details(event)["username"] == "ghost"
+        assert _details(event)["email"] == "ghost@example.com"
 
     async def test_inactive_user_is_rejected_after_password_check(self, kit: AuthKit):
         user = await kit.create_user(is_active=False)
@@ -159,7 +161,7 @@ class TestLogin:
 
         with pytest.raises(InvalidCredentialsError):
             await kit.login_handler().handle(
-                LoginCommand(username=user.name, password="Wrong-pass1", context=context())
+                LoginCommand(email=user.email, password="Wrong-pass1", context=context())
             )
 
         model = await kit.db.get(UserModel, user.id)  # type: ignore[attr-defined]

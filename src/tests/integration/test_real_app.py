@@ -96,10 +96,11 @@ class TestSchemaImports:
             from presentation.schemas.requests.auth import LoginRequest, RegisterRequest
 
             # Test schema creation
-            login_req = LoginRequest(username="testuser", password="Password123!")
-            assert login_req.username == "testuser"
+            login_req = LoginRequest(email="testuser@example.com", password="Password123!")
+            assert login_req.email == "testuser@example.com"
 
             register_req = RegisterRequest(
+                email="testuser@example.com",
                 username="Test User",
                 password="Password123!"
             )

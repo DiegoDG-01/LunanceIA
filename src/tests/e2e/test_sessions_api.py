@@ -17,11 +17,12 @@ from sqlalchemy.pool import StaticPool
 from infrastructure.cache.redis import set_redis
 from infrastructure.database.connection import Base, get_db
 from infrastructure.database.models.auth_event import AuthEventModel
+from infrastructure.external_services.email.memory import InMemoryEmailSender
 from main import app
 from presentation.dependencies.auth_services import get_auth_config, get_password_hasher
+from presentation.dependencies.email_deps import get_email_sender
 from tests.auth_helpers import fast_hasher
-
-PASSWORD = "Password123!"
+from tests.email_flow import PASSWORD, signup
 
 pytestmark = [pytest.mark.e2e, pytest.mark.asyncio]
 
@@ -52,13 +53,16 @@ async def client(sessionmaker) -> AsyncGenerator[httpx.AsyncClient, None]:
 
     hasher = fast_hasher()
     redis = FakeAsyncRedis(decode_responses=True)
+    outbox = InMemoryEmailSender()
     set_redis(redis)
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_password_hasher] = lambda: hasher
+    app.dependency_overrides[get_email_sender] = lambda: outbox
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test/api/v2"
     ) as http:
         http.redis = redis  # type: ignore[attr-defined]
+        http.outbox = outbox  # type: ignore[attr-defined]
         yield http
     app.dependency_overrides.clear()
     set_redis(None)
@@ -103,10 +107,10 @@ class Device:
         else:
             self.refresh_token = data["refresh_token"]
 
-    async def login(self, http: httpx.AsyncClient, username: str, **extra) -> httpx.Response:
+    async def login(self, http: httpx.AsyncClient, email: str, **extra) -> httpx.Response:
         response = await http.post(
             "/auth/login",
-            json={"username": username, "password": PASSWORD, **extra},
+            json={"email": email, "password": PASSWORD, **extra},
             headers=self.headers,
         )
         self._forget_jar(http)
@@ -135,20 +139,16 @@ class Device:
 
 
 async def _register(http: httpx.AsyncClient) -> str:
-    username = f"sess_{uuid.uuid4().hex[:10]}"
-    response = await http.post(
-        "/auth/register", json={"username": username, "password": PASSWORD}
-    )
-    assert response.status_code == 200
-    return username
+    """Cuenta confirmada por correo; devuelve el correo con el que se entra."""
+    return await signup(http, http.outbox)  # type: ignore[attr-defined]
 
 
 class TestTransport:
     async def test_web_login_sets_httponly_cookie_and_no_body_token(self, client):
-        username = await _register(client)
+        email = await _register(client)
         web = Device("web")
 
-        response = await web.login(client, username)
+        response = await web.login(client, email)
 
         assert response.status_code == 200
         assert "refresh_token" not in response.json()
@@ -159,19 +159,19 @@ class TestTransport:
         assert "Max-Age=86400" in cookie  # 1 día de inactividad
 
     async def test_mobile_login_returns_refresh_in_body_without_cookie(self, client):
-        username = await _register(client)
+        email = await _register(client)
         phone = Device("ios")
 
-        response = await phone.login(client, username)
+        response = await phone.login(client, email)
 
         assert response.status_code == 200
         assert response.json()["refresh_token"].startswith("rt_")
         assert "set-cookie" not in response.headers
 
     async def test_web_refresh_reads_cookie_and_rotates_it(self, client):
-        username = await _register(client)
+        email = await _register(client)
         web = Device("web")
-        await web.login(client, username)
+        await web.login(client, email)
         first = web.refresh_token
 
         response = await web.refresh(client)
@@ -181,9 +181,9 @@ class TestTransport:
         assert web.refresh_token and web.refresh_token != first
 
     async def test_web_refresh_ignores_body_token(self, client):
-        username = await _register(client)
+        email = await _register(client)
         web = Device("web")
-        await web.login(client, username)
+        await web.login(client, email)
 
         response = await client.post(
             "/auth/refresh",
@@ -194,9 +194,9 @@ class TestTransport:
         assert response.status_code == 401
 
     async def test_mobile_refresh_reads_body(self, client):
-        username = await _register(client)
+        email = await _register(client)
         phone = Device("android")
-        await phone.login(client, username)
+        await phone.login(client, email)
         first = phone.refresh_token
 
         response = await phone.refresh(client)
@@ -208,9 +208,9 @@ class TestTransport:
     async def test_reusing_rotated_mobile_token_after_grace_closes_session(
         self, client
     ):
-        username = await _register(client)
+        email = await _register(client)
         phone = Device("ios")
-        await phone.login(client, username)
+        await phone.login(client, email)
         stolen = phone.refresh_token
         await phone.refresh(client)
         # Sin margen de gracia: cualquier reuso del token ya rotado cuenta como robo.
@@ -235,22 +235,22 @@ class TestTransport:
         ids=["missing", "invalid"],
     )
     async def test_login_requires_device_uuid(self, client, headers):
-        username = await _register(client)
+        email = await _register(client)
 
         response = await client.post(
             "/auth/login",
-            json={"username": username, "password": PASSWORD},
+            json={"email": email, "password": PASSWORD},
             headers=headers,
         )
 
         assert response.status_code == 422
 
     async def test_login_rejects_unknown_platform(self, client):
-        username = await _register(client)
+        email = await _register(client)
 
         response = await client.post(
             "/auth/login",
-            json={"username": username, "password": PASSWORD},
+            json={"email": email, "password": PASSWORD},
             headers={
                 "X-Lunance-Device": str(uuid.uuid4()),
                 "X-Lunance-Client": "windows/11",
@@ -262,10 +262,10 @@ class TestTransport:
 
 class TestSessions:
     async def test_list_sessions_marks_current(self, client):
-        username = await _register(client)
+        email = await _register(client)
         web, phone = Device("web"), Device("ios")
-        await web.login(client, username)
-        await phone.login(client, username, device_name="iPhone de prueba")
+        await web.login(client, email)
+        await phone.login(client, email, device_name="iPhone de prueba")
 
         response = await client.get("/auth/sessions", headers=web.auth)
 
@@ -289,12 +289,12 @@ class TestSessions:
         }
 
     async def test_login_again_from_same_device_replaces_its_session(self, client):
-        username = await _register(client)
+        email = await _register(client)
         web = Device("web")
-        await web.login(client, username)
+        await web.login(client, email)
         old_access = web.access_token
 
-        await web.login(client, username)
+        await web.login(client, email)
 
         sessions = (await client.get("/auth/sessions", headers=web.auth)).json()
         assert len(sessions) == 1
@@ -302,10 +302,10 @@ class TestSessions:
         assert (await client.get("/auth/me", headers=stale)).status_code == 401
 
     async def test_close_session_from_another_device_is_immediate(self, client):
-        username = await _register(client)
+        email = await _register(client)
         web, phone = Device("web"), Device("android")
-        await web.login(client, username)
-        await phone.login(client, username)
+        await web.login(client, email)
+        await phone.login(client, email)
         assert (await client.get("/auth/me", headers=phone.auth)).status_code == 200
         sessions = (await client.get("/auth/sessions", headers=web.auth)).json()
         phone_uuid = next(s["uuid"] for s in sessions if s["platform"] == "android")
@@ -324,10 +324,10 @@ class TestSessions:
         assert (await client.get("/account/", headers=web.auth)).status_code == 200
 
     async def test_revocation_is_enforced_even_if_redis_lost_it(self, client):
-        username = await _register(client)
+        email = await _register(client)
         web, phone = Device("web"), Device("ios")
-        await web.login(client, username)
-        await phone.login(client, username)
+        await web.login(client, email)
+        await phone.login(client, email)
         sessions = (await client.get("/auth/sessions", headers=web.auth)).json()
         phone_uuid = next(s["uuid"] for s in sessions if s["platform"] == "ios")
         await client.delete(f"/auth/sessions/{phone_uuid}", headers=web.auth)
@@ -385,10 +385,10 @@ class TestLogout:
         assert (await client.get("/auth/me", headers=phone.auth)).status_code == 401
 
     async def test_logout_all_devices(self, client):
-        username = await _register(client)
+        email = await _register(client)
         web, phone, tablet = Device("web"), Device("ios"), Device("android")
         for device in (web, phone, tablet):
-            await device.login(client, username)
+            await device.login(client, email)
 
         response = await phone.logout(client, all_devices=True)
 
@@ -397,10 +397,10 @@ class TestLogout:
             assert (await client.get("/auth/me", headers=device.auth)).status_code == 401
 
     async def test_logout_only_current_device_by_default(self, client):
-        username = await _register(client)
+        email = await _register(client)
         web, phone = Device("web"), Device("ios")
-        await web.login(client, username)
-        await phone.login(client, username)
+        await web.login(client, email)
+        await phone.login(client, email)
 
         await web.logout(client)
 
@@ -409,14 +409,14 @@ class TestLogout:
 
 class TestAudit:
     async def test_login_events_never_store_secrets(self, client, sessionmaker):
-        username = await _register(client)
+        email = await _register(client)
         web = Device("web")
         await client.post(
             "/auth/login",
-            json={"username": username, "password": "Wrong-password-1"},
+            json={"email": email, "password": "Wrong-password-1"},
             headers=web.headers,
         )
-        await web.login(client, username)
+        await web.login(client, email)
 
         async with sessionmaker() as db:
             events = (
@@ -432,7 +432,7 @@ class TestAudit:
         assert PASSWORD not in dumped and "Wrong-password-1" not in dumped
         assert web.refresh_token and web.access_token
         assert web.refresh_token not in dumped and web.access_token not in dumped
-        assert (events[0].details or {})["username"] == username
+        assert (events[0].details or {})["email"] == email
         assert events[1].ip and events[1].user_agent
 
     async def test_throttled_login_is_audited_once_per_window(
@@ -449,7 +449,7 @@ class TestAudit:
         web = Device("web")
 
         for _ in range(3):
-            response = await web.login(client, "someone")
+            response = await web.login(client, "Someone@Example.com")
             assert response.status_code == 429
 
         async with sessionmaker() as db:
@@ -461,4 +461,4 @@ class TestAudit:
                 )
             ).scalars().all()
         assert len(events) == 1
-        assert events[0].details == {"username": "someone"}
+        assert events[0].details == {"email": "someone@example.com", "scope": "rate_limit"}

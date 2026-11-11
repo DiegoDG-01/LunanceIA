@@ -215,18 +215,30 @@ async def http_client(db_session: AsyncSession) -> AsyncGenerator[httpx.AsyncCli
         finally:
             pass
 
+    from fakeredis import FakeAsyncRedis
+
+    from infrastructure.cache.redis import set_redis
+    from infrastructure.external_services.email.memory import InMemoryEmailSender
+    from presentation.dependencies.email_deps import get_email_sender
+
+    # Redis en memoria (throttle del login, sesiones revocadas) y buzón en memoria.
+    outbox = InMemoryEmailSender()
+    set_redis(FakeAsyncRedis(decode_responses=True))
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = mock_get_current_user
     app.dependency_overrides[get_current_active_user] = mock_get_current_active_user
     app.dependency_overrides[get_user_dual_auth] = mock_get_user_dual_auth
+    app.dependency_overrides[get_email_sender] = lambda: outbox
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app),
         base_url="http://test/api/v2",
         follow_redirects=True
     ) as client:
+        client.outbox = outbox  # type: ignore[attr-defined]
         yield client
 
     app.dependency_overrides.clear()
+    set_redis(None)
 
 
 @pytest.fixture(scope="session")

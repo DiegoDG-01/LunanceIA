@@ -108,7 +108,12 @@ async def _seed(sessions: async_sessionmaker[AsyncSession]) -> None:
         )
         session.add_all(
             [
-                UserModel(id=user_id, uuid=f"user-{user_id}", name=f"Usuario {user_id}")
+                UserModel(
+                    id=user_id,
+                    uuid=f"user-{user_id}",
+                    name=f"Usuario {user_id}",
+                    email=f"usuario{user_id}@example.com",
+                )
                 for user_id in USER_IDS
             ]
         )

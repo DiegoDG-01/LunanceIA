@@ -12,21 +12,40 @@ from fakeredis import FakeAsyncRedis
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+from application.auth.commands.change_password import ChangePasswordHandler
 from application.auth.commands.login import LoginCommand, LoginHandler
 from application.auth.commands.logout import LogoutHandler
+from application.auth.commands.password_reset import (
+    RequestPasswordResetHandler,
+    ResetPasswordHandler,
+)
 from application.auth.commands.purge_auth_data import PurgeAuthDataHandler
 from application.auth.commands.refresh_session import RefreshSessionHandler
+from application.auth.commands.register import RegisterHandler
 from application.auth.commands.revoke_session import RevokeSessionHandler
-from application.auth.config import AuthConfig
+from application.auth.commands.verify_email import (
+    ResendVerificationHandler,
+    VerifyEmailHandler,
+)
+from application.auth.config import AuthConfig, EmailAuthConfig
 from application.auth.dto import ClientContext
 from application.auth.queries.list_sessions import ListSessionsHandler
+from application.auth.services.login_guard import LoginGuard
 from application.auth.services.sessions import SessionManager
+from application.interfaces.email import EmailQueue, OutgoingEmail
 from domain.entities.auth.session import Platform, SessionLifetime
+from infrastructure.cache.login_throttle import RedisLoginThrottle
 from infrastructure.cache.session_revocations import PersistentSessionRevocations
 from infrastructure.database.connection import Base
 from infrastructure.database.models.user import UserModel
 from infrastructure.database.repositories.sqlalchemy_auth_event_repository import (
     SQLAlchemyAuthEventRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_password_reset_token_repository import (
+    SQLAlchemyPasswordResetTokenRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_pending_signup_repository import (
+    SQLAlchemyPendingSignupRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_refresh_token_repository import (
     SQLAlchemyRefreshTokenRepository,
@@ -72,6 +91,27 @@ def context(
     )
 
 
+class ListQueue(EmailQueue):
+    """Cola de correo que solo los apunta (los handlers encolan después del commit)."""
+
+    def __init__(self) -> None:
+        self.sent: list[OutgoingEmail] = []
+
+    def enqueue(self, email: OutgoingEmail) -> None:
+        self.sent.append(email)
+
+    def to(self, address: str) -> list[OutgoingEmail]:
+        return [email for email in self.sent if address in email.to]
+
+
+EMAIL_CONFIG = EmailAuthConfig(
+    link_base_url="https://app.lunance.test",
+    email_verification_ttl=timedelta(hours=24),
+    pending_signup_ttl=timedelta(days=7),
+    password_reset_ttl=timedelta(hours=1),
+)
+
+
 @dataclass
 class AuthKit:
     """Todo lo necesario para ejercitar los handlers contra la base de test."""
@@ -88,6 +128,11 @@ class AuthKit:
     events: SQLAlchemyAuthEventRepository
     uow: SQLAlchemyUnitOfWork
     revocations: PersistentSessionRevocations
+    pending: SQLAlchemyPendingSignupRepository
+    reset_tokens: SQLAlchemyPasswordResetTokenRepository
+    guard: LoginGuard
+    queue: ListQueue
+    email_config: EmailAuthConfig = EMAIL_CONFIG
 
     def manager(self) -> SessionManager:
         return SessionManager(
@@ -105,6 +150,82 @@ class AuthKit:
             session_manager=self.manager(),
             password_hasher=self.hasher,
             revocations=self.revocations,
+            uow=self.uow,
+            login_guard=self.guard,
+            session_repository=self.sessions,
+            pending_signup_repository=self.pending,
+            now=self.clock,
+        )
+
+    def register_handler(self) -> RegisterHandler:
+        return RegisterHandler(
+            user_repository=self.users,
+            pending_signup_repository=self.pending,
+            auth_event_repository=self.events,
+            password_hasher=self.hasher,
+            email_queue=self.queue,
+            config=self.email_config,
+            uow=self.uow,
+            now=self.clock,
+        )
+
+    def verify_handler(self) -> VerifyEmailHandler:
+        return VerifyEmailHandler(
+            user_repository=self.users,
+            pending_signup_repository=self.pending,
+            auth_event_repository=self.events,
+            uow=self.uow,
+            now=self.clock,
+        )
+
+    def resend_handler(self) -> ResendVerificationHandler:
+        return ResendVerificationHandler(
+            user_repository=self.users,
+            pending_signup_repository=self.pending,
+            auth_event_repository=self.events,
+            email_queue=self.queue,
+            config=self.email_config,
+            uow=self.uow,
+            now=self.clock,
+        )
+
+    def forgot_handler(self) -> RequestPasswordResetHandler:
+        return RequestPasswordResetHandler(
+            user_repository=self.users,
+            pending_signup_repository=self.pending,
+            reset_token_repository=self.reset_tokens,
+            auth_event_repository=self.events,
+            email_queue=self.queue,
+            config=self.email_config,
+            uow=self.uow,
+            now=self.clock,
+        )
+
+    def reset_handler(self) -> ResetPasswordHandler:
+        return ResetPasswordHandler(
+            user_repository=self.users,
+            reset_token_repository=self.reset_tokens,
+            session_repository=self.sessions,
+            auth_event_repository=self.events,
+            password_hasher=self.hasher,
+            revocations=self.revocations,
+            login_guard=self.guard,
+            email_queue=self.queue,
+            config=self.email_config,
+            uow=self.uow,
+            now=self.clock,
+        )
+
+    def change_handler(self) -> ChangePasswordHandler:
+        return ChangePasswordHandler(
+            user_repository=self.users,
+            reset_token_repository=self.reset_tokens,
+            session_repository=self.sessions,
+            auth_event_repository=self.events,
+            password_hasher=self.hasher,
+            revocations=self.revocations,
+            email_queue=self.queue,
+            config=self.email_config,
             uow=self.uow,
             now=self.clock,
         )
@@ -150,13 +271,17 @@ class AuthKit:
             auth_event_repository=self.events,
             uow=self.uow,
             now=self.clock,
+            pending_signup_repository=self.pending,
+            reset_token_repository=self.reset_tokens,
         )
 
     async def create_user(
         self, name: str | None = None, password_hash: str | None = None, **fields
     ) -> UserModel:
+        name = name or f"user_{uuid.uuid4().hex[:10]}"
+        fields.setdefault("email", f"{name.lower()}@example.com")
         model = UserModel(
-            name=name or f"user_{uuid.uuid4().hex[:10]}",
+            name=name,
             password=password_hash or await self.hasher.hash(PASSWORD),
             **fields,
         )
@@ -166,7 +291,7 @@ class AuthKit:
 
     async def login(self, user: UserModel, ctx: ClientContext):
         return await self.login_handler().handle(
-            LoginCommand(username=user.name, password=PASSWORD, context=ctx)
+            LoginCommand(email=user.email, password=PASSWORD, context=ctx)
         )
 
 
@@ -219,4 +344,11 @@ async def kit(auth_db, clock) -> AuthKit:
             session_repository=sessions,
             now=clock,
         ),
+        pending=SQLAlchemyPendingSignupRepository(db_session),
+        reset_tokens=SQLAlchemyPasswordResetTokenRepository(db_session),
+        guard=LoginGuard(
+            per_ip=RedisLoginThrottle(lambda: redis),
+            per_account=RedisLoginThrottle.per_account(lambda: redis),
+        ),
+        queue=ListQueue(),
     )
