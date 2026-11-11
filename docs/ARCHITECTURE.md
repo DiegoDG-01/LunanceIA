@@ -531,7 +531,9 @@ application/
 │   ├── services/
 │   │   ├── sessions.py       # SessionManager: abre sesiones y emite access + refresh
 │   │   ├── login_guard.py    # LoginGuard: bloqueo por correo + IP y por correo
-│   │   └── signups.py        # Emite el enlace de verificación de un registro pendiente
+│   │   ├── signups.py        # Emite el enlace de verificación de un registro pendiente
+│   │   ├── external_accounts.py # Google/Apple: cuenta vinculada, vinculación por buzón estable o alta
+│   │   └── apple_tokens.py   # Refresh token de Apple cifrado y AppleAuthorizationRevoker
 │   ├── commands/
 │   │   ├── __init__.py
 │   │   ├── login.py          # Login por correo: throttle, verifica contraseña, re-hashea bcrypt → Argon2, abre sesión
@@ -542,7 +544,11 @@ application/
 │   │   ├── register.py       # Registro pendiente + correo de verificación (anti-enumeración)
 │   │   ├── verify_email.py   # Confirmar el correo (crea la cuenta) y reenviar el enlace
 │   │   ├── password_reset.py # "Olvidé mi contraseña" y restablecerla (cierra todas las sesiones)
-│   │   └── change_password.py # Cambiar la contraseña con sesión (cierra las demás)
+│   │   ├── change_password.py # Cambiar la contraseña con sesión (cierra las demás)
+│   │   ├── change_username.py # Cambiar el username (PATCH /auth/me)
+│   │   ├── provider_sign_in.py # Entrar con Google o Apple (token de un solo uso, canje del código de Apple)
+│   │   ├── link_provider.py  # Vincular/desvincular Google o Apple desde ajustes
+│   │   └── apple_notifications.py # Avisos servidor a servidor de Apple
 │   └── queries/
 │       └── list_sessions.py  # Sesiones activas, con la actual marcada
 ├── api_keys/                 # Feature: API keys (acceso programático / MCP)
@@ -592,6 +598,7 @@ application/
     ├── ai_agent.py           # Contrato del agente IA (AIAgentInterface)
     ├── auth_service.py       # Contratos de auth: AccessTokenIssuer, PasswordHasher, SessionRevocationList, LoginThrottle
     ├── email.py              # OutgoingEmail, EmailSender (puerto de envío) y EmailQueue (envío tras el commit)
+    ├── identity_providers.py # Google/Apple: verificadores, AppleSignInGateway, UsedProviderTokens, SecretCipher
     └── uploaded_file.py      # Contrato de archivo subido (UploadedFileInterface)
 ```
 
@@ -682,6 +689,11 @@ infrastructure/
 ├── security/                 # Servicios de seguridad
 │   ├── __init__.py
 │   ├── jwt_tokens.py         # EdDSATokenIssuer: access tokens JWT Ed25519 (sub + sid)
+│   ├── jwks.py               # JwksCache: claves públicas de Google/Apple con Cache-Control y refresco limitado
+│   ├── id_tokens.py          # Comprobación común de ID tokens RS256 (iss, aud, exp/iat, nonce)
+│   ├── google_id_tokens.py   # GoogleIdTokenVerifier (web, iOS y Android)
+│   ├── apple_sign_in.py      # AppleSignInClient: identity token, canje del código (ES256), revocación y avisos
+│   ├── secret_cipher.py      # AesGcmSecretCipher: secretos en la base con AES-256-GCM (HKDF)
 │   ├── passwords.py          # Argon2PasswordHasher (verifica también bcrypt heredado)
 │   └── api_key_service.py    # APIKeyService: emisión y validación de API keys
 ├── scheduler/                # Tareas programadas
@@ -691,7 +703,8 @@ infrastructure/
 ├── cache/                    # Cliente de Redis compartido (init/close en el lifespan)
 │   ├── redis.py
 │   ├── login_throttle.py     # RedisLoginThrottle: bloqueo progresivo del login (fail-closed)
-│   └── session_revocations.py # Lista revoked_sid:<uuid> en Redis, con MySQL como autoridad
+│   ├── session_revocations.py # Lista revoked_sid:<uuid> en Redis, con MySQL como autoridad
+│   └── provider_tokens.py    # ID tokens de Google/Apple ya usados (un solo uso, fail-closed)
 ├── rate_limiting/            # Rate limiting por endpoint sobre Redis
 │   ├── __init__.py
 │   ├── client_ip.py          # IP real del cliente (CLIENT_IP_HEADER) e identidad por IP (IPv6 por /64)
@@ -786,6 +799,7 @@ presentation/
 │   ├── auth_handler_deps.py     # Factories de handlers de auth
 │   ├── auth_services.py         # Issuer JWT, hasher, AuthConfig/EmailAuthConfig y LoginGuard
 │   ├── email_deps.py            # EmailSender (lru_cache) y cola de correo con BackgroundTasks
+│   ├── identity_deps.py         # Verificadores de Google/Apple (None si no están configurados) y sus handlers
 │   ├── repositories.py          # Factories de repositorios
 │   ├── services.py              # Factories de servicios
 │   ├── account_deps.py          # Factories de handlers de cuentas
@@ -1430,7 +1444,21 @@ Lunance IA gestiona la identidad por sí misma, sin proveedor externo:
 - **Revocación inmediata**: al cerrar una sesión se escribe `revoked_sid:<uuid>` en Redis (TTL ≈ vida del access token) y cada petición autenticada lo consulta; MySQL es la autoridad, así que si Redis falla o perdió la clave se consulta la sesión en la base
 - **Endpoints de sesión**: `GET /auth/sessions` (marca `is_current`), `DELETE /auth/sessions/{uuid}` (solo sesiones propias; 404 si no), `POST /auth/logout` (`all_devices` opcional)
 - **Auditoría** (`auth_events`): `login.succeeded`, `login.failed` (con el correo intentado y el motivo), `login.throttled` (rate limit, bloqueo por IP o por cuenta), `session.revoked` (motivo y quién), `session.refresh_reuse_detected`, `signup.requested`, `signup.verification_resent`, `signup.verified`, `password.reset_requested`, `password.reset` y `password.changed`. Nunca guarda contraseñas ni tokens
+- **Google y Apple** (fase 3): `POST /auth/google` y `POST /auth/apple` abren la misma sesión por dispositivo que el login con contraseña. Detalle en la sección siguiente
 - **Limpieza**: un job diario borra las sesiones vencidas o revocadas hace más de 30 días (con sus refresh tokens), los eventos de más de 90, los registros sin confirmar caducados (con sus enlaces) y los enlaces de recuperación vencidos o usados
+
+### Iniciar sesión con Google y Apple
+
+- **Verificación del ID token** (`infrastructure/security/`): firma RS256 con las claves públicas del proveedor (`JwksCache`: se guardan lo que diga `Cache-Control: max-age`, como mucho un día; un `kid` desconocido vuelve a pedirlas, como mucho una vez por minuto; si el proveedor cae y no quedan claves vigentes → `503 AUTH_PROVIDER_UNAVAILABLE`), `iss`, `aud` contra todas las audiencias configuradas (`GOOGLE_CLIENT_IDS`: web, iOS, Android; `APPLE_CLIENT_IDS`: bundle ID y Services ID), `exp`/`iat` con 10 s de margen, `email_verified` y el `nonce`: si el token lo lleva, la app manda el valor en claro y el token debe llevar su SHA-256 (hex). Cualquier fallo responde `401 AUTH_INVALID_PROVIDER_TOKEN`; el motivo (`signature`, `audience`, `expired`, `nonce`…) solo va a `auth_events`
+- **Un solo uso**: tras la firma, el SHA-256 del token se apunta en Redis (`provider_token:<hash>`, hasta su `exp` + 2 min). Un token repetido responde `401` y se audita como `provider.token_replay`. Sin Redis → `503` (fail-closed, como el login)
+- **Cuenta** (`ExternalAccounts`): primero por `google_sub`/`apple_sub` (el correo del proveedor puede cambiar sin que importe). Si no, por correo: se vincula sola solo si el buzón lo administra el proveedor y nunca lo reasigna (Gmail/googlemail para Google; iCloud, me.com, mac.com y el relay privado `privaterelay.appleid.com` para Apple) o, con Google, si el correo es del dominio de Google Workspace de la cuenta (claim `hd`). Con cualquier otro dominio responde `409 AUTH_PROVIDER_LINK_REQUIRED` con los métodos de la cuenta en `details[0].input` (`["password"]`): hay que entrar como siempre y vincular desde ajustes. Una cuenta que ya tiene otra cuenta del mismo proveedor → `409 AUTH_PROVIDER_CONFLICT`. Al vincular se avisa por correo
+- **Alta**: sin cuenta, se crea con el correo ya verificado, sin contraseña y con un username generado del nombre (o de la parte local del correo; si no, `usuario`), sin acentos y en minúsculas, con sufijo `_NNNN` si está ocupado por una cuenta o apartado por un registro pendiente. Un registro pendiente del mismo correo se descarta. Dos altas simultáneas de la misma identidad: la que pierde la carrera (unicidad en MySQL) reintenta y entra en la cuenta creada. El username se cambia con `PATCH /auth/me`
+- **Apple**: con `authorization_code`, el código se canjea en `https://appleid.apple.com/auth/token` con el client ID del `aud` del token y un client secret JWT ES256 firmado con la clave `.p8` (`APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`). Un código rechazado o de otro usuario invalida el login; si Apple no responde se entra igual y el token se obtiene en el siguiente login. El refresh token se guarda en `users.apple_refresh_token` cifrado con AES-256-GCM (clave derivada con HKDF de `APPLE_TOKEN_ENCRYPTION_KEY`, con la fila del usuario como dato asociado). `AppleAuthorizationRevoker.revoke_for_user` lo revoca en `https://appleid.apple.com/auth/revoke` (lo usará el borrado de cuenta)
+- **Notificaciones de Apple** (`POST /auth/apple/notifications`, JWT firmado como los identity tokens): `consent-revoked` cierra todas las sesiones (`apple_revoked`) y borra el refresh token; `account-delete`, además, desvincula (`apple_sub = NULL`); `email-disabled`/`email-enabled` solo se registran. Todo queda en `apple.notification`
+- **Vincular desde ajustes**: `POST /auth/providers/google|apple` (con sesión) acepta cualquier correo del proveedor; esa cuenta del proveedor no puede estar en otro usuario (`409 AUTH_PROVIDER_IN_USE`). `DELETE /auth/providers/{provider}` nunca deja la cuenta sin forma de entrar (`409 AUTH_LAST_LOGIN_METHOD`) y, con Apple, revoca su token
+- **Cuentas sin contraseña**: el login por correo responde `401 AUTH_INVALID_CREDENTIALS` como siempre (sin revelar nada); "Olvidé mi contraseña" sirve para crear la primera (el enlace prueba el buzón); `POST /auth/password/change` responde `409 AUTH_PASSWORD_NOT_SET`
+- **Proveedor apagado**: sin client IDs, el verificador no se construye y sus rutas responden `503 AUTH_PROVIDER_NOT_CONFIGURED`. La validación de settings de Apple (clave `.p8` EC P-256, clave de cifrado, y en PROD la `.p8` obligatoria) solo corre si Apple está encendido
+- **Auditoría**: `login.succeeded` lleva `method` (`password`, `google`, `apple`), `account_created` y `provider_linked`; `login.failed` lleva `method` y `reason`; además `signup.verified` (con `method`), `provider.linked` (`mode`: `email` o `manual`), `provider.unlinked`, `provider.token_replay`, `apple.notification` y `account.username_changed`. Nunca se guardan tokens
 
 ### Configuración CORS Basada en Entorno
 

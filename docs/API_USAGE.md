@@ -17,13 +17,13 @@ Esta guía te mostrará cómo usar la API REST de Lunance IA v2, incluyendo aute
 
 ## 🔐 Autenticación JWT
 
-La API gestiona la autenticación **por sí misma**, con correo y contraseña, y abre **una sesión por dispositivo**: puedes tener la web, el iPhone y la tablet abiertos a la vez y cerrar cualquiera desde otro.
+La API gestiona la autenticación **por sí misma**, con correo y contraseña o con Google y Apple, y abre **una sesión por dispositivo**: puedes tener la web, el iPhone y la tablet abiertos a la vez y cerrar cualquiera desde otro.
 
 ### Cabeceras del dispositivo
 
 | Cabecera | Valor | Dónde |
 |---|---|---|
-| `X-Lunance-Device` | UUID que el cliente genera **una sola vez** y guarda | Obligatoria en `/login` y `/refresh` (`422` si falta o no es UUID) |
+| `X-Lunance-Device` | UUID que el cliente genera **una sola vez** y guarda | Obligatoria en `/login`, `/google`, `/apple` y `/refresh` (`422` si falta o no es UUID) |
 | `X-Lunance-Client` | `<plataforma>/<versión>`: `web/…`, `ios/…` o `android/…` | Opcional; sin ella se trata como `web` |
 
 Volver a iniciar sesión desde el mismo dispositivo sustituye solo la sesión de ese dispositivo.
@@ -38,6 +38,7 @@ Volver a iniciar sesión desde el mismo dispositivo sustituye solo la sesión de
 6. **Cierre de sesión**: `POST /api/v2/auth/logout` (esta sesión o `all_devices`)
 7. **Sesiones**: `GET /api/v2/auth/sessions` y `DELETE /api/v2/auth/sessions/{uuid}`
 8. **Contraseña**: `POST /api/v2/auth/password/forgot` + `/password/reset` (con el enlace del correo) o `/password/change` (con sesión iniciada)
+9. **Google y Apple**: `POST /api/v2/auth/google` o `/apple` con el ID token del proveedor (alta o login en un paso); vincular y desvincular desde ajustes con `/auth/providers/…`
 
 ### Características de los tokens
 
@@ -172,7 +173,99 @@ curl -X POST "http://localhost:8000/api/v2/auth/password/change" \
      -d '{"current_password": "MiClave123!", "new_password": "OtraClave456!"}'
 ```
 
-**Respuesta:** `204`. Cierra las **demás** sesiones (motivo `password_change`); la de este access token sigue abierta. También invalida los enlaces de recuperación pendientes. Contraseña actual incorrecta → `400 AUTH_INVALID_CURRENT_PASSWORD` (la sesión no se cierra); igual a la actual → `400 VALIDATION_ERROR` (`PASSWORD_SAME_AS_CURRENT`). Solo con access token (no con API key); límite de 5 por minuto por usuario.
+**Respuesta:** `204`. Cierra las **demás** sesiones (motivo `password_change`); la de este access token sigue abierta. También invalida los enlaces de recuperación pendientes. Contraseña actual incorrecta → `400 AUTH_INVALID_CURRENT_PASSWORD` (la sesión no se cierra); igual a la actual → `400 VALIDATION_ERROR` (`PASSWORD_SAME_AS_CURRENT`). Cuenta creada con Google o Apple que aún no tiene contraseña → `409 AUTH_PASSWORD_NOT_SET` (se crea con "Olvidé mi contraseña", que prueba que el correo es suyo). Solo con access token (no con API key); límite de 5 por minuto por usuario.
+
+### Iniciar sesión con Google
+
+La app (web, iOS o Android) obtiene el **ID token** con el SDK de Google y lo manda tal cual. Si no hay cuenta, se crea en el momento (correo ya verificado, sin contraseña, username generado del nombre).
+
+```bash
+curl -X POST "http://localhost:8000/api/v2/auth/google" \
+     -H "Content-Type: application/json" \
+     -H "X-Lunance-Device: 0b5f3c55-7f4e-4f0e-9a43-0d6c2d0d6b8e" \
+     -H "X-Lunance-Client: android/1.4.0" \
+     -d '{"id_token": "<id token de Google>", "nonce": "<nonce en claro, opcional>", "device_name": "Pixel de Ana"}'
+```
+
+**Respuesta** (misma sesión que `/login`: en la web el refresh va en la cookie `httpOnly`):
+```json
+{
+  "access_token": "eyJhbGciOiJFZERTQSIs...",
+  "token_type": "bearer",
+  "expires_in": 600,
+  "refresh_token": "rt_…",
+  "account_created": true,
+  "provider_linked": false
+}
+```
+
+- `account_created: true` → cuenta nueva: buen momento para ofrecer cambiar el username (`PATCH /auth/me`).
+- `provider_linked: true` → había una cuenta con ese correo y se vinculó (se avisa por correo).
+- **Nonce** (opcional): si la app lo usa, al proveedor se le pasa el **SHA-256 en hex** del nonce y a la API el valor **en claro**. Si el token trae `nonce`, este campo es obligatorio.
+- **Cada ID token sirve una vez**: repetirlo responde `401`. Para reintentar, pide otro al SDK.
+
+**Cuenta existente con el mismo correo**: se vincula sola solo si es un buzón de Gmail/googlemail o del dominio de Google Workspace de la cuenta de Google. Con cualquier otro correo responde:
+
+```json
+{
+  "error": true,
+  "error_code": "AUTH_PROVIDER_LINK_REQUIRED",
+  "message": "Ya hay una cuenta con ese correo. Inicia sesión con tu método actual y vincula esta cuenta desde ajustes",
+  "details": [{"loc": ["account", "login_methods"], "msg": "Métodos con los que puedes iniciar sesión en esa cuenta", "type": "LOGIN_METHODS", "input": ["password"]}]
+}
+```
+
+### Iniciar sesión con Apple (Sign in with Apple)
+
+```bash
+curl -X POST "http://localhost:8000/api/v2/auth/apple" \
+     -H "Content-Type: application/json" \
+     -H "X-Lunance-Device: 0b5f3c55-7f4e-4f0e-9a43-0d6c2d0d6b8e" \
+     -H "X-Lunance-Client: ios/1.4.0" \
+     -d '{
+       "id_token": "<identityToken de Apple>",
+       "authorization_code": "<authorizationCode de Apple>",
+       "nonce": "<nonce en claro>",
+       "name": "Ana Pérez"
+     }'
+```
+
+- `authorization_code` (recomendado): la API lo canjea por el refresh token de Apple y lo guarda **cifrado**; sirve para revocar el acceso cuando se borre la cuenta (Apple lo exige). Caduca a los 5 minutos y es de un solo uso: mándalo en cuanto lo recibas.
+- `name`: Apple **solo** lo entrega la primera vez que el usuario autoriza la app; mándalo entonces para generar el username.
+- Con el correo oculto de Apple (`…@privaterelay.appleid.com`) la cuenta usa esa dirección. Una cuenta existente se vincula sola solo si su correo es de iCloud (`icloud.com`, `me.com`, `mac.com`) o ese mismo relay privado; si no, `409 AUTH_PROVIDER_LINK_REQUIRED`.
+- Misma respuesta que `/auth/google`.
+
+### Vincular y desvincular Google o Apple (ajustes)
+
+```bash
+# Vincular (con sesión iniciada; el correo del proveedor puede ser otro)
+curl -X POST "http://localhost:8000/api/v2/auth/providers/google" \
+     -H "Authorization: Bearer <access_token>" \
+     -H "Content-Type: application/json" \
+     -d '{"id_token": "<id token de Google>"}'
+
+curl -X POST "http://localhost:8000/api/v2/auth/providers/apple" \
+     -H "Authorization: Bearer <access_token>" \
+     -H "Content-Type: application/json" \
+     -d '{"id_token": "<identityToken>", "authorization_code": "<authorizationCode>", "nonce": "<nonce>"}'
+
+# Desvincular
+curl -X DELETE "http://localhost:8000/api/v2/auth/providers/google" \
+     -H "Authorization: Bearer <access_token>"
+```
+
+**Respuesta:** `200` con `{"login_methods": ["password", "google"]}`. Errores: esa cuenta del proveedor ya está en otro usuario → `409 AUTH_PROVIDER_IN_USE`; tu cuenta ya tiene otra cuenta de ese proveedor → `409 AUTH_PROVIDER_CONFLICT`; desvincular el único método de acceso → `409 AUTH_LAST_LOGIN_METHOD`. Desvincular algo que no está vinculado no hace nada. Ambas cosas se avisan por correo. Límite de 5 por minuto por usuario.
+
+### Cambiar el username
+
+```bash
+curl -X PATCH "http://localhost:8000/api/v2/auth/me" \
+     -H "Authorization: Bearer <access_token>" \
+     -H "Content-Type: application/json" \
+     -d '{"username": "ana_perez"}'
+```
+
+**Respuesta:** la misma que `GET /auth/me`. Ocupado por otra cuenta o apartado por un registro pendiente → `409 BUSINESS_USERNAME_EXISTS`.
 
 ### Usar Token en Requests
 
@@ -215,7 +308,8 @@ curl -X GET "http://localhost:8000/api/v2/auth/me" \
   "username": "juanperez",
   "email": "juan@example.com",
   "email_verified": true,
-  "is_active": true
+  "is_active": true,
+  "login_methods": ["password", "google"]
 }
 ```
 
@@ -496,7 +590,8 @@ GET /api/v2/auth/me
   "username": "juanperez",
   "email": "juan@example.com",
   "email_verified": true,
-  "is_active": true
+  "is_active": true,
+  "login_methods": ["password", "google"]
 }
 ```
 
@@ -525,6 +620,29 @@ POST /api/v2/auth/logout
 GET /api/v2/auth/sessions                 # lista las sesiones activas, marca is_current
 DELETE /api/v2/auth/sessions/{uuid}       # 204; 404 si no existe o es de otro usuario
 ```
+
+#### Google y Apple
+```bash
+POST /api/v2/auth/google                  # {id_token, nonce?, device_name?} → tokens + account_created/provider_linked
+POST /api/v2/auth/apple                   # {id_token, authorization_code?, nonce?, name?, device_name?}
+POST /api/v2/auth/apple/notifications     # avisos servidor a servidor de Apple ({payload}); responde 200
+POST /api/v2/auth/providers/google        # vincular desde ajustes (con sesión) → {login_methods}
+POST /api/v2/auth/providers/apple         # vincular desde ajustes (con sesión) → {login_methods}
+DELETE /api/v2/auth/providers/{provider}  # desvincular google|apple → {login_methods}
+PATCH /api/v2/auth/me                     # {username} → cambiar el username
+```
+
+| Código | Estado | Cuándo |
+|---|---|---|
+| `AUTH_INVALID_PROVIDER_TOKEN` | 401 | Firma, emisor, audiencia, caducidad, nonce o correo sin verificar; token ya usado; código de Apple rechazado |
+| `AUTH_PROVIDER_LINK_REQUIRED` | 409 | Hay una cuenta con ese correo y el buzón no permite vincular solo (`details[0].input`: métodos de esa cuenta) |
+| `AUTH_PROVIDER_CONFLICT` | 409 | La cuenta ya tiene otra cuenta del mismo proveedor |
+| `AUTH_PROVIDER_IN_USE` | 409 | Esa cuenta del proveedor está vinculada a otro usuario |
+| `AUTH_LAST_LOGIN_METHOD` | 409 | Desvincular dejaría la cuenta sin forma de entrar |
+| `AUTH_PASSWORD_NOT_SET` | 409 | Cambiar la contraseña de una cuenta que no tiene |
+| `AUTH_PROVIDER_NOT_CONFIGURED` | 503 | El proveedor no tiene client IDs en el servidor |
+| `AUTH_PROVIDER_UNAVAILABLE` | 503 | No se pudieron obtener las claves públicas del proveedor (`Retry-After`) |
+| `SERVICE_UNAVAILABLE` | 503 | Redis no responde: no se puede comprobar que el token no se usó antes |
 
 ### 🔑 API Keys - `/api/v2/api-keys/`
 

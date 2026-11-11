@@ -28,6 +28,7 @@ Lunance IA es una API REST completa para la gestión de finanzas personales cons
 
 ### 🔐 Seguridad y Autenticación
 - **Autenticación propia**: Registro con verificación de correo y login con correo y contraseña, sin depender de proveedores externos
+- **Google y Apple**: Login y alta en un paso con el ID token del proveedor (web, iOS y Android), vinculación automática solo con buzones que el proveedor administra y vinculación manual desde ajustes
 - **Recuperación de contraseña**: Enlaces de un solo uso por correo (Resend en producción, Mailpit en local); restablecer o cambiar la contraseña cierra las demás sesiones
 - **JWT Tokens**: La API emite y valida sus propios tokens (EdDSA/Ed25519) con una sesión por dispositivo; contraseñas hasheadas con Argon2id
 - **Refresh tokens rotativos**: Se almacenan solo como hash SHA-256 y se revocan al cerrar sesión
@@ -191,7 +192,9 @@ docker run -d --name lunance-mailpit -p 127.0.0.1:8025:8025 -p 127.0.0.1:1025:10
 ```
 Con `ENVIRONMENT=DEV` la API manda los correos por SMTP a `localhost:1025` (valores por defecto de `SMTP_HOST`/`SMTP_PORT`). Los enlaces apuntan a `EMAIL_LINK_BASE_URL` o, si está vacío, a `FRONTEND_URL`. En producción hacen falta `RESEND_API_KEY`, `EMAIL_FROM` con un dominio verificado en Resend y `EMAIL_LINK_BASE_URL` https. Ver [DOCKER_SETUP.md](docs/DOCKER_SETUP.md#-correo-en-local-con-mailpit).
 
-7. **Ejecutar migraciones y iniciar servidor**
+7. **Google y Apple (opcional)**: ver [Iniciar sesión con Google y Apple](#-iniciar-sesión-con-google-y-apple). Sin configurarlos, sus rutas responden `503 AUTH_PROVIDER_NOT_CONFIGURED` y el resto funciona igual.
+
+8. **Ejecutar migraciones y iniciar servidor**
 ```bash
 alembic upgrade head
 uvicorn src.main:app --reload
@@ -199,12 +202,41 @@ uvicorn src.main:app --reload
 
 > 🐳 **Para gestión avanzada de contenedores**: Consulta [DOCKER_SETUP.md](docs/DOCKER_SETUP.md)
 
+## 🔑 Iniciar sesión con Google y Apple
+
+Los dos son opcionales y se encienden por separado: un proveedor sin client IDs queda apagado. Van juntos en la app de iOS: **App Store Review Guideline 4.8** exige ofrecer Sign in with Apple (u otra opción equivalente que respete la privacidad) si la app ofrece un login de terceros como Google. Y la **5.1.1(v)** exige poder borrar la cuenta desde la app, revocando el token de Apple (por eso se guarda; el borrado de cuenta llega en otra rama).
+
+### Google Cloud Console
+
+1. Crea (o elige) un proyecto y configura la **pantalla de consentimiento de OAuth** (APIs y servicios › Pantalla de consentimiento): nombre de la app, correo de soporte, dominios autorizados (`lunance.app`) y los scopes `openid`, `email` y `profile`.
+2. En **Credenciales › Crear credenciales › ID de cliente de OAuth**, crea un cliente por plataforma:
+   - **Aplicación web**: orígenes de JavaScript autorizados (`https://lunance.app`, `http://localhost:3000` en desarrollo).
+   - **iOS**: el bundle ID de la app.
+   - **Android**: el nombre del paquete y la huella SHA-1 del certificado de firma (debug y release).
+3. Copia los tres client IDs (`…apps.googleusercontent.com`) en `GOOGLE_CLIENT_IDS`, separados por comas. El backend no necesita el client secret: solo comprueba los ID tokens.
+
+### Apple Developer
+
+1. **Identifiers › App IDs**: en el App ID de la app de iOS activa **Sign in with Apple** (como *primary App ID*). En **Server-to-Server Notification Endpoint** pon `https://api.lunance.app/api/v2/auth/apple/notifications`.
+2. **Identifiers › Services IDs**: crea uno para la web (p. ej. `app.lunance.web`), activa Sign in with Apple, asócialo al App ID anterior y registra el dominio (`lunance.app`) y la URL de retorno de la web.
+3. **Keys**: crea una clave con **Sign in with Apple** habilitado (asociada al App ID) y descarga el `.p8` (solo se puede descargar una vez). Anota su **Key ID** y tu **Team ID** (esquina superior derecha de la cuenta).
+4. En el `.env`:
+   - `APPLE_CLIENT_IDS`: bundle ID de iOS y Services ID de la web, separados por comas.
+   - `APPLE_TEAM_ID`, `APPLE_KEY_ID` y `APPLE_PRIVATE_KEY` (el contenido del `.p8` en una línea con `\n`):
+     ```bash
+     printf "APPLE_PRIVATE_KEY='%s'\n" "$(awk '{printf "%s\\n", $0}' AuthKey_XXXXXXXXXX.p8)" >> .env
+     printf "APPLE_TOKEN_ENCRYPTION_KEY='%s'\n" "$(openssl rand -base64 48)" >> .env
+     ```
+   - `APPLE_TOKEN_ENCRYPTION_KEY` cifra el refresh token de Apple en la base; si se cambia, los guardados dejan de poder descifrarse (se renuevan en el siguiente login con Apple).
+
+En PROD, con Apple encendido, la app no arranca sin la clave `.p8` y la clave de cifrado. Los detalles del flujo (vinculación por correo, nonce, notificaciones) están en [ARCHITECTURE.md](docs/ARCHITECTURE.md#iniciar-sesión-con-google-y-apple) y los endpoints en [API_USAGE.md](docs/API_USAGE.md#iniciar-sesión-con-google).
+
 ## 📖 Uso de la API
 
 La API REST de Lunance IA v2 utiliza autenticación JWT y sigue los principios de Clean Architecture.
 
 ### Endpoints Principales
-- 🔐 **Autenticación**: `/api/v2/auth/` (register, email/verify, email/verify/resend, login, refresh, logout, me, sessions, password/forgot, password/reset, password/change)
+- 🔐 **Autenticación**: `/api/v2/auth/` (register, email/verify, email/verify/resend, login, google, apple, apple/notifications, providers, refresh, logout, me, sessions, password/forgot, password/reset, password/change)
 - 💳 **Cuentas**: `/api/v2/account/` (CRUD completo + activación/desactivación)
 - 💰 **Transacciones**: `/api/v2/transaction/` (CRUD completo)
 - 🔄 **Suscripciones**: `/api/v2/subscription/` (CRUD completo + cargos + activación)
@@ -262,7 +294,8 @@ Lunance IA utiliza **Clean Architecture + Domain-Driven Design** para garantizar
 - **Bloqueo del login**: por correo + IP y por correo en Redis tras varios intentos fallidos; si Redis cae, login, registro y recuperación responden `503`
 - **Sesiones por dispositivo**: access tokens EdDSA (Ed25519) de 10 min con `sid`; refresh tokens opacos rotativos (cookie httpOnly en web, body en ios/android), con detección de reuso
 - **Revocación inmediata**: cerrar una sesión desde otro dispositivo invalida su access token al instante (Redis + MySQL como autoridad)
-- **Auditoría**: registro de inicios de sesión, cierres de sesión, registros y cambios de contraseña en `auth_events`
+- **Google y Apple**: ID tokens verificados con las claves públicas del proveedor (en caché), audiencia, emisor, caducidad y nonce; cada token sirve una sola vez (Redis, fail-closed); el refresh token de Apple se guarda cifrado con AES-256-GCM
+- **Auditoría**: registro de inicios de sesión (con el método), cierres de sesión, registros, cambios de contraseña, vinculaciones de Google/Apple y avisos de Apple en `auth_events`
 - **Rate limiting de autenticación**: Límites por endpoint y por IP ante intentos fallidos
 - **Validación robusta**: Schemas Pydantic en todos los endpoints
 - **CORS Configurado**: Según entorno (PROD: lista cerrada de dominios, DEV/TEST: `FRONTEND_URL`)
