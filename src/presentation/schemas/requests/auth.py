@@ -1,13 +1,19 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
+
+# Tope de longitud de las contraseñas: Argon2 acepta cualquiera, pero no hace falta que nadie
+# pueda mandar megas para que los hasheemos.
+PASSWORD_MAX_LENGTH = 256
+# RFC 5321: 254 caracteres como máximo para una dirección.
+EMAIL_MAX_LENGTH = 254
 
 
 class LoginRequest(BaseModel):
     """Schema para login."""
 
-    username: str = Field(
-        ..., min_length=1, max_length=100, description="Nombre de usuario"
+    email: EmailStr = Field(..., max_length=EMAIL_MAX_LENGTH, description="Correo")
+    password: str = Field(
+        ..., min_length=8, max_length=PASSWORD_MAX_LENGTH, description="Contraseña"
     )
-    password: str = Field(..., min_length=8, description="Contraseña")
     device_name: str | None = Field(
         default=None,
         max_length=100,
@@ -16,12 +22,54 @@ class LoginRequest(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    """Schema para registro."""
+    """Registro con correo. La cuenta se crea al abrir el enlace del correo."""
 
+    email: EmailStr = Field(..., max_length=EMAIL_MAX_LENGTH, description="Correo")
     username: str = Field(
-        ..., min_length=1, max_length=100, description="Nombre de usuario"
+        ..., min_length=1, max_length=100, description="Nombre de usuario (único)"
     )
-    password: str = Field(..., min_length=8, description="Contraseña")
+    password: str = Field(
+        ..., min_length=8, max_length=PASSWORD_MAX_LENGTH, description="Contraseña"
+    )
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str = Field(
+        ..., min_length=1, max_length=200, description="Token del enlace del correo"
+    )
+
+
+class EmailRequest(BaseModel):
+    """Reenvío de verificación y "Olvidé mi contraseña"."""
+
+    email: EmailStr = Field(..., max_length=EMAIL_MAX_LENGTH, description="Correo")
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(
+        ..., min_length=1, max_length=200, description="Token del enlace del correo"
+    )
+    password: str = Field(
+        ...,
+        min_length=8,
+        max_length=PASSWORD_MAX_LENGTH,
+        description="Contraseña nueva",
+    )
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(
+        ...,
+        min_length=1,
+        max_length=PASSWORD_MAX_LENGTH,
+        description="Contraseña actual",
+    )
+    new_password: str = Field(
+        ...,
+        min_length=8,
+        max_length=PASSWORD_MAX_LENGTH,
+        description="Contraseña nueva",
+    )
 
 
 class RefreshRequest(BaseModel):

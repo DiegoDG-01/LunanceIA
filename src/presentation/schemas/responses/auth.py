@@ -17,11 +17,18 @@ class TokenResponse(BaseModel):
     )
 
 
-class RegisterResponse(BaseModel):
-    """Schema de respuesta para registro."""
+class MessageResponse(BaseModel):
+    """Respuesta genérica: misma forma exista o no el correo."""
+
+    message: str = Field(..., description="Mensaje para mostrar al usuario")
+
+
+class VerifyEmailResponse(BaseModel):
+    """Cuenta creada al confirmar el correo. Para entrar hay que iniciar sesión."""
 
     user_uuid: str = Field(..., description="UUID del usuario")
     username: str = Field(..., description="Nombre del usuario")
+    email: str = Field(..., description="Correo confirmado")
     message: str = Field(..., description="Mensaje de confirmación")
 
 
@@ -30,6 +37,8 @@ class UserInfoResponse(BaseModel):
 
     user_uuid: str = Field(..., description="UUID del usuario")
     username: str = Field(..., description="Nombre del usuario")
+    email: str | None = Field(..., description="Correo de la cuenta")
+    email_verified: bool = Field(..., description="Si el correo está confirmado")
     is_active: bool = Field(..., description="Estado del usuario")
 
 

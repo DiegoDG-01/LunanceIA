@@ -102,6 +102,10 @@ limiter_30_per_minute = RateLimitRule(limit=30, window_seconds=60)
 limiter_50_per_minute = RateLimitRule(limit=50, window_seconds=60)
 limiter_100_per_minute = RateLimitRule(limit=100, window_seconds=60)
 limiter_auth_failure = RateLimitRule(limit=20, window_seconds=60)
+# Correos por buzón (clave = hash del correo, no la IP): nadie llena de enlaces la bandeja
+# de otro. Cuentan igual tenga o no cuenta el correo, así que no revelan nada.
+limiter_signup_emails = RateLimitRule(limit=5, window_seconds=3600)
+limiter_password_reset_emails = RateLimitRule(limit=3, window_seconds=3600)
 
 
 async def enforce_rate_limit(

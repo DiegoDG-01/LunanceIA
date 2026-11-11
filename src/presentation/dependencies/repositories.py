@@ -2,6 +2,10 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.repositories.auth.auth_event_repository import AuthEventRepository
+from domain.repositories.auth.password_reset_token_repository import (
+    PasswordResetTokenRepository,
+)
+from domain.repositories.auth.pending_signup_repository import PendingSignupRepository
 from domain.repositories.auth.refresh_token_repository import RefreshTokenRepository
 from domain.repositories.auth.session_repository import SessionRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
@@ -44,6 +48,12 @@ from infrastructure.database.repositories.sqlalchemy_installment_purchase_reposi
 )
 from infrastructure.database.repositories.sqlalchemy_notification_repository import (
     SQLAlchemyNotificationRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_password_reset_token_repository import (
+    SQLAlchemyPasswordResetTokenRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_pending_signup_repository import (
+    SQLAlchemyPendingSignupRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_recurring_income_repository import (
     SQLAlchemyRecurringIncomeRepository,
@@ -142,6 +152,18 @@ def get_auth_event_repository(
     db: AsyncSession = Depends(get_db),
 ) -> AuthEventRepository:
     return SQLAlchemyAuthEventRepository(db)
+
+
+def get_pending_signup_repository(
+    db: AsyncSession = Depends(get_db),
+) -> PendingSignupRepository:
+    return SQLAlchemyPendingSignupRepository(db)
+
+
+def get_password_reset_token_repository(
+    db: AsyncSession = Depends(get_db),
+) -> PasswordResetTokenRepository:
+    return SQLAlchemyPasswordResetTokenRepository(db)
 
 
 def get_dashboard_repository(

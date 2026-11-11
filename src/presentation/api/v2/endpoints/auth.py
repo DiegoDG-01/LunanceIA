@@ -4,8 +4,18 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
+from application.auth.commands.change_password import (
+    ChangePasswordCommand,
+    ChangePasswordHandler,
+)
 from application.auth.commands.login import LoginCommand, LoginHandler
 from application.auth.commands.logout import LogoutCommand, LogoutHandler
+from application.auth.commands.password_reset import (
+    RequestPasswordResetCommand,
+    RequestPasswordResetHandler,
+    ResetPasswordCommand,
+    ResetPasswordHandler,
+)
 from application.auth.commands.refresh_session import (
     RefreshSessionCommand,
     RefreshSessionHandler,
@@ -14,6 +24,12 @@ from application.auth.commands.register import RegisterCommand, RegisterHandler
 from application.auth.commands.revoke_session import (
     RevokeSessionCommand,
     RevokeSessionHandler,
+)
+from application.auth.commands.verify_email import (
+    ResendVerificationCommand,
+    ResendVerificationHandler,
+    VerifyEmailCommand,
+    VerifyEmailHandler,
 )
 from application.auth.dto import ClientContext, IssuedSession
 from application.auth.queries.list_sessions import (
@@ -26,20 +42,29 @@ from infrastructure.cache.redis import claim_once
 from infrastructure.config.settings import settings
 from infrastructure.rate_limiting.client_ip import ip_identity
 from infrastructure.rate_limiting.limiters import (
+    RateLimitRule,
     enforce_rate_limit,
     limiter_5_per_hour,
+    limiter_5_per_minute,
     limiter_10_per_minute,
     limiter_20_per_minute,
     limiter_30_per_minute,
     limiter_100_per_minute,
+    limiter_password_reset_emails,
+    limiter_signup_emails,
 )
 from presentation.dependencies import (
+    get_change_password_handler,
     get_list_sessions_handler,
     get_login_handler,
     get_logout_handler,
     get_refresh_session_handler,
     get_register_handler,
+    get_request_password_reset_handler,
+    get_resend_verification_handler,
+    get_reset_password_handler,
     get_revoke_session_handler,
+    get_verify_email_handler,
 )
 from presentation.dependencies.auth_deps import (
     AccessContext,
@@ -51,18 +76,24 @@ from presentation.dependencies.client_deps import (
     get_device_context,
 )
 from presentation.schemas.requests.auth import (
+    ChangePasswordRequest,
+    EmailRequest,
     LoginRequest,
     LogoutRequest,
     RefreshRequest,
     RegisterRequest,
+    ResetPasswordRequest,
+    VerifyEmailRequest,
 )
 from presentation.schemas.responses.auth import (
     LogoutResponse,
-    RegisterResponse,
+    MessageResponse,
     SessionResponse,
     TokenResponse,
     UserInfoResponse,
+    VerifyEmailResponse,
 )
+from shared.utils.emails import email_digest
 from shared.utils.time import utc_now
 
 router = APIRouter()
@@ -71,6 +102,20 @@ REFRESH_COOKIE = "refresh_token"
 REFRESH_COOKIE_PATH = "/api/v2/auth"
 # Un rate limit cortando el login se audita una vez por IP y minuto, no en cada intento.
 THROTTLED_AUDIT_WINDOW_SECONDS = 60
+
+# Las rutas públicas de cuenta responden lo mismo exista o no el correo (anti-enumeración).
+SIGNUP_ACCEPTED_MESSAGE = (
+    "Si el correo es válido, te enviamos un enlace para confirmar tu cuenta. "
+    "Revisa tu bandeja de entrada y la carpeta de spam."
+)
+RESEND_ACCEPTED_MESSAGE = (
+    "Si hay un registro pendiente con ese correo, te enviamos un enlace nuevo."
+)
+EMAIL_VERIFIED_MESSAGE = "Correo confirmado. Ya puedes iniciar sesión."
+
+# Sin Idempotency-Key en estas rutas (fase 4): no mueven dinero ni duplican nada al repetirse.
+# Repetir el registro sustituye el registro pendiente del mismo correo; cada enlace (verificar,
+# restablecer) sirve una sola vez, y los reenvíos están limitados por buzón.
 
 
 def _set_refresh_cookie(response: Response, issued: IssuedSession) -> None:
@@ -125,24 +170,145 @@ def _incoming_refresh_token(
     return token
 
 
-@router.post("/register", response_model=RegisterResponse)
+async def _limit_mailbox(
+    request: Request, rule: RateLimitRule, purpose: str, email: str
+) -> None:
+    """Límite por buzón, aparte del de la IP. Fail-closed: sin Redis, 503."""
+    await enforce_rate_limit(
+        rule,
+        request,
+        key=f"mailbox:{purpose}:{email_digest(email)}",
+        fail_closed=True,
+    )
+
+
+@router.post(
+    "/register",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=MessageResponse,
+)
 async def register(
     request: Request,
     register_request: RegisterRequest,
+    context: ClientContext = Depends(get_client_context),
     handler: RegisterHandler = Depends(get_register_handler),
 ):
+    """Guarda el registro y manda el enlace de verificación. Siempre 202 (salvo username
+    ocupado, 409): la respuesta no revela si el correo ya tiene cuenta."""
     await enforce_rate_limit(limiter_5_per_hour, request, fail_closed=True)
-    command = RegisterCommand(
-        username=register_request.username,
-        password=register_request.password,
+    await _limit_mailbox(
+        request, limiter_signup_emails, "signup", register_request.email
+    )
+    await handler.handle(
+        RegisterCommand(
+            email=register_request.email,
+            username=register_request.username,
+            password=register_request.password,
+            context=context,
+        )
+    )
+    return MessageResponse(message=SIGNUP_ACCEPTED_MESSAGE)
+
+
+@router.post("/email/verify", response_model=VerifyEmailResponse)
+async def verify_email(
+    request: Request,
+    body: VerifyEmailRequest,
+    context: ClientContext = Depends(get_client_context),
+    handler: VerifyEmailHandler = Depends(get_verify_email_handler),
+):
+    """Abre el enlace del correo: crea la cuenta ya verificada. No inicia sesión."""
+    await enforce_rate_limit(limiter_10_per_minute, request, fail_closed=True)
+    user = await handler.handle(VerifyEmailCommand(token=body.token, context=context))
+    return VerifyEmailResponse(
+        user_uuid=user.uuid,
+        username=user.name,
+        email=user.email or "",
+        message=EMAIL_VERIFIED_MESSAGE,
     )
 
-    result = await handler.handle(command)
-    return RegisterResponse(
-        user_uuid=result.user_uuid,
-        username=result.username,
-        message=result.message,
+
+@router.post(
+    "/email/verify/resend",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=MessageResponse,
+)
+async def resend_verification(
+    request: Request,
+    body: EmailRequest,
+    context: ClientContext = Depends(get_client_context),
+    handler: ResendVerificationHandler = Depends(get_resend_verification_handler),
+):
+    """Otro enlace para un registro pendiente. Siempre 202."""
+    await enforce_rate_limit(limiter_5_per_minute, request, fail_closed=True)
+    await _limit_mailbox(request, limiter_signup_emails, "signup", body.email)
+    await handler.handle(ResendVerificationCommand(email=body.email, context=context))
+    return MessageResponse(message=RESEND_ACCEPTED_MESSAGE)
+
+
+@router.post("/password/forgot", status_code=status.HTTP_204_NO_CONTENT)
+async def forgot_password(
+    request: Request,
+    body: EmailRequest,
+    context: ClientContext = Depends(get_client_context),
+    handler: RequestPasswordResetHandler = Depends(get_request_password_reset_handler),
+):
+    """Manda el enlace para elegir una contraseña nueva. Siempre 204, incluso al llegar al
+    límite del buzón (entonces no se manda nada): la respuesta no revela si hay cuenta."""
+    await enforce_rate_limit(limiter_5_per_minute, request, fail_closed=True)
+    try:
+        await _limit_mailbox(
+            request, limiter_password_reset_emails, "password_reset", body.email
+        )
+    except HTTPException as exc:
+        if exc.status_code != status.HTTP_429_TOO_MANY_REQUESTS:
+            raise
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    await handler.handle(RequestPasswordResetCommand(email=body.email, context=context))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/password/reset", status_code=status.HTTP_204_NO_CONTENT)
+async def reset_password(
+    request: Request,
+    body: ResetPasswordRequest,
+    context: ClientContext = Depends(get_client_context),
+    handler: ResetPasswordHandler = Depends(get_reset_password_handler),
+):
+    """Cambia la contraseña con el enlace del correo y cierra todas las sesiones."""
+    await enforce_rate_limit(limiter_10_per_minute, request, fail_closed=True)
+    await handler.handle(
+        ResetPasswordCommand(token=body.token, password=body.password, context=context)
     )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/password/change", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(
+    request: Request,
+    body: ChangePasswordRequest,
+    auth: AccessContext = Depends(get_access_context),
+    context: ClientContext = Depends(get_client_context),
+    handler: ChangePasswordHandler = Depends(get_change_password_handler),
+):
+    """Cambia la contraseña (pide la actual) y cierra las demás sesiones; esta sigue."""
+    user_id = cast(int, auth.user.id)
+    await enforce_rate_limit(
+        limiter_5_per_minute,
+        request,
+        key=f"user:{user_id}:{request.url.path}",
+        fail_closed=True,
+    )
+    await handler.handle(
+        ChangePasswordCommand(
+            user_id=user_id,
+            session_uuid=auth.session_uuid,
+            current_password=body.current_password,
+            new_password=body.new_password,
+            context=context,
+        )
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/me", response_model=UserInfoResponse)
@@ -151,6 +317,8 @@ async def me(request: Request, current_user: User = Depends(get_current_active_u
     return UserInfoResponse(
         user_uuid=current_user.uuid,
         username=current_user.name,
+        email=current_user.email,
+        email_verified=current_user.email_verified,
         is_active=current_user.is_active,
     )
 
@@ -164,7 +332,7 @@ async def login(
     handler: LoginHandler = Depends(get_login_handler),
 ):
     command = LoginCommand(
-        username=login_request.username,
+        email=login_request.email,
         password=login_request.password,
         context=replace(context, device_name=login_request.device_name),
     )

@@ -19,12 +19,17 @@ from presentation.dependencies.auth_deps import (
 
 # Auth handlers
 from presentation.dependencies.auth_handler_deps import (
+    get_change_password_handler,
     get_list_sessions_handler,
     get_login_handler,
     get_logout_handler,
     get_refresh_session_handler,
     get_register_handler,
+    get_request_password_reset_handler,
+    get_resend_verification_handler,
+    get_reset_password_handler,
     get_revoke_session_handler,
+    get_verify_email_handler,
 )
 
 # Category handlers
@@ -134,6 +139,7 @@ __all__ = [
     # Category
     "get_categories_handler",
     "get_category_repository",
+    "get_change_password_handler",
     # Account
     "get_create_account_handler",
     # Budget
@@ -175,6 +181,9 @@ __all__ = [
     "get_refresh_session_handler",
     "get_refresh_token_repository",
     "get_register_handler",
+    "get_request_password_reset_handler",
+    "get_resend_verification_handler",
+    "get_reset_password_handler",
     "get_revoke_session_handler",
     "get_saving_goals_by_id_handler",
     "get_saving_goals_handler",
@@ -201,4 +210,5 @@ __all__ = [
     "get_update_transaction_handler",
     "get_user_accounts_handler",
     "get_user_repository",
+    "get_verify_email_handler",
 ]
