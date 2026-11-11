@@ -207,6 +207,10 @@ SENSITIVE_FIELDS = {
     "authorization",
     "secret",
     "api_key",
+    "id_token",
+    "authorization_code",
+    "nonce",
+    "payload",
 }
 
 

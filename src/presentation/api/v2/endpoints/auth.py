@@ -4,9 +4,23 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
+from application.auth.commands.apple_notifications import (
+    AppleNotificationCommand,
+    AppleNotificationHandler,
+)
 from application.auth.commands.change_password import (
     ChangePasswordCommand,
     ChangePasswordHandler,
+)
+from application.auth.commands.change_username import (
+    ChangeUsernameCommand,
+    ChangeUsernameHandler,
+)
+from application.auth.commands.link_provider import (
+    LinkProviderCommand,
+    LinkProviderHandler,
+    UnlinkProviderCommand,
+    UnlinkProviderHandler,
 )
 from application.auth.commands.login import LoginCommand, LoginHandler
 from application.auth.commands.logout import LogoutCommand, LogoutHandler
@@ -15,6 +29,11 @@ from application.auth.commands.password_reset import (
     RequestPasswordResetHandler,
     ResetPasswordCommand,
     ResetPasswordHandler,
+)
+from application.auth.commands.provider_sign_in import (
+    ProviderSignInCommand,
+    ProviderSignInHandler,
+    ProviderSignInResult,
 )
 from application.auth.commands.refresh_session import (
     RefreshSessionCommand,
@@ -36,6 +55,7 @@ from application.auth.queries.list_sessions import (
     ListSessionsHandler,
     ListSessionsQuery,
 )
+from application.interfaces.identity_providers import IdentityProvider
 from domain.entities.auth.session import Platform
 from domain.entities.users.user import User
 from infrastructure.cache.redis import claim_once
@@ -75,19 +95,34 @@ from presentation.dependencies.client_deps import (
     get_client_context,
     get_device_context,
 )
+from presentation.dependencies.identity_deps import (
+    get_apple_notification_handler,
+    get_change_username_handler,
+    get_link_provider_handler,
+    get_provider_sign_in_handler,
+    get_unlink_provider_handler,
+)
 from presentation.schemas.requests.auth import (
+    AppleNotificationRequest,
+    AppleSignInRequest,
+    AppleTokenRequest,
     ChangePasswordRequest,
     EmailRequest,
+    GoogleSignInRequest,
     LoginRequest,
     LogoutRequest,
+    ProviderTokenRequest,
     RefreshRequest,
     RegisterRequest,
     ResetPasswordRequest,
+    UpdateMeRequest,
     VerifyEmailRequest,
 )
 from presentation.schemas.responses.auth import (
+    LoginMethodsResponse,
     LogoutResponse,
     MessageResponse,
+    ProviderTokenResponse,
     SessionResponse,
     TokenResponse,
     UserInfoResponse,
@@ -311,16 +346,40 @@ async def change_password(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+def _user_info(user: User) -> UserInfoResponse:
+    return UserInfoResponse(
+        user_uuid=user.uuid,
+        username=user.name,
+        email=user.email,
+        email_verified=user.email_verified,
+        is_active=user.is_active,
+        login_methods=user.login_methods,
+    )
+
+
 @router.get("/me", response_model=UserInfoResponse)
 async def me(request: Request, current_user: User = Depends(get_current_active_user)):
     await enforce_rate_limit(limiter_100_per_minute, request)
-    return UserInfoResponse(
-        user_uuid=current_user.uuid,
-        username=current_user.name,
-        email=current_user.email,
-        email_verified=current_user.email_verified,
-        is_active=current_user.is_active,
+    return _user_info(current_user)
+
+
+@router.patch("/me", response_model=UserInfoResponse)
+async def update_me(
+    request: Request,
+    body: UpdateMeRequest,
+    auth: AccessContext = Depends(get_access_context),
+    context: ClientContext = Depends(get_client_context),
+    handler: ChangeUsernameHandler = Depends(get_change_username_handler),
+):
+    """Cambia el username (las cuentas de Google y Apple empiezan con uno generado)."""
+    user_id = cast(int, auth.user.id)
+    await enforce_rate_limit(
+        limiter_5_per_minute, request, key=f"user:{user_id}:{request.url.path}"
     )
+    user = await handler.handle(
+        ChangeUsernameCommand(user_id=user_id, username=body.username, context=context)
+    )
+    return _user_info(user)
 
 
 @router.post("/login", response_model=TokenResponse, response_model_exclude_none=True)
@@ -438,3 +497,168 @@ async def revoke_session(
         )
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- Google y Apple ---
+# Sin Idempotency-Key: cada ID token sirve una sola vez, así que un reintento con el mismo token
+# responde 401 y la app pide otro al proveedor.
+
+
+def _provider_token_response(
+    response: Response, result: ProviderSignInResult
+) -> ProviderTokenResponse:
+    token = _token_response(response, result.issued)
+    return ProviderTokenResponse(
+        **token.model_dump(),
+        account_created=result.account_created,
+        provider_linked=result.provider_linked,
+    )
+
+
+async def _limit_provider_sign_in(request: Request) -> None:
+    """Mismo límite que el login con contraseña. Fail-closed: sin Redis, 503."""
+    await enforce_rate_limit(limiter_10_per_minute, request, fail_closed=True)
+
+
+@router.post(
+    "/google", response_model=ProviderTokenResponse, response_model_exclude_none=True
+)
+async def google_sign_in(
+    request: Request,
+    response: Response,
+    body: GoogleSignInRequest,
+    context: ClientContext = Depends(get_device_context),
+    handler: ProviderSignInHandler = Depends(get_provider_sign_in_handler),
+):
+    """Entra o crea la cuenta con el ID token de Google. Una cuenta con el mismo correo solo
+    se vincula sola si es un buzón de Gmail o del dominio de Google Workspace de la cuenta;
+    si no, 409 AUTH_PROVIDER_LINK_REQUIRED."""
+    await _limit_provider_sign_in(request)
+    result = await handler.handle(
+        ProviderSignInCommand(
+            provider=IdentityProvider.GOOGLE,
+            id_token=body.id_token,
+            nonce=body.nonce,
+            context=replace(context, device_name=body.device_name),
+        )
+    )
+    return _provider_token_response(response, result)
+
+
+@router.post(
+    "/apple", response_model=ProviderTokenResponse, response_model_exclude_none=True
+)
+async def apple_sign_in(
+    request: Request,
+    response: Response,
+    body: AppleSignInRequest,
+    context: ClientContext = Depends(get_device_context),
+    handler: ProviderSignInHandler = Depends(get_provider_sign_in_handler),
+):
+    """Entra o crea la cuenta con Sign in with Apple. Con `authorization_code` se guarda
+    (cifrado) el refresh token de Apple para poder revocar el acceso al borrar la cuenta."""
+    await _limit_provider_sign_in(request)
+    result = await handler.handle(
+        ProviderSignInCommand(
+            provider=IdentityProvider.APPLE,
+            id_token=body.id_token,
+            nonce=body.nonce,
+            authorization_code=body.authorization_code,
+            name=body.name,
+            context=replace(context, device_name=body.device_name),
+        )
+    )
+    return _provider_token_response(response, result)
+
+
+@router.post("/apple/notifications", status_code=status.HTTP_200_OK)
+async def apple_notifications(
+    request: Request,
+    body: AppleNotificationRequest,
+    handler: AppleNotificationHandler = Depends(get_apple_notification_handler),
+):
+    """Avisos servidor a servidor de Apple (Apple Developer › Identifiers › el App ID ›
+    Sign in with Apple › Server-to-Server Notification Endpoint). Apple espera un 200."""
+    await enforce_rate_limit(limiter_100_per_minute, request)
+    await handler.handle(AppleNotificationCommand(payload=body.payload))
+    return Response(status_code=status.HTTP_200_OK)
+
+
+async def _limit_provider_change(request: Request, user_id: int) -> None:
+    await enforce_rate_limit(
+        limiter_5_per_minute,
+        request,
+        key=f"user:{user_id}:auth/providers",
+        fail_closed=True,
+    )
+
+
+@router.post("/providers/google", response_model=LoginMethodsResponse)
+async def link_google(
+    request: Request,
+    body: ProviderTokenRequest,
+    auth: AccessContext = Depends(get_access_context),
+    context: ClientContext = Depends(get_client_context),
+    handler: LinkProviderHandler = Depends(get_link_provider_handler),
+):
+    """Vincula una cuenta de Google a la cuenta con sesión iniciada (desde ajustes)."""
+    user_id = cast(int, auth.user.id)
+    await _limit_provider_change(request, user_id)
+    user = await handler.handle(
+        LinkProviderCommand(
+            user_id=user_id,
+            session_uuid=auth.session_uuid,
+            provider=IdentityProvider.GOOGLE,
+            id_token=body.id_token,
+            nonce=body.nonce,
+            context=context,
+        )
+    )
+    return LoginMethodsResponse(login_methods=user.login_methods)
+
+
+@router.post("/providers/apple", response_model=LoginMethodsResponse)
+async def link_apple(
+    request: Request,
+    body: AppleTokenRequest,
+    auth: AccessContext = Depends(get_access_context),
+    context: ClientContext = Depends(get_client_context),
+    handler: LinkProviderHandler = Depends(get_link_provider_handler),
+):
+    """Vincula una cuenta de Apple a la cuenta con sesión iniciada (desde ajustes)."""
+    user_id = cast(int, auth.user.id)
+    await _limit_provider_change(request, user_id)
+    user = await handler.handle(
+        LinkProviderCommand(
+            user_id=user_id,
+            session_uuid=auth.session_uuid,
+            provider=IdentityProvider.APPLE,
+            id_token=body.id_token,
+            nonce=body.nonce,
+            authorization_code=body.authorization_code,
+            context=context,
+        )
+    )
+    return LoginMethodsResponse(login_methods=user.login_methods)
+
+
+@router.delete("/providers/{provider}", response_model=LoginMethodsResponse)
+async def unlink_provider(
+    request: Request,
+    provider: IdentityProvider,
+    auth: AccessContext = Depends(get_access_context),
+    context: ClientContext = Depends(get_client_context),
+    handler: UnlinkProviderHandler = Depends(get_unlink_provider_handler),
+):
+    """Desvincula Google o Apple. 409 AUTH_LAST_LOGIN_METHOD si es la única forma de entrar."""
+    user_id = cast(int, auth.user.id)
+    await _limit_provider_change(request, user_id)
+    user = await handler.handle(
+        UnlinkProviderCommand(
+            user_id=user_id,
+            session_uuid=auth.session_uuid,
+            provider=provider,
+            context=context,
+        )
+    )
+    return LoginMethodsResponse(login_methods=user.login_methods)

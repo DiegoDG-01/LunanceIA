@@ -88,3 +88,69 @@ class LogoutRequest(BaseModel):
         default=False,
         description="Cierra también las sesiones de los demás dispositivos",
     )
+
+
+# Un ID token real mide 1-2 KB; el tope solo evita cuerpos enormes.
+ID_TOKEN_MAX_LENGTH = 8192
+NONCE_MAX_LENGTH = 512
+
+
+class ProviderTokenRequest(BaseModel):
+    """ID token de Google o Apple tal como lo entregó su SDK."""
+
+    id_token: str = Field(
+        ...,
+        min_length=1,
+        max_length=ID_TOKEN_MAX_LENGTH,
+        description="ID token (JWT) que la app obtuvo del proveedor",
+    )
+    nonce: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=NONCE_MAX_LENGTH,
+        description=(
+            "Nonce en claro. Al proveedor se le manda su SHA-256 (hex); obligatorio si el "
+            "token lleva `nonce`"
+        ),
+    )
+
+
+class GoogleSignInRequest(ProviderTokenRequest):
+    device_name: str | None = Field(
+        default=None, max_length=100, description="Nombre legible del dispositivo"
+    )
+
+
+class AppleTokenRequest(ProviderTokenRequest):
+    authorization_code: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=1024,
+        description=(
+            "Código de autorización de Apple: se canjea por el refresh token que permite "
+            "revocar el acceso al borrar la cuenta"
+        ),
+    )
+
+
+class AppleSignInRequest(AppleTokenRequest):
+    name: str | None = Field(
+        default=None,
+        max_length=100,
+        description="Nombre completo; Apple solo lo da la primera vez que se autoriza",
+    )
+    device_name: str | None = Field(
+        default=None, max_length=100, description="Nombre legible del dispositivo"
+    )
+
+
+class AppleNotificationRequest(BaseModel):
+    """Cuerpo que manda Apple a la URL de notificaciones servidor a servidor."""
+
+    payload: str = Field(..., min_length=1, max_length=16384)
+
+
+class UpdateMeRequest(BaseModel):
+    username: str = Field(
+        ..., min_length=1, max_length=100, description="Nombre de usuario (único)"
+    )

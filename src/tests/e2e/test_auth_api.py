@@ -217,6 +217,7 @@ class TestMe:
             "email",
             "email_verified",
             "is_active",
+            "login_methods",
         }
         assert isinstance(data["user_uuid"], str)
         assert isinstance(data["username"], str)

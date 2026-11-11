@@ -17,6 +17,22 @@ class TokenResponse(BaseModel):
     )
 
 
+class ProviderTokenResponse(TokenResponse):
+    """Login con Google o Apple: además del par de tokens, si la cuenta se creó (conviene
+    ofrecer cambiar el username generado) o se vinculó por correo."""
+
+    account_created: bool = Field(..., description="Cuenta nueva")
+    provider_linked: bool = Field(
+        ..., description="El proveedor se vinculó ahora a una cuenta existente"
+    )
+
+
+class LoginMethodsResponse(BaseModel):
+    login_methods: list[str] = Field(
+        ..., description="Formas de entrar: password, google, apple"
+    )
+
+
 class MessageResponse(BaseModel):
     """Respuesta genérica: misma forma exista o no el correo."""
 
@@ -40,6 +56,9 @@ class UserInfoResponse(BaseModel):
     email: str | None = Field(..., description="Correo de la cuenta")
     email_verified: bool = Field(..., description="Si el correo está confirmado")
     is_active: bool = Field(..., description="Estado del usuario")
+    login_methods: list[str] = Field(
+        default_factory=list, description="Formas de entrar: password, google, apple"
+    )
 
 
 class SessionResponse(BaseModel):
