@@ -12,7 +12,7 @@ from application.interfaces.market_data import (
     QuotaExhausted,
     SymbolNotSupported,
 )
-from domain.objects.enums import Market
+from domain.objects.enums import InstrumentType, Market
 from infrastructure.external_services.market_data.banxico import BanxicoFxProvider
 from infrastructure.external_services.market_data.databursatil import (
     DataBursatilProvider,
@@ -463,3 +463,140 @@ def test_keys_are_required():
 def test_seconds_until_utc_midnight():
     now = datetime(2026, 11, 14, 23, 59, 30, tzinfo=UTC)
     assert seconds_until_utc_midnight(now) == 30
+
+
+# ------------------------------------------------------------- catálogo y búsqueda
+
+
+class TestDataBursatilCatalog:
+    async def test_parses_issuers_and_series(self):
+        recorder = respond(
+            body={
+                "None": {"None": {"razon_social": None, "estatus": "ACTIVA"}},
+                "WALMEX": {
+                    "*": {
+                        "razon_social": "WAL - MART DE MEXICO, S.A.B. DE C.V.",
+                        "isin": "MX01WA000038",
+                        "bolsa": "BMV",
+                        "tipo_valor_descripcion": "ACCIONES DE EMPRESAS COMERCIALES, INDUSTRIALES Y DE SERVICIOS",
+                        "tipo_valor_id": "1",
+                        "estatus": "ACTIVA",
+                    }
+                },
+                "FUNO": {
+                    "11": {
+                        "razon_social": "BANCO ACTINVER",
+                        "isin": "MXCFFU000001",
+                        "bolsa": "BMV",
+                        "tipo_valor_descripcion": "FIBRAS CERTIFICADOS INMOBILIARIOS",
+                        "estatus": "ACTIVA",
+                    }
+                },
+                "AA1CK": {
+                    "17": {
+                        "razon_social": "BANCO INVEX",
+                        "isin": "bad",
+                        "tipo_valor_descripcion": "CERTIFICADOS DE CAPITAL DE DESARROLLO",
+                        "estatus": "SUSPENDIDA",
+                    }
+                },
+            }
+        )
+        provider = DataBursatilProvider(token=SECRET, transport=recorder.transport)
+
+        listings = {l.symbol: l for l in await provider.fetch_catalog(Market.BMV)}
+
+        assert set(listings) == {"WALMEX*", "FUNO11", "AA1CK17"}
+        assert listings["WALMEX*"].instrument_type is InstrumentType.STOCK
+        assert listings["WALMEX*"].isin == "MX01WA000038"
+        assert listings["WALMEX*"].exchange == "BMV"
+        assert listings["FUNO11"].instrument_type is InstrumentType.FIBRA
+        assert listings["AA1CK17"].instrument_type is InstrumentType.OTHER
+        assert listings["AA1CK17"].is_active is False
+        assert listings["AA1CK17"].isin is None
+        assert recorder.last.url.params["mercado"] == "local"
+
+    async def test_sic_is_the_global_segment(self):
+        recorder = respond(
+            body={
+                "IVV": {
+                    "*": {
+                        "razon_social": "ISHARES CORE S&P 500 ETF",
+                        "isin": "US4642872000",
+                        "bolsa": "NEW YORK STOCK EXCHANGE",
+                        "tipo_valor_descripcion": "CANASTA DE ACCIONES (TRAC'S EXTRANJEROS)",
+                        "estatus": "ACTIVA",
+                    }
+                }
+            }
+        )
+        provider = DataBursatilProvider(token=SECRET, transport=recorder.transport)
+        [ivv] = await provider.fetch_catalog(Market.SIC)
+        assert (ivv.market, ivv.symbol, ivv.instrument_type, ivv.currency) == (
+            Market.SIC,
+            "IVV*",
+            InstrumentType.ETF,
+            "MXN",
+        )
+        assert recorder.last.url.params["mercado"] == "global"
+
+    async def test_no_catalog_for_us(self):
+        provider = DataBursatilProvider(token=SECRET)
+        with pytest.raises(SymbolNotSupported):
+            await provider.fetch_catalog(Market.US)
+
+
+class TestTwelveDataSearch:
+    async def test_keeps_the_us_listing_once(self):
+        recorder = respond(
+            body={
+                "data": [
+                    {
+                        "symbol": "AAPL",
+                        "instrument_name": "Apple Inc.",
+                        "exchange": "NASDAQ",
+                        "instrument_type": "Common Stock",
+                        "country": "United States",
+                        "currency": "USD",
+                    },
+                    {
+                        "symbol": "AAPL",
+                        "instrument_name": "Apple Inc. CEDEAR",
+                        "exchange": "BCBA",
+                        "instrument_type": "Depositary Receipt",
+                        "country": "Argentina",
+                        "currency": "ARS",
+                    },
+                    {
+                        "symbol": "AAPL",
+                        "instrument_name": "Apple Inc.",
+                        "exchange": "XETR",
+                        "instrument_type": "Common Stock",
+                        "country": "United States",
+                        "currency": "USD",
+                    },
+                    {
+                        "symbol": "AAPU",
+                        "instrument_name": "Direxion Daily AAPL Bull 2X",
+                        "exchange": "NASDAQ",
+                        "instrument_type": "ETF",
+                        "country": "United States",
+                        "currency": "USD",
+                    },
+                ],
+                "status": "ok",
+            }
+        )
+        provider = TwelveDataProvider(api_key=SECRET, transport=recorder.transport)
+
+        listings = await provider.search("aapl", Market.US)
+
+        assert [(l.symbol, l.instrument_type, l.exchange) for l in listings] == [
+            ("AAPL", InstrumentType.STOCK, "NASDAQ"),
+            ("AAPU", InstrumentType.ETF, "NASDAQ"),
+        ]
+        assert recorder.last.url.params["symbol"] == "aapl"
+
+    async def test_only_us(self):
+        provider = TwelveDataProvider(api_key=SECRET)
+        assert await provider.search("WALMEX", Market.BMV) == []

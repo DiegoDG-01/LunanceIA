@@ -17,7 +17,7 @@ from datetime import date
 from decimal import Decimal
 from enum import StrEnum
 
-from domain.objects.enums import Market
+from domain.objects.enums import InstrumentType, Market
 
 
 class ProviderName(StrEnum):
@@ -46,6 +46,20 @@ class FxRate:
 
     rate_date: date
     rate: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class InstrumentListing:
+    """Un valor como lo describe un proveedor de catálogo o de búsqueda."""
+
+    market: Market
+    symbol: str
+    name: str
+    instrument_type: InstrumentType
+    currency: str
+    isin: str | None = None
+    exchange: str | None = None
+    is_active: bool = True
 
 
 class MarketDataError(Exception):
@@ -78,9 +92,11 @@ class QuotaExhausted(MarketDataError):
 @dataclass(frozen=True, slots=True)
 class ProviderAttempt:
     provider: ProviderName
-    # `unavailable`, `unsupported`, `quota`, `down` (marcado caído) o `not_configured`.
+    # `unavailable`, `unsupported`, `quota` o `down` (marcado caído).
     outcome: str
     detail: str = ""
+    # Símbolo con el que se preguntó (solo en precios).
+    provider_symbol: str = ""
 
 
 class NoProviderAvailable(Exception):
@@ -122,6 +138,26 @@ class FxRateProvider(ABC):
         self, base: str, quote: str, start: date, end: date
     ) -> list[FxRate]:
         """Tipos de cambio de `start` a `end` (incluidos), ordenados por fecha."""
+
+
+class InstrumentCatalogSource(ABC):
+    """Da el catálogo completo de un mercado (DataBursatil: BMV/BIVA y SIC)."""
+
+    name: ProviderName
+    catalog_markets: frozenset[Market]
+
+    @abstractmethod
+    async def fetch_catalog(self, market: Market) -> list[InstrumentListing]: ...
+
+
+class InstrumentSearchSource(ABC):
+    """Busca valores por texto cuando el mercado no tiene catálogo descargable (EE. UU.)."""
+
+    name: ProviderName
+    search_markets: frozenset[Market]
+
+    @abstractmethod
+    async def search(self, query: str, market: Market) -> list[InstrumentListing]: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -170,3 +206,17 @@ class MarketDataGateway(ABC):
         self, base: str, quote: str, start: date, end: date
     ) -> RoutedRates:
         """Lanza `NoProviderAvailable` si ningún proveedor de tipo de cambio respondió."""
+
+    @abstractmethod
+    def has_catalog(self, market: Market) -> bool:
+        """True si algún proveedor da el catálogo completo del mercado."""
+
+    @abstractmethod
+    async def fetch_catalog(self, market: Market) -> list[InstrumentListing]:
+        """Lanza `NoProviderAvailable` si nadie pudo darlo."""
+
+    @abstractmethod
+    async def search_instruments(
+        self, market: Market, query: str
+    ) -> list[InstrumentListing]:
+        """Lanza `NoProviderAvailable` si nadie pudo buscar."""

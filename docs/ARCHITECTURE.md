@@ -727,7 +727,7 @@ infrastructure/
 #### Características de Infraestructura:
 - **Implementaciones concretas**: 22 repositorios SQLAlchemy + Unit of Work implementando interfaces del dominio
 - **Adaptadores**: Para servicios externos (agentes IA con pydantic-ai multi-proveedor)
-- **Scheduler**: APScheduler con AsyncIOScheduler para jobs diarios (suscripciones 00:00, ingresos 00:15, rendimientos 12:00 y vencimientos de apartados 12:30, en UTC; los vencimientos corren después de los rendimientos para que el día del vencimiento aún genere interés)
+- **Scheduler**: APScheduler con AsyncIOScheduler para jobs diarios (suscripciones 00:00, ingresos 00:15, rendimientos 12:00 y vencimientos de apartados 12:30, en UTC; los vencimientos corren después de los rendimientos para que el día del vencimiento aún genere interés). Precios de mercado: cierres y tipo de cambio a la 01:00 y 13:00, y catálogo de BMV/BIVA y SIC los domingos a las 02:00
 - **Logging estructurado**: Correlation IDs, filtros personalizados, integración Grafana Loki
 - **Configuración**: Variables de entorno con pydantic-settings
 - **Persistencia async**: Modelos SQLAlchemy con AsyncSession (aiomysql driver)

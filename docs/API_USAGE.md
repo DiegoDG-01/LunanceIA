@@ -9,6 +9,7 @@ Esta guía te mostrará cómo usar la API REST de Lunance IA v2, incluyendo aute
 - [Idempotencia (`Idempotency-Key`)](#-idempotencia-idempotency-key)
 - [Endpoints Principales](#endpoints-principales)
 - [Apartados de Inversión](#-apartados-de-inversión---apiv2positions)
+- [Valores (acciones, ETFs, FIBRAs)](#-valores-acciones-etfs-fibras---apiv2securities)
 - [Ejemplos de Uso](#ejemplos-de-uso)
 - [Manejo de Errores](#manejo-de-errores)
 - [Códigos de Estado](#códigos-de-estado)
@@ -1563,6 +1564,84 @@ fijo se proyecta solo hasta su vencimiento y después aporta su valor final sin 
 > cuenta tiene **más de un apartado**, porque en ese caso no existe una sola tasa: pide
 > el detalle apartado por apartado.
 
+### 📉 Valores (acciones, ETFs, FIBRAs) - `/api/v2/securities/`
+
+Catálogo de valores que cotizan en bolsa y sus precios de cierre. No es tiempo real: los
+precios son el cierre de cada día hábil y se actualizan a la 01:00 y a las 13:00 UTC.
+
+| Mercado | Qué incluye | Moneda |
+|---------|-------------|--------|
+| `BMV` | Acciones, FIBRAs y ETFs de la BMV y la BIVA | MXN |
+| `SIC` | Valores extranjeros listados en México (Sistema Internacional de Cotizaciones) | MXN |
+| `US` | Acciones y ETFs de EE. UU. comprados directamente | USD |
+
+Los símbolos de BMV y SIC llevan la serie como la publica la BMV: `WALMEX*`, `FUNO11`,
+`AAPL*`. Los de EE. UU. son el ticker: `AAPL`.
+
+Scope con API key: `investments:read`.
+
+#### Buscar valores
+```bash
+GET /api/v2/securities/search?q=walmex&market=BMV&limit=20
+```
+
+- `q` (obligatorio): símbolo o nombre. Primero aparece el símbolo exacto (`walmex`
+  encuentra `WALMEX*`), luego los que empiezan igual y luego las coincidencias por nombre;
+  los activos antes que los suspendidos.
+- `market` (opcional): `BMV`, `SIC` o `US`. Sin él, busca en los tres.
+- BMV y SIC tienen el catálogo completo. Para EE. UU., un símbolo que no esté se consulta al
+  proveedor y se agrega al catálogo. Si el proveedor no responde, se devuelve lo que ya
+  hay.
+
+**Response:**
+```json
+[
+  {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "market": "BMV",
+    "symbol": "WALMEX*",
+    "name": "WAL - MART DE MEXICO, S.A.B. DE C.V.",
+    "instrument_type": "STOCK",
+    "currency": "MXN",
+    "exchange": "BMV",
+    "isin": "MX01WA000038",
+    "is_active": true
+  }
+]
+```
+
+`instrument_type`: `STOCK`, `ETF`, `FIBRA` u `OTHER` (CKDs, certificados, etc.).
+
+> En las FIBRAs, el nombre es el del fiduciario (por ejemplo, `FUNO11` aparece como
+> «BANCO ACTINVER…»): búscalas por símbolo.
+
+#### Precios de cierre de un valor
+```bash
+GET /api/v2/securities/instruments/{instrument_uuid}/prices?from=2026-11-01&to=2026-11-13
+```
+
+Cierres guardados, sin ajustar por splits ni dividendos, en la moneda del valor. Sin `from`
+y `to`, los últimos 30 días; el rango máximo es de 3,660 días. Solo hay precios de los
+valores que alguien sigue.
+
+**Response:**
+```json
+{
+  "instrument": { "uuid": "…", "market": "BMV", "symbol": "WALMEX*", "…": "…" },
+  "prices": [
+    {
+      "price_date": "2026-11-02",
+      "close": "50.390000",
+      "is_trading_day": false,
+      "provider": "databursatil"
+    }
+  ]
+}
+```
+
+`is_trading_day: false` marca los feriados de la bolsa, en los que el proveedor repite el
+cierre anterior.
+
 ### 🤖 IA - `/api/v2/ai/`
 
 #### Analizar Imagen (Recibo/Ticket)
@@ -2271,6 +2350,7 @@ La API retorna errores en un formato estándar con soporte de internacionalizaci
 - `NOT_FOUND_TRANSACTION`: Transacción no encontrada
 - `NOT_FOUND_CATEGORY`: Categoría no encontrada
 - `NOT_FOUND_SESSION`: Sesión no encontrada, ya cerrada o de otro usuario (`DELETE /auth/sessions/{uuid}`)
+- `NOT_FOUND_INSTRUMENT`: Valor no encontrado en el catálogo (`/securities/instruments/{uuid}/…`)
 - `NOT_FOUND`: Recurso genérico no encontrado
 
 ### Errores de Negocio (409 o 400)
@@ -2454,6 +2534,13 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 |----------|--------|------|
 | `GET /investments/{id}/yields/` | **50 requests/minuto** | Rendimientos históricos de la cuenta |
 | `GET /investments/{id}/projections/` | **30 requests/minuto** | Proyecciones agregadas de la cuenta |
+
+#### Endpoints de Valores
+
+| Endpoint | Límite | Nota |
+|----------|--------|------|
+| `GET /securities/search` | **30 requests/minuto** | Puede consultar al proveedor de EE. UU. |
+| `GET /securities/instruments/{uuid}/prices` | **50 requests/minuto** | Cierres guardados |
 
 #### Endpoints de Apartados de Inversión
 

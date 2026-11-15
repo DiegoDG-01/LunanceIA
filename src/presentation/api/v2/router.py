@@ -15,6 +15,7 @@ from presentation.api.v2.endpoints import (
     investment_position,
     investment_yield,
     notification,
+    security,
     subscription,
     transaction,
     transfer,
@@ -51,3 +52,4 @@ api_router.include_router(goals.router, prefix="/goals", tags=["Goals"])
 api_router.include_router(transfer.router, prefix="/transfers", tags=["Transfer"])
 api_router.include_router(api_key.router, prefix="/api-keys", tags=["API Keys"])
 api_router.include_router(income.router, prefix="/incomes", tags=["Incomes"])
+api_router.include_router(security.router, prefix="/securities", tags=["Securities"])
