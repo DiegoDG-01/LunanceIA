@@ -20,6 +20,7 @@ from sqlalchemy.sql import func
 
 from domain.objects.enums import TransactionType
 from infrastructure.database.connection import Base
+from infrastructure.database.models.account import account_currency
 
 # Tabla de asociación para la relación muchos a muchos - Temporalmente comentada
 transaction_tags = Table(
@@ -55,6 +56,7 @@ class TransactionModel(Base):
     account_id: Mapped[int] = mapped_column(
         ForeignKey("accounts.id", ondelete="CASCADE")
     )
+    currency: Mapped[str] = account_currency(account_id)
     category_id: Mapped[int | None] = mapped_column(
         ForeignKey("categories.id"), nullable=True
     )

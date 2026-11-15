@@ -919,6 +919,7 @@ GET /api/v2/transaction/
     "category": "Alimentación",
     "transaction_type": "EXPENSE",
     "amount": 250.50,
+    "currency": "MXN",
     "transaction_date": "2024-12-14",
     "description": "Compra en supermercado",
     "notes": "Compra semanal",
@@ -948,6 +949,8 @@ GET /api/v2/transaction/{transaction_uuid}/
 POST /api/v2/transaction/
 ```
 
+El movimiento está en la moneda de su cuenta (`currency` en la respuesta): no se manda moneda.
+
 **Request:**
 ```json
 {
@@ -965,6 +968,9 @@ POST /api/v2/transaction/
 ```bash
 PUT /api/v2/transaction/{transaction_uuid}/
 ```
+
+Con `account_uuid` el movimiento se pasa a otra cuenta, pero solo si es de la misma moneda;
+si no → `409 ACCOUNT_CURRENCY_MISMATCH`.
 
 **Request:**
 ```json
@@ -1276,7 +1282,7 @@ cualquier cuenta **excepto tarjetas de crédito**.
 | `lock_period_end_date` | ❌ | Antes de esta fecha no se permite liquidar |
 | `early_withdrawal_penalty` | ❌ | % (0-100) que se castiga **solo sobre los rendimientos**; el capital nunca se toca |
 | `on_maturity` | ❌ | `AUTO_RENEW`, `LIQUIDATE` o `HOLD` (default `HOLD`) |
-| `currency` | ❌ | `MXN`, `USD` o `EUR` (default `MXN`) |
+| `currency` | ❌ | La del apartado es la de su cuenta. Si se manda, debe coincidir; si no → `409 ACCOUNT_CURRENCY_MISMATCH` |
 | `cap` | ❌ | Tope y destino del excedente (solo a la vista). Ver [Topes y desbordamiento](#topes-y-desbordamiento) |
 
 **Con tope:**
@@ -2297,6 +2303,7 @@ Los dos movimientos que se generan comparten `transfer_uuid` y llevan descripci�
 | `INSTALLMENT_CHARGE_ALREADY_PAID` | 409 | Ese cargo ya se pagó |
 | `SAME_ACCOUNT_TRANSFER` | 409 | La cuenta origen es la misma tarjeta de la compra |
 | `TRANSFER_ACCOUNT_TYPE_NOT_ALLOWED` | 409 | Se intentó pagar desde otra tarjeta de crédito |
+| `TRANSFER_CURRENCY_MISMATCH` | 409 | La cuenta origen no está en la moneda de la tarjeta |
 | `INSUFFICIENT_FUNDS` | 422 | La cuenta origen no tiene saldo disponible suficiente |
 
 **Response:** el cargo actualizado (`uuid`, `installment_number`, `amount`, `due_date`, `paid`, `paid_at`).
@@ -2356,9 +2363,10 @@ POST /api/v2/transfers/
 
 La cuenta origen no puede ser una tarjeta de crédito (`409 TRANSFER_ACCOUNT_TYPE_NOT_ALLOWED`)
 ni la misma que el destino (`409 SAME_ACCOUNT_TRANSFER`), y necesita saldo disponible
-suficiente (`422 INSUFFICIENT_FUNDS`).
+suficiente (`422 INSUFFICIENT_FUNDS`). Las dos cuentas deben estar en la misma moneda; entre
+monedas distintas → `409 TRANSFER_CURRENCY_MISMATCH`.
 
-**Response:** `201 Created` con `transfer_uuid`, `amount`, `transfer_date`, `description`, `source_account_name`, `source_account_uuid`, `destination_account_name`, `destination_account_uuid` y `creation_date`.
+**Response:** `201 Created` con `transfer_uuid`, `amount`, `currency`, `transfer_date`, `description`, `source_account_name`, `source_account_uuid`, `destination_account_name`, `destination_account_uuid` y `creation_date`.
 
 #### Eliminar Transferencia
 ```bash
@@ -2650,6 +2658,8 @@ La API retorna errores en un formato estándar con soporte de internacionalizaci
 - `INSUFFICIENT_SHARES` (409): Una venta o split pide más títulos de los que hay ese día (también al editar o borrar una operación anterior)
 - `SECURITY_ACCOUNT_TYPE_NOT_ALLOWED` (409): Las tarjetas de crédito no admiten acciones
 - `SECURITY_CURRENCY_MISMATCH` (409): La cuenta no está en la moneda del valor
+- `TRANSFER_CURRENCY_MISMATCH` (409): Las cuentas de una transferencia (o del pago de una compra a meses) no están en la misma moneda
+- `ACCOUNT_CURRENCY_MISMATCH` (409): Se pidió otra moneda que la de la cuenta, o mover un movimiento, suscripción o ingreso recurrente a una cuenta de otra moneda
 - `SECURITY_TRADE_TRANSACTION_LOCKED` (409): La transacción es de una operación de acciones; se edita desde `/securities/trades/`
 - `VALIDATION_INVALID_SECURITY_TRADE` (400): Faltan o sobran campos para el tipo de operación, fecha futura, o comisiones que superan la venta
 

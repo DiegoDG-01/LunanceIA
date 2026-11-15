@@ -6,7 +6,6 @@ from application.dto.subscription_dto import (
     SubscriptionResponseDTO,
 )
 from domain.entities.subscriptions.subscription import Subscription
-from domain.objects.money import Money
 from domain.repositories.accounts.account_repository import AccountRepository
 from domain.repositories.categories.category_repository import CategoryRepository
 from domain.repositories.subscriptions.subscription_repository import (
@@ -61,7 +60,7 @@ class CreateSubscriptionHandler:
 
         category_name = category.name if category else None
 
-        amount = Money(amount=dto.amount, currency=dto.currency)
+        amount = account.money(dto.amount)
 
         subscription = Subscription.create_new(
             user_id=dto.user_id,

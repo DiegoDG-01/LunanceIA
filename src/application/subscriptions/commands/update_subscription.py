@@ -14,6 +14,7 @@ from domain.repositories.subscriptions.subscription_repository import (
 )
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.exceptions.domain import (
+    AccountCurrencyMismatchError,
     AccountNotFoundError,
     CategoryNotFoundError,
     InvalidSubscriptionDateRangeError,
@@ -64,6 +65,11 @@ class UpdateSubscriptionHandler:
             )
             if not account:
                 raise AccountNotFoundError(dto.account_uuid)
+            # Se cobra en la moneda de la cuenta: solo cambia a otra de la misma moneda.
+            if account.currency != subscription.amount.currency:
+                raise AccountCurrencyMismatchError(
+                    subscription.amount.currency, account.currency
+                )
 
             subscription.account_id = cast(int, account.id)
 

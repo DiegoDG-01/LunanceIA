@@ -12,5 +12,5 @@ def _normalize(value: Any) -> Any:
     return value.strip().upper() if isinstance(value, str) else value
 
 
-# MXN, USD o EUR, sin importar mayúsculas. Otra moneda → 400 con el campo `currency`.
+# MXN, USD o EUR, sin importar mayúsculas. Otra moneda → 422 con el campo `currency`.
 CurrencyCode = Annotated[Currency, BeforeValidator(_normalize)]

@@ -12,12 +12,14 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    select,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, column_property, mapped_column
 from sqlalchemy.sql import func
 
 from domain.objects.enums import Frequency, TransactionStatus
 from infrastructure.database.connection import Base
+from infrastructure.database.models.account import AccountModel, account_currency
 
 
 class RecurringIncomeModel(Base):
@@ -28,6 +30,7 @@ class RecurringIncomeModel(Base):
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
+    currency: Mapped[str] = account_currency(account_id)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
     uuid: Mapped[str] = mapped_column(
         CHAR(36), unique=True, index=True, default=lambda: str(uuid.uuid4())
@@ -51,6 +54,15 @@ class IncomeDepositModel(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
     recurring_income_id: Mapped[int] = mapped_column(
         ForeignKey("recurring_incomes.id", ondelete="CASCADE"), index=True
+    )
+    # La moneda de la cuenta del ingreso recurrente.
+    currency: Mapped[str] = column_property(
+        select(AccountModel.currency)
+        .join(RecurringIncomeModel, RecurringIncomeModel.account_id == AccountModel.id)
+        .where(RecurringIncomeModel.id == recurring_income_id)
+        .correlate_except(AccountModel, RecurringIncomeModel)
+        .scalar_subquery(),
+        expire_on_flush=False,
     )
     uuid: Mapped[str] = mapped_column(
         CHAR(36), unique=True, index=True, default=lambda: str(uuid.uuid4())

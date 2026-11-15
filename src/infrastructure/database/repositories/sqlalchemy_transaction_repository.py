@@ -45,7 +45,7 @@ class SQLAlchemyTransactionRepository(TransactionRepository):
             user_id=model.user_id,
             account_id=model.account_id,
             transaction_type=model.type,
-            amount=Money(amount=model.amount, currency="MXN"),  # Asumo MXN por defecto
+            amount=Money(amount=model.amount, currency=model.currency),
             transaction_date=model.transaction_date,
             description=model.description,
             notes=model.notes,

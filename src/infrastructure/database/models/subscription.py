@@ -18,6 +18,7 @@ from sqlalchemy.sql import func
 
 from domain.objects.enums import Frequency, TransactionStatus
 from infrastructure.database.connection import Base
+from infrastructure.database.models.account import account_currency
 
 
 class SubscriptionModel(Base):
@@ -28,6 +29,7 @@ class SubscriptionModel(Base):
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
+    currency: Mapped[str] = account_currency(account_id)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
     uuid: Mapped[str] = mapped_column(
         CHAR(36), unique=True, index=True, default=lambda: str(uuid.uuid4())

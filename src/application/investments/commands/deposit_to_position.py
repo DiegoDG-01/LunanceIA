@@ -85,7 +85,7 @@ class DepositToPositionHandler:
             if not position:
                 raise InvestmentPositionNotFoundError(dto.position_uuid)
 
-            money = Money(dto.amount, dto.currency)
+            money = account.money(dto.amount, dto.currency)
 
             if not account.can_withdraw(money):
                 raise InsufficientFundsError(

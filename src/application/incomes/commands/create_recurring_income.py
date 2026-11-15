@@ -6,7 +6,6 @@ from application.dto.recurring_income_dto import (
     RecurringIncomeResponseDTO,
 )
 from domain.entities.incomes.recurring_income import RecurringIncome
-from domain.objects.money import Money
 from domain.repositories.accounts.account_repository import AccountRepository
 from domain.repositories.categories.category_repository import CategoryRepository
 from domain.repositories.incomes.recurring_income_repository import (
@@ -59,7 +58,7 @@ class CreateRecurringIncomeHandler:
         )
         category_name = category.name if category else None
 
-        amount = Money(amount=dto.amount, currency=dto.currency)
+        amount = account.money(dto.amount)
 
         income = RecurringIncome.create_new(
             user_id=dto.user_id,

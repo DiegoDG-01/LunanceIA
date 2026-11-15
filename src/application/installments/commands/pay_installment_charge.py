@@ -6,7 +6,6 @@ from typing import cast
 from application.dto.installment_dto import InstallmentChargeResponseDTO
 from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import AccountType, TransactionType
-from domain.objects.money import Money
 from domain.repositories.accounts.account_repository import AccountRepository
 from domain.repositories.installments.installment_charge_repository import (
     InstallmentChargeRepository,
@@ -25,6 +24,7 @@ from shared.exceptions.domain import (
     InsufficientFundsError,
     SameAccountTransferError,
     TransferAccountTypeNotAllowedError,
+    TransferCurrencyMismatchError,
 )
 
 
@@ -104,7 +104,12 @@ class PayInstallmentChargeHandler:
             if charge.paid:
                 raise InstallmentChargeAlreadyPaidError(command.charge_uuid)
 
-            money = Money(charge.amount)
+            # Es una transferencia a la tarjeta: las dos cuentas en la misma moneda.
+            if source_account.currency != account.currency:
+                raise TransferCurrencyMismatchError(
+                    source_account.currency, account.currency
+                )
+            money = account.money(charge.amount)
             if not source_account.can_withdraw(money):
                 raise InsufficientFundsError(
                     required_amount=float(money.amount),

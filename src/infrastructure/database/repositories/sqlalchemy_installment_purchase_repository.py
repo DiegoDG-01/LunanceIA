@@ -23,7 +23,7 @@ class SQLAlchemyInstallmentPurchaseRepository(InstallmentPurchaseRepository):
             initial_transaction_id=model.initial_transaction_id,
             category_id=model.category_id,
             description=model.description,
-            total_amount=Money(model.total_amount),
+            total_amount=Money(model.total_amount, model.currency),
             num_installments=model.num_installments,
             installment_type=model.installment_type,
             annual_interest_rate=model.annual_interest_rate,

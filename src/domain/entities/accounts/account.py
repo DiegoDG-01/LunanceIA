@@ -6,7 +6,11 @@ from typing import cast
 from domain.objects.credit_card_settings import CreditCardSettings
 from domain.objects.enums import AccountType, Currency
 from domain.objects.money import Money, ensure_supported_currency
-from shared.exceptions.domain import AccountInactiveError, InvalidBalanceUpdateError
+from shared.exceptions.domain import (
+    AccountCurrencyMismatchError,
+    AccountInactiveError,
+    InvalidBalanceUpdateError,
+)
 
 
 @dataclass
@@ -65,6 +69,17 @@ class Account:
         if new_balance.amount < 0 and self.account_type != AccountType.CREDIT_CARD:
             raise InvalidBalanceUpdateError(self.account_type)
         self.current_balance = new_balance
+
+    @property
+    def currency(self) -> str:
+        return self.current_balance.currency
+
+    def money(self, amount: Decimal, requested_currency: str | None = None) -> Money:
+        """Un monto en la moneda de esta cuenta: el dinero no cambia de moneda al entrar o
+        salir. Si el cliente pidió otra moneda, se rechaza en vez de ignorarla."""
+        if requested_currency is not None and requested_currency != self.currency:
+            raise AccountCurrencyMismatchError(self.currency, requested_currency)
+        return Money(amount, self.currency)
 
     def can_withdraw(self, amount: Money) -> bool:
         return self.current_balance.amount >= amount.amount

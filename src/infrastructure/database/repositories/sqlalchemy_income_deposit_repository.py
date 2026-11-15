@@ -26,7 +26,7 @@ class SQLAlchemyIncomeDepositRepository(IncomeDepositRepository):
             uuid=model.uuid,
             recurring_income_id=model.recurring_income_id,
             deposit_date=model.deposit_date,
-            amount=Money(model.amount, currency="MXN"),
+            amount=Money(model.amount, currency=model.currency),
             status=model.status,
             transaction_id=model.transaction_id,
             processing_date=model.processing_date,

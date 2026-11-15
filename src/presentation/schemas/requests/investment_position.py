@@ -4,7 +4,6 @@ from decimal import Decimal
 from pydantic import BaseModel, Field
 
 from domain.objects.enums import (
-    Currency,
     InterestType,
     MaturityAction,
     OverflowAction,
@@ -63,7 +62,10 @@ class CreatePositionRequest(BaseModel):
         MaturityAction.HOLD,
         description="Qué hacer al vencer: AUTO_RENEW, LIQUIDATE o HOLD",
     )
-    currency: CurrencyCode = Field(Currency.MXN, description="MXN, USD o EUR")
+    currency: CurrencyCode | None = Field(
+        None,
+        description="Opcional: la del apartado es la de su cuenta. Si se manda, debe coincidir",
+    )
     cap: PositionCapRequest | None = Field(
         None,
         description=(
@@ -86,4 +88,7 @@ class UpdatePositionRequest(BaseModel):
 
 class PositionMovementRequest(BaseModel):
     amount: Decimal = Field(..., gt=Decimal(0), description="Monto a mover")
-    currency: CurrencyCode = Field(Currency.MXN, description="MXN, USD o EUR")
+    currency: CurrencyCode | None = Field(
+        None,
+        description="Opcional: la del apartado es la de su cuenta. Si se manda, debe coincidir",
+    )

@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from domain.objects.enums import InstallmentType
 
@@ -21,6 +21,7 @@ class InstallmentPurchaseResponse(BaseModel):
     category_id: int | None
     description: str
     total_amount: Decimal
+    currency: str = Field(..., description="Moneda de la cuenta: MXN, USD o EUR")
     num_installments: int
     installment_type: InstallmentType
     annual_interest_rate: Decimal

@@ -38,6 +38,7 @@ from shared.exceptions.base import (
     ValidationError as LunanceValidationError,
 )
 from shared.exceptions.domain import (
+    AccountCurrencyMismatchError,
     AccountHasBalanceError,
     AccountHasTransactionsError,
     AccountInactiveError,
@@ -104,6 +105,7 @@ from shared.exceptions.domain import (
     TransactionNotActivityError,
     TransactionNotFoundError,
     TransferAccountTypeNotAllowedError,
+    TransferCurrencyMismatchError,
     TransferNotAllowedError,
     UserInactiveError,
     UsernameAlreadyExistsError,
@@ -177,6 +179,8 @@ EXCEPTION_MAP: dict[type[Exception], tuple[str, int]] = {
     InsufficientSharesError: ("INSUFFICIENT_SHARES", 409),
     SecurityAccountTypeNotAllowedError: ("SECURITY_ACCOUNT_TYPE_NOT_ALLOWED", 409),
     SecurityCurrencyMismatchError: ("SECURITY_CURRENCY_MISMATCH", 409),
+    TransferCurrencyMismatchError: ("TRANSFER_CURRENCY_MISMATCH", 409),
+    AccountCurrencyMismatchError: ("ACCOUNT_CURRENCY_MISMATCH", 409),
     SecurityTradeTransactionLockedError: ("SECURITY_TRADE_TRANSACTION_LOCKED", 409),
     # La clave existe sin respuesta guardada: el cliente debe consultar el recurso.
     IdempotencyKeyInUseError: ("IDEMPOTENCY_KEY_IN_USE", 409),

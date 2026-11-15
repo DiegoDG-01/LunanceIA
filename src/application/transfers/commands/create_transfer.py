@@ -6,7 +6,6 @@ from typing import cast
 from application.dto.transaction_dto import CreateTransferDTO, TransferResponseDTO
 from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import AccountType, TransactionType
-from domain.objects.money import Money
 from domain.repositories.accounts.account_repository import AccountRepository
 from domain.repositories.transactions.transaction_repository import (
     TransactionRepository,
@@ -18,6 +17,7 @@ from shared.exceptions.domain import (
     InsufficientFundsError,
     SameAccountTransferError,
     TransferAccountTypeNotAllowedError,
+    TransferCurrencyMismatchError,
     UserNotFoundError,
 )
 
@@ -81,7 +81,12 @@ class CreateTransferHandler:
             if source.account_type == AccountType.CREDIT_CARD:
                 raise TransferAccountTypeNotAllowedError(source.account_type.value)
 
-            money = Money(dto.amount, dto.currency)
+            if source.current_balance.currency != destination.current_balance.currency:
+                raise TransferCurrencyMismatchError(
+                    source.current_balance.currency,
+                    destination.current_balance.currency,
+                )
+            money = source.money(dto.amount)
             transfer_date = dto.transfer_date or datetime.now(UTC).date()
 
             if not source.can_withdraw(money):
@@ -133,6 +138,7 @@ class CreateTransferHandler:
         return TransferResponseDTO(
             transfer_uuid=shared_transfer_uuid,
             amount=dto.amount,
+            currency=money.currency,
             transfer_date=transfer_date,
             description=dto.description,
             source_account_name=source.name,

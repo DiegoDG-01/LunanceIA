@@ -1,9 +1,10 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
-from sqlalchemy import CHAR, DECIMAL, DateTime, Enum, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import CHAR, DECIMAL, DateTime, Enum, ForeignKey, String, select
+from sqlalchemy.orm import Mapped, column_property, mapped_column
 from sqlalchemy.sql import func
 
 from domain.objects.enums import AccountType
@@ -26,4 +27,19 @@ class AccountModel(Base):
     is_active: Mapped[bool] = mapped_column(default=True)
     creation_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
+    )
+
+
+def account_currency(account_id: Any) -> Any:
+    """Moneda de la cuenta de la fila, leída en la misma consulta.
+
+    Los movimientos, suscripciones, MSI e ingresos recurrentes no guardan moneda: es la de
+    su cuenta. `account_id` es la columna de la fila que apunta a la cuenta.
+    """
+    return column_property(
+        select(AccountModel.currency)
+        .where(AccountModel.id == account_id)
+        .correlate_except(AccountModel)
+        .scalar_subquery(),
+        expire_on_flush=False,
     )

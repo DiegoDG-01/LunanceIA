@@ -13,7 +13,6 @@ from domain.entities.installments.installment_charge import InstallmentCharge
 from domain.entities.installments.installment_purchase import InstallmentPurchase
 from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import AccountType, TransactionType
-from domain.objects.money import Money
 from domain.repositories.accounts.account_repository import AccountRepository
 from domain.repositories.installments.installment_charge_repository import (
     InstallmentChargeRepository,
@@ -75,7 +74,7 @@ class CreateInstallmentPurchaseHandler:
                     expected=AccountType.CREDIT_CARD, received=account.account_type
                 )
 
-            money = Money(dto.total_amount, dto.currency)
+            money = account.money(dto.total_amount)
 
             new_balance = account.current_balance.subtract(money)
             account.update_balance(new_balance)

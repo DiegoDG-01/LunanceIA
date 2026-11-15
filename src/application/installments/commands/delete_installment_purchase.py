@@ -3,7 +3,6 @@ from decimal import Decimal
 from typing import cast
 
 from domain.objects.enums import TransactionType
-from domain.objects.money import Money
 from domain.repositories.accounts.account_repository import AccountRepository
 from domain.repositories.installments.installment_charge_repository import (
     InstallmentChargeRepository,
@@ -90,7 +89,7 @@ class DeleteInstallmentPurchaseHandler:
                 transactions_ids_to_delete.append(charge.transaction_id)
 
         net_restore = purchase.total_amount.amount - paid_total
-        new_balance = account.current_balance.add(Money(net_restore))
+        new_balance = account.current_balance.add(account.money(net_restore))
         account.update_balance(new_balance)
 
         if transactions_ids_to_delete:

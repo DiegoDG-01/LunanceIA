@@ -4,7 +4,6 @@ from typing import cast
 
 from application.dto.transaction_dto import CreateTransactionDTO, TransactionResponseDTO
 from domain.entities.transactions.transaction import Transaction
-from domain.objects.money import Money
 from domain.repositories.accounts.account_repository import AccountRepository
 from domain.repositories.banks.bank_repository import BankRepository
 from domain.repositories.categories.category_repository import CategoryRepository
@@ -48,7 +47,6 @@ class CreateTransactionHandler:
 
     async def handle(self, command: CreateTransactionCommand) -> TransactionResponseDTO:
         dto = command.dto
-        money = Money(dto.amount, dto.currency)
 
         transaction_date = dto.transaction_date or datetime.now(UTC).date()
 
@@ -62,6 +60,9 @@ class CreateTransactionHandler:
             )
             if not account:
                 raise AccountNotFoundError(account_uuid=dto.account_uuid)
+
+            # El movimiento está en la moneda de su cuenta.
+            money = account.money(dto.amount)
 
             transaction = Transaction.create_new(
                 user_id=cast(int, user.id),

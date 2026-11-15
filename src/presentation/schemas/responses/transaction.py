@@ -12,6 +12,7 @@ class TransactionResponse(BaseModel):
     category: str | None
     transaction_type: TransactionType
     amount: Decimal
+    currency: str = Field(..., description="Moneda de la cuenta: MXN, USD o EUR")
     transaction_date: date
     description: str | None
     notes: str | None
