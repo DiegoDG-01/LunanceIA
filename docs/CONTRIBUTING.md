@@ -142,7 +142,7 @@ LOG_LEVEL=INFO
 LOG_FORMAT=text
 ```
 
-> Ninguna de estas variables tiene valor por defecto en `settings.py` salvo `ACCESS_TOKEN_EXPIRE_MINUTES`, la duración de las sesiones (`SESSION_*`), `ENVIRONMENT`, `FRONTEND_URL`, `BANXICO_TOKEN` y los defaults de DB: si falta `JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY`, `REFRESH_ROTATION_KEY`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `AI_PROVIDER` o `AI_MODEL_ID`, la aplicación no arranca. Consulta [`.env.example`](../.env.example) para la lista completa, incluidas las opciones de logging y Grafana Loki.
+> Ninguna de estas variables tiene valor por defecto en `settings.py` salvo `ACCESS_TOKEN_EXPIRE_MINUTES`, la duración de las sesiones (`SESSION_*`), `ENVIRONMENT`, `FRONTEND_URL`, las llaves de precios de mercado (`DATABURSATIL_TOKEN`, `EODHD_API_KEY`, `TWELVEDATA_API_KEY`, `BANXICO_TOKEN`) y `MARKET_DATA_*`, y los defaults de DB: si falta `JWT_PRIVATE_KEY`, `JWT_PUBLIC_KEY`, `REFRESH_ROTATION_KEY`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `AI_PROVIDER` o `AI_MODEL_ID`, la aplicación no arranca. Consulta [`.env.example`](../.env.example) para la lista completa, incluidas las opciones de logging y Grafana Loki.
 
 **Nota sobre ENVIRONMENT:**
 - **DEV / TEST**: CORS permite únicamente el `FRONTEND_URL` definido en `.env`; logging detallado con stack traces

@@ -110,6 +110,14 @@ class OverflowAction(str, Enum):
     TO_POSITION = "TO_POSITION"
 
 
+class Market(str, Enum):
+    """Dónde cotiza un valor. SIC: valores extranjeros listados en México, en pesos."""
+
+    BMV = "BMV"
+    SIC = "SIC"
+    US = "US"
+
+
 class APIKeyScope(str, Enum):
     TRANSACTIONS_READ = "transactions:read"
     TRANSACTIONS_WRITE = "transactions:write"
