@@ -48,6 +48,9 @@ class TransactionResponseDTO:
     account_type: AccountType
     account_uuid: str
     transfer_uuid: str | None = None
+    # Si la creó una operación de acciones: se edita desde /securities/trades.
+    security_trade_uuid: str | None = None
+    security_holding_uuid: str | None = None
 
     @classmethod
     def from_entity(

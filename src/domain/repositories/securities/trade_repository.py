@@ -1,10 +1,19 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import date
 
 from domain.entities.securities.holding_snapshot import HoldingSnapshot
 from domain.entities.securities.security_holding import SecurityHolding
 from domain.entities.securities.security_trade import SecurityTrade
+
+
+@dataclass(frozen=True, slots=True)
+class TradeLink:
+    """La operación de acciones que creó un movimiento de dinero, y su tenencia."""
+
+    trade_uuid: str
+    holding_uuid: str | None
 
 
 class SecurityTradeRepository(ABC):
@@ -44,6 +53,12 @@ class SecurityTradeRepository(ABC):
     @abstractmethod
     async def exists_for_transaction(self, transaction_id: int) -> bool:
         """True si la transacción es el movimiento de dinero de una operación."""
+
+    @abstractmethod
+    async def links_for_transactions(
+        self, transaction_ids: Sequence[int]
+    ) -> dict[int, TradeLink]:
+        """Por id de transacción, la operación que la creó. Las demás no vienen."""
 
 
 class SecurityHoldingRepository(ABC):

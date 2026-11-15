@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from domain.objects.enums import AccountType, TransactionType
 
@@ -19,3 +19,13 @@ class TransactionResponse(BaseModel):
     account_name: str
     account_type: AccountType
     account_uuid: str
+    security_trade_uuid: str | None = Field(
+        None,
+        description=(
+            "Operación de acciones que creó este movimiento. Si no es null, el movimiento "
+            "no se edita ni se borra aquí: se cambia desde /securities/trades/"
+        ),
+    )
+    security_holding_uuid: str | None = Field(
+        None, description="Tenencia de esa operación (GET /securities/holdings/{uuid})"
+    )
