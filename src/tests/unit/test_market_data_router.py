@@ -13,6 +13,9 @@ from application.interfaces.market_data import (
     DailyClose,
     FxRate,
     FxRateProvider,
+    InstrumentCatalogSource,
+    InstrumentListing,
+    InstrumentSearchSource,
     MarketDataProvider,
     NoProviderAvailable,
     ProviderName,
@@ -20,7 +23,7 @@ from application.interfaces.market_data import (
     QuotaExhausted,
     SymbolNotSupported,
 )
-from domain.objects.enums import Market
+from domain.objects.enums import InstrumentType, Market
 from infrastructure.config.settings import settings
 from infrastructure.external_services.market_data.factory import (
     build_market_data_router,
@@ -439,3 +442,77 @@ class TestFactory:
         )
         assert on.providers_for(Market.BMV) == (E, ProviderName.YAHOO)
         assert on.providers_for(Market.US) == (E, ProviderName.YAHOO)
+
+
+class FakeCatalogProvider(FakeProvider, InstrumentCatalogSource):
+    catalog_markets = frozenset({Market.BMV})
+
+    def __init__(self, *outcomes, catalog=None):
+        super().__init__(D, {Market.BMV}, *outcomes)
+        self.catalog = catalog
+
+    async def fetch_catalog(self, market):
+        if isinstance(self.catalog, Exception):
+            raise self.catalog
+        return self.catalog or []
+
+
+class FakeSearchProvider(FakeProvider, InstrumentSearchSource):
+    search_markets = frozenset({Market.US})
+
+    def __init__(self, results=None):
+        super().__init__(T, {Market.US})
+        self.results = results
+
+    async def search(self, query, market):
+        if isinstance(self.results, Exception):
+            raise self.results
+        return self.results or []
+
+
+LISTING = InstrumentListing(
+    market=Market.BMV,
+    symbol="WALMEX*",
+    name="WAL - MART",
+    instrument_type=InstrumentType.STOCK,
+    currency="MXN",
+)
+
+
+class TestCatalogAndSearch:
+    async def test_catalog_from_the_provider_that_has_it(self, redis, clock):
+        router = make_router(redis, clock, [FakeCatalogProvider(catalog=[LISTING])])
+        assert router.has_catalog(Market.BMV)
+        assert not router.has_catalog(Market.US)
+        assert await router.fetch_catalog(Market.BMV) == [LISTING]
+
+    async def test_catalog_unavailable(self, redis, clock):
+        router = make_router(
+            redis,
+            clock,
+            [FakeCatalogProvider(catalog=ProviderUnavailable(D, "HTTP 503"))],
+        )
+        with pytest.raises(NoProviderAvailable):
+            await router.fetch_catalog(Market.BMV)
+        assert await redis.exists("md_down:databursatil")
+
+    async def test_search_uses_quota_and_reports_failures(self, redis, clock):
+        router = make_router(
+            redis,
+            clock,
+            [FakeSearchProvider([LISTING])],
+            rules={T: (RateLimitRule(limit=1, window_seconds=86400),)},
+        )
+        assert await router.search_instruments(Market.US, "aapl") == [LISTING]
+        with pytest.raises(NoProviderAvailable) as caught:
+            await router.search_instruments(Market.US, "msft")
+        assert caught.value.attempts[0].outcome == "quota"
+
+    async def test_attempts_carry_the_symbol_that_was_asked(self, redis, clock):
+        d = FakeProvider(D, {Market.BMV}, SymbolNotSupported(D, "desconocida"))
+        e = FakeProvider(E, {Market.BMV})
+        router = make_router(redis, clock, [d, e])
+        result = await router.fetch_daily_closes(
+            Market.BMV, "WALMEX*", START, END, provider_symbols={D: "WALMEX*"}
+        )
+        assert result.attempts[0].provider_symbol == "WALMEX*"
