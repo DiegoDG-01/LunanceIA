@@ -66,6 +66,9 @@ disponible: las operaciones de **lectura** requieren el scope `:read` del recurs
 | **Inversiones** | `get_investment_yields`, `get_investment_projections` | `investments:read` |
 | **Apartados de inversión** | `list_positions`, `get_position`, `get_position_yields`, `get_position_projections` | `investments:read` |
 | | `create_position`, `update_position`, `deposit_to_position`, `withdraw_from_position`, `liquidate_position` | `investments:write` |
+| **Acciones, ETFs y FIBRAs** | `search_securities`, `get_security_prices`, `list_security_holdings`, `get_security_holding`, `get_security_holding_history`, `list_security_trades` | `investments:read` |
+| | `record_security_trade`, `update_security_trade`, `delete_security_trade` | `investments:write` |
+| **Patrimonio** | `get_portfolio`, `get_portfolio_history` | `investments:read` |
 | **Suscripciones** | `list_subscriptions`, `list_subscription_charges`, `get_subscription` | `subscriptions:read` |
 | | `create_subscription`, `update_subscription`, `toggle_subscription`, `delete_subscription` | `subscriptions:write` |
 | **Ingresos recurrentes** | `list_incomes`, `get_income_deposits` | `incomes:read` |
@@ -75,13 +78,19 @@ disponible: las operaciones de **lectura** requieren el scope `:read` del recurs
 | **Transferencias** | `create_transfer`, `delete_transfer` | `transfers:write` |
 | **Bancos** | `list_banks` | `banks:read` |
 
-> Total: **59 herramientas**. Excluidos a propósito del MCP: `auth` y `api-keys` (por
+> Total: **70 herramientas**. Excluidos a propósito del MCP: `auth` y `api-keys` (por
 > seguridad) y `ai` (el MCP ya es la capa de IA).
 >
 > Un **apartado de inversión** vive dentro de una cuenta y genera rendimientos (a la
 > vista o a plazo fijo). El dinero apartado no cuenta en el saldo disponible: para
 > gastarlo o transferirlo primero hay que regresarlo con `withdraw_from_position` o
 > `liquidate_position`.
+>
+> Las **acciones** se registran como operaciones (compra, venta, dividendo o split) con
+> `record_security_trade`; la tenencia y su costo promedio salen de ellas. Compras, ventas y
+> dividendos mueven el saldo disponible de la cuenta. `get_portfolio` suma todo en pesos
+> (cuentas, tarjetas, apartados y acciones) y `get_portfolio_history` da lo invertido por
+> día.
 >
 > Un apartado puede tener un **tope** y un destino para lo que ya no cabe: así se
 > representan las tasas por tramo de las SOFIPOs (25,000 al 10% desbordando a otro

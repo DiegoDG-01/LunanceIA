@@ -1032,6 +1032,9 @@ GET /api/v2/dashboard/
 
 Retorna un resumen del estado financiero del usuario.
 
+Incluye `net_worth`, el patrimonio en pesos con la misma forma que
+[`GET /securities/portfolio/`](#patrimonio). También lo trae `GET /api/v2/dashboard/mobile/`.
+
 ### 🔄 Suscripciones - `/api/v2/subscription/`
 
 #### Listar Suscripciones
@@ -1814,6 +1817,72 @@ de 3,660 días.
 - Las fotos se rehacen solas cuando cambia algo que las afecta: una operación (desde su
   fecha), un cierre corregido por el proveedor o el tipo de cambio. Después de registrar o
   editar una operación se actualizan en segundo plano en unos segundos.
+
+#### Patrimonio
+```bash
+GET /api/v2/securities/portfolio/
+```
+
+Todo lo del usuario en pesos al día de hoy:
+
+```json
+{
+  "as_of": "2026-11-15",
+  "cash": "21400.00",
+  "credit_cards": "-1200.00",
+  "positions": "1952.00",
+  "securities": "550.00",
+  "invested": "2502.00",
+  "net_worth": "22702.00",
+  "fx_rates": { "USD": "18.55250000" },
+  "missing": []
+}
+```
+
+- `cash`: disponible de las cuentas que no son tarjeta de crédito. El dinero en apartados
+  no está aquí: está en `positions`.
+- `credit_cards`: saldo de las tarjetas de crédito, negativo cuando hay deuda.
+- `positions`: apartados de inversión no liquidados (capital más rendimiento acumulado).
+- `securities`: tenencias abiertas al último cierre guardado.
+- `invested` = `positions` + `securities`; `net_worth` = `cash` + `credit_cards` + `invested`.
+- Lo que no está en pesos se convierte con el último FIX de Banxico (`fx_rates`). Lo que no
+  tiene precio o tipo de cambio no se suma y queda en `missing`, por ejemplo
+  `"AAPL: sin precio guardado"` o `"Cuenta: sin tipo de cambio EUR/MXN"`.
+
+#### Historia de lo invertido
+```bash
+GET /api/v2/securities/portfolio/history?from=2026-01-01&to=2026-12-31
+```
+
+Un punto por día de calendario con lo invertido en pesos: apartados más acciones. No
+incluye el disponible de las cuentas, porque no hay histórico de saldos. Sin `from` y `to`,
+los últimos 365 días; el rango máximo es de 3,660 días. Los días anteriores a la primera
+inversión no se devuelven.
+
+```json
+{
+  "start": "2026-01-01",
+  "end": "2026-12-31",
+  "days": [
+    {
+      "date": "2026-11-12",
+      "positions": "1952.00",
+      "securities": "550.00",
+      "total": "2502.00",
+      "complete": true
+    }
+  ]
+}
+```
+
+- `positions`: el `cumulative_balance` del último rendimiento de cada apartado (los
+  rendimientos se generan a diario a las 12:00 UTC). Un apartado liquidado deja de contar
+  después de su último rendimiento; uno con tasa 0 no genera rendimientos y no aparece.
+- `securities`: la suma de `market_value_mxn` de las fotos diarias de las tenencias.
+- `complete: false` quiere decir que el día está incompleto: una tenencia sin cierre o sin
+  tipo de cambio ese día, fotos que el job todavía no genera (por ejemplo, hoy antes de la
+  corrida) o que se van a rehacer por una operación editada, o un apartado en otra moneda
+  sin tipo de cambio. El total de ese día no incluye lo que falta.
 
 
 ### 🤖 IA - `/api/v2/ai/`
@@ -2727,6 +2796,8 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 | `GET /securities/trades/` | **50 requests/minuto** | Listado |
 | `GET /securities/holdings/` y `/{uuid}` | **50 requests/minuto** | Tenencias valuadas |
 | `GET /securities/holdings/{uuid}/history` | **50 requests/minuto** | Fotos diarias |
+| `GET /securities/portfolio/` | **50 requests/minuto** | Patrimonio en pesos |
+| `GET /securities/portfolio/history` | **50 requests/minuto** | Lo invertido por día |
 
 #### Endpoints de Apartados de Inversión
 

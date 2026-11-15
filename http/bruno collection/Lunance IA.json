@@ -2586,6 +2586,608 @@
           }
         }
       ]
+    },
+    {
+      "type": "folder",
+      "name": "Securities",
+      "filename": "Securities",
+      "seq": 10,
+      "examples": [],
+      "root": {
+        "request": {
+          "auth": {
+            "mode": "inherit"
+          }
+        },
+        "meta": {
+          "name": "Securities",
+          "seq": 10
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "Search",
+          "filename": "Search.bru",
+          "seq": 1,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "http://{{URL_HOST}}/api/v2/securities/search?q=WALMEX&market=BMV",
+            "method": "GET",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              },
+              {
+                "name": "Authorization",
+                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                "enabled": true
+              },
+              {
+                "name": "Accept-Language",
+                "value": "{{LANG}}",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "q",
+                "value": "WALMEX",
+                "type": "query",
+                "enabled": true
+              },
+              {
+                "name": "market",
+                "value": "BMV",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {
+              "res": "// Guarda el primer resultado para el resto de la carpeta\nif (res.status === 200 && res.body.length) {\n  bru.setEnvVar(\"INSTRUMENT_UUID\", res.body[0].uuid);\n}"
+            },
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "Busca en el catálogo. `market`: BMV, SIC o US. Las FIBRAs se buscan por símbolo (FUNO11).",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Prices",
+          "filename": "Prices.bru",
+          "seq": 2,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "http://{{URL_HOST}}/api/v2/securities/instruments/{{INSTRUMENT_UUID}}/prices?from=2026-10-01&to=2026-11-15",
+            "method": "GET",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              },
+              {
+                "name": "Authorization",
+                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                "enabled": true
+              },
+              {
+                "name": "Accept-Language",
+                "value": "{{LANG}}",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "from",
+                "value": "2026-10-01",
+                "type": "query",
+                "enabled": true
+              },
+              {
+                "name": "to",
+                "value": "2026-11-15",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "Cierres guardados, sin ajustar. Por defecto, los últimos 30 días.",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Record trade",
+          "filename": "Record trade.bru",
+          "seq": 3,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "http://{{URL_HOST}}/api/v2/securities/trades/",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              },
+              {
+                "name": "Authorization",
+                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                "enabled": true
+              },
+              {
+                "name": "Accept-Language",
+                "value": "{{LANG}}",
+                "enabled": true
+              },
+              {
+                "name": "Idempotency-Key",
+                "value": "{{$randomUUID}}",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"account_uuid\": \"{{SECURITY_ACCOUNT_UUID}}\",\n  \"instrument_uuid\": \"{{INSTRUMENT_UUID}}\",\n  \"trade_type\": \"BUY\",\n  \"trade_date\": \"2026-11-13\",\n  \"quantity\": \"10\",\n  \"price\": \"56.50\",\n  \"fees\": \"5.80\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {
+              "res": "if (res.status === 201) {\n  bru.setEnvVar(\"TRADE_UUID\", res.body.trade.uuid);\n  bru.setEnvVar(\"HOLDING_UUID\", res.body.holding.uuid);\n}"
+            },
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "BUY/SELL: quantity, price, fees (SELL también tax_withheld). DIVIDEND: gross_amount, tax_withheld. SPLIT: split_from, split_to.",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "List trades",
+          "filename": "List trades.bru",
+          "seq": 4,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "http://{{URL_HOST}}/api/v2/securities/trades/?limit=100",
+            "method": "GET",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              },
+              {
+                "name": "Authorization",
+                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                "enabled": true
+              },
+              {
+                "name": "Accept-Language",
+                "value": "{{LANG}}",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "limit",
+                "value": "100",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Update trade",
+          "filename": "Update trade.bru",
+          "seq": 5,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "http://{{URL_HOST}}/api/v2/securities/trades/{{TRADE_UUID}}",
+            "method": "PUT",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              },
+              {
+                "name": "Authorization",
+                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                "enabled": true
+              },
+              {
+                "name": "Accept-Language",
+                "value": "{{LANG}}",
+                "enabled": true
+              },
+              {
+                "name": "Idempotency-Key",
+                "value": "{{$randomUUID}}",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"trade_date\": \"2026-11-13\",\n  \"quantity\": \"12\",\n  \"price\": \"56.50\",\n  \"fees\": \"5.80\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "Reemplaza todos los campos de la operación; el tipo, la cuenta y el valor no cambian.",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Delete trade",
+          "filename": "Delete trade.bru",
+          "seq": 6,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "http://{{URL_HOST}}/api/v2/securities/trades/{{TRADE_UUID}}",
+            "method": "DELETE",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              },
+              {
+                "name": "Authorization",
+                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                "enabled": true
+              },
+              {
+                "name": "Accept-Language",
+                "value": "{{LANG}}",
+                "enabled": true
+              },
+              {
+                "name": "Idempotency-Key",
+                "value": "{{$randomUUID}}",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Holdings",
+          "filename": "Holdings.bru",
+          "seq": 7,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "http://{{URL_HOST}}/api/v2/securities/holdings/?include_closed=false",
+            "method": "GET",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              },
+              {
+                "name": "Authorization",
+                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                "enabled": true
+              },
+              {
+                "name": "Accept-Language",
+                "value": "{{LANG}}",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "include_closed",
+                "value": "false",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Holding",
+          "filename": "Holding.bru",
+          "seq": 8,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "http://{{URL_HOST}}/api/v2/securities/holdings/{{HOLDING_UUID}}",
+            "method": "GET",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              },
+              {
+                "name": "Authorization",
+                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                "enabled": true
+              },
+              {
+                "name": "Accept-Language",
+                "value": "{{LANG}}",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Holding history",
+          "filename": "Holding history.bru",
+          "seq": 9,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "http://{{URL_HOST}}/api/v2/securities/holdings/{{HOLDING_UUID}}/history?from=2026-01-01&to=2026-11-15",
+            "method": "GET",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              },
+              {
+                "name": "Authorization",
+                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                "enabled": true
+              },
+              {
+                "name": "Accept-Language",
+                "value": "{{LANG}}",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "from",
+                "value": "2026-01-01",
+                "type": "query",
+                "enabled": true
+              },
+              {
+                "name": "to",
+                "value": "2026-11-15",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Portfolio",
+          "filename": "Portfolio.bru",
+          "seq": 10,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "http://{{URL_HOST}}/api/v2/securities/portfolio/",
+            "method": "GET",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              },
+              {
+                "name": "Authorization",
+                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                "enabled": true
+              },
+              {
+                "name": "Accept-Language",
+                "value": "{{LANG}}",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "Patrimonio en pesos: cuentas, tarjetas, apartados y acciones.",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Portfolio history",
+          "filename": "Portfolio history.bru",
+          "seq": 11,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "http://{{URL_HOST}}/api/v2/securities/portfolio/history?from=2026-01-01&to=2026-11-15",
+            "method": "GET",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              },
+              {
+                "name": "Authorization",
+                "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                "enabled": true
+              },
+              {
+                "name": "Accept-Language",
+                "value": "{{LANG}}",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "from",
+                "value": "2026-01-01",
+                "type": "query",
+                "enabled": true
+              },
+              {
+                "name": "to",
+                "value": "2026-11-15",
+                "type": "query",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "Lo invertido por día (apartados + acciones). `complete=false` marca días con datos pendientes.",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        }
+      ]
     }
   ],
   "activeEnvironmentUid": "86ZeHPF66Scc5WlXZN7pN",
@@ -2689,6 +3291,34 @@
           "enabled": true,
           "secret": true,
           "type": "text"
+        },
+        {
+          "name": "SECURITY_ACCOUNT_UUID",
+          "value": "",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "INSTRUMENT_UUID",
+          "value": "",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "TRADE_UUID",
+          "value": "",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "HOLDING_UUID",
+          "value": "",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
         }
       ],
       "name": "Lunance Local"
@@ -2791,6 +3421,34 @@
           "value": "",
           "enabled": true,
           "secret": true,
+          "type": "text"
+        },
+        {
+          "name": "SECURITY_ACCOUNT_UUID",
+          "value": "",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "INSTRUMENT_UUID",
+          "value": "",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "TRADE_UUID",
+          "value": "",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "HOLDING_UUID",
+          "value": "",
+          "enabled": true,
+          "secret": false,
           "type": "text"
         }
       ],
