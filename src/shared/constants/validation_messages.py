@@ -165,6 +165,8 @@ HTTP_CODES_ERRORS = {
         "INSUFFICIENT_SHARES": "No hay suficientes títulos para esta operación",
         "SECURITY_ACCOUNT_TYPE_NOT_ALLOWED": "Este tipo de cuenta no admite acciones",
         "SECURITY_CURRENCY_MISMATCH": "La moneda de la cuenta no es la del valor",
+        "TRANSFER_CURRENCY_MISMATCH": "Solo se puede transferir entre cuentas de la misma moneda",
+        "ACCOUNT_CURRENCY_MISMATCH": "La moneda no coincide con la de la cuenta",
         "SECURITY_TRADE_TRANSACTION_LOCKED": "Esta transacción es de una operación de acciones; edítala desde la operación",
         "VALIDATION_INVALID_SECURITY_TRADE": "Los datos de la operación no son válidos",
         # Códigos específicos de Lunance - Conflictos de negocio
@@ -259,6 +261,8 @@ HTTP_CODES_ERRORS = {
         "INSUFFICIENT_SHARES": "Not enough shares for this trade",
         "SECURITY_ACCOUNT_TYPE_NOT_ALLOWED": "This account type cannot hold securities",
         "SECURITY_CURRENCY_MISMATCH": "The account currency does not match the security currency",
+        "TRANSFER_CURRENCY_MISMATCH": "Transfers are only allowed between accounts in the same currency",
+        "ACCOUNT_CURRENCY_MISMATCH": "The currency does not match the account currency",
         "SECURITY_TRADE_TRANSACTION_LOCKED": "This transaction belongs to a securities trade; edit the trade instead",
         "VALIDATION_INVALID_SECURITY_TRADE": "The trade data is not valid",
         # Códigos específicos de Lunance - Conflictos de negocio

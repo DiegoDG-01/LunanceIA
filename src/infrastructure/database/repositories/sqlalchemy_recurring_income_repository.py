@@ -26,7 +26,7 @@ class SQLAlchemyRecurringIncomeRepository(RecurringIncomeRepository):
             account_id=model.account_id,
             category_id=model.category_id,
             name=model.name,
-            amount=Money(amount=model.amount, currency="MXN"),
+            amount=Money(amount=model.amount, currency=model.currency),
             frequency=model.frequency,
             start_date=model.start_date,
             end_date=model.end_date,

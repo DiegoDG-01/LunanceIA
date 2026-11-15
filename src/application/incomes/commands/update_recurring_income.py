@@ -13,6 +13,7 @@ from domain.repositories.incomes.recurring_income_repository import (
 )
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.exceptions.domain import (
+    AccountCurrencyMismatchError,
     AccountNotFoundError,
     CategoryNotFoundError,
     InvalidIncomeDateRangeError,
@@ -63,6 +64,11 @@ class UpdateRecurringIncomeHandler:
             )
             if not account:
                 raise AccountNotFoundError(dto.account_uuid)
+            # Se deposita en la moneda de la cuenta: solo cambia a otra de la misma moneda.
+            if account.currency != income.amount.currency:
+                raise AccountCurrencyMismatchError(
+                    income.amount.currency, account.currency
+                )
 
             income.account_id = cast(int, account.id)
 

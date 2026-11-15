@@ -27,7 +27,8 @@ class CreatePositionDTO:
     lock_period_end_date: date | None = None
     early_withdrawal_penalty: Decimal | None = None
     on_maturity: MaturityAction = MaturityAction.HOLD
-    currency: str = "MXN"
+    # La de la cuenta; si se manda, debe coincidir.
+    currency: str | None = None
     max_balance: Decimal | None = None
     overflow_action: OverflowAction | None = None
     overflow_position_uuid: str | None = None
@@ -40,7 +41,8 @@ class PositionMovementDTO:
     user_id: int
     position_uuid: str
     amount: Decimal
-    currency: str = "MXN"
+    # La de la cuenta; si se manda, debe coincidir.
+    currency: str | None = None
 
 
 @dataclass

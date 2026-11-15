@@ -48,6 +48,8 @@ class TransactionResponseDTO:
     account_type: AccountType
     account_uuid: str
     transfer_uuid: str | None = None
+    # La de su cuenta.
+    currency: str = "MXN"
     # Si la creó una operación de acciones: se edita desde /securities/trades.
     security_trade_uuid: str | None = None
     security_holding_uuid: str | None = None
@@ -75,6 +77,7 @@ class TransactionResponseDTO:
             account_type=account_type,
             account_uuid=account_uuid,
             transfer_uuid=transaction.transfer_uuid,
+            currency=transaction.amount.currency,
         )
 
 
@@ -98,6 +101,7 @@ class TransferResponseDTO:
 
     transfer_uuid: str
     amount: Decimal
+    currency: str
     transfer_date: date
     description: str | None
     source_account_name: str

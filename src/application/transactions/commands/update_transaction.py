@@ -5,7 +5,6 @@ from typing import cast
 
 from application.dto.transaction_dto import TransactionResponseDTO
 from domain.entities.transactions.transaction import TransactionType
-from domain.objects.money import Money
 from domain.repositories.accounts.account_repository import AccountRepository
 from domain.repositories.installments.installment_purchase_repository import (
     InstallmentPurchaseRepository,
@@ -16,6 +15,7 @@ from domain.repositories.transactions.transaction_repository import (
 )
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 from shared.exceptions.domain import (
+    AccountCurrencyMismatchError,
     AccountNotFoundError,
     InstallmentTransactionModificationError,
     InvalidTransactionTypeError,
@@ -109,6 +109,12 @@ class UpdateTransactionCommandHandler:
 
             account = locked_accounts[source_account_id]
             new_account = locked_accounts[destination_account_id]
+            # Moverlo a otra cuenta solo si está en la misma moneda.
+            if new_account.current_balance.currency != account.current_balance.currency:
+                raise AccountCurrencyMismatchError(
+                    account.current_balance.currency,
+                    new_account.current_balance.currency,
+                )
 
             # 1. REVERTIR el efecto de la transacción original
             if transaction.transaction_type == TransactionType.EXPENSE:
@@ -140,7 +146,7 @@ class UpdateTransactionCommandHandler:
                     raise InvalidTransactionTypeError(command.transaction_type)
 
             if command.amount is not None:
-                transaction.amount = Money(amount=command.amount, currency="MXN")
+                transaction.amount = new_account.money(command.amount)
 
             if command.transaction_date is not None:
                 if isinstance(command.transaction_date, str):

@@ -18,6 +18,7 @@ from sqlalchemy.sql import func
 
 from domain.objects.enums import InstallmentType
 from infrastructure.database.connection import Base
+from infrastructure.database.models.account import account_currency
 
 
 class InstallmentPurchaseModel(Base):
@@ -33,6 +34,7 @@ class InstallmentPurchaseModel(Base):
     account_id: Mapped[int] = mapped_column(
         ForeignKey("accounts.id", ondelete="CASCADE")
     )
+    currency: Mapped[str] = account_currency(account_id)
     initial_transaction_id: Mapped[int | None] = mapped_column(
         ForeignKey("transactions.id", ondelete="SET NULL"), nullable=True
     )

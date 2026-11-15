@@ -37,6 +37,7 @@ class InstallmentPurchaseResponseDTO:
     category_id: int | None
     description: str
     total_amount: Decimal
+    currency: str
     num_installments: int
     installment_type: InstallmentType
     annual_interest_rate: Decimal
@@ -57,6 +58,7 @@ class InstallmentPurchaseResponseDTO:
             category_id=purchase.category_id,
             description=purchase.description,
             total_amount=purchase.total_amount.amount,
+            currency=purchase.total_amount.currency,
             num_installments=purchase.num_installments,
             installment_type=purchase.installment_type,
             annual_interest_rate=purchase.annual_interest_rate,

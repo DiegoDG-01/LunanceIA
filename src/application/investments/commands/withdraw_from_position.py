@@ -9,7 +9,6 @@ from application.dto.investment_position_dto import (
 from application.investments.services.position_overflow import PositionOverflowService
 from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import TransactionType
-from domain.objects.money import Money
 from domain.repositories.accounts.account_repository import AccountRepository
 from domain.repositories.investments.investment_position_repository import (
     InvestmentPositionRepository,
@@ -80,7 +79,7 @@ class WithdrawFromPositionHandler:
             if not position:
                 raise InvestmentPositionNotFoundError(dto.position_uuid)
 
-            money = Money(dto.amount, dto.currency)
+            money = account.money(dto.amount, dto.currency)
 
             position.withdraw(money)
             account.update_balance(account.current_balance.add(money))

@@ -68,8 +68,8 @@ async def get_installment_purchases(
     query = GetInstallmentPurchasesQuery(user_id=cast(int, current_user.id))
     result = await handler.handle(query)
     return [
-        InstallmentPurchaseResponse(
-            **{
+        InstallmentPurchaseResponse.model_validate(
+            {
                 **r.__dict__,
                 "charges": [InstallmentChargeResponse(**c.__dict__) for c in r.charges],
             }
@@ -103,7 +103,9 @@ async def create_installment_purchase(
     async def operation():
         result = await handler.handle(CreateInstallmentPurchaseCommand(dto=dto))
         charges = [InstallmentChargeResponse(**c.__dict__) for c in result.charges]
-        return InstallmentPurchaseResponse(**{**result.__dict__, "charges": charges})
+        return InstallmentPurchaseResponse.model_validate(
+            {**result.__dict__, "charges": charges}
+        )
 
     return await idempotency.run(cast(int, current_user.id), operation)
 
@@ -172,6 +174,8 @@ async def update_installment_purchase(
     async def operation():
         result = await handler.handle(command)
         charges = [InstallmentChargeResponse(**c.__dict__) for c in result.charges]
-        return InstallmentPurchaseResponse(**{**result.__dict__, "charges": charges})
+        return InstallmentPurchaseResponse.model_validate(
+            {**result.__dict__, "charges": charges}
+        )
 
     return await idempotency.run(cast(int, current_user.id), operation)

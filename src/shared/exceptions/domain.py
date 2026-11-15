@@ -481,6 +481,26 @@ class SecurityAccountTypeNotAllowedError(BusinessRuleError):
         super().__init__(f"Las cuentas de tipo {account_type} no admiten acciones")
 
 
+class TransferCurrencyMismatchError(BusinessRuleError):
+    """Las dos cuentas de una transferencia no están en la misma moneda."""
+
+    def __init__(self, source_currency: str, destination_currency: str):
+        super().__init__(
+            f"La cuenta de origen es en {source_currency} y la de destino en "
+            f"{destination_currency}: solo se transfiere entre cuentas de la misma moneda"
+        )
+
+
+class AccountCurrencyMismatchError(BusinessRuleError):
+    """El monto o el destino no están en la moneda de la cuenta."""
+
+    def __init__(self, account_currency: str, other_currency: str):
+        super().__init__(
+            f"La cuenta es en {account_currency} y se pidió {other_currency}: "
+            "el dinero se queda en la moneda de su cuenta"
+        )
+
+
 class SecurityCurrencyMismatchError(BusinessRuleError):
     """La moneda de la cuenta no es la del valor."""
 

@@ -14,6 +14,7 @@ class SubscriptionResponse(BaseModel):
     category_name: str | None
     frequency: Frequency
     amount: Decimal
+    currency: str = Field(..., description="Moneda de la cuenta: MXN, USD o EUR")
     billing_day: int | None
     description: str | None
     service_url: str | None

@@ -10,7 +10,6 @@ from application.investments.services.position_overflow import PositionOverflowS
 from domain.entities.investments.investment_position import InvestmentPosition
 from domain.entities.transactions.transaction import Transaction
 from domain.objects.enums import AccountType, OverflowAction, TransactionType
-from domain.objects.money import Money
 from domain.repositories.accounts.account_repository import AccountRepository
 from domain.repositories.investments.investment_position_repository import (
     InvestmentPositionRepository,
@@ -84,7 +83,7 @@ class CreatePositionHandler:
             if not account.is_active:
                 raise AccountInactiveError(cast(int, account.id))
 
-            money = Money(dto.amount, dto.currency)
+            money = account.money(dto.amount, dto.currency)
 
             if not account.can_withdraw(money):
                 raise InsufficientFundsError(
