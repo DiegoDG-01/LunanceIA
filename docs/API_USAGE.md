@@ -1776,6 +1776,46 @@ agrega todas sus operaciones.
 - Una tenencia se cierra (`CLOSED`) al vender todos los títulos; `include_closed=true` las
   incluye.
 
+#### Historia diaria de una tenencia
+```bash
+GET /api/v2/securities/holdings/{holding_uuid}/history?from=2026-01-01&to=2026-12-31
+```
+
+Una foto por día de calendario desde la primera operación: hasta hoy, o hasta la última
+operación si la tenencia se cerró. Sin `from` y `to`, los últimos 365 días; el rango máximo es
+de 3,660 días.
+
+```json
+{
+  "holding": { "uuid": "…", "instrument": { "symbol": "WALMEX*", "…": "…" }, "…": "…" },
+  "snapshots": [
+    {
+      "snapshot_date": "2026-11-15",
+      "quantity": "100.00000000",
+      "close": "54.790000",
+      "price_date": "2026-11-13",
+      "market_value": "5479.00",
+      "fx_rate": null,
+      "market_value_mxn": "5479.00",
+      "cost_basis": "5806.73",
+      "unrealized_pnl": "-327.73",
+      "realized_pnl": "0.00",
+      "dividends": "0.00"
+    }
+  ]
+}
+```
+
+- Los fines de semana, feriados o días sin precio usan el último cierre conocido:
+  `price_date` dice de qué día es. Antes del primer cierre, la valuación llega en `null`.
+- `market_value_mxn` usa el FIX de Banxico del día (o el último publicado). En un valor en
+  dólares recién registrado llega en `null` hasta la siguiente corrida del job de precios,
+  que descarga el tipo de cambio.
+- Las fotos se rehacen solas cuando cambia algo que las afecta: una operación (desde su
+  fecha), un cierre corregido por el proveedor o el tipo de cambio. Después de registrar o
+  editar una operación se actualizan en segundo plano en unos segundos.
+
+
 ### 🤖 IA - `/api/v2/ai/`
 
 #### Analizar Imagen (Recibo/Ticket)
@@ -2686,6 +2726,7 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 | `PUT` / `DELETE /securities/trades/{uuid}` | **20 requests/minuto** | Aceptan `Idempotency-Key` |
 | `GET /securities/trades/` | **50 requests/minuto** | Listado |
 | `GET /securities/holdings/` y `/{uuid}` | **50 requests/minuto** | Tenencias valuadas |
+| `GET /securities/holdings/{uuid}/history` | **50 requests/minuto** | Fotos diarias |
 
 #### Endpoints de Apartados de Inversión
 
