@@ -1,12 +1,35 @@
 """Valores que cotizan en bolsa (acciones, ETFs, FIBRAs): catálogo y precios de cierre."""
 
 from datetime import UTC, date, datetime, timedelta
+from typing import cast
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
 
+from application.securities.commands.delete_trade import (
+    DeleteTradeCommand,
+    DeleteTradeHandler,
+)
+from application.securities.commands.record_trade import (
+    RecordTradeCommand,
+    RecordTradeHandler,
+)
+from application.securities.commands.update_trade import (
+    UpdateTradeCommand,
+    UpdateTradeHandler,
+)
+from application.securities.dto import TradeResultDTO
 from application.securities.queries.get_instrument_prices import (
     GetInstrumentPricesHandler,
     GetInstrumentPricesQuery,
+)
+from application.securities.queries.list_holdings import (
+    GetHoldingQuery,
+    HoldingQueries,
+    ListHoldingsQuery,
+)
+from application.securities.queries.list_trades import (
+    ListTradesHandler,
+    ListTradesQuery,
 )
 from application.securities.queries.search_instruments import (
     SearchInstrumentsHandler,
@@ -16,18 +39,39 @@ from domain.entities.users.user import User
 from domain.objects.enums import APIKeyScope, Market
 from infrastructure.rate_limiting.limiters import (
     enforce_rate_limit,
+    limiter_20_per_minute,
     limiter_30_per_minute,
     limiter_50_per_minute,
 )
 from presentation.dependencies.auth_deps import require_scope
+from presentation.dependencies.idempotency_deps import (
+    Idempotency,
+    accept_idempotency_key,
+    require_idempotency_key,
+)
 from presentation.dependencies.security_deps import (
+    InstrumentTracker,
+    get_delete_trade_handler,
+    get_holding_queries,
     get_instrument_prices_handler,
+    get_instrument_tracker,
+    get_list_trades_handler,
+    get_record_trade_handler,
     get_search_instruments_handler,
+    get_update_trade_handler,
+)
+from presentation.schemas.requests.security import (
+    CreateTradeRequest,
+    UpdateTradeRequest,
 )
 from presentation.schemas.responses.security import (
+    HoldingDetailResponse,
+    HoldingResponse,
     InstrumentPriceResponse,
     InstrumentPricesResponse,
     InstrumentResponse,
+    TradeResponse,
+    TradeResultResponse,
 )
 from shared.exceptions.base import ValidationError
 
@@ -80,4 +124,171 @@ async def get_instrument_prices(
     return InstrumentPricesResponse(
         instrument=InstrumentResponse.from_entity(result.instrument),
         prices=[InstrumentPriceResponse.from_entity(p) for p in result.prices],
+    )
+
+
+def _track(
+    background: BackgroundTasks, tracker: InstrumentTracker, result: TradeResultDTO
+) -> None:
+    if result.trade is not None:
+        background.add_task(
+            tracker, cast(int, result.trade.instrument.id), result.trade.trade_date
+        )
+
+
+@router.post("/trades/", response_model=TradeResultResponse, status_code=201)
+async def record_trade(
+    request: Request,
+    body: CreateTradeRequest,
+    background: BackgroundTasks,
+    current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_WRITE.value)),
+    handler: RecordTradeHandler = Depends(get_record_trade_handler),
+    tracker: InstrumentTracker = Depends(get_instrument_tracker),
+    idempotency: Idempotency = Depends(require_idempotency_key),
+):
+    """Registra una compra, venta, dividendo o split. Compra y venta mueven el disponible
+    de la cuenta (transacción TRANSFER); el dividendo entra como ingreso en «Inversiones».
+    La primera operación de un valor descarga su historia de precios en segundo plano."""
+    await enforce_rate_limit(limiter_20_per_minute, request)
+    command = RecordTradeCommand(
+        user_id=cast(int, current_user.id),
+        account_uuid=body.account_uuid,
+        instrument_uuid=body.instrument_uuid,
+        trade_type=body.trade_type,
+        trade_date=body.trade_date,
+        quantity=body.quantity,
+        price=body.price,
+        fees=body.fees,
+        tax_withheld=body.tax_withheld,
+        gross_amount=body.gross_amount,
+        split_from=body.split_from,
+        split_to=body.split_to,
+        notes=body.notes,
+    )
+
+    async def operation():
+        result = await handler.handle(command)
+        _track(background, tracker, result)
+        return TradeResultResponse.from_dto(result)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
+
+
+@router.get("/trades/", response_model=list[TradeResponse])
+async def list_trades(
+    request: Request,
+    account_uuid: str | None = Query(None),
+    instrument_uuid: str | None = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_READ.value)),
+    handler: ListTradesHandler = Depends(get_list_trades_handler),
+):
+    """Operaciones del usuario, las más recientes primero."""
+    await enforce_rate_limit(limiter_50_per_minute, request)
+    trades = await handler.handle(
+        ListTradesQuery(
+            user_id=cast(int, current_user.id),
+            account_uuid=account_uuid,
+            instrument_uuid=instrument_uuid,
+            limit=limit,
+            offset=offset,
+        )
+    )
+    return [TradeResponse.from_dto(t) for t in trades]
+
+
+@router.put("/trades/{trade_uuid}", response_model=TradeResultResponse)
+async def update_trade(
+    request: Request,
+    trade_uuid: str,
+    body: UpdateTradeRequest,
+    background: BackgroundTasks,
+    current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_WRITE.value)),
+    handler: UpdateTradeHandler = Depends(get_update_trade_handler),
+    tracker: InstrumentTracker = Depends(get_instrument_tracker),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
+):
+    """Reemplaza los datos de una operación y recalcula la tenencia. Se rechaza si deja una
+    venta posterior sin títulos."""
+    await enforce_rate_limit(limiter_20_per_minute, request)
+    command = UpdateTradeCommand(
+        user_id=cast(int, current_user.id),
+        trade_uuid=trade_uuid,
+        trade_date=body.trade_date,
+        quantity=body.quantity,
+        price=body.price,
+        fees=body.fees,
+        tax_withheld=body.tax_withheld,
+        gross_amount=body.gross_amount,
+        split_from=body.split_from,
+        split_to=body.split_to,
+        notes=body.notes,
+    )
+
+    async def operation():
+        result = await handler.handle(command)
+        _track(background, tracker, result)
+        return TradeResultResponse.from_dto(result)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
+
+
+@router.delete("/trades/{trade_uuid}", response_model=TradeResultResponse)
+async def delete_trade(
+    request: Request,
+    trade_uuid: str,
+    current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_WRITE.value)),
+    handler: DeleteTradeHandler = Depends(get_delete_trade_handler),
+    idempotency: Idempotency = Depends(accept_idempotency_key),
+):
+    """Borra una operación y revierte su movimiento de dinero. Se rechaza si deja una venta
+    posterior sin títulos."""
+    await enforce_rate_limit(limiter_20_per_minute, request)
+
+    async def operation():
+        result = await handler.handle(
+            DeleteTradeCommand(
+                user_id=cast(int, current_user.id), trade_uuid=trade_uuid
+            )
+        )
+        return TradeResultResponse.from_dto(result)
+
+    return await idempotency.run(cast(int, current_user.id), operation)
+
+
+@router.get("/holdings/", response_model=list[HoldingResponse])
+async def list_holdings(
+    request: Request,
+    account_uuid: str | None = Query(None),
+    include_closed: bool = Query(False),
+    current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_READ.value)),
+    queries: HoldingQueries = Depends(get_holding_queries),
+):
+    """Lo que hay de cada valor, con su valor al último cierre guardado."""
+    await enforce_rate_limit(limiter_50_per_minute, request)
+    holdings = await queries.list_holdings(
+        ListHoldingsQuery(
+            user_id=cast(int, current_user.id),
+            account_uuid=account_uuid,
+            include_closed=include_closed,
+        )
+    )
+    return [HoldingResponse.from_dto(h) for h in holdings]
+
+
+@router.get("/holdings/{holding_uuid}", response_model=HoldingDetailResponse)
+async def get_holding(
+    request: Request,
+    holding_uuid: str,
+    current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_READ.value)),
+    queries: HoldingQueries = Depends(get_holding_queries),
+):
+    await enforce_rate_limit(limiter_50_per_minute, request)
+    detail = await queries.get_holding(
+        GetHoldingQuery(user_id=cast(int, current_user.id), holding_uuid=holding_uuid)
+    )
+    return HoldingDetailResponse(
+        holding=HoldingResponse.from_dto(detail.holding),
+        trades=[TradeResponse.from_dto(t) for t in detail.trades],
     )

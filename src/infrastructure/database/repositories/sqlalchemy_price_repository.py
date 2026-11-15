@@ -64,6 +64,44 @@ class SQLAlchemyInstrumentPriceRepository(InstrumentPriceRepository):
             for m in result.scalars()
         ]
 
+    async def latest_on_or_before(
+        self, instrument_ids: Sequence[int], day: date
+    ) -> dict[int, InstrumentPrice]:
+        unique = list(dict.fromkeys(instrument_ids))
+        if not unique:
+            return {}
+        latest = (
+            select(
+                InstrumentPriceModel.instrument_id,
+                func.max(InstrumentPriceModel.price_date).label("price_date"),
+            )
+            .where(
+                InstrumentPriceModel.instrument_id.in_(unique),
+                InstrumentPriceModel.price_date <= day,
+            )
+            .group_by(InstrumentPriceModel.instrument_id)
+            .subquery()
+        )
+        result = await self.db.execute(
+            select(InstrumentPriceModel).join(
+                latest,
+                (InstrumentPriceModel.instrument_id == latest.c.instrument_id)
+                & (InstrumentPriceModel.price_date == latest.c.price_date),
+            )
+        )
+        return {
+            m.instrument_id: InstrumentPrice(
+                instrument_id=m.instrument_id,
+                price_date=m.price_date,
+                close=m.close,
+                provider=m.provider,
+                traded_value=m.traded_value,
+                is_trading_day=m.is_trading_day,
+                fetched_at=m.fetched_at,
+            )
+            for m in result.scalars()
+        }
+
     async def save_many(self, prices: Sequence[InstrumentPrice]) -> None:
         # Portable (MySQL y SQLite de los tests): se leen las que existen y se actualizan.
         keys = [(p.instrument_id, p.price_date) for p in prices]
@@ -140,6 +178,31 @@ class SQLAlchemyExchangeRateRepository(ExchangeRateRepository):
             )
             for m in result.scalars()
         ]
+
+    async def latest_on_or_before(
+        self, base: str, quote: str, day: date
+    ) -> ExchangeRate | None:
+        result = await self.db.execute(
+            select(ExchangeRateModel)
+            .where(
+                ExchangeRateModel.base == base,
+                ExchangeRateModel.quote == quote,
+                ExchangeRateModel.rate_date <= day,
+            )
+            .order_by(ExchangeRateModel.rate_date.desc())
+            .limit(1)
+        )
+        m = result.scalar_one_or_none()
+        if m is None:
+            return None
+        return ExchangeRate(
+            base=m.base,
+            quote=m.quote,
+            rate_date=m.rate_date,
+            rate=m.rate,
+            provider=m.provider,
+            fetched_at=m.fetched_at,
+        )
 
     async def save_many(self, rates: Sequence[ExchangeRate]) -> None:
         keys = [(r.base, r.quote, r.rate_date) for r in rates]

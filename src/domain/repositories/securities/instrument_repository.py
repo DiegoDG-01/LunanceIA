@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from datetime import date
 
 from domain.entities.securities.instrument import Instrument
 from domain.entities.securities.instrument_provider_symbol import (
@@ -34,6 +35,15 @@ class InstrumentRepository(ABC):
     @abstractmethod
     async def list_tracked(self) -> list[Instrument]:
         """Valores con `tracked_since`: los que el job de precios mantiene al día."""
+
+    @abstractmethod
+    async def get_by_ids(
+        self, instrument_ids: Sequence[int]
+    ) -> dict[int, Instrument]: ...
+
+    @abstractmethod
+    async def track_since(self, instrument_id: int, since: date) -> None:
+        """Adelanta `tracked_since` hacia atrás de forma atómica (nunca lo atrasa)."""
 
     @abstractmethod
     async def save(self, instrument: Instrument) -> Instrument:

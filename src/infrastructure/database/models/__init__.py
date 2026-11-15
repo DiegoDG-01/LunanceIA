@@ -22,6 +22,7 @@ from .recurring_income import IncomeDepositModel, RecurringIncomeModel
 from .refresh_token import RefreshTokenModel
 from .reminder import ReminderModel
 from .saving_goal import SavingGoalModel
+from .security_trade import SecurityHoldingModel, SecurityTradeModel
 from .subscription import SubscriptionChargeModel, SubscriptionModel
 from .tag import TagModel
 from .transaction import TransactionModel
@@ -54,6 +55,8 @@ __all__ = [
     "RefreshTokenModel",
     "ReminderModel",
     "SavingGoalModel",
+    "SecurityHoldingModel",
+    "SecurityTradeModel",
     "SubscriptionChargeModel",
     "SubscriptionModel",
     "TagModel",

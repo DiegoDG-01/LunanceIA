@@ -10,6 +10,7 @@ from domain.repositories.accounts.account_repository import AccountRepository
 from domain.repositories.installments.installment_purchase_repository import (
     InstallmentPurchaseRepository,
 )
+from domain.repositories.securities.trade_repository import SecurityTradeRepository
 from domain.repositories.transactions.transaction_repository import (
     TransactionRepository,
 )
@@ -18,6 +19,7 @@ from shared.exceptions.domain import (
     AccountNotFoundError,
     InstallmentTransactionModificationError,
     InvalidTransactionTypeError,
+    SecurityTradeTransactionLockedError,
     TransactionNotFoundError,
 )
 
@@ -42,11 +44,14 @@ class UpdateTransactionCommandHandler:
         account_repository: AccountRepository,
         installment_purchase_repository: InstallmentPurchaseRepository,
         uow: AbstractUnitOfWork,
+        security_trade_repository: SecurityTradeRepository | None = None,
     ):
         self.transaction_repository = transaction_repository
         self.account_repository = account_repository
         self.installment_purchase_repository = installment_purchase_repository
         self.uow = uow
+        # El dinero de una operación de acciones se mueve desde /securities/trades.
+        self.security_trade_repository = security_trade_repository
 
     async def handle(self, command: UpdateTransactionCommand) -> TransactionResponseDTO:
         async with self.uow:
@@ -62,6 +67,14 @@ class UpdateTransactionCommandHandler:
             )
             if purchase:
                 raise InstallmentTransactionModificationError()
+
+            if (
+                self.security_trade_repository is not None
+                and await self.security_trade_repository.exists_for_transaction(
+                    cast(int, transaction.id)
+                )
+            ):
+                raise SecurityTradeTransactionLockedError()
 
             # Una transferencia se compone de dos movimientos y debe editarse
             # mediante su caso de uso específico para no desbalancear cuentas.

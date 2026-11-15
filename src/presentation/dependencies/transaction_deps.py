@@ -1,4 +1,5 @@
 from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.transactions.commands.create_transaction import (
     CreateTransactionHandler,
@@ -21,6 +22,7 @@ from domain.repositories.transactions.transaction_repository import (
     TransactionRepository,
 )
 from domain.repositories.unit_of_work import AbstractUnitOfWork
+from infrastructure.database.connection import get_db
 from infrastructure.database.repositories.sqlalchemy_account_repository import (
     SQLAlchemyAccountRepository,
 )
@@ -29,6 +31,9 @@ from infrastructure.database.repositories.sqlalchemy_bank_repository import (
 )
 from infrastructure.database.repositories.sqlalchemy_category_repository import (
     SQLAlchemyCategoryRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_trade_repository import (
+    SQLAlchemySecurityTradeRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_transaction_repository import (
     SQLAlchemyTransactionRepository,
@@ -88,9 +93,14 @@ def get_update_transaction_handler(
         get_installment_purchase_repository
     ),
     uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
+    db: AsyncSession = Depends(get_db),
 ) -> UpdateTransactionCommandHandler:
     return UpdateTransactionCommandHandler(
-        transaction_repository, account_repository, installment_purchase_repository, uow
+        transaction_repository,
+        account_repository,
+        installment_purchase_repository,
+        uow,
+        security_trade_repository=SQLAlchemySecurityTradeRepository(db),
     )
 
 
@@ -103,5 +113,12 @@ def get_delete_transaction_handler(
         get_installment_purchase_repository
     ),
     uow: AbstractUnitOfWork = Depends(get_unit_of_work_repository),
+    db: AsyncSession = Depends(get_db),
 ) -> DeleteTransactionHandler:
-    return DeleteTransactionHandler(transaction_repo, account_repo, purchase_repo, uow)
+    return DeleteTransactionHandler(
+        transaction_repo,
+        account_repo,
+        purchase_repo,
+        uow,
+        security_trade_repository=SQLAlchemySecurityTradeRepository(db),
+    )

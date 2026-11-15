@@ -1,11 +1,12 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel
 
+from application.securities.dto import HoldingDTO, TradeDTO, TradeResultDTO
 from domain.entities.securities.instrument import Instrument
 from domain.entities.securities.instrument_price import InstrumentPrice
-from domain.objects.enums import InstrumentType, Market
+from domain.objects.enums import HoldingStatus, InstrumentType, Market, TradeType
 
 
 class InstrumentResponse(BaseModel):
@@ -53,3 +54,75 @@ class InstrumentPriceResponse(BaseModel):
 class InstrumentPricesResponse(BaseModel):
     instrument: InstrumentResponse
     prices: list[InstrumentPriceResponse]
+
+
+class TradeResponse(BaseModel):
+    uuid: str
+    account_uuid: str
+    instrument: InstrumentResponse
+    trade_type: TradeType
+    trade_date: date
+    quantity: Decimal
+    price: Decimal
+    fees: Decimal
+    tax_withheld: Decimal
+    gross_amount: Decimal | None
+    cash_amount: Decimal
+    split_from: int | None
+    split_to: int | None
+    notes: str | None
+    created_at: datetime | None
+
+    @classmethod
+    def from_dto(cls, dto: TradeDTO) -> "TradeResponse":
+        values = {f: getattr(dto, f) for f in cls.model_fields if f != "instrument"}
+        return cls(instrument=InstrumentResponse.from_entity(dto.instrument), **values)
+
+
+class HoldingResponse(BaseModel):
+    uuid: str
+    account_uuid: str
+    account_name: str
+    instrument: InstrumentResponse
+    quantity: Decimal
+    avg_cost: Decimal
+    cost_basis: Decimal
+    realized_pnl: Decimal
+    dividends: Decimal
+    status: HoldingStatus
+    opened_at: date | None
+    closed_at: date | None
+    last_price: Decimal | None
+    last_price_date: date | None
+    market_value: Decimal | None
+    unrealized_pnl: Decimal | None
+    unrealized_pnl_pct: Decimal | None
+    fx_rate: Decimal | None
+    market_value_mxn: Decimal | None
+
+    @classmethod
+    def from_dto(cls, dto: HoldingDTO) -> "HoldingResponse":
+        values = {f: getattr(dto, f) for f in cls.model_fields if f != "instrument"}
+        return cls(instrument=InstrumentResponse.from_entity(dto.instrument), **values)
+
+
+class HoldingDetailResponse(BaseModel):
+    holding: HoldingResponse
+    trades: list[TradeResponse]
+
+
+class TradeResultResponse(BaseModel):
+    """`trade` es null al borrar; `holding` es null si el valor ya no tiene operaciones en
+    la cuenta. `holding` no trae valuación: para eso, `GET /securities/holdings/`."""
+
+    trade: TradeResponse | None
+    holding: HoldingResponse | None
+    account_available_balance: Decimal
+
+    @classmethod
+    def from_dto(cls, dto: TradeResultDTO) -> "TradeResultResponse":
+        return cls(
+            trade=TradeResponse.from_dto(dto.trade) if dto.trade else None,
+            holding=HoldingResponse.from_dto(dto.holding) if dto.holding else None,
+            account_available_balance=dto.account_available_balance,
+        )

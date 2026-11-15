@@ -1,6 +1,7 @@
 from collections.abc import Sequence
+from datetime import date
 
-from sqlalchemy import case, func, or_, select
+from sqlalchemy import case, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.entities.securities.instrument import Instrument
@@ -132,6 +133,30 @@ class SQLAlchemyInstrumentRepository(InstrumentRepository):
             .order_by(InstrumentModel.id)
         )
         return [_to_entity(m) for m in result.scalars()]
+
+    async def get_by_ids(self, instrument_ids: Sequence[int]) -> dict[int, Instrument]:
+        unique = list(dict.fromkeys(instrument_ids))
+        if not unique:
+            return {}
+        result = await self.db.execute(
+            select(InstrumentModel).where(InstrumentModel.id.in_(unique))
+        )
+        return {m.id: _to_entity(m) for m in result.scalars()}
+
+    async def track_since(self, instrument_id: int, since: date) -> None:
+        await self.db.execute(
+            update(InstrumentModel)
+            .where(
+                InstrumentModel.id == instrument_id,
+                or_(
+                    InstrumentModel.tracked_since.is_(None),
+                    InstrumentModel.tracked_since > since,
+                ),
+            )
+            .values(tracked_since=since)
+            .execution_options(synchronize_session=False)
+        )
+        await self.db.flush()
 
     async def save(self, instrument: Instrument) -> Instrument:
         if instrument.id is None:

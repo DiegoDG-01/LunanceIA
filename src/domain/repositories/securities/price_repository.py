@@ -23,6 +23,12 @@ class InstrumentPriceRepository(ABC):
     async def save_many(self, prices: Sequence[InstrumentPrice]) -> None:
         """Crea o reemplaza cada (valor, fecha)."""
 
+    @abstractmethod
+    async def latest_on_or_before(
+        self, instrument_ids: Sequence[int], day: date
+    ) -> dict[int, InstrumentPrice]:
+        """El último cierre de cada valor hasta `day` (incluido)."""
+
 
 class ExchangeRateRepository(ABC):
     @abstractmethod
@@ -39,3 +45,8 @@ class ExchangeRateRepository(ABC):
     @abstractmethod
     async def save_many(self, rates: Sequence[ExchangeRate]) -> None:
         """Crea o reemplaza cada (base, quote, fecha)."""
+
+    @abstractmethod
+    async def latest_on_or_before(
+        self, base: str, quote: str, day: date
+    ) -> ExchangeRate | None: ...

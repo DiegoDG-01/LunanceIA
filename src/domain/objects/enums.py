@@ -132,6 +132,20 @@ class ProviderSymbolStatus(str, Enum):
     UNSUPPORTED = "UNSUPPORTED"
 
 
+class TradeType(str, Enum):
+    """Operaciones sobre un valor. DIVIDEND entra al disponible; SPLIT no mueve dinero."""
+
+    BUY = "BUY"
+    SELL = "SELL"
+    DIVIDEND = "DIVIDEND"
+    SPLIT = "SPLIT"
+
+
+class HoldingStatus(str, Enum):
+    OPEN = "OPEN"
+    CLOSED = "CLOSED"
+
+
 class APIKeyScope(str, Enum):
     TRANSACTIONS_READ = "transactions:read"
     TRANSACTIONS_WRITE = "transactions:write"

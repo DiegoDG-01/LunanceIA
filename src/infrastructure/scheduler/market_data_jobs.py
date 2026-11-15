@@ -1,7 +1,7 @@
 """Jobs de precios de mercado: cierres diarios, tipo de cambio y catálogo de valores."""
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from application.interfaces.market_data import NoProviderAvailable
 from application.securities.commands.sync_instrument_catalog import (
@@ -11,6 +11,10 @@ from application.securities.commands.sync_instrument_catalog import (
 from application.securities.commands.sync_market_data import (
     SyncMarketDataCommand,
     SyncMarketDataHandler,
+)
+from application.securities.commands.track_instrument import (
+    TrackInstrumentCommand,
+    TrackInstrumentHandler,
 )
 from application.securities.services.price_sync import InstrumentPriceSync
 from domain.objects.enums import Market
@@ -113,3 +117,43 @@ async def sync_instrument_catalog_job() -> None:
                 logger.exception(
                     "Error syncing instrument catalog", extra={"market": market.value}
                 )
+
+
+async def track_instrument_job(instrument_id: int, since: date) -> None:
+    """Backfill de un valor después de registrar una operación (en `BackgroundTasks`, con
+    su propia sesión: la de la petición ya se cerró). Si falla, el job de la noche lo
+    retoma porque `tracked_since` ya quedó guardado."""
+    gateway = get_market_data_gateway()
+    async with AsyncSessionLocal() as db:
+        try:
+            instruments = SQLAlchemyInstrumentRepository(db)
+            prices = SQLAlchemyInstrumentPriceRepository(db)
+            handler = TrackInstrumentHandler(
+                instrument_repository=instruments,
+                price_repository=prices,
+                price_sync=InstrumentPriceSync(
+                    instrument_repository=instruments,
+                    symbol_repository=SQLAlchemyInstrumentProviderSymbolRepository(db),
+                    price_repository=prices,
+                    gateway=gateway,
+                ),
+                uow=SQLAlchemyUnitOfWork(db),
+            )
+            result = await handler.handle(
+                TrackInstrumentCommand(
+                    instrument_id=instrument_id,
+                    since=since,
+                    as_of=datetime.now(UTC).date(),
+                )
+            )
+            if result.error:
+                logger.warning(
+                    "Instrument backfill failed; the nightly job will retry",
+                    extra={"instrument_id": instrument_id, "detail": result.error},
+                )
+        except Exception:
+            await db.rollback()
+            logger.exception(
+                "Error backfilling instrument prices",
+                extra={"instrument_id": instrument_id},
+            )

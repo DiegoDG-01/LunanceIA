@@ -443,6 +443,64 @@ class InstrumentNotFoundError(NotFoundError):
         super().__init__(f"Valor con ID {instrument_uuid} no encontrado")
 
 
+class SecurityTradeNotFoundError(NotFoundError):
+    """Operación (compra, venta, dividendo o split) no encontrada."""
+
+    def __init__(self, trade_uuid: str):
+        super().__init__(f"Operación con ID {trade_uuid} no encontrada")
+
+
+class SecurityHoldingNotFoundError(NotFoundError):
+    """Tenencia de un valor no encontrada."""
+
+    def __init__(self, holding_uuid: str):
+        super().__init__(f"Tenencia con ID {holding_uuid} no encontrada")
+
+
+class InvalidSecurityTradeError(ValidationError):
+    """Los datos de la operación no son válidos para su tipo."""
+
+    def __init__(self, reason: str):
+        super().__init__(f"Operación no válida: {reason}")
+
+
+class InsufficientSharesError(BusinessRuleError):
+    """Una venta o un split dejaría la tenencia con menos títulos de los que hay."""
+
+    def __init__(self, symbol: str, on: str, available: str, requested: str):
+        super().__init__(
+            f"No hay suficientes títulos de {symbol} el {on}: hay {available} y se "
+            f"necesitan {requested}"
+        )
+
+
+class SecurityAccountTypeNotAllowedError(BusinessRuleError):
+    """El tipo de cuenta no admite acciones."""
+
+    def __init__(self, account_type: str):
+        super().__init__(f"Las cuentas de tipo {account_type} no admiten acciones")
+
+
+class SecurityCurrencyMismatchError(BusinessRuleError):
+    """La moneda de la cuenta no es la del valor."""
+
+    def __init__(self, account_currency: str, instrument_currency: str):
+        super().__init__(
+            f"El valor cotiza en {instrument_currency} y la cuenta es en "
+            f"{account_currency}: usa una cuenta en {instrument_currency}"
+        )
+
+
+class SecurityTradeTransactionLockedError(BusinessRuleError):
+    """La transacción pertenece a una operación de acciones: se edita desde ahí."""
+
+    def __init__(self):
+        super().__init__(
+            "Esta transacción es de una operación de acciones; edítala o bórrala desde "
+            "/securities/trades"
+        )
+
+
 class InvestmentPositionNotFoundError(NotFoundError):
     """Apartado de inversión no encontrado."""
 
