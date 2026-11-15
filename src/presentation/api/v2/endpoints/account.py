@@ -138,7 +138,7 @@ async def create_account(
         name=account_request.name,
         account_type=account_request.account_type,
         initial_balance=account_request.initial_balance,
-        currency=account_request.currency,
+        currency=account_request.currency.value,
         credit_card_settings=cc_settings_dto,
     )
 

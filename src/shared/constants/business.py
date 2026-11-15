@@ -21,8 +21,8 @@ MAX_PAGE_SIZE = 100
 TRANSACTION_HISTORY_DAYS = 365  # 1 año
 MAX_EXPORT_TRANSACTIONS = 10000
 
-# Monedas soportadas
-SUPPORTED_CURRENCIES = ["MXN", "USD", "EUR", "GBP"]
+# Monedas soportadas: las mismas que `domain.objects.enums.Currency`.
+SUPPORTED_CURRENCIES = ("MXN", "USD", "EUR")
 DEFAULT_CURRENCY = "MXN"
 
 # Categorías por defecto (IDs)

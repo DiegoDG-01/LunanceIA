@@ -10,7 +10,7 @@ from domain.objects.enums import (
     PositionStatus,
     PositionType,
 )
-from domain.objects.money import Money
+from domain.objects.money import Money, ensure_supported_currency
 from shared.exceptions.domain import (
     FixedTermCapNotAllowedError,
     FixedTermDepositNotAllowedError,
@@ -81,6 +81,7 @@ class InvestmentPosition:
         overflow_action: OverflowAction | None = None,
         overflow_position_id: int | None = None,
     ) -> "InvestmentPosition":
+        ensure_supported_currency(initial_balance.currency)
         if annual_rate < 0:
             raise InvalidInvestmentRateError(str(annual_rate))
         if (

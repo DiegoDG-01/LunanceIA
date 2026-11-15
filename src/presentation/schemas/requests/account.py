@@ -2,7 +2,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field, field_validator
 
-from domain.objects.enums import AccountType
+from domain.objects.enums import AccountType, Currency
+from presentation.schemas.requests.currency import CurrencyCode
 from shared.exceptions.domain import InvalidAccountSettingsError
 
 
@@ -26,7 +27,9 @@ class CreateAccountRequest(BaseModel):
     initial_balance: Decimal = Field(
         Decimal("0.00"), ge=Decimal(0), description="Balance inicial"
     )
-    currency: str = Field("MXN", min_length=3, max_length=3, description="Moneda")
+    currency: CurrencyCode = Field(
+        Currency.MXN, description="Moneda: MXN, USD o EUR. No se cambia después"
+    )
     is_active: bool = Field(True, description="Estado de la cuenta")
     credit_card_settings: CreditCardSettingsRequest | None = None
 

@@ -4,8 +4,8 @@ from decimal import Decimal
 from typing import cast
 
 from domain.objects.credit_card_settings import CreditCardSettings
-from domain.objects.enums import AccountType
-from domain.objects.money import Money
+from domain.objects.enums import AccountType, Currency
+from domain.objects.money import Money, ensure_supported_currency
 from shared.exceptions.domain import AccountInactiveError, InvalidBalanceUpdateError
 
 
@@ -34,7 +34,8 @@ class Account:
         initial_balance: Money | None = None,
     ) -> "Account":
         if initial_balance is None:
-            initial_balance = Money(Decimal(0), "MXN")
+            initial_balance = Money(Decimal(0), Currency.MXN.value)
+        ensure_supported_currency(initial_balance.currency)
 
         return cls(
             id=None,
