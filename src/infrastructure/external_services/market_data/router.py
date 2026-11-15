@@ -9,10 +9,14 @@ proveedor que falla queda marcado como caído un rato y la siguiente petición l
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable, Mapping, Sequence
+from dataclasses import replace
 from datetime import date
 
 from application.interfaces.market_data import (
     FxRateProvider,
+    InstrumentCatalogSource,
+    InstrumentListing,
+    InstrumentSearchSource,
     MarketDataError,
     MarketDataGateway,
     MarketDataProvider,
@@ -73,6 +77,15 @@ class MarketDataRouter(MarketDataGateway):
                     usable.append(name)
             self._routes[market] = tuple(usable)
         self._fx_providers = tuple(fx_providers)
+        # Catálogo y búsqueda: los proveedores de precios que además los ofrecen.
+        self._catalog_sources = [
+            p
+            for p in self._providers.values()
+            if isinstance(p, InstrumentCatalogSource)
+        ]
+        self._search_sources = [
+            p for p in self._providers.values() if isinstance(p, InstrumentSearchSource)
+        ]
         self._quotas = quotas
         self._health = health
         self._max_quota_wait = max_quota_wait
@@ -99,13 +112,18 @@ class MarketDataRouter(MarketDataGateway):
         attempts: list[ProviderAttempt] = []
         unsupported: list[ProviderName] = []
         for name in order:
-            if name in skip:
-                attempts.append(ProviderAttempt(name, "unsupported", "marcado antes"))
-                continue
             provider = self._providers[name]
             provider_symbol = (provider_symbols or {}).get(
                 name
             ) or provider.provider_symbol(market, symbol)
+            if name in skip:
+                attempts.append(
+                    ProviderAttempt(
+                        name, "unsupported", "marcado antes", provider_symbol
+                    )
+                )
+                continue
+            first_new = len(attempts)
             try:
                 closes = await self._attempt(
                     name,
@@ -117,6 +135,9 @@ class MarketDataRouter(MarketDataGateway):
             except _Unsupported:
                 unsupported.append(name)
                 continue
+            finally:
+                for i in range(first_new, len(attempts)):
+                    attempts[i] = replace(attempts[i], provider_symbol=provider_symbol)
             if closes is None:
                 continue
             return RoutedCloses(
@@ -146,6 +167,45 @@ class MarketDataRouter(MarketDataGateway):
             if rates is not None:
                 return RoutedRates(provider=provider.name, rates=rates)
         raise NoProviderAvailable(f"{base}/{quote}", attempts)
+
+    def has_catalog(self, market: Market) -> bool:
+        return any(market in s.catalog_markets for s in self._catalog_sources)
+
+    async def fetch_catalog(self, market: Market) -> list[InstrumentListing]:
+        attempts: list[ProviderAttempt] = []
+        for source in self._catalog_sources:
+            if market not in source.catalog_markets:
+                continue
+            try:
+                listings = await self._attempt(
+                    source.name,
+                    lambda s=source: s.fetch_catalog(market),
+                    attempts,
+                )
+            except _Unsupported:
+                continue
+            if listings is not None:
+                return listings
+        raise NoProviderAvailable(f"catálogo {market.value}", attempts)
+
+    async def search_instruments(
+        self, market: Market, query: str
+    ) -> list[InstrumentListing]:
+        attempts: list[ProviderAttempt] = []
+        for source in self._search_sources:
+            if market not in source.search_markets:
+                continue
+            try:
+                listings = await self._attempt(
+                    source.name,
+                    lambda s=source: s.search(query, market),
+                    attempts,
+                )
+            except _Unsupported:
+                continue
+            if listings is not None:
+                return listings
+        raise NoProviderAvailable(f"búsqueda {market.value}:{query}", attempts)
 
     async def _attempt(self, name, call, attempts: list[ProviderAttempt]):
         """Resultado de la llamada, o None si hay que pasar al siguiente. Lanza `_Unsupported`

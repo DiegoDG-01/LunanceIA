@@ -78,6 +78,7 @@ from shared.exceptions.domain import (
     InvalidTransactionTypeError,
     InvestmentPositionLockedError,
     InvestmentPositionNotActiveError,
+    InstrumentNotFoundError,
     InvestmentPositionNotFoundError,
     InvestmentPositionNotMaturedError,
     LastLoginMethodError,
@@ -140,6 +141,7 @@ EXCEPTION_MAP: dict[type[Exception], tuple[str, int]] = {
     CreditCardSettingsNotFoundError: ("CREDIT_CARD_SETTINGS_NOT_FOUND", 404),
     TransactionNotActivityError: ("NOT_FOUND_ACTIVITY", 404),
     InvestmentPositionNotFoundError: ("NOT_FOUND_INVESTMENT_POSITION", 404),
+    InstrumentNotFoundError: ("NOT_FOUND_INSTRUMENT", 404),
     # Fallback para cualquier NotFoundError sin entrada específica
     # (presupuestos, metas de ahorro, compras a plazos, bancos, etc.)
     NotFoundError: ("NOT_FOUND", 404),

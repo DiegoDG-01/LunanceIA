@@ -436,6 +436,13 @@ class InvalidSubscriptionDateRangeError(ValidationError):
 
 
 # Investment Position Exceptions
+class InstrumentNotFoundError(NotFoundError):
+    """Valor (acción, ETF o FIBRA) no encontrado en el catálogo."""
+
+    def __init__(self, instrument_uuid: str):
+        super().__init__(f"Valor con ID {instrument_uuid} no encontrado")
+
+
 class InvestmentPositionNotFoundError(NotFoundError):
     """Apartado de inversión no encontrado."""
 

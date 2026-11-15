@@ -13,18 +13,24 @@ import httpx
 
 from application.interfaces.market_data import (
     DailyClose,
+    InstrumentCatalogSource,
+    InstrumentListing,
     MarketDataProvider,
     ProviderName,
     ProviderUnavailable,
     SymbolNotSupported,
 )
-from domain.objects.enums import Market
+from domain.objects.enums import InstrumentType, Market
 from infrastructure.external_services.market_data.provider_http import ProviderHttp
 
+# `/v2/emisoras?mercado=`: local es BMV y BIVA; global es el SIC.
+_CATALOG_SEGMENT = {Market.BMV: "local", Market.SIC: "global"}
 
-class DataBursatilProvider(MarketDataProvider):
+
+class DataBursatilProvider(MarketDataProvider, InstrumentCatalogSource):
     name = ProviderName.DATABURSATIL
     markets = frozenset({Market.BMV, Market.SIC})
+    catalog_markets = frozenset(_CATALOG_SEGMENT)
     BASE_URL = "https://api.databursatil.com/v2"
 
     def __init__(
@@ -83,6 +89,48 @@ class DataBursatilProvider(MarketDataProvider):
         closes.sort(key=lambda c: c.price_date)
         return [c for c in closes if start <= c.price_date <= end]
 
+    async def fetch_catalog(self, market: Market) -> list[InstrumentListing]:
+        """Todas las emisoras del mercado, activas y suspendidas. Responde
+        `{"WALMEX": {"*": {"razon_social": ..., "isin": ..., "estatus": "ACTIVA", ...}}}`.
+        Cuesta ~470 créditos (local) y ~1,800 (global)."""
+        segment = _CATALOG_SEGMENT.get(market)
+        if segment is None:
+            raise SymbolNotSupported(self.name, f"sin catálogo para {market.value}")
+        response = await self._http.get(
+            f"{self.BASE_URL}/emisoras",
+            params={"token": self._token, "mercado": segment},
+        )
+        data = self._http.json(response)
+        if response.status_code != 200 or not isinstance(data, dict):
+            raise ProviderUnavailable(
+                self.name,
+                f"HTTP {response.status_code}: {self._http.snippet(response)}",
+            )
+        listings: dict[str, InstrumentListing] = {}
+        for issuer, series in data.items():
+            if not isinstance(series, dict) or issuer in ("", "None"):
+                continue
+            for serie, info in series.items():
+                if not isinstance(info, dict) or serie in ("", "None"):
+                    continue
+                symbol = f"{issuer}{serie}".strip().upper()
+                if not symbol or len(symbol) > 30:
+                    continue
+                isin = str(info.get("isin") or "").strip().upper()
+                listings[symbol] = InstrumentListing(
+                    market=market,
+                    symbol=symbol,
+                    name=str(info.get("razon_social") or symbol).strip()[:255],
+                    instrument_type=_instrument_type(
+                        str(info.get("tipo_valor_descripcion") or "")
+                    ),
+                    currency="MXN",
+                    isin=isin if len(isin) == 12 else None,
+                    exchange=(str(info.get("bolsa") or "").strip()[:60] or None),
+                    is_active=str(info.get("estatus") or "").upper() == "ACTIVA",
+                )
+        return list(listings.values())
+
     async def remaining_credits(self) -> int | None:
         """Créditos del mes que quedan (1 crédito por KiB de respuesta)."""
         response = await self._http.get(
@@ -113,3 +161,15 @@ def _decimal(value) -> Decimal | None:
         return Decimal(str(value))
     except ArithmeticError:
         return None
+
+
+def _instrument_type(description: str) -> InstrumentType:
+    """Por la descripción del tipo de valor de la BMV: los códigos varían entre segmentos."""
+    text = description.upper()
+    if "FIBRA" in text:
+        return InstrumentType.FIBRA
+    if "TRAC" in text or "CANASTA" in text:
+        return InstrumentType.ETF
+    if text.startswith("ACCIONES"):
+        return InstrumentType.STOCK
+    return InstrumentType.OTHER

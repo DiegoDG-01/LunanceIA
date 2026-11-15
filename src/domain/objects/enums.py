@@ -118,6 +118,20 @@ class Market(str, Enum):
     US = "US"
 
 
+class InstrumentType(str, Enum):
+    STOCK = "STOCK"
+    ETF = "ETF"
+    FIBRA = "FIBRA"
+    OTHER = "OTHER"
+
+
+class ProviderSymbolStatus(str, Enum):
+    """Si un proveedor tiene el valor. UNSUPPORTED: no lo conoce o su plan no lo cubre."""
+
+    ACTIVE = "ACTIVE"
+    UNSUPPORTED = "UNSUPPORTED"
+
+
 class APIKeyScope(str, Enum):
     TRANSACTIONS_READ = "transactions:read"
     TRANSACTIONS_WRITE = "transactions:write"

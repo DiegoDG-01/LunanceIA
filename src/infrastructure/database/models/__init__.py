@@ -7,6 +7,12 @@ from .category import CategoryModel
 from .credit_card import CreditCardSettingsModel
 from .idempotency_key import IdempotencyKeyModel
 from .installment import InstallmentChargeModel, InstallmentPurchaseModel
+from .instrument import (
+    ExchangeRateModel,
+    InstrumentModel,
+    InstrumentPriceModel,
+    InstrumentProviderSymbolModel,
+)
 from .investment_position import InvestmentPositionModel
 from .investment_yield import InvestmentYieldModel
 from .notifications import NotificationModel
@@ -31,10 +37,14 @@ __all__ = [
     "CategoryModel",
     "CreditCardSettingsModel",
     "EmailVerificationTokenModel",
+    "ExchangeRateModel",
     "IdempotencyKeyModel",
     "IncomeDepositModel",
     "InstallmentChargeModel",
     "InstallmentPurchaseModel",
+    "InstrumentModel",
+    "InstrumentPriceModel",
+    "InstrumentProviderSymbolModel",
     "InvestmentPositionModel",
     "InvestmentYieldModel",
     "NotificationModel",

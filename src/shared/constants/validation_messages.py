@@ -159,6 +159,7 @@ HTTP_CODES_ERRORS = {
         "NOT_FOUND_SUBSCRIPTION": "Suscripción no encontrada",
         "NOT_FOUND_ACTIVITY": "No se encontró ningún movimiento",
         "NOT_FOUND_INVESTMENT_POSITION": "Apartado de inversión no encontrado",
+        "NOT_FOUND_INSTRUMENT": "Valor no encontrado",
         # Códigos específicos de Lunance - Conflictos de negocio
         "BUSINESS_EMAIL_EXISTS": "El email ya está registrado",
         "BUSINESS_USERNAME_EXISTS": "Ese nombre de usuario ya está en uso",
@@ -245,6 +246,7 @@ HTTP_CODES_ERRORS = {
         "NOT_FOUND_SUBSCRIPTION": "Subscription not found",
         "NOT_FOUND_ACTIVITY": "No movement was found",
         "NOT_FOUND_INVESTMENT_POSITION": "Investment position not found",
+        "NOT_FOUND_INSTRUMENT": "Security not found",
         # Códigos específicos de Lunance - Conflictos de negocio
         "INVALID_CREDENTIALS": "Invalid credentials",
         "BUSINESS_EMAIL_EXISTS": "Email already registered",

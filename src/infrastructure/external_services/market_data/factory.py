@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from functools import lru_cache
 
 import httpx
 from redis.asyncio import Redis
@@ -10,7 +11,7 @@ from application.interfaces.market_data import (
 )
 from domain.objects.enums import Market
 from infrastructure.cache.redis import get_redis
-from infrastructure.config.settings import Settings
+from infrastructure.config.settings import Settings, settings
 from infrastructure.external_services.market_data.banxico import BanxicoFxProvider
 from infrastructure.external_services.market_data.databursatil import (
     DataBursatilProvider,
@@ -117,3 +118,10 @@ def build_market_data_router(
         quotas=ProviderQuotas(RedisRateLimiter(redis, prefix="md")),
         health=ProviderHealth(redis),
     )
+
+
+@lru_cache(maxsize=1)
+def get_market_data_gateway() -> MarketDataRouter:
+    """El router de la app, armado una vez con las settings. Redis se resuelve en cada
+    llamada, así que se puede crear antes del `lifespan`."""
+    return build_market_data_router(settings)

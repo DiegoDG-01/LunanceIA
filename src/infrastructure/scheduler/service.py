@@ -12,6 +12,10 @@ from infrastructure.scheduler.jobs import (
     purge_auth_data_job,
     purge_idempotency_keys_job,
 )
+from infrastructure.scheduler.market_data_jobs import (
+    sync_instrument_catalog_job,
+    sync_market_data_job,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +72,24 @@ class SchedulerService:
             trigger=CronTrigger(hour=3, minute=30),
             id="purge_idempotency_keys_job",
             name="Purge idempotency keys older than 24 h",
+            replace_existing=True,
+        )
+
+        # Las bolsas cierran entre 20:00 y 21:00 UTC: a la 01:00 ya hay cierre del día. La
+        # corrida de las 13:00 recoge lo que falló y las correcciones de los proveedores.
+        self.scheduler.add_job(
+            sync_market_data_job,
+            trigger=CronTrigger(hour="1,13", minute=0),
+            id="sync_market_data_job",
+            name="Sync daily closes and FX rates",
+            replace_existing=True,
+        )
+
+        self.scheduler.add_job(
+            sync_instrument_catalog_job,
+            trigger=CronTrigger(day_of_week="sun", hour=2, minute=0),
+            id="sync_instrument_catalog_job",
+            name="Sync the BMV/BIVA and SIC instrument catalog",
             replace_existing=True,
         )
 

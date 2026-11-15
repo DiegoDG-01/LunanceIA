@@ -13,23 +13,32 @@ import httpx
 
 from application.interfaces.market_data import (
     DailyClose,
+    InstrumentListing,
+    InstrumentSearchSource,
     MarketDataProvider,
     ProviderName,
     ProviderUnavailable,
     QuotaExhausted,
     SymbolNotSupported,
 )
-from domain.objects.enums import Market
+from domain.objects.enums import InstrumentType, Market
 from infrastructure.external_services.market_data.provider_http import (
     ProviderHttp,
     seconds_until_utc_midnight,
 )
 
+_TYPES = {
+    "common stock": InstrumentType.STOCK,
+    "etf": InstrumentType.ETF,
+}
 
-class TwelveDataProvider(MarketDataProvider):
+
+class TwelveDataProvider(MarketDataProvider, InstrumentSearchSource):
     name = ProviderName.TWELVEDATA
     markets = frozenset({Market.US})
+    search_markets = frozenset({Market.US})
     URL = "https://api.twelvedata.com/time_series"
+    SEARCH_URL = "https://api.twelvedata.com/symbol_search"
 
     def __init__(
         self, *, api_key: str, transport: httpx.AsyncBaseTransport | None = None
@@ -74,6 +83,42 @@ class TwelveDataProvider(MarketDataProvider):
         ]
         closes.sort(key=lambda c: c.price_date)
         return [c for c in closes if start <= c.price_date <= end]
+
+    async def search(self, query: str, market: Market) -> list[InstrumentListing]:
+        """Valores de EE. UU. que coinciden con `query` (símbolo o nombre). La búsqueda
+        devuelve el mismo símbolo en varias bolsas del mundo: se queda con el listado de
+        EE. UU. en dólares."""
+        if market is not Market.US:
+            return []
+        response = await self._http.get(
+            self.SEARCH_URL,
+            params={"symbol": query, "outputsize": 30, "apikey": self._api_key},
+        )
+        data = self._http.json(response)
+        if not isinstance(data, dict):
+            raise ProviderUnavailable(self.name, "respuesta inesperada")
+        if data.get("status") not in (None, "ok"):
+            self._raise_error(query, response, data)
+        listings: dict[str, InstrumentListing] = {}
+        for row in data.get("data") or []:
+            if not isinstance(row, dict):
+                continue
+            if row.get("country") != "United States" or row.get("currency") != "USD":
+                continue
+            symbol = str(row.get("symbol") or "").strip().upper()
+            if not symbol or len(symbol) > 30 or symbol in listings:
+                continue
+            listings[symbol] = InstrumentListing(
+                market=Market.US,
+                symbol=symbol,
+                name=str(row.get("instrument_name") or symbol).strip()[:255],
+                instrument_type=_TYPES.get(
+                    str(row.get("instrument_type") or "").lower(), InstrumentType.OTHER
+                ),
+                currency="USD",
+                exchange=(str(row.get("exchange") or "").strip()[:60] or None),
+            )
+        return list(listings.values())
 
     def _raise_error(
         self, symbol: str, response: httpx.Response, data: dict
