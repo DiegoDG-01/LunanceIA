@@ -25,3 +25,11 @@ class SecurityHolding:
     opened_at: date | None = None
     closed_at: date | None = None
     updated_at: datetime | None = None
+    # Fotos diarias: hasta qué día están hechas y desde qué día hay que rehacerlas (una
+    # operación, un precio o un tipo de cambio cambió). None: no hay nada pendiente.
+    snapshots_through: date | None = None
+    snapshots_dirty_from: date | None = None
+
+    def mark_dirty_from(self, day: date) -> None:
+        if self.snapshots_dirty_from is None or day < self.snapshots_dirty_from:
+            self.snapshots_dirty_from = day

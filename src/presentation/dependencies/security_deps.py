@@ -31,6 +31,7 @@ from infrastructure.database.repositories.sqlalchemy_price_repository import (
     SQLAlchemyInstrumentPriceRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_trade_repository import (
+    SQLAlchemyHoldingSnapshotRepository,
     SQLAlchemySecurityHoldingRepository,
     SQLAlchemySecurityTradeRepository,
 )
@@ -118,4 +119,5 @@ def get_holding_queries(db: AsyncSession = Depends(get_db)) -> HoldingQueries:
             price_repository=SQLAlchemyInstrumentPriceRepository(db),
             fx_repository=SQLAlchemyExchangeRateRepository(db),
         ),
+        snapshot_repository=SQLAlchemyHoldingSnapshotRepository(db),
     )

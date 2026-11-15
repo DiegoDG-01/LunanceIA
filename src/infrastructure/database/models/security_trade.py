@@ -92,6 +92,10 @@ class SecurityHoldingModel(Base):
     status: Mapped[HoldingStatus] = mapped_column(Enum(HoldingStatus))
     opened_at: Mapped[date | None] = mapped_column(Date, nullable=True)
     closed_at: Mapped[date | None] = mapped_column(Date, nullable=True)
+    snapshots_through: Mapped[date | None] = mapped_column(Date, nullable=True)
+    snapshots_dirty_from: Mapped[date | None] = mapped_column(
+        Date, nullable=True, index=True
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -100,4 +104,27 @@ class SecurityHoldingModel(Base):
         UniqueConstraint(
             "account_id", "instrument_id", name="uq_holding_account_instrument"
         ),
+    )
+
+
+class HoldingSnapshotModel(Base):
+    __tablename__ = "holding_snapshots"
+
+    holding_id: Mapped[int] = mapped_column(
+        ForeignKey("security_holdings.id", ondelete="CASCADE"), primary_key=True
+    )
+    snapshot_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    quantity: Mapped[Decimal] = mapped_column(DECIMAL(24, 8))
+    close: Mapped[Decimal | None] = mapped_column(DECIMAL(20, 6), nullable=True)
+    price_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    fx_rate: Mapped[Decimal | None] = mapped_column(DECIMAL(18, 8), nullable=True)
+    market_value: Mapped[Decimal | None] = mapped_column(DECIMAL(15, 2), nullable=True)
+    market_value_mxn: Mapped[Decimal | None] = mapped_column(
+        DECIMAL(15, 2), nullable=True
+    )
+    cost_basis: Mapped[Decimal] = mapped_column(DECIMAL(15, 2))
+    realized_pnl: Mapped[Decimal] = mapped_column(DECIMAL(15, 2))
+    dividends: Mapped[Decimal] = mapped_column(DECIMAL(15, 2))
+    unrealized_pnl: Mapped[Decimal | None] = mapped_column(
+        DECIMAL(15, 2), nullable=True
     )

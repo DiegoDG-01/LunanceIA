@@ -37,7 +37,7 @@ class DeleteTradeHandler:
             )
             await books.move_money(context, old=trade, new=None)
             await books.trades.delete(cast(int, trade.id))
-            holding = await books.recompute(context)
+            holding = await books.recompute(context, changed_from=trade.trade_date)
             await self._uow.commit()
 
         return TradeResultDTO(

@@ -4,6 +4,7 @@ from decimal import Decimal
 from pydantic import BaseModel
 
 from application.securities.dto import HoldingDTO, TradeDTO, TradeResultDTO
+from domain.entities.securities.holding_snapshot import HoldingSnapshot
 from domain.entities.securities.instrument import Instrument
 from domain.entities.securities.instrument_price import InstrumentPrice
 from domain.objects.enums import HoldingStatus, InstrumentType, Market, TradeType
@@ -126,3 +127,29 @@ class TradeResultResponse(BaseModel):
             holding=HoldingResponse.from_dto(dto.holding) if dto.holding else None,
             account_available_balance=dto.account_available_balance,
         )
+
+
+class HoldingSnapshotResponse(BaseModel):
+    """Una foto diaria. `close` es el último cierre conocido hasta ese día (`price_date`);
+    sin cierres todavía, la valuación llega en null."""
+
+    snapshot_date: date
+    quantity: Decimal
+    close: Decimal | None
+    price_date: date | None
+    market_value: Decimal | None
+    fx_rate: Decimal | None
+    market_value_mxn: Decimal | None
+    cost_basis: Decimal
+    unrealized_pnl: Decimal | None
+    realized_pnl: Decimal
+    dividends: Decimal
+
+    @classmethod
+    def from_entity(cls, snapshot: HoldingSnapshot) -> "HoldingSnapshotResponse":
+        return cls(**{f: getattr(snapshot, f) for f in cls.model_fields})
+
+
+class HoldingHistoryResponse(BaseModel):
+    holding: HoldingResponse
+    snapshots: list[HoldingSnapshotResponse]

@@ -82,7 +82,7 @@ class RecordTradeHandler:
             trade = await books.trades.create(trade)
             trade.transaction_id = await books.move_money(context, old=None, new=trade)
             trade = await books.trades.update(trade)
-            holding = await books.recompute(context)
+            holding = await books.recompute(context, changed_from=trade.trade_date)
             await books.instruments.track_since(
                 cast(int, context.instrument.id), trade.trade_date
             )

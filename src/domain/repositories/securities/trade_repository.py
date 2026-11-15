@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
+from datetime import date
 
+from domain.entities.securities.holding_snapshot import HoldingSnapshot
 from domain.entities.securities.security_holding import SecurityHolding
 from domain.entities.securities.security_trade import SecurityTrade
 
@@ -69,3 +72,47 @@ class SecurityHoldingRepository(ABC):
 
     @abstractmethod
     async def delete(self, holding_id: int) -> None: ...
+
+    @abstractmethod
+    async def get_by_id(
+        self, holding_id: int, *, for_update: bool = False
+    ) -> SecurityHolding | None: ...
+
+    @abstractmethod
+    async def list_needing_snapshots(
+        self, as_of: date, *, instrument_id: int | None = None
+    ) -> list[int]:
+        """Ids de las tenencias con fotos pendientes: marcadas para rehacer, o abiertas y
+        con fotos que no llegan a `as_of`."""
+
+    @abstractmethod
+    async def mark_dirty_for_instrument(self, instrument_id: int, since: date) -> None:
+        """Pide rehacer las fotos desde `since` de todas las tenencias del valor."""
+
+    @abstractmethod
+    async def mark_dirty_for_currency(self, currency: str, since: date) -> None:
+        """Lo mismo para las tenencias de valores en `currency` (cambió el tipo de cambio)."""
+
+    @abstractmethod
+    async def finish_snapshots(
+        self, holding_id: int, *, through: date | None, dirty_from: date | None
+    ) -> None:
+        """Guarda hasta dónde quedaron las fotos y limpia la marca, pero solo si sigue siendo
+        `dirty_from`: si alguien la adelantó mientras tanto, queda para la siguiente vez."""
+
+
+class HoldingSnapshotRepository(ABC):
+    @abstractmethod
+    async def replace_from(
+        self, holding_id: int, start: date, snapshots: Sequence[HoldingSnapshot]
+    ) -> None:
+        """Borra las fotos desde `start` y guarda `snapshots`."""
+
+    @abstractmethod
+    async def get_range(
+        self, holding_id: int, start: date, end: date
+    ) -> list[HoldingSnapshot]: ...
+
+    @abstractmethod
+    async def last_before(self, holding_id: int, day: date) -> HoldingSnapshot | None:
+        """La foto más reciente anterior a `day`."""

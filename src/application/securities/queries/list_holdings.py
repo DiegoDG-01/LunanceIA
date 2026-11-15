@@ -7,10 +7,12 @@ from typing import cast
 
 from application.securities.dto import HoldingDTO, TradeDTO
 from application.securities.services.valuation import HoldingValuer
+from domain.entities.securities.holding_snapshot import HoldingSnapshot
 from domain.entities.securities.security_holding import SecurityHolding
 from domain.repositories.accounts.account_repository import AccountRepository
 from domain.repositories.securities.instrument_repository import InstrumentRepository
 from domain.repositories.securities.trade_repository import (
+    HoldingSnapshotRepository,
     SecurityHoldingRepository,
     SecurityTradeRepository,
 )
@@ -30,6 +32,20 @@ class GetHoldingQuery:
     holding_uuid: str
 
 
+@dataclass
+class HoldingHistoryQuery:
+    user_id: int
+    holding_uuid: str
+    start: date
+    end: date
+
+
+@dataclass(frozen=True, slots=True)
+class HoldingHistory:
+    holding: HoldingDTO
+    snapshots: list[HoldingSnapshot]
+
+
 @dataclass(frozen=True, slots=True)
 class HoldingDetail:
     holding: HoldingDTO
@@ -45,8 +61,10 @@ class HoldingQueries:
         holding_repository: SecurityHoldingRepository,
         trade_repository: SecurityTradeRepository,
         valuer: HoldingValuer,
+        snapshot_repository: HoldingSnapshotRepository | None = None,
         today: Callable[[], date] = lambda: datetime.now(UTC).date(),
     ) -> None:
+        self._snapshots = snapshot_repository
         self._accounts = account_repository
         self._instruments = instrument_repository
         self._holdings = holding_repository
@@ -87,6 +105,22 @@ class HoldingQueries:
                 for t in reversed(trades)
             ],
         )
+
+    async def history(self, query: HoldingHistoryQuery) -> HoldingHistory:
+        """Fotos diarias guardadas del rango. Las de hoy se agregan con el job de precios;
+        tras registrar una operación, en segundo plano."""
+        if self._snapshots is None:
+            raise RuntimeError("HoldingQueries sin repositorio de fotos")
+        holding = await self._holdings.get_by_uuid_and_user_id(
+            query.holding_uuid, query.user_id
+        )
+        if holding is None:
+            raise SecurityHoldingNotFoundError(query.holding_uuid)
+        [dto] = await self._build([holding])
+        snapshots = await self._snapshots.get_range(
+            cast(int, holding.id), query.start, query.end
+        )
+        return HoldingHistory(holding=dto, snapshots=snapshots)
 
     async def _build(self, holdings: list[SecurityHolding]) -> list[HoldingDTO]:
         if not holdings:
