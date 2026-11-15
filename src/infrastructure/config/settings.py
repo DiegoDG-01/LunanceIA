@@ -34,7 +34,6 @@ class Settings(BaseSettings):
 
     ENVIRONMENT: str = "PROD"
     FRONTEND_URL: str = ""
-    BANXICO_TOKEN: str = ""
 
     DB_HOST: str = "localhost"
     DB_PORT: str = "3306"
@@ -80,6 +79,24 @@ class Settings(BaseSettings):
     APPLE_PRIVATE_KEY: SecretStr = SecretStr("")
     # Cifra en reposo el refresh token de Apple (AES-256-GCM; al menos 32 caracteres).
     APPLE_TOKEN_ENCRYPTION_KEY: SecretStr = SecretStr("")
+
+    # Precios de mercado (acciones, ETFs, FIBRAs) y tipo de cambio. Todas opcionales: sin
+    # llave, el proveedor queda fuera de las rutas. Banxico da el FIX de USD/MXN.
+    DATABURSATIL_TOKEN: SecretStr = SecretStr("")
+    EODHD_API_KEY: SecretStr = SecretStr("")
+    TWELVEDATA_API_KEY: SecretStr = SecretStr("")
+    BANXICO_TOKEN: SecretStr = SecretStr("")
+    # Orden de proveedores por mercado: `MERCADO=prov1,prov2;...`. El primero es el
+    # preferido; los siguientes solo entran si el anterior falla.
+    MARKET_DATA_ROUTES: str = (
+        "BMV=databursatil,eodhd;SIC=databursatil,eodhd;US=twelvedata,eodhd"
+    )
+    # Días hábiles hacia atrás que se vuelven a pedir en cada corrida: los proveedores
+    # corrigen cierres recientes.
+    MARKET_DATA_REVISION_DAYS: int = Field(default=10, ge=0)
+    # Yahoo no tiene API oficial: apagado salvo que se encienda a mano. Encendido, entra al
+    # final de cada ruta.
+    MARKET_DATA_ENABLE_YAHOO: bool = False
 
     AI_PROVIDER: str
     AI_MODEL_ID: str
