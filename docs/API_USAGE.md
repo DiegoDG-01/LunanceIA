@@ -923,10 +923,18 @@ GET /api/v2/transaction/
     "creation_date": "2024-12-14T10:30:00Z",
     "account_name": "Cuenta Principal",
     "account_type": "CHECKING",
-    "account_uuid": "660e8400-e29b-41d4-a716-446655440001"
+    "account_uuid": "660e8400-e29b-41d4-a716-446655440001",
+    "security_trade_uuid": null,
+    "security_holding_uuid": null
   }
 ]
 ```
+
+`security_trade_uuid` y `security_holding_uuid` vienen llenos cuando el movimiento lo creó una
+operación de acciones (una compra, venta o dividendo). Ese movimiento no se edita ni se borra
+desde `/transaction/` (responde `409 SECURITY_TRADE_TRANSACTION_LOCKED`): se cambia la
+operación en `/securities/trades/{security_trade_uuid}`, y su tenencia se consulta en
+`/securities/holdings/{security_holding_uuid}`. El detalle por UUID trae los mismos campos.
 
 #### Obtener Transacción por UUID
 ```bash
@@ -1731,7 +1739,8 @@ Se rechazan con `409 INSUFFICIENT_SHARES` si dejan alguna venta o split posterio
 títulos (por ejemplo, borrar la compra detrás de una venta).
 
 > La transacción de una operación no se edita ni se borra desde `/transaction/`: responde
-> `409 SECURITY_TRADE_TRANSACTION_LOCKED`.
+> `409 SECURITY_TRADE_TRANSACTION_LOCKED`. En `GET /transaction/` se reconoce porque trae
+> `security_trade_uuid` y `security_holding_uuid`.
 
 #### Listar operaciones
 ```bash
