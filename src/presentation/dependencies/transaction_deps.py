@@ -56,14 +56,22 @@ def get_transactions_handler(
     transaction_repo: SQLAlchemyTransactionRepository = Depends(
         get_transaction_repository
     ),
+    db: AsyncSession = Depends(get_db),
 ) -> GetTransactionsHandler:
-    return GetTransactionsHandler(transaction_repo)
+    return GetTransactionsHandler(
+        transaction_repo,
+        security_trade_repository=SQLAlchemySecurityTradeRepository(db),
+    )
 
 
 def get_transaction_by_uuid_handler(
     transaction_repository: TransactionRepository = Depends(get_transaction_repository),
+    db: AsyncSession = Depends(get_db),
 ) -> GetTransactionByUuidHandler:
-    return GetTransactionByUuidHandler(transaction_repository)
+    return GetTransactionByUuidHandler(
+        transaction_repository,
+        security_trade_repository=SQLAlchemySecurityTradeRepository(db),
+    )
 
 
 def get_create_transaction_handler(

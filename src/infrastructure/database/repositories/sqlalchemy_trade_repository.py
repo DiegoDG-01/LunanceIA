@@ -12,6 +12,7 @@ from domain.repositories.securities.trade_repository import (
     HoldingSnapshotRepository,
     SecurityHoldingRepository,
     SecurityTradeRepository,
+    TradeLink,
 )
 from infrastructure.database.models.instrument import InstrumentModel
 from infrastructure.database.models.security_trade import (
@@ -158,6 +159,33 @@ class SQLAlchemySecurityTradeRepository(SecurityTradeRepository):
             select(exists().where(SecurityTradeModel.transaction_id == transaction_id))
         )
         return bool(result.scalar())
+
+    async def links_for_transactions(
+        self, transaction_ids: Sequence[int]
+    ) -> dict[int, TradeLink]:
+        if not transaction_ids:
+            return {}
+        rows = await self.db.execute(
+            select(
+                SecurityTradeModel.transaction_id,
+                SecurityTradeModel.uuid,
+                SecurityHoldingModel.uuid,
+            )
+            .outerjoin(
+                SecurityHoldingModel,
+                (SecurityHoldingModel.account_id == SecurityTradeModel.account_id)
+                & (
+                    SecurityHoldingModel.instrument_id
+                    == SecurityTradeModel.instrument_id
+                ),
+            )
+            .where(SecurityTradeModel.transaction_id.in_(set(transaction_ids)))
+        )
+        return {
+            transaction_id: TradeLink(trade_uuid, holding_uuid)
+            for transaction_id, trade_uuid, holding_uuid in rows
+            if transaction_id is not None
+        }
 
 
 class SQLAlchemySecurityHoldingRepository(SecurityHoldingRepository):
