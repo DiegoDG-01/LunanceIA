@@ -378,47 +378,54 @@ class TestTrades:
         assert response.json()["error_code"] == "SECURITY_TRADE_TRANSACTION_LOCKED"
 
 
+async def _walmex_with_snapshots(http_client, auth_tokens, db_session) -> str:
+    """Compra 10 WALMEX el 6 de noviembre a 50, cierre de 52 y fotos hasta el 9."""
+    account_uuid = await _account(http_client, auth_tokens)
+    walmex = await _instrument(db_session)
+    headers = auth_tokens.get_auth_headers()
+    response = await http_client.post(
+        "/securities/trades/",
+        json={
+            "account_uuid": account_uuid,
+            "instrument_uuid": walmex.uuid,
+            "trade_type": "BUY",
+            "trade_date": "2026-11-06",
+            "quantity": "10",
+            "price": "50",
+        },
+        headers=with_idempotency_key(headers),
+    )
+    holding_uuid = response.json()["holding"]["uuid"]
+    await SQLAlchemyInstrumentPriceRepository(db_session).save_many(
+        [
+            InstrumentPrice(
+                instrument_id=cast(int, walmex.id),
+                price_date=date(2026, 11, 6),
+                close=Decimal("52"),
+                provider="databursatil",
+            )
+        ]
+    )
+    # Lo que hacen el backfill en segundo plano y el job de la noche.
+    await RebuildSnapshotsHandler(
+        holding_repository=SQLAlchemySecurityHoldingRepository(db_session),
+        trade_repository=SQLAlchemySecurityTradeRepository(db_session),
+        snapshot_repository=SQLAlchemyHoldingSnapshotRepository(db_session),
+        instrument_repository=SQLAlchemyInstrumentRepository(db_session),
+        price_repository=SQLAlchemyInstrumentPriceRepository(db_session),
+        fx_repository=SQLAlchemyExchangeRateRepository(db_session),
+        uow=_NoCommit(),
+    ).handle(RebuildSnapshotsCommand(as_of=date(2026, 11, 9)))
+    return holding_uuid
+
+
 @pytest.mark.e2e
 class TestHistory:
     async def test_daily_snapshots(
         self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens, db_session, tracked
     ):
-        account_uuid = await _account(http_client, auth_tokens)
-        walmex = await _instrument(db_session)
+        holding_uuid = await _walmex_with_snapshots(http_client, auth_tokens, db_session)
         headers = auth_tokens.get_auth_headers()
-        response = await http_client.post(
-            "/securities/trades/",
-            json={
-                "account_uuid": account_uuid,
-                "instrument_uuid": walmex.uuid,
-                "trade_type": "BUY",
-                "trade_date": "2026-11-06",
-                "quantity": "10",
-                "price": "50",
-            },
-            headers=with_idempotency_key(headers),
-        )
-        holding_uuid = response.json()["holding"]["uuid"]
-        await SQLAlchemyInstrumentPriceRepository(db_session).save_many(
-            [
-                InstrumentPrice(
-                    instrument_id=cast(int, walmex.id),
-                    price_date=date(2026, 11, 6),
-                    close=Decimal("52"),
-                    provider="databursatil",
-                )
-            ]
-        )
-        # Lo que hacen el backfill en segundo plano y el job de la noche.
-        await RebuildSnapshotsHandler(
-            holding_repository=SQLAlchemySecurityHoldingRepository(db_session),
-            trade_repository=SQLAlchemySecurityTradeRepository(db_session),
-            snapshot_repository=SQLAlchemyHoldingSnapshotRepository(db_session),
-            instrument_repository=SQLAlchemyInstrumentRepository(db_session),
-            price_repository=SQLAlchemyInstrumentPriceRepository(db_session),
-            fx_repository=SQLAlchemyExchangeRateRepository(db_session),
-            uow=_NoCommit(),
-        ).handle(RebuildSnapshotsCommand(as_of=date(2026, 11, 9)))
 
         history = await http_client.get(
             f"/securities/holdings/{holding_uuid}/history",
@@ -448,3 +455,50 @@ class TestHistory:
         )
         assert response.status_code == 404
         assert response.json()["error_code"] == "NOT_FOUND_SECURITY_HOLDING"
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+class TestPortfolio:
+    async def test_summary_and_history(
+        self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens, db_session, tracked
+    ):
+        await _walmex_with_snapshots(http_client, auth_tokens, db_session)
+        headers = auth_tokens.get_auth_headers()
+
+        summary = await http_client.get("/securities/portfolio/", headers=headers)
+        assert summary.status_code == 200, summary.text
+        body = summary.json()
+        assert body["cash"] == "9500.00"
+        assert body["securities"] == "520.00"
+        assert body["invested"] == "520.00"
+        assert body["net_worth"] == "10020.00"
+        assert body["missing"] == []
+
+        history = await http_client.get(
+            "/securities/portfolio/history",
+            params={"from": "2026-11-01", "to": "2026-11-12"},
+            headers=headers,
+        )
+        assert history.status_code == 200, history.text
+        days = history.json()["days"]
+        assert [d["date"] for d in days][:2] == ["2026-11-06", "2026-11-07"]
+        assert days[0] == {
+            "date": "2026-11-06",
+            "positions": "0.00",
+            "securities": "520.00",
+            "total": "520.00",
+            "complete": True,
+        }
+        # Las fotos llegan hasta el 9: lo que sigue queda pendiente.
+        assert [d["complete"] for d in days[3:]] == [True, False, False, False]
+
+    async def test_history_rejects_a_reversed_range(
+        self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens
+    ):
+        response = await http_client.get(
+            "/securities/portfolio/history",
+            params={"from": "2026-11-10", "to": "2026-11-01"},
+            headers=auth_tokens.get_auth_headers(),
+        )
+        assert response.status_code == 400

@@ -65,6 +65,7 @@ class TestDashboardAPI:
             "top_account",
             "today_transactions",
             "category_distribution",
+            "net_worth",
         }
 
         # The logic: 500 (income) and 200 (expense)
@@ -75,6 +76,12 @@ class TestDashboardAPI:
         assert data["top_account"] == account_data["name"]
         assert isinstance(data["today_transactions"], list)
         assert isinstance(data["category_distribution"], list)
+        # 1000 inicial + 500 de ingreso - 200 de gasto; sin apartados ni acciones.
+        net_worth = data["net_worth"]
+        assert float(net_worth["cash"]) == 1300.00
+        assert float(net_worth["invested"]) == 0
+        assert float(net_worth["net_worth"]) == 1300.00
+        assert net_worth["missing"] == []
 
     @pytest.mark.asyncio
     async def test_mobile_dashboard_summary_returns_only_expense_metrics(
@@ -124,6 +131,7 @@ class TestDashboardAPI:
             "top_category",
             "category_distribution",
             "monthly_budget",
+            "net_worth",
         }
         assert float(data["total_spent"]) == 400.00
         assert data["top_category"] == "Alimentos"
