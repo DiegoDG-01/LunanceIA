@@ -1,14 +1,21 @@
-from sqlalchemy import delete, desc, exists, select
+from collections.abc import Sequence
+from datetime import date
+
+from sqlalchemy import case, delete, desc, exists, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from domain.entities.securities.holding_snapshot import HoldingSnapshot
 from domain.entities.securities.security_holding import SecurityHolding
 from domain.entities.securities.security_trade import SecurityTrade
 from domain.objects.enums import HoldingStatus
 from domain.repositories.securities.trade_repository import (
+    HoldingSnapshotRepository,
     SecurityHoldingRepository,
     SecurityTradeRepository,
 )
+from infrastructure.database.models.instrument import InstrumentModel
 from infrastructure.database.models.security_trade import (
+    HoldingSnapshotModel,
     SecurityHoldingModel,
     SecurityTradeModel,
 )
@@ -43,6 +50,8 @@ _HOLDING_FIELDS = (
     "status",
     "opened_at",
     "closed_at",
+    "snapshots_through",
+    "snapshots_dirty_from",
 )
 
 
@@ -226,3 +235,160 @@ class SQLAlchemySecurityHoldingRepository(SecurityHoldingRepository):
             delete(SecurityHoldingModel).where(SecurityHoldingModel.id == holding_id)
         )
         await self.db.flush()
+
+    async def get_by_id(
+        self, holding_id: int, *, for_update: bool = False
+    ) -> SecurityHolding | None:
+        stmt = select(SecurityHoldingModel).where(SecurityHoldingModel.id == holding_id)
+        if for_update:
+            stmt = stmt.with_for_update()
+        result = await self.db.execute(stmt)
+        model = result.scalar_one_or_none()
+        return _holding(model) if model else None
+
+    async def list_needing_snapshots(
+        self, as_of: date, *, instrument_id: int | None = None
+    ) -> list[int]:
+        model = SecurityHoldingModel
+        stmt = select(model.id).where(
+            or_(
+                model.snapshots_dirty_from.is_not(None),
+                model.snapshots_through.is_(None),
+                (model.status == HoldingStatus.OPEN)
+                & (model.snapshots_through < as_of),
+            )
+        )
+        if instrument_id is not None:
+            stmt = stmt.where(model.instrument_id == instrument_id)
+        result = await self.db.execute(stmt.order_by(model.id))
+        return list(result.scalars())
+
+    def _mark(self, since: date):
+        dirty = SecurityHoldingModel.snapshots_dirty_from
+        return case(
+            (dirty.is_(None), since),
+            (dirty > since, since),
+            else_=dirty,
+        )
+
+    async def mark_dirty_for_instrument(self, instrument_id: int, since: date) -> None:
+        # Solo si ya hay fotos de ese día: las que faltan las agrega la corrida normal.
+        await self.db.execute(
+            update(SecurityHoldingModel)
+            .where(
+                SecurityHoldingModel.instrument_id == instrument_id,
+                SecurityHoldingModel.snapshots_through >= since,
+            )
+            .values(snapshots_dirty_from=self._mark(since))
+            .execution_options(synchronize_session=False)
+        )
+
+    async def mark_dirty_for_currency(self, currency: str, since: date) -> None:
+        await self.db.execute(
+            update(SecurityHoldingModel)
+            .where(
+                SecurityHoldingModel.instrument_id.in_(
+                    select(InstrumentModel.id).where(
+                        InstrumentModel.currency == currency
+                    )
+                ),
+                SecurityHoldingModel.snapshots_through >= since,
+            )
+            .values(snapshots_dirty_from=self._mark(since))
+            .execution_options(synchronize_session=False)
+        )
+
+    async def finish_snapshots(
+        self, holding_id: int, *, through: date | None, dirty_from: date | None
+    ) -> None:
+        values: dict = {"snapshots_through": through}
+        if dirty_from is not None:
+            dirty = SecurityHoldingModel.snapshots_dirty_from
+            values["snapshots_dirty_from"] = case(
+                (dirty == dirty_from, None), else_=dirty
+            )
+        await self.db.execute(
+            update(SecurityHoldingModel)
+            .where(SecurityHoldingModel.id == holding_id)
+            .values(**values)
+            .execution_options(synchronize_session=False)
+        )
+
+
+_SNAPSHOT_FIELDS = (
+    "quantity",
+    "close",
+    "price_date",
+    "fx_rate",
+    "market_value",
+    "market_value_mxn",
+    "cost_basis",
+    "realized_pnl",
+    "dividends",
+    "unrealized_pnl",
+)
+
+
+def _snapshot(model: HoldingSnapshotModel) -> HoldingSnapshot:
+    return HoldingSnapshot(
+        holding_id=model.holding_id,
+        snapshot_date=model.snapshot_date,
+        **{f: getattr(model, f) for f in _SNAPSHOT_FIELDS},
+    )
+
+
+class SQLAlchemyHoldingSnapshotRepository(HoldingSnapshotRepository):
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def replace_from(
+        self, holding_id: int, start: date, snapshots: Sequence[HoldingSnapshot]
+    ) -> None:
+        await self.db.execute(
+            delete(HoldingSnapshotModel).where(
+                HoldingSnapshotModel.holding_id == holding_id,
+                HoldingSnapshotModel.snapshot_date >= start,
+            )
+        )
+        self.db.add_all(
+            [
+                HoldingSnapshotModel(
+                    holding_id=s.holding_id,
+                    snapshot_date=s.snapshot_date,
+                    **{f: getattr(s, f) for f in _SNAPSHOT_FIELDS},
+                )
+                for s in snapshots
+            ]
+        )
+        await self.db.flush()
+        # Las fotos son muchas y no se vuelven a leer en esta sesión.
+        for model in list(self.db.new) + list(self.db.identity_map.values()):
+            if isinstance(model, HoldingSnapshotModel):
+                self.db.expunge(model)
+
+    async def get_range(
+        self, holding_id: int, start: date, end: date
+    ) -> list[HoldingSnapshot]:
+        result = await self.db.execute(
+            select(HoldingSnapshotModel)
+            .where(
+                HoldingSnapshotModel.holding_id == holding_id,
+                HoldingSnapshotModel.snapshot_date >= start,
+                HoldingSnapshotModel.snapshot_date <= end,
+            )
+            .order_by(HoldingSnapshotModel.snapshot_date)
+        )
+        return [_snapshot(m) for m in result.scalars()]
+
+    async def last_before(self, holding_id: int, day: date) -> HoldingSnapshot | None:
+        result = await self.db.execute(
+            select(HoldingSnapshotModel)
+            .where(
+                HoldingSnapshotModel.holding_id == holding_id,
+                HoldingSnapshotModel.snapshot_date < day,
+            )
+            .order_by(HoldingSnapshotModel.snapshot_date.desc())
+            .limit(1)
+        )
+        model = result.scalar_one_or_none()
+        return _snapshot(model) if model else None

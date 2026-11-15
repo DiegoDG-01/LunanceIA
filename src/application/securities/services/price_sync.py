@@ -27,6 +27,7 @@ from domain.repositories.securities.instrument_repository import (
     InstrumentRepository,
 )
 from domain.repositories.securities.price_repository import InstrumentPriceRepository
+from domain.repositories.securities.trade_repository import SecurityHoldingRepository
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +55,12 @@ class InstrumentPriceSync:
         symbol_repository: InstrumentProviderSymbolRepository,
         price_repository: InstrumentPriceRepository,
         gateway: MarketDataGateway,
+        holding_repository: SecurityHoldingRepository | None = None,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self._instruments = instrument_repository
+        # Para pedir que se rehagan las fotos de las tenencias cuando cambia un precio.
+        self._holdings = holding_repository
         self._symbols = symbol_repository
         self._prices = price_repository
         self._gateway = gateway
@@ -167,6 +171,10 @@ class InstrumentPriceSync:
             )
         if to_save:
             await self._prices.save_many(to_save)
+            if self._holdings is not None:
+                await self._holdings.mark_dirty_for_instrument(
+                    instrument_id, min(p.price_date for p in to_save)
+                )
         return InstrumentSyncResult(
             instrument_id=instrument_id,
             provider=routed.provider.value,

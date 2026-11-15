@@ -64,42 +64,47 @@ def trade_order(trade: SecurityTrade) -> tuple:
 def replay(trades: Iterable[SecurityTrade], *, symbol: str = "") -> HoldingState:
     state = HoldingState()
     for trade in sorted(trades, key=trade_order):
-        state.trades += 1
-        if trade.trade_type is TradeType.BUY:
-            if state.quantity.is_zero():
-                state.opened_at = trade.trade_date
-                state.closed_at = None
-            state.quantity += trade.quantity
-            state.cost += trade.quantity * trade.price + trade.fees
-        elif trade.trade_type is TradeType.SELL:
-            if trade.quantity > state.quantity:
-                raise InsufficientSharesError(
-                    symbol,
-                    trade.trade_date.isoformat(),
-                    f"{state.quantity.normalize():f}",
-                    f"{trade.quantity.normalize():f}",
-                )
-            removed = state.cost * trade.quantity / state.quantity
-            state.realized_pnl += trade.quantity * trade.price - trade.fees - removed
-            state.quantity -= trade.quantity
-            state.cost -= removed
-            if state.quantity.is_zero():
-                state.cost = ZERO
-                state.closed_at = trade.trade_date
-        elif trade.trade_type is TradeType.DIVIDEND:
-            if state.opened_at is None:
-                raise InvalidSecurityTradeError(
-                    f"no hay compras de {symbol} antes del dividendo del "
-                    f"{trade.trade_date.isoformat()}"
-                )
-            state.dividends += trade.cash_amount
-        else:
-            if state.quantity.is_zero():
-                raise InsufficientSharesError(
-                    symbol, trade.trade_date.isoformat(), "0", "títulos para el split"
-                )
-            ratio = Decimal(trade.split_to or 1) / Decimal(trade.split_from or 1)
-            state.quantity = (state.quantity * ratio).quantize(
-                QUANTITY_STEP, rounding=ROUND_HALF_UP
-            )
+        apply_trade(state, trade, symbol=symbol)
     return state
+
+
+def apply_trade(state: HoldingState, trade: SecurityTrade, *, symbol: str = "") -> None:
+    """Aplica una operación a `state` (en orden: ver `trade_order`)."""
+    state.trades += 1
+    if trade.trade_type is TradeType.BUY:
+        if state.quantity.is_zero():
+            state.opened_at = trade.trade_date
+            state.closed_at = None
+        state.quantity += trade.quantity
+        state.cost += trade.quantity * trade.price + trade.fees
+    elif trade.trade_type is TradeType.SELL:
+        if trade.quantity > state.quantity:
+            raise InsufficientSharesError(
+                symbol,
+                trade.trade_date.isoformat(),
+                f"{state.quantity.normalize():f}",
+                f"{trade.quantity.normalize():f}",
+            )
+        removed = state.cost * trade.quantity / state.quantity
+        state.realized_pnl += trade.quantity * trade.price - trade.fees - removed
+        state.quantity -= trade.quantity
+        state.cost -= removed
+        if state.quantity.is_zero():
+            state.cost = ZERO
+            state.closed_at = trade.trade_date
+    elif trade.trade_type is TradeType.DIVIDEND:
+        if state.opened_at is None:
+            raise InvalidSecurityTradeError(
+                f"no hay compras de {symbol} antes del dividendo del "
+                f"{trade.trade_date.isoformat()}"
+            )
+        state.dividends += trade.cash_amount
+    else:
+        if state.quantity.is_zero():
+            raise InsufficientSharesError(
+                symbol, trade.trade_date.isoformat(), "0", "títulos para el split"
+            )
+        ratio = Decimal(trade.split_to or 1) / Decimal(trade.split_from or 1)
+        state.quantity = (state.quantity * ratio).quantize(
+            QUANTITY_STEP, rounding=ROUND_HALF_UP
+        )

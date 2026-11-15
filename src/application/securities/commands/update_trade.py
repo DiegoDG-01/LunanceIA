@@ -72,7 +72,9 @@ class UpdateTradeHandler:
 
             trade.transaction_id = await books.move_money(context, old=old, new=trade)
             trade = await books.trades.update(trade)
-            holding = await books.recompute(context)
+            holding = await books.recompute(
+                context, changed_from=min(old.trade_date, trade.trade_date)
+            )
             await books.instruments.track_since(old.instrument_id, trade.trade_date)
             await self._uow.commit()
 

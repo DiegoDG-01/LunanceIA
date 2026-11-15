@@ -4,6 +4,10 @@ import logging
 from datetime import UTC, date, datetime
 
 from application.interfaces.market_data import NoProviderAvailable
+from application.securities.commands.rebuild_snapshots import (
+    RebuildSnapshotsCommand,
+    RebuildSnapshotsHandler,
+)
 from application.securities.commands.sync_instrument_catalog import (
     SyncInstrumentCatalogCommand,
     SyncInstrumentCatalogHandler,
@@ -28,6 +32,11 @@ from infrastructure.database.repositories.sqlalchemy_price_repository import (
     SQLAlchemyExchangeRateRepository,
     SQLAlchemyInstrumentPriceRepository,
 )
+from infrastructure.database.repositories.sqlalchemy_trade_repository import (
+    SQLAlchemyHoldingSnapshotRepository,
+    SQLAlchemySecurityHoldingRepository,
+    SQLAlchemySecurityTradeRepository,
+)
 from infrastructure.database.repositories.sqlalchemy_unit_of_work import (
     SQLAlchemyUnitOfWork,
 )
@@ -38,6 +47,34 @@ from infrastructure.external_services.market_data.factory import (
 logger = logging.getLogger(__name__)
 
 
+async def rebuild_snapshots(db, *, instrument_id: int | None = None) -> None:
+    """Rehace las fotos diarias pendientes (todas, o solo las de un valor)."""
+    handler = RebuildSnapshotsHandler(
+        holding_repository=SQLAlchemySecurityHoldingRepository(db),
+        trade_repository=SQLAlchemySecurityTradeRepository(db),
+        snapshot_repository=SQLAlchemyHoldingSnapshotRepository(db),
+        instrument_repository=SQLAlchemyInstrumentRepository(db),
+        price_repository=SQLAlchemyInstrumentPriceRepository(db),
+        fx_repository=SQLAlchemyExchangeRateRepository(db),
+        uow=SQLAlchemyUnitOfWork(db),
+    )
+    stats = await handler.handle(
+        RebuildSnapshotsCommand(
+            as_of=datetime.now(UTC).date(), instrument_id=instrument_id
+        )
+    )
+    logger.info(
+        "Holding snapshots rebuilt",
+        extra={
+            "instrument_id": instrument_id,
+            "holdings": stats.holdings,
+            "rebuilt": stats.rebuilt,
+            "failed": stats.failed,
+            "snapshots": stats.snapshots,
+        },
+    )
+
+
 async def sync_market_data_job() -> None:
     """Pone al día cierres y tipo de cambio. Corre a la 01:00 UTC (las bolsas ya cerraron)
     y se repite a las 13:00 UTC para recoger lo que haya fallado o se haya corregido."""
@@ -46,6 +83,7 @@ async def sync_market_data_job() -> None:
         try:
             instruments = SQLAlchemyInstrumentRepository(db)
             prices = SQLAlchemyInstrumentPriceRepository(db)
+            holdings = SQLAlchemySecurityHoldingRepository(db)
             handler = SyncMarketDataHandler(
                 instrument_repository=instruments,
                 price_repository=prices,
@@ -55,9 +93,11 @@ async def sync_market_data_job() -> None:
                     symbol_repository=SQLAlchemyInstrumentProviderSymbolRepository(db),
                     price_repository=prices,
                     gateway=gateway,
+                    holding_repository=holdings,
                 ),
                 gateway=gateway,
                 uow=SQLAlchemyUnitOfWork(db),
+                holding_repository=holdings,
             )
             stats = await handler.handle(
                 SyncMarketDataCommand(
@@ -79,6 +119,13 @@ async def sync_market_data_job() -> None:
         except Exception:
             await db.rollback()
             logger.exception("Error running market data sync job")
+    # Aunque la sincronización falle: las fotos del día se agregan con lo que haya.
+    async with AsyncSessionLocal() as db:
+        try:
+            await rebuild_snapshots(db)
+        except Exception:
+            await db.rollback()
+            logger.exception("Error rebuilding holding snapshots")
 
 
 async def sync_instrument_catalog_job() -> None:
@@ -120,9 +167,10 @@ async def sync_instrument_catalog_job() -> None:
 
 
 async def track_instrument_job(instrument_id: int, since: date) -> None:
-    """Backfill de un valor después de registrar una operación (en `BackgroundTasks`, con
-    su propia sesión: la de la petición ya se cerró). Si falla, el job de la noche lo
-    retoma porque `tracked_since` ya quedó guardado."""
+    """Después de registrar una operación (en `BackgroundTasks`, con su propia sesión: la de
+    la petición ya se cerró): backfill de precios del valor y fotos de sus tenencias. Si
+    falla, el job de la noche lo retoma porque `tracked_since` y la marca ya quedaron
+    guardados."""
     gateway = get_market_data_gateway()
     async with AsyncSessionLocal() as db:
         try:
@@ -136,6 +184,7 @@ async def track_instrument_job(instrument_id: int, since: date) -> None:
                     symbol_repository=SQLAlchemyInstrumentProviderSymbolRepository(db),
                     price_repository=prices,
                     gateway=gateway,
+                    holding_repository=SQLAlchemySecurityHoldingRepository(db),
                 ),
                 uow=SQLAlchemyUnitOfWork(db),
             )
@@ -151,6 +200,8 @@ async def track_instrument_job(instrument_id: int, since: date) -> None:
                     "Instrument backfill failed; the nightly job will retry",
                     extra={"instrument_id": instrument_id, "detail": result.error},
                 )
+            # La operación marcó su tenencia: sus fotos quedan al día ya con los precios.
+            await rebuild_snapshots(db, instrument_id=instrument_id)
         except Exception:
             await db.rollback()
             logger.exception(

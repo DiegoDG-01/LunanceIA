@@ -23,6 +23,7 @@ from domain.repositories.securities.price_repository import (
     ExchangeRateRepository,
     InstrumentPriceRepository,
 )
+from domain.repositories.securities.trade_repository import SecurityHoldingRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
 
 logger = logging.getLogger(__name__)
@@ -80,9 +81,11 @@ class SyncMarketDataHandler:
         price_sync: InstrumentPriceSync,
         gateway: MarketDataGateway,
         uow: AbstractUnitOfWork,
+        holding_repository: SecurityHoldingRepository | None = None,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self._instruments = instrument_repository
+        self._holdings = holding_repository
         self._prices = price_repository
         self._fx = fx_repository
         self._price_sync = price_sync
@@ -187,6 +190,10 @@ class SyncMarketDataHandler:
                 ]
                 if to_save:
                     await self._fx.save_many(to_save)
+                    if self._holdings is not None:
+                        await self._holdings.mark_dirty_for_currency(
+                            base, min(r.rate_date for r in to_save)
+                        )
                 await self._uow.commit()
                 stats.fx_saved += len(to_save)
             except NoProviderAvailable as error:

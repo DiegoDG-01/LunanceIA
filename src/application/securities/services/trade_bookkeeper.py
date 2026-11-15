@@ -170,9 +170,12 @@ class TradeBookkeeper:
         created = await self.transactions.create(movement)
         return created.id
 
-    async def recompute(self, context: TradeContext) -> SecurityHolding | None:
-        """Recalcula la tenencia con todas sus operaciones. Lanza `InsufficientSharesError`
-        si alguna venta o split se queda sin títulos. None si ya no quedan operaciones."""
+    async def recompute(
+        self, context: TradeContext, *, changed_from: date
+    ) -> SecurityHolding | None:
+        """Recalcula la tenencia con todas sus operaciones y marca sus fotos para rehacer
+        desde `changed_from`. Lanza `InsufficientSharesError` si alguna venta o split se
+        queda sin títulos. None si ya no quedan operaciones."""
         account_id = cast(int, context.account.id)
         instrument_id = cast(int, context.instrument.id)
         trades = await self.trades.list_for_holding(
@@ -206,4 +209,5 @@ class TradeBookkeeper:
         holding.status = state.status
         holding.opened_at = state.opened_at
         holding.closed_at = state.closed_at
+        holding.mark_dirty_from(changed_from)
         return await self.holdings.save(holding)

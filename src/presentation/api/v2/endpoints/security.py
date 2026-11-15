@@ -24,6 +24,7 @@ from application.securities.queries.get_instrument_prices import (
 )
 from application.securities.queries.list_holdings import (
     GetHoldingQuery,
+    HoldingHistoryQuery,
     HoldingQueries,
     ListHoldingsQuery,
 )
@@ -66,7 +67,9 @@ from presentation.schemas.requests.security import (
 )
 from presentation.schemas.responses.security import (
     HoldingDetailResponse,
+    HoldingHistoryResponse,
     HoldingResponse,
+    HoldingSnapshotResponse,
     InstrumentPriceResponse,
     InstrumentPricesResponse,
     InstrumentResponse,
@@ -291,4 +294,36 @@ async def get_holding(
     return HoldingDetailResponse(
         holding=HoldingResponse.from_dto(detail.holding),
         trades=[TradeResponse.from_dto(t) for t in detail.trades],
+    )
+
+
+@router.get("/holdings/{holding_uuid}/history", response_model=HoldingHistoryResponse)
+async def get_holding_history(
+    request: Request,
+    holding_uuid: str,
+    from_date: date | None = Query(None, alias="from"),
+    to_date: date | None = Query(None, alias="to"),
+    current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_READ.value)),
+    queries: HoldingQueries = Depends(get_holding_queries),
+):
+    """Fotos diarias de la tenencia: cantidad, valor, costo y ganancias de cada día de
+    calendario. Por defecto, los últimos 365 días."""
+    await enforce_rate_limit(limiter_50_per_minute, request)
+    end = to_date or datetime.now(UTC).date()
+    start = from_date or end - timedelta(days=365)
+    if start > end:
+        raise ValidationError("'from' no puede ser posterior a 'to'")
+    if (end - start).days > MAX_PRICE_RANGE_DAYS:
+        raise ValidationError(f"El rango máximo es de {MAX_PRICE_RANGE_DAYS} días")
+    history = await queries.history(
+        HoldingHistoryQuery(
+            user_id=cast(int, current_user.id),
+            holding_uuid=holding_uuid,
+            start=start,
+            end=end,
+        )
+    )
+    return HoldingHistoryResponse(
+        holding=HoldingResponse.from_dto(history.holding),
+        snapshots=[HoldingSnapshotResponse.from_entity(s) for s in history.snapshots],
     )
