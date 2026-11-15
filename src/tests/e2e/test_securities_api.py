@@ -377,6 +377,59 @@ class TestTrades:
         assert response.status_code == 409
         assert response.json()["error_code"] == "SECURITY_TRADE_TRANSACTION_LOCKED"
 
+    async def test_transactions_point_to_the_trade_that_made_them(
+        self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens, db_session, tracked
+    ):
+        account_uuid = await _account(http_client, auth_tokens)
+        walmex = await _instrument(db_session)
+        headers = auth_tokens.get_auth_headers()
+        bought = await http_client.post(
+            "/securities/trades/",
+            json={
+                "account_uuid": account_uuid,
+                "instrument_uuid": walmex.uuid,
+                "trade_type": "BUY",
+                "trade_date": "2026-11-03",
+                "quantity": "10",
+                "price": "50",
+            },
+            headers=with_idempotency_key(headers),
+        )
+        assert bought.status_code == 201, bought.text
+        expense = await http_client.post(
+            "/transaction",
+            json={
+                "account_uuid": account_uuid,
+                "category_id": 1,
+                "transaction_type": "EXPENSE",
+                "amount": 20,
+                "description": "Súper",
+                "transaction_date": "2026-11-04",
+            },
+            headers=with_idempotency_key(headers),
+        )
+        assert expense.status_code == 200, expense.text
+        assert expense.json()["security_trade_uuid"] is None
+
+        response = await http_client.get(
+            "/transaction", params={"account_uuid": account_uuid}, headers=headers
+        )
+        assert response.status_code == 200, response.text
+        links = {
+            t["uuid"]: (t["security_trade_uuid"], t["security_holding_uuid"])
+            for t in response.json()
+        }
+        trade, holding = bought.json()["trade"], bought.json()["holding"]
+        linked = [uuid for uuid, link in links.items() if link != (None, None)]
+        assert len(linked) == 1
+        assert links[linked[0]] == (trade["uuid"], holding["uuid"])
+        assert links[expense.json()["uuid"]] == (None, None)
+
+        detail = await http_client.get(f"/transaction/{linked[0]}/", headers=headers)
+        assert detail.status_code == 200, detail.text
+        assert detail.json()["security_trade_uuid"] == trade["uuid"]
+        assert detail.json()["security_holding_uuid"] == holding["uuid"]
+
 
 async def _walmex_with_snapshots(http_client, auth_tokens, db_session) -> str:
     """Compra 10 WALMEX el 6 de noviembre a 50, cierre de 52 y fotos hasta el 9."""
