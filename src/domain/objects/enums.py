@@ -1,6 +1,14 @@
 from enum import Enum
 
 
+class Currency(str, Enum):
+    """Monedas con las que se puede tener una cuenta o un apartado."""
+
+    MXN = "MXN"
+    USD = "USD"
+    EUR = "EUR"
+
+
 class InterestType(str, Enum):
     SIMPLE = "SIMPLE"
     COMPOUND = "COMPOUND"

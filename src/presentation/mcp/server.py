@@ -309,7 +309,7 @@ async def create_account(
     name: str,
     account_type: str,  # CHECKING / SAVINGS / CREDIT_CARD / DEBIT_CARD / INVESTMENT / CASH
     initial_balance: float = 0.0,
-    currency: str = "MXN",
+    currency: str = "MXN",  # MXN / USD / EUR
     # Ajustes de tarjeta de crédito (solo cuando account_type == CREDIT_CARD)
     billing_cycle_day: int | None = None,  # día de facturación 1-31
     payment_due_day: int | None = None,  # día de pago 1-31
@@ -318,7 +318,8 @@ async def create_account(
 ) -> str:
     """Crea una nueva cuenta del usuario. 'account_type' debe ser uno de:
     CHECKING, SAVINGS, CREDIT_CARD, DEBIT_CARD, INVESTMENT, CASH. 'bank_id' es el
-    ID del banco (usa list_banks/list_accounts como referencia).
+    ID del banco (usa list_banks/list_accounts como referencia). 'currency' es
+    MXN, USD o EUR y no se puede cambiar después.
 
     INVESTMENT es solo una etiqueta para organizar (plataformas de inversión);
     los rendimientos se configuran creando apartados con create_position en

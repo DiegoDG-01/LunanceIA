@@ -1,11 +1,25 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
+from domain.objects.enums import Currency
 from shared.exceptions.domain import (
     CurrencyMismatchError,
     InsufficientFundsError,
+    InvalidCurrencyError,
     NegativeAmountError,
 )
+
+SUPPORTED_CURRENCIES = frozenset(c.value for c in Currency)
+
+
+def ensure_supported_currency(currency: str) -> None:
+    """Una cuenta o un apartado solo puede estar en MXN, USD o EUR.
+
+    `Money` no lo exige por sí solo: también representa precios de valores, que pueden
+    venir en otra moneda.
+    """
+    if currency not in SUPPORTED_CURRENCIES:
+        raise InvalidCurrencyError(currency)
 
 
 @dataclass(frozen=True)

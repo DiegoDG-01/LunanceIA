@@ -5,6 +5,8 @@ import re
 from email_validator import EmailNotValidError, validate_email
 from pydantic import EmailStr
 
+from shared.constants.business import SUPPORTED_CURRENCIES
+
 
 def validate_email_format(email: EmailStr) -> bool:
     """Valida formato de email."""
@@ -38,9 +40,8 @@ def validate_password_strength(password: str) -> list[str]:
 
 
 def validate_currency_code(currency: str) -> bool:
-    """Valida código de moneda ISO."""
-    valid_currencies = ["MXN", "USD", "EUR", "GBP", "CAD", "JPY", "CHF", "AUD"]
-    return currency.upper() in valid_currencies
+    """True si la moneda está entre las soportadas (sin importar mayúsculas)."""
+    return currency.upper() in SUPPORTED_CURRENCIES
 
 
 def validate_phone_number(phone: str) -> bool:

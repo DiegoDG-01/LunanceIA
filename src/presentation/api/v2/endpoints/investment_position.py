@@ -109,7 +109,7 @@ async def create_position(
         lock_period_end_date=position_request.lock_period_end_date,
         early_withdrawal_penalty=position_request.early_withdrawal_penalty,
         on_maturity=position_request.on_maturity,
-        currency=position_request.currency,
+        currency=position_request.currency.value,
         max_balance=cap.max_balance if cap else None,
         overflow_action=cap.overflow_action if cap else None,
         overflow_position_uuid=cap.overflow_position_uuid if cap else None,
@@ -210,7 +210,7 @@ async def deposit_to_position(
         user_id=cast(int, current_user.id),
         position_uuid=position_uuid,
         amount=movement_request.amount,
-        currency=movement_request.currency,
+        currency=movement_request.currency.value,
     )
 
     async def operation():
@@ -234,7 +234,7 @@ async def withdraw_from_position(
         user_id=cast(int, current_user.id),
         position_uuid=position_uuid,
         amount=movement_request.amount,
-        currency=movement_request.currency,
+        currency=movement_request.currency.value,
     )
 
     async def operation():

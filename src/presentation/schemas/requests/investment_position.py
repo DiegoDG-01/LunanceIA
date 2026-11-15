@@ -4,11 +4,13 @@ from decimal import Decimal
 from pydantic import BaseModel, Field
 
 from domain.objects.enums import (
+    Currency,
     InterestType,
     MaturityAction,
     OverflowAction,
     PositionType,
 )
+from presentation.schemas.requests.currency import CurrencyCode
 
 
 class PositionCapRequest(BaseModel):
@@ -61,7 +63,7 @@ class CreatePositionRequest(BaseModel):
         MaturityAction.HOLD,
         description="Qué hacer al vencer: AUTO_RENEW, LIQUIDATE o HOLD",
     )
-    currency: str = Field("MXN", min_length=3, max_length=3)
+    currency: CurrencyCode = Field(Currency.MXN, description="MXN, USD o EUR")
     cap: PositionCapRequest | None = Field(
         None,
         description=(
@@ -84,4 +86,4 @@ class UpdatePositionRequest(BaseModel):
 
 class PositionMovementRequest(BaseModel):
     amount: Decimal = Field(..., gt=Decimal(0), description="Monto a mover")
-    currency: str = Field("MXN", min_length=3, max_length=3)
+    currency: CurrencyCode = Field(Currency.MXN, description="MXN, USD o EUR")

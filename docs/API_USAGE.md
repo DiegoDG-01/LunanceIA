@@ -798,6 +798,8 @@ POST /api/v2/account/
 
 **Request:** `bank_id` es el ID del banco del catálogo (`GET /api/v2/bank/`). Opcionales: `currency` (default `MXN`), `is_active` y `credit_card_settings` (solo `CREDIT_CARD`).
 
+`currency` acepta `MXN`, `USD` o `EUR`, sin importar mayúsculas (`"usd"` se guarda como `USD`), y no se puede cambiar después. Cualquier otra → `422 VALIDATION_ERROR` con `loc: ["body", "currency"]`.
+
 > 💡 El tipo `INVESTMENT` es solo una **etiqueta de organización** (para plataformas
 > como GBM o CetesDirecto): no configura rendimientos. Para que el dinero genere
 > rendimientos, crea un apartado con [`POST /api/v2/positions/`](#-apartados-de-inversión---apiv2positions)
@@ -1274,7 +1276,7 @@ cualquier cuenta **excepto tarjetas de crédito**.
 | `lock_period_end_date` | ❌ | Antes de esta fecha no se permite liquidar |
 | `early_withdrawal_penalty` | ❌ | % (0-100) que se castiga **solo sobre los rendimientos**; el capital nunca se toca |
 | `on_maturity` | ❌ | `AUTO_RENEW`, `LIQUIDATE` o `HOLD` (default `HOLD`) |
-| `currency` | ❌ | Default `MXN` |
+| `currency` | ❌ | `MXN`, `USD` o `EUR` (default `MXN`) |
 | `cap` | ❌ | Tope y destino del excedente (solo a la vista). Ver [Topes y desbordamiento](#topes-y-desbordamiento) |
 
 **Con tope:**
