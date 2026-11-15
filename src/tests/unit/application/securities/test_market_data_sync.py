@@ -338,6 +338,33 @@ class TestSyncMarketData:
         assert stats.fx_failed == 1
 
 
+class TestTrackInstrumentAfterTrade:
+    """La operación ya fijó `tracked_since`; el backfill completa la historia que falte."""
+
+    async def test_backfills_when_history_starts_later(self, env, gateway):
+        walmex = await env.instrument(tracked_since=WED)
+        gateway.closes["WALMEX*"] = routed(D, "WALMEX*", closes((WED, "54.1")))
+        await env.price_sync.sync(walmex, WED, FRI)
+        await env.instruments.track_since(walmex.id, MON)
+
+        gateway.closes["WALMEX*"] = routed(
+            D, "WALMEX*", closes((MON, "53.9"), (WED, "54.1"))
+        )
+        handler = TrackInstrumentHandler(
+            instrument_repository=env.instruments,
+            price_repository=env.prices,
+            price_sync=env.price_sync,
+            uow=env.uow,
+        )
+        result = await handler.handle(
+            TrackInstrumentCommand(instrument_id=walmex.id, since=MON, as_of=FRI)
+        )
+        assert result.started is False
+        assert result.sync is not None
+        assert gateway.calls[-1].start == subtract_business_days(MON, 5)
+        assert MON in await env.saved(walmex)
+
+
 class TestTrackInstrument:
     def handler(self, env):
         return TrackInstrumentHandler(

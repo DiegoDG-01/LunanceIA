@@ -1,7 +1,8 @@
 """Empieza a seguir los precios de un valor desde una fecha y descarga su historia.
 
-Lo usa la fase de operaciones: la primera compra de un valor lo pone en seguimiento desde
-la fecha de la compra, en segundo plano, para no esperar al job de la noche.
+Registrar una operación fija `tracked_since` en su misma transacción y después corre esto en
+segundo plano, para no esperar al job de la noche. Si ya hay precios desde el inicio del
+seguimiento, no hace nada.
 """
 
 from dataclasses import dataclass
@@ -57,11 +58,13 @@ class TrackInstrumentHandler:
         if started:
             instrument = await self._instruments.save(instrument)
             await self._uow.commit()
-        elif await self._prices.last_price_date(cast(int, instrument.id)) is not None:
-            # Ya se seguía desde antes y tiene precios: el job lo mantiene al día.
-            return TrackInstrumentResult(started=False, sync=None)
+        tracked_since = cast(date, instrument.tracked_since)
+        first = await self._prices.first_price_date(cast(int, instrument.id))
+        if first is not None and first <= tracked_since:
+            # Ya tiene la historia desde el inicio del seguimiento: el job lo mantiene al día.
+            return TrackInstrumentResult(started=started, sync=None)
 
-        start = first_fetch_date(cast(date, instrument.tracked_since))
+        start = first_fetch_date(tracked_since)
         end = command.as_of
         if start > end:
             return TrackInstrumentResult(started=started, sync=None)

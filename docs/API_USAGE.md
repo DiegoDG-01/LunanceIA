@@ -1642,6 +1642,140 @@ valores que alguien sigue.
 `is_trading_day: false` marca los feriados de la bolsa, en los que el proveedor repite el
 cierre anterior.
 
+#### Registrar una operación
+```bash
+POST /api/v2/securities/trades/
+Idempotency-Key: <uuid>
+```
+
+Scope con API key: `investments:write`. La `Idempotency-Key` es obligatoria.
+
+| `trade_type` | Campos | Dinero |
+|--------------|--------|--------|
+| `BUY` | `quantity`, `price`, `fees` | Sale del disponible `quantity × price + fees` (transacción `TRANSFER`) |
+| `SELL` | `quantity`, `price`, `fees`, `tax_withheld` | Entra `quantity × price − fees − tax_withheld` (`TRANSFER`) |
+| `DIVIDEND` | `gross_amount`, `tax_withheld` | Entra el neto como ingreso en «Inversiones» (`INCOME`) |
+| `SPLIT` | `split_from`, `split_to` | No mueve dinero; multiplica los títulos por `split_to / split_from` |
+
+```json
+{
+  "account_uuid": "…",
+  "instrument_uuid": "…",
+  "trade_type": "BUY",
+  "trade_date": "2026-11-03",
+  "quantity": "10",
+  "price": "54.79",
+  "fees": "11.60",
+  "notes": "Primera compra"
+}
+```
+
+- La cuenta debe estar en la moneda del valor (BMV y SIC en MXN, EE. UU. en USD) y no puede
+  ser tarjeta de crédito.
+- La fecha no puede ser futura. Una operación con fecha pasada se acomoda en su lugar y la
+  tenencia se recalcula desde el principio.
+- Costo promedio: la comisión de compra entra al costo; una venta realiza
+  `cantidad × precio − comisión − cantidad × costo promedio` (antes de impuestos).
+- La primera operación de un valor descarga su historia de precios en segundo plano.
+
+**Response (201):**
+```json
+{
+  "trade": {
+    "uuid": "…",
+    "account_uuid": "…",
+    "instrument": { "symbol": "WALMEX*", "market": "BMV", "…": "…" },
+    "trade_type": "BUY",
+    "trade_date": "2026-11-03",
+    "quantity": "10.00000000",
+    "price": "54.790000",
+    "fees": "11.60",
+    "tax_withheld": "0.00",
+    "gross_amount": null,
+    "cash_amount": "559.50",
+    "split_from": null,
+    "split_to": null,
+    "notes": "Primera compra",
+    "created_at": "2026-11-14T19:00:00Z"
+  },
+  "holding": {
+    "uuid": "…",
+    "quantity": "10.00000000",
+    "avg_cost": "55.950000",
+    "cost_basis": "559.50",
+    "realized_pnl": "0.00",
+    "dividends": "0.00",
+    "status": "OPEN",
+    "…": "…"
+  },
+  "account_available_balance": "9440.50"
+}
+```
+
+#### Editar o borrar una operación
+```bash
+PUT /api/v2/securities/trades/{trade_uuid}
+DELETE /api/v2/securities/trades/{trade_uuid}
+```
+
+`PUT` reemplaza todos los datos (mismo cuerpo que el POST sin `account_uuid`,
+`instrument_uuid` ni `trade_type`: para cambiarlos, borra y registra otra). El disponible se
+ajusta solo por la diferencia y la transacción se rehace con los datos nuevos. `DELETE`
+revierte el movimiento de dinero; responde como el POST, con `trade: null`, y `holding: null`
+si el valor ya no tiene operaciones en la cuenta.
+
+Se rechazan con `409 INSUFFICIENT_SHARES` si dejan alguna venta o split posterior sin
+títulos (por ejemplo, borrar la compra detrás de una venta).
+
+> La transacción de una operación no se edita ni se borra desde `/transaction/`: responde
+> `409 SECURITY_TRADE_TRANSACTION_LOCKED`.
+
+#### Listar operaciones
+```bash
+GET /api/v2/securities/trades/?account_uuid=…&instrument_uuid=…&limit=100&offset=0
+```
+
+Las más recientes primero.
+
+#### Tenencias
+```bash
+GET /api/v2/securities/holdings/?account_uuid=…&include_closed=false
+GET /api/v2/securities/holdings/{holding_uuid}
+```
+
+Cantidad, costo y ganancia de cada valor, valuados con el último cierre guardado. El detalle
+agrega todas sus operaciones.
+
+```json
+{
+  "uuid": "…",
+  "account_uuid": "…",
+  "account_name": "GBM",
+  "instrument": { "symbol": "AAPL", "market": "US", "currency": "USD", "…": "…" },
+  "quantity": "2.00000000",
+  "avg_cost": "200.000000",
+  "cost_basis": "400.00",
+  "realized_pnl": "0.00",
+  "dividends": "0.00",
+  "status": "OPEN",
+  "opened_at": "2026-11-03",
+  "closed_at": null,
+  "last_price": "210.000000",
+  "last_price_date": "2026-11-13",
+  "market_value": "420.00",
+  "unrealized_pnl": "20.00",
+  "unrealized_pnl_pct": "5.00",
+  "fx_rate": "18.55250000",
+  "market_value_mxn": "7792.05"
+}
+```
+
+- Los campos de valuación llegan en `null` mientras no haya precios del valor.
+- `fx_rate` y `market_value_mxn`: FIX de Banxico del último día publicado (solo para valores
+  que no son en pesos; en pesos, `market_value_mxn` es igual a `market_value`).
+- Una tenencia se cierra (`CLOSED`) al vender todos los títulos; `include_closed=true` las
+  incluye.
+
 ### 🤖 IA - `/api/v2/ai/`
 
 #### Analizar Imagen (Recibo/Ticket)
@@ -2351,6 +2485,8 @@ La API retorna errores en un formato estándar con soporte de internacionalizaci
 - `NOT_FOUND_CATEGORY`: Categoría no encontrada
 - `NOT_FOUND_SESSION`: Sesión no encontrada, ya cerrada o de otro usuario (`DELETE /auth/sessions/{uuid}`)
 - `NOT_FOUND_INSTRUMENT`: Valor no encontrado en el catálogo (`/securities/instruments/{uuid}/…`)
+- `NOT_FOUND_SECURITY_TRADE`: Operación no encontrada o de otro usuario
+- `NOT_FOUND_SECURITY_HOLDING`: Tenencia no encontrada o de otro usuario
 - `NOT_FOUND`: Recurso genérico no encontrado
 
 ### Errores de Negocio (409 o 400)
@@ -2391,6 +2527,11 @@ La API retorna errores en un formato estándar con soporte de internacionalizaci
 - `INVALID_OVERFLOW_TARGET` (409): El destino del excedente no existe, es de otra cuenta, no es a la vista, está liquidado o cerraría un ciclo
 - `FIXED_TERM_CAP_NOT_ALLOWED` (409): Un plazo fijo no admite tope ni desbordamiento
 - `VALIDATION_INVALID_POSITION_CAP` (400): Tope menor o igual a cero, o destino de desbordamiento sin tope
+- `INSUFFICIENT_SHARES` (409): Una venta o split pide más títulos de los que hay ese día (también al editar o borrar una operación anterior)
+- `SECURITY_ACCOUNT_TYPE_NOT_ALLOWED` (409): Las tarjetas de crédito no admiten acciones
+- `SECURITY_CURRENCY_MISMATCH` (409): La cuenta no está en la moneda del valor
+- `SECURITY_TRADE_TRANSACTION_LOCKED` (409): La transacción es de una operación de acciones; se edita desde `/securities/trades/`
+- `VALIDATION_INVALID_SECURITY_TRADE` (400): Faltan o sobran campos para el tipo de operación, fecha futura, o comisiones que superan la venta
 
 ### Errores de Idempotencia (409 / 422)
 
@@ -2541,6 +2682,10 @@ La API implementa rate limiting específico por endpoint para proteger contra ab
 |----------|--------|------|
 | `GET /securities/search` | **30 requests/minuto** | Puede consultar al proveedor de EE. UU. |
 | `GET /securities/instruments/{uuid}/prices` | **50 requests/minuto** | Cierres guardados |
+| `POST /securities/trades/` | **20 requests/minuto** | Exige `Idempotency-Key` |
+| `PUT` / `DELETE /securities/trades/{uuid}` | **20 requests/minuto** | Aceptan `Idempotency-Key` |
+| `GET /securities/trades/` | **50 requests/minuto** | Listado |
+| `GET /securities/holdings/` y `/{uuid}` | **50 requests/minuto** | Tenencias valuadas |
 
 #### Endpoints de Apartados de Inversión
 

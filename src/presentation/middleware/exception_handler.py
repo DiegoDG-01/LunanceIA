@@ -56,7 +56,9 @@ from shared.exceptions.domain import (
     InstallmentChargeAlreadyPaidError,
     InstallmentChargeNotFoundError,
     InstallmentTransactionModificationError,
+    InstrumentNotFoundError,
     InsufficientFundsError,
+    InsufficientSharesError,
     InvalidAccountSettingsError,
     InvalidBalanceUpdateError,
     InvalidBillingCycleDayError,
@@ -74,11 +76,11 @@ from shared.exceptions.domain import (
     InvalidPaymentDueDayError,
     InvalidPenaltyPercentageError,
     InvalidPositionCapError,
+    InvalidSecurityTradeError,
     InvalidTransactionAmountError,
     InvalidTransactionTypeError,
     InvestmentPositionLockedError,
     InvestmentPositionNotActiveError,
-    InstrumentNotFoundError,
     InvestmentPositionNotFoundError,
     InvestmentPositionNotMaturedError,
     LastLoginMethodError,
@@ -91,6 +93,11 @@ from shared.exceptions.domain import (
     ProviderLinkRequiredError,
     RecentLoginRequiredError,
     SameAccountTransferError,
+    SecurityAccountTypeNotAllowedError,
+    SecurityCurrencyMismatchError,
+    SecurityHoldingNotFoundError,
+    SecurityTradeNotFoundError,
+    SecurityTradeTransactionLockedError,
     SessionExpiredError,
     SessionNotFoundError,
     SubscriptionNotFoundError,
@@ -142,6 +149,8 @@ EXCEPTION_MAP: dict[type[Exception], tuple[str, int]] = {
     TransactionNotActivityError: ("NOT_FOUND_ACTIVITY", 404),
     InvestmentPositionNotFoundError: ("NOT_FOUND_INVESTMENT_POSITION", 404),
     InstrumentNotFoundError: ("NOT_FOUND_INSTRUMENT", 404),
+    SecurityTradeNotFoundError: ("NOT_FOUND_SECURITY_TRADE", 404),
+    SecurityHoldingNotFoundError: ("NOT_FOUND_SECURITY_HOLDING", 404),
     # Fallback para cualquier NotFoundError sin entrada específica
     # (presupuestos, metas de ahorro, compras a plazos, bancos, etc.)
     NotFoundError: ("NOT_FOUND", 404),
@@ -165,6 +174,10 @@ EXCEPTION_MAP: dict[type[Exception], tuple[str, int]] = {
     PositionCapExceededError: ("POSITION_CAP_EXCEEDED", 409),
     InvalidOverflowTargetError: ("INVALID_OVERFLOW_TARGET", 409),
     FixedTermCapNotAllowedError: ("FIXED_TERM_CAP_NOT_ALLOWED", 409),
+    InsufficientSharesError: ("INSUFFICIENT_SHARES", 409),
+    SecurityAccountTypeNotAllowedError: ("SECURITY_ACCOUNT_TYPE_NOT_ALLOWED", 409),
+    SecurityCurrencyMismatchError: ("SECURITY_CURRENCY_MISMATCH", 409),
+    SecurityTradeTransactionLockedError: ("SECURITY_TRADE_TRANSACTION_LOCKED", 409),
     # La clave existe sin respuesta guardada: el cliente debe consultar el recurso.
     IdempotencyKeyInUseError: ("IDEMPOTENCY_KEY_IN_USE", 409),
     # --- Errores de Validación y Reglas de Negocio (400 / 422) ---
@@ -201,6 +214,7 @@ EXCEPTION_MAP: dict[type[Exception], tuple[str, int]] = {
     InvalidBalanceUpdateError: ("VALIDATION_INVALID_BALANCE_UPDATE", 400),
     InvalidFixedTermConfigError: ("VALIDATION_INVALID_FIXED_TERM_CONFIG", 400),
     InvalidPositionCapError: ("VALIDATION_INVALID_POSITION_CAP", 400),
+    InvalidSecurityTradeError: ("VALIDATION_INVALID_SECURITY_TRADE", 400),
 }
 
 SENSITIVE_FIELDS = {
