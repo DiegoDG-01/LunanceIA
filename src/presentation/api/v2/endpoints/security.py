@@ -32,6 +32,7 @@ from application.securities.queries.list_trades import (
     ListTradesHandler,
     ListTradesQuery,
 )
+from application.securities.queries.portfolio import PortfolioQueries
 from application.securities.queries.search_instruments import (
     SearchInstrumentsHandler,
     SearchInstrumentsQuery,
@@ -57,6 +58,7 @@ from presentation.dependencies.security_deps import (
     get_instrument_prices_handler,
     get_instrument_tracker,
     get_list_trades_handler,
+    get_portfolio_queries,
     get_record_trade_handler,
     get_search_instruments_handler,
     get_update_trade_handler,
@@ -73,6 +75,9 @@ from presentation.schemas.responses.security import (
     InstrumentPriceResponse,
     InstrumentPricesResponse,
     InstrumentResponse,
+    PortfolioDayResponse,
+    PortfolioHistoryResponse,
+    PortfolioSummaryResponse,
     TradeResponse,
     TradeResultResponse,
 )
@@ -81,6 +86,17 @@ from shared.exceptions.base import ValidationError
 router = APIRouter()
 
 MAX_PRICE_RANGE_DAYS = 3660
+
+
+def _date_range(from_date: date | None, to_date: date | None) -> tuple[date, date]:
+    """Rango de una consulta de historia: por defecto, los últimos 365 días."""
+    end = to_date or datetime.now(UTC).date()
+    start = from_date or end - timedelta(days=365)
+    if start > end:
+        raise ValidationError("'from' no puede ser posterior a 'to'")
+    if (end - start).days > MAX_PRICE_RANGE_DAYS:
+        raise ValidationError(f"El rango máximo es de {MAX_PRICE_RANGE_DAYS} días")
+    return start, end
 
 
 @router.get("/search", response_model=list[InstrumentResponse])
@@ -309,12 +325,7 @@ async def get_holding_history(
     """Fotos diarias de la tenencia: cantidad, valor, costo y ganancias de cada día de
     calendario. Por defecto, los últimos 365 días."""
     await enforce_rate_limit(limiter_50_per_minute, request)
-    end = to_date or datetime.now(UTC).date()
-    start = from_date or end - timedelta(days=365)
-    if start > end:
-        raise ValidationError("'from' no puede ser posterior a 'to'")
-    if (end - start).days > MAX_PRICE_RANGE_DAYS:
-        raise ValidationError(f"El rango máximo es de {MAX_PRICE_RANGE_DAYS} días")
+    start, end = _date_range(from_date, to_date)
     history = await queries.history(
         HoldingHistoryQuery(
             user_id=cast(int, current_user.id),
@@ -326,4 +337,35 @@ async def get_holding_history(
     return HoldingHistoryResponse(
         holding=HoldingResponse.from_dto(history.holding),
         snapshots=[HoldingSnapshotResponse.from_entity(s) for s in history.snapshots],
+    )
+
+
+@router.get("/portfolio/", response_model=PortfolioSummaryResponse)
+async def get_portfolio(
+    request: Request,
+    current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_READ.value)),
+    queries: PortfolioQueries = Depends(get_portfolio_queries),
+):
+    """Patrimonio en pesos: disponible de las cuentas, tarjetas de crédito, apartados y
+    acciones al último cierre. `missing` dice qué no se pudo sumar."""
+    await enforce_rate_limit(limiter_50_per_minute, request)
+    summary = await queries.summary(cast(int, current_user.id))
+    return PortfolioSummaryResponse.from_summary(summary)
+
+
+@router.get("/portfolio/history", response_model=PortfolioHistoryResponse)
+async def get_portfolio_history(
+    request: Request,
+    from_date: date | None = Query(None, alias="from"),
+    to_date: date | None = Query(None, alias="to"),
+    current_user: User = Depends(require_scope(APIKeyScope.INVESTMENTS_READ.value)),
+    queries: PortfolioQueries = Depends(get_portfolio_queries),
+):
+    """Lo invertido por día en pesos: apartados más acciones. Por defecto, los últimos
+    365 días; no incluye días anteriores a la primera inversión."""
+    await enforce_rate_limit(limiter_50_per_minute, request)
+    start, end = _date_range(from_date, to_date)
+    days = await queries.history(cast(int, current_user.id), start, end)
+    return PortfolioHistoryResponse(
+        start=start, end=end, days=[PortfolioDayResponse.from_day(d) for d in days]
     )

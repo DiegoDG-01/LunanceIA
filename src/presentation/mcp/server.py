@@ -6,7 +6,6 @@ from mcp.server.transport_security import TransportSecuritySettings
 from presentation.mcp.client import get_api_key, request_api
 from presentation.mcp.config import mcp_settings
 
-
 transport_security = TransportSecuritySettings(
     enable_dns_rebinding_protection=True,
     allowed_hosts=mcp_settings.allowed_hosts,
@@ -1239,6 +1238,260 @@ async def get_position_projections(
         f"/positions/{position_uuid}/projections/",
         get_api_key(ctx),
         params=params,
+    )
+
+
+# ── Acciones, ETFs y FIBRAs ───────────────────────────────────
+
+
+def _range_params(from_date: str | None, to_date: str | None) -> dict[str, str]:
+    return {
+        k: v for k, v in {"from": from_date, "to": to_date}.items() if v is not None
+    }
+
+
+def _trade_fields(
+    trade_date: str,
+    quantity: float | None,
+    price: float | None,
+    fees: float | None,
+    tax_withheld: float | None,
+    gross_amount: float | None,
+    split_from: int | None,
+    split_to: int | None,
+    notes: str | None,
+) -> dict:
+    fields = {
+        "trade_date": trade_date,
+        "quantity": quantity,
+        "price": price,
+        "fees": fees,
+        "tax_withheld": tax_withheld,
+        "gross_amount": gross_amount,
+        "split_from": split_from,
+        "split_to": split_to,
+        "notes": notes,
+    }
+    return {k: v for k, v in fields.items() if v is not None}
+
+
+@mcp.tool()
+async def search_securities(
+    ctx: Context, query: str, market: str | None = None, limit: int = 20
+) -> str:
+    """Busca acciones, ETFs y FIBRAs por símbolo o nombre. 'market' acepta BMV, SIC o
+    US. Las FIBRAs se encuentran por símbolo (FUNO11), no por nombre. Devuelve el
+    instrument_uuid que piden las operaciones."""
+    params: dict = {"q": query, "limit": limit}
+    if market:
+        params["market"] = market
+    return await request_api(
+        "GET", "/securities/search", get_api_key(ctx), params=params
+    )
+
+
+@mcp.tool()
+async def get_security_prices(
+    ctx: Context,
+    instrument_uuid: str,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> str:
+    """Cierres diarios guardados de un valor (sin ajustar, en su moneda). Fechas en
+    YYYY-MM-DD; por defecto, los últimos 30 días."""
+    if error := _validate_uuid(instrument_uuid, "instrument_uuid"):
+        return error
+    return await request_api(
+        "GET",
+        f"/securities/instruments/{instrument_uuid}/prices",
+        get_api_key(ctx),
+        params=_range_params(from_date, to_date),
+    )
+
+
+@mcp.tool()
+async def list_security_holdings(
+    ctx: Context, account_uuid: str | None = None, include_closed: bool = False
+) -> str:
+    """Tenencias de acciones del usuario: cantidad, costo promedio, valor al último
+    cierre (y en pesos), ganancia no realizada, ganancia realizada y dividendos."""
+    params: dict = {"include_closed": include_closed}
+    if account_uuid:
+        if error := _validate_uuid(account_uuid, "account_uuid"):
+            return error
+        params["account_uuid"] = account_uuid
+    return await request_api(
+        "GET", "/securities/holdings/", get_api_key(ctx), params=params
+    )
+
+
+@mcp.tool()
+async def get_security_holding(ctx: Context, holding_uuid: str) -> str:
+    """Una tenencia con todas sus operaciones."""
+    if error := _validate_uuid(holding_uuid, "holding_uuid"):
+        return error
+    return await request_api(
+        "GET", f"/securities/holdings/{holding_uuid}", get_api_key(ctx)
+    )
+
+
+@mcp.tool()
+async def get_security_holding_history(
+    ctx: Context,
+    holding_uuid: str,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> str:
+    """Historia diaria de una tenencia: cantidad, cierre, valor, costo y ganancias de
+    cada día. Fechas en YYYY-MM-DD; por defecto, los últimos 365 días."""
+    if error := _validate_uuid(holding_uuid, "holding_uuid"):
+        return error
+    return await request_api(
+        "GET",
+        f"/securities/holdings/{holding_uuid}/history",
+        get_api_key(ctx),
+        params=_range_params(from_date, to_date),
+    )
+
+
+@mcp.tool()
+async def list_security_trades(
+    ctx: Context,
+    account_uuid: str | None = None,
+    instrument_uuid: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> str:
+    """Compras, ventas, dividendos y splits registrados, los más recientes primero."""
+    params: dict = {"limit": limit, "offset": offset}
+    for field, value in (
+        ("account_uuid", account_uuid),
+        ("instrument_uuid", instrument_uuid),
+    ):
+        if value:
+            if error := _validate_uuid(value, field):
+                return error
+            params[field] = value
+    return await request_api(
+        "GET", "/securities/trades/", get_api_key(ctx), params=params
+    )
+
+
+@mcp.tool()
+async def record_security_trade(
+    ctx: Context,
+    account_uuid: str,
+    instrument_uuid: str,
+    trade_type: str,
+    trade_date: str,
+    quantity: float | None = None,
+    price: float | None = None,
+    fees: float | None = None,
+    tax_withheld: float | None = None,
+    gross_amount: float | None = None,
+    split_from: int | None = None,
+    split_to: int | None = None,
+    notes: str | None = None,
+) -> str:
+    """Registra una operación con acciones. trade_type acepta BUY, SELL, DIVIDEND o
+    SPLIT; fecha en YYYY-MM-DD. BUY/SELL usan quantity, price y fees (SELL también
+    tax_withheld); DIVIDEND usa gross_amount y tax_withheld; SPLIT usa split_from y
+    split_to. Compras, ventas y dividendos mueven el saldo disponible de la cuenta.
+    IMPORTANTE: mueve dinero real — muestra el detalle y pide confirmación explícita
+    del usuario antes de ejecutar."""
+    for field, value in (
+        ("account_uuid", account_uuid),
+        ("instrument_uuid", instrument_uuid),
+    ):
+        if error := _validate_uuid(value, field):
+            return error
+    body = {
+        "account_uuid": account_uuid,
+        "instrument_uuid": instrument_uuid,
+        "trade_type": trade_type,
+        **_trade_fields(
+            trade_date,
+            quantity,
+            price,
+            fees,
+            tax_withheld,
+            gross_amount,
+            split_from,
+            split_to,
+            notes,
+        ),
+    }
+    return await request_api("POST", "/securities/trades/", get_api_key(ctx), json=body)
+
+
+@mcp.tool()
+async def update_security_trade(
+    ctx: Context,
+    trade_uuid: str,
+    trade_date: str,
+    quantity: float | None = None,
+    price: float | None = None,
+    fees: float | None = None,
+    tax_withheld: float | None = None,
+    gross_amount: float | None = None,
+    split_from: int | None = None,
+    split_to: int | None = None,
+    notes: str | None = None,
+) -> str:
+    """Reemplaza los datos de una operación (manda todos los campos que aplican a su
+    tipo, no solo los que cambian). El tipo, la cuenta y el valor no se cambian: para
+    eso, bórrala y registra otra. Ajusta el saldo disponible por la diferencia.
+    IMPORTANTE: pide confirmación explícita del usuario antes de ejecutar."""
+    if error := _validate_uuid(trade_uuid, "trade_uuid"):
+        return error
+    body = _trade_fields(
+        trade_date,
+        quantity,
+        price,
+        fees,
+        tax_withheld,
+        gross_amount,
+        split_from,
+        split_to,
+        notes,
+    )
+    return await request_api(
+        "PUT", f"/securities/trades/{trade_uuid}", get_api_key(ctx), json=body
+    )
+
+
+@mcp.tool()
+async def delete_security_trade(ctx: Context, trade_uuid: str) -> str:
+    """Borra una operación y revierte su movimiento en el saldo disponible. No se puede
+    borrar una compra si una venta posterior se quedaría sin títulos. IMPORTANTE:
+    acción permanente — pide confirmación explícita del usuario antes de ejecutar."""
+    if error := _validate_uuid(trade_uuid, "trade_uuid"):
+        return error
+    return await request_api(
+        "DELETE", f"/securities/trades/{trade_uuid}", get_api_key(ctx)
+    )
+
+
+@mcp.tool()
+async def get_portfolio(ctx: Context) -> str:
+    """Patrimonio del usuario en pesos: disponible de las cuentas, saldo de tarjetas de
+    crédito (negativo si hay deuda), apartados de inversión y acciones al último
+    cierre. 'missing' lista lo que no se pudo sumar (sin precio o sin tipo de cambio)."""
+    return await request_api("GET", "/securities/portfolio/", get_api_key(ctx))
+
+
+@mcp.tool()
+async def get_portfolio_history(
+    ctx: Context, from_date: str | None = None, to_date: str | None = None
+) -> str:
+    """Lo invertido por día en pesos: apartados más acciones (no incluye el disponible
+    de las cuentas). Un día con complete=false tiene datos pendientes. Fechas en
+    YYYY-MM-DD; por defecto, los últimos 365 días."""
+    return await request_api(
+        "GET",
+        "/securities/portfolio/history",
+        get_api_key(ctx),
+        params=_range_params(from_date, to_date),
     )
 
 
