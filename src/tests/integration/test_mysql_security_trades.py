@@ -53,9 +53,9 @@ def slow_recompute(monkeypatch):
     segunda."""
     original = TradeBookkeeper.recompute
 
-    async def slow(self, context):
+    async def slow(self, context, **kwargs):
         await asyncio.sleep(0.4)
-        return await original(self, context)
+        return await original(self, context, **kwargs)
 
     monkeypatch.setattr(TradeBookkeeper, "recompute", slow)
 

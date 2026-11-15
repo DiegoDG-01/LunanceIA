@@ -9,14 +9,25 @@ import pytest
 from sqlalchemy import select
 
 from application.interfaces.market_data import InstrumentListing, ProviderName
+from application.securities.commands.rebuild_snapshots import (
+    RebuildSnapshotsCommand,
+    RebuildSnapshotsHandler,
+)
 from domain.entities.securities.instrument import Instrument
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from domain.entities.securities.instrument_price import InstrumentPrice
 from domain.objects.enums import InstrumentType, Market
 from infrastructure.database.repositories.sqlalchemy_instrument_repository import (
     SQLAlchemyInstrumentRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_price_repository import (
+    SQLAlchemyExchangeRateRepository,
     SQLAlchemyInstrumentPriceRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_trade_repository import (
+    SQLAlchemyHoldingSnapshotRepository,
+    SQLAlchemySecurityHoldingRepository,
+    SQLAlchemySecurityTradeRepository,
 )
 from infrastructure.database.models.transaction import TransactionModel
 from main import app
@@ -25,6 +36,14 @@ from presentation.dependencies.security_deps import get_instrument_tracker, get_
 from ..conftest import AuthTokens
 from ..idempotency import with_idempotency_key
 from ..unit.application.securities.fakes import FakeGateway
+
+
+class _NoCommit(AbstractUnitOfWork):
+    async def commit(self) -> None:
+        return None
+
+    async def rollback(self) -> None:
+        return None
 
 
 @pytest.fixture
@@ -357,3 +376,75 @@ class TestTrades:
         response = await http_client.delete(f"/transaction/{model.uuid}/", headers=headers)
         assert response.status_code == 409
         assert response.json()["error_code"] == "SECURITY_TRADE_TRANSACTION_LOCKED"
+
+
+@pytest.mark.e2e
+class TestHistory:
+    async def test_daily_snapshots(
+        self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens, db_session, tracked
+    ):
+        account_uuid = await _account(http_client, auth_tokens)
+        walmex = await _instrument(db_session)
+        headers = auth_tokens.get_auth_headers()
+        response = await http_client.post(
+            "/securities/trades/",
+            json={
+                "account_uuid": account_uuid,
+                "instrument_uuid": walmex.uuid,
+                "trade_type": "BUY",
+                "trade_date": "2026-11-06",
+                "quantity": "10",
+                "price": "50",
+            },
+            headers=with_idempotency_key(headers),
+        )
+        holding_uuid = response.json()["holding"]["uuid"]
+        await SQLAlchemyInstrumentPriceRepository(db_session).save_many(
+            [
+                InstrumentPrice(
+                    instrument_id=cast(int, walmex.id),
+                    price_date=date(2026, 11, 6),
+                    close=Decimal("52"),
+                    provider="databursatil",
+                )
+            ]
+        )
+        # Lo que hacen el backfill en segundo plano y el job de la noche.
+        await RebuildSnapshotsHandler(
+            holding_repository=SQLAlchemySecurityHoldingRepository(db_session),
+            trade_repository=SQLAlchemySecurityTradeRepository(db_session),
+            snapshot_repository=SQLAlchemyHoldingSnapshotRepository(db_session),
+            instrument_repository=SQLAlchemyInstrumentRepository(db_session),
+            price_repository=SQLAlchemyInstrumentPriceRepository(db_session),
+            fx_repository=SQLAlchemyExchangeRateRepository(db_session),
+            uow=_NoCommit(),
+        ).handle(RebuildSnapshotsCommand(as_of=date(2026, 11, 9)))
+
+        history = await http_client.get(
+            f"/securities/holdings/{holding_uuid}/history",
+            params={"from": "2026-11-01", "to": "2026-11-30"},
+            headers=headers,
+        )
+        assert history.status_code == 200, history.text
+        body = history.json()
+        assert body["holding"]["uuid"] == holding_uuid
+        assert [s["snapshot_date"] for s in body["snapshots"]] == [
+            "2026-11-06",
+            "2026-11-07",
+            "2026-11-08",
+            "2026-11-09",
+        ]
+        sunday = body["snapshots"][2]
+        assert sunday["market_value"] == "520.00"
+        assert sunday["price_date"] == "2026-11-06"
+        assert sunday["unrealized_pnl"] == "20.00"
+
+    async def test_unknown_holding(
+        self, http_client: httpx.AsyncClient, auth_tokens: AuthTokens
+    ):
+        response = await http_client.get(
+            "/securities/holdings/00000000-0000-0000-0000-000000000000/history",
+            headers=auth_tokens.get_auth_headers(),
+        )
+        assert response.status_code == 404
+        assert response.json()["error_code"] == "NOT_FOUND_SECURITY_HOLDING"
