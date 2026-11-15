@@ -13,6 +13,7 @@ from application.securities.queries.get_instrument_prices import (
 )
 from application.securities.queries.list_holdings import HoldingQueries
 from application.securities.queries.list_trades import ListTradesHandler
+from application.securities.queries.portfolio import PortfolioQueries
 from application.securities.queries.search_instruments import SearchInstrumentsHandler
 from application.securities.services.trade_bookkeeper import TradeBookkeeper
 from application.securities.services.valuation import HoldingValuer
@@ -25,6 +26,9 @@ from infrastructure.database.repositories.sqlalchemy_category_repository import 
 )
 from infrastructure.database.repositories.sqlalchemy_instrument_repository import (
     SQLAlchemyInstrumentRepository,
+)
+from infrastructure.database.repositories.sqlalchemy_portfolio_repository import (
+    SQLAlchemyPortfolioReadRepository,
 )
 from infrastructure.database.repositories.sqlalchemy_price_repository import (
     SQLAlchemyExchangeRateRepository,
@@ -120,4 +124,15 @@ def get_holding_queries(db: AsyncSession = Depends(get_db)) -> HoldingQueries:
             fx_repository=SQLAlchemyExchangeRateRepository(db),
         ),
         snapshot_repository=SQLAlchemyHoldingSnapshotRepository(db),
+    )
+
+
+def get_portfolio_queries(
+    db: AsyncSession = Depends(get_db),
+    holding_queries: HoldingQueries = Depends(get_holding_queries),
+) -> PortfolioQueries:
+    return PortfolioQueries(
+        read_repository=SQLAlchemyPortfolioReadRepository(db),
+        fx_repository=SQLAlchemyExchangeRateRepository(db),
+        holding_queries=holding_queries,
     )

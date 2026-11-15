@@ -1,9 +1,11 @@
+from dataclasses import asdict
 from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel
 
 from application.securities.dto import HoldingDTO, TradeDTO, TradeResultDTO
+from application.securities.queries.portfolio import PortfolioDay, PortfolioSummary
 from domain.entities.securities.holding_snapshot import HoldingSnapshot
 from domain.entities.securities.instrument import Instrument
 from domain.entities.securities.instrument_price import InstrumentPrice
@@ -153,3 +155,45 @@ class HoldingSnapshotResponse(BaseModel):
 class HoldingHistoryResponse(BaseModel):
     holding: HoldingResponse
     snapshots: list[HoldingSnapshotResponse]
+
+
+class PortfolioSummaryResponse(BaseModel):
+    """Patrimonio en pesos al día de hoy."""
+
+    as_of: date
+    cash: Decimal
+    credit_cards: Decimal
+    positions: Decimal
+    securities: Decimal
+    invested: Decimal
+    net_worth: Decimal
+    fx_rates: dict[str, Decimal]
+    missing: list[str]
+
+    @classmethod
+    def from_summary(cls, summary: PortfolioSummary) -> "PortfolioSummaryResponse":
+        return cls(**asdict(summary))
+
+
+class PortfolioDayResponse(BaseModel):
+    date: date
+    positions: Decimal
+    securities: Decimal
+    total: Decimal
+    complete: bool
+
+    @classmethod
+    def from_day(cls, day: PortfolioDay) -> "PortfolioDayResponse":
+        return cls(
+            date=day.day,
+            positions=day.positions,
+            securities=day.securities,
+            total=day.total,
+            complete=day.complete,
+        )
+
+
+class PortfolioHistoryResponse(BaseModel):
+    start: date
+    end: date
+    days: list[PortfolioDayResponse]

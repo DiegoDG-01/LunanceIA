@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 
+from presentation.schemas.responses.security import PortfolioSummaryResponse
+
 
 class CategoryDistributionResponse(BaseModel):
     category: str = Field(..., description="The category name")
@@ -28,6 +30,9 @@ class DashboardSummaryResponse(BaseModel):
     category_distribution: list[CategoryDistributionResponse] = Field(
         ..., description="The distribution of categories"
     )
+    net_worth: PortfolioSummaryResponse | None = Field(
+        None, description="Net worth in MXN: accounts, investment positions and stocks"
+    )
 
 
 class MonthlyBudgetSummaryResponse(BaseModel):
@@ -41,3 +46,4 @@ class MobileDashboardSummaryResponse(BaseModel):
     top_category: str
     category_distribution: list[CategoryDistributionResponse]
     monthly_budget: MonthlyBudgetSummaryResponse | None
+    net_worth: PortfolioSummaryResponse | None = None

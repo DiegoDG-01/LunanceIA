@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from application.securities.queries.portfolio import PortfolioSummary
+
 
 @dataclass
 class DashboardSummary:
@@ -10,6 +12,8 @@ class DashboardSummary:
     top_account: str
     today_transactions: list
     category_distribution: list
+    # Patrimonio en pesos: cuentas + apartados + acciones.
+    net_worth: PortfolioSummary | None = None
 
 
 @dataclass
@@ -25,3 +29,4 @@ class MobileDashboardSummary:
     top_category: str
     category_distribution: list
     monthly_budget: MonthlyBudgetSummary | None
+    net_worth: PortfolioSummary | None = None
