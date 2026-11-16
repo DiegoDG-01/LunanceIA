@@ -1889,7 +1889,9 @@ Todo lo del usuario en pesos al día de hoy:
 - `positions`: apartados de inversión no liquidados (capital más rendimiento acumulado).
 - `securities`: tenencias abiertas al último cierre guardado.
 - `invested` = `positions` + `securities`; `net_worth` = `cash` + `credit_cards` + `invested`.
-- Lo que no está en pesos se convierte con el último FIX de Banxico (`fx_rates`). Lo que no
+- Lo que no está en pesos se convierte con el último tipo de cambio de Banxico (`fx_rates`):
+  el FIX para USD y la cotización del euro (serie SF46410) para EUR. El job de precios los
+  baja para toda moneda que tenga una cuenta, un apartado o un valor. Lo que no
   tiene precio o tipo de cambio no se suma y queda en `missing`, por ejemplo
   `"AAPL: sin precio guardado"` o `"Cuenta: sin tipo de cambio EUR/MXN"`.
 

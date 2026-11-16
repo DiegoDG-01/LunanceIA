@@ -1,6 +1,10 @@
-"""Banxico SIE (https://www.banxico.org.mx/SieAPIRest/): tipo de cambio FIX.
+"""Banxico SIE (https://www.banxico.org.mx/SieAPIRest/): tipo de cambio en pesos.
 
-El FIX (serie SF43718, pesos por dólar) se determina una vez por día hábil bancario. Fechas en
+- USD: el FIX (serie SF43718, pesos por dólar), que se determina una vez por día hábil bancario.
+- EUR: la cotización del euro respecto al peso (serie SF46410, de las divisas de la canasta del
+  DEG), que Banxico calcula a partir del FIX el mismo día.
+
+Fechas en
 `dd/mm/aaaa`; días sin dato llegan como `N/E`. Un rango sin días hábiles devuelve la serie
 sin `datos`. Token inválido: 400 con `{"error": {"mensaje": "Token inválido"}}`.
 """
@@ -19,7 +23,7 @@ from application.interfaces.market_data import (
 )
 from infrastructure.external_services.market_data.provider_http import ProviderHttp
 
-SERIES = {("USD", "MXN"): "SF43718"}
+SERIES = {("USD", "MXN"): "SF43718", ("EUR", "MXN"): "SF46410"}
 
 
 class BanxicoFxProvider(FxRateProvider):

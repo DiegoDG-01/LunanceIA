@@ -379,12 +379,23 @@ class TestBanxico:
             await self.provider(recorder).fetch_rates("USD", "MXN", START, END)
         assert_no_secret(caught.value)
 
+    async def test_euro_uses_its_own_series(self):
+        # Respuesta real de SF46410 («Euro respecto al peso mexicano»), 13/11/2026.
+        recorder = respond(body=banxico_body([{"fecha": "13/11/2026", "dato": "20.5085"}]))
+        rates = await self.provider(recorder).fetch_rates("EUR", "MXN", START, END)
+        assert [(r.rate_date, r.rate) for r in rates] == [
+            (date(2026, 11, 13), Decimal("20.5085"))
+        ]
+        assert recorder.last.url.path.endswith(
+            "/series/SF46410/datos/2026-11-02/2026-11-13"
+        )
+
     async def test_other_pairs_are_not_supported(self):
         provider = BanxicoFxProvider(token=SECRET)
-        assert provider.supports("USD", "MXN")
-        assert not provider.supports("EUR", "MXN")
+        assert provider.supports("USD", "MXN") and provider.supports("eur", "mxn")
+        assert not provider.supports("GBP", "MXN")
         with pytest.raises(SymbolNotSupported):
-            await provider.fetch_rates("EUR", "MXN", START, END)
+            await provider.fetch_rates("GBP", "MXN", START, END)
 
 
 # ------------------------------------------------------------------------- Yahoo

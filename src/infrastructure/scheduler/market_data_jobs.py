@@ -24,6 +24,9 @@ from application.securities.services.price_sync import InstrumentPriceSync
 from domain.objects.enums import Market
 from infrastructure.config.settings import settings
 from infrastructure.database.connection import AsyncSessionLocal
+from infrastructure.database.repositories.sqlalchemy_currency_demand_repository import (
+    SQLAlchemyCurrencyDemandRepository,
+)
 from infrastructure.database.repositories.sqlalchemy_instrument_repository import (
     SQLAlchemyInstrumentProviderSymbolRepository,
     SQLAlchemyInstrumentRepository,
@@ -98,6 +101,7 @@ async def sync_market_data_job() -> None:
                 gateway=gateway,
                 uow=SQLAlchemyUnitOfWork(db),
                 holding_repository=holdings,
+                currency_demand=SQLAlchemyCurrencyDemandRepository(db),
             )
             stats = await handler.handle(
                 SyncMarketDataCommand(

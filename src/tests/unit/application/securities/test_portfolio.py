@@ -13,6 +13,9 @@ from domain.objects.enums import (
     TradeType,
 )
 from infrastructure.database.models import InvestmentPositionModel, InvestmentYieldModel
+from infrastructure.database.repositories.sqlalchemy_currency_demand_repository import (
+    SQLAlchemyCurrencyDemandRepository,
+)
 from infrastructure.database.repositories.sqlalchemy_portfolio_repository import (
     SQLAlchemyPortfolioReadRepository,
 )
@@ -224,3 +227,37 @@ class TestSecuritiesHistory:
         days = await history(env, nov(3), nov(9))
         assert days[nov(5)].securities == 0  # sin títulos al cierre del día
         assert all(d.complete for d in days.values())
+
+
+class TestEuro:
+    async def test_summary_converts_euro_accounts(self, env, account):
+        await make_account(env, balance="100", currency="EUR")
+        await fx(env, {nov(13): "20.5"}, base="EUR")
+
+        summary = await portfolio(env).summary(USER_ID)
+
+        assert summary.fx_rates == {"EUR": D("20.50000000")}
+        assert summary.missing == []
+        assert summary.cash == D("12050.00")  # 10,000 + 100 EUR × 20.5
+
+    async def test_history_converts_euro_positions(self, env):
+        euros = await make_account(env, currency="EUR")
+        await make_position(env, euros, currency="EUR", yields={nov(3): "10"})
+        await fx(env, {nov(2): "20", nov(4): "21"}, base="EUR")
+
+        days = await history(env, nov(3), nov(4))
+
+        assert [days[nov(3)].positions, days[nov(4)].positions] == [D("200.00"), D("210.00")]
+        assert all(d.complete for d in days.values())
+
+
+class TestCurrencyDemand:
+    async def test_accounts_and_positions_outside_pesos(self, env, account):
+        await make_account(env, currency="USD")
+        euros = await make_account(env, currency="EUR")
+        await make_position(env, euros, currency="EUR")
+
+        demand = await SQLAlchemyCurrencyDemandRepository(env.db).since()
+
+        # Cuentas en USD: solo días recientes. EUR: desde que empezó el apartado.
+        assert demand == {"USD": None, "EUR": date(2026, 10, 1)}
