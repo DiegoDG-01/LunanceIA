@@ -18,7 +18,7 @@ from sqlalchemy.sql import func
 
 from domain.objects.enums import InstallmentType
 from infrastructure.database.connection import Base
-from infrastructure.database.models.account import account_currency
+from .account import account_currency
 
 
 class InstallmentPurchaseModel(Base):
