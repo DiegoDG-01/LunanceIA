@@ -41,6 +41,7 @@ class FakeGateway(MarketDataGateway):
     search_error: Exception | None = None
     calls: list[Call] = field(default_factory=list)
     fx_calls: list[tuple[date, date]] = field(default_factory=list)
+    fx_pairs: list[str] = field(default_factory=list)
     catalog_calls: list[Market] = field(default_factory=list)
     search_calls: list[str] = field(default_factory=list)
 
@@ -80,6 +81,7 @@ class FakeGateway(MarketDataGateway):
         self, base: str, quote: str, start: date, end: date
     ) -> RoutedRates:
         self.fx_calls.append((start, end))
+        self.fx_pairs.append(f"{base}/{quote}")
         if self.fx_error:
             raise self.fx_error
         return RoutedRates(

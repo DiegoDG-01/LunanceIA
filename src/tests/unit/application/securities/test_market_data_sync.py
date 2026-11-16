@@ -27,6 +27,7 @@ from application.securities.commands.track_instrument import (
     TrackInstrumentCommand,
     TrackInstrumentHandler,
 )
+from application.securities.currency_demand import CurrencyDemandRepository
 from application.securities.queries.search_instruments import (
     SearchInstrumentsHandler,
     SearchInstrumentsQuery,
@@ -35,6 +36,7 @@ from application.securities.services.business_days import subtract_business_days
 from application.securities.services.price_sync import InstrumentPriceSync
 from domain.entities.securities.instrument import Instrument
 from domain.objects.enums import InstrumentType, Market, ProviderSymbolStatus
+from domain.repositories.unit_of_work import AbstractUnitOfWork
 from infrastructure.database.repositories.sqlalchemy_instrument_repository import (
     SQLAlchemyInstrumentProviderSymbolRepository,
     SQLAlchemyInstrumentRepository,
@@ -43,7 +45,6 @@ from infrastructure.database.repositories.sqlalchemy_price_repository import (
     SQLAlchemyExchangeRateRepository,
     SQLAlchemyInstrumentPriceRepository,
 )
-from domain.repositories.unit_of_work import AbstractUnitOfWork
 
 from .fakes import FakeGateway, closes, routed
 
@@ -87,7 +88,7 @@ class Env:
             clock=lambda: NOW,
         )
 
-    def sync_handler(self) -> SyncMarketDataHandler:
+    def sync_handler(self, demand=None) -> SyncMarketDataHandler:
         return SyncMarketDataHandler(
             instrument_repository=self.instruments,
             price_repository=self.prices,
@@ -95,6 +96,7 @@ class Env:
             price_sync=self.price_sync,
             gateway=self.gateway,
             uow=self.uow,
+            currency_demand=demand,
             clock=lambda: NOW,
         )
 
@@ -329,6 +331,25 @@ class TestSyncMarketData:
             SyncMarketDataCommand(as_of=FRI, revision_days=2)
         )
         assert gateway.fx_calls[-1] == (TUE, FRI)
+
+    async def test_fx_for_accounts_and_positions_without_stocks(self, env, gateway):
+        gateway.rates = [FxRate(rate_date=THU, rate=Decimal("20.5085"))]
+
+        class Demand(CurrencyDemandRepository):
+            async def since(self):
+                # Cuentas en USD (solo días recientes) y un apartado en EUR desde el miércoles.
+                return {"USD": None, "EUR": WED}
+
+        stats = await env.sync_handler(Demand()).handle(SyncMarketDataCommand(as_of=FRI))
+
+        assert gateway.fx_pairs == ["USD/MXN", "EUR/MXN"]
+        assert gateway.fx_calls == [
+            (subtract_business_days(FRI, 5), FRI),
+            (subtract_business_days(WED, 5), FRI),
+        ]
+        assert stats.fx_saved == 2
+        [euro] = await env.fx.get_range("EUR", "MXN", MON, FRI)
+        assert euro.rate == Decimal("20.50850000")
 
     async def test_fx_failure_is_counted(self, env, gateway):
         await env.instrument("AAPL", market=Market.US, currency="USD")
