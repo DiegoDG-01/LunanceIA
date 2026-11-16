@@ -495,6 +495,13 @@ Aplica igual con JWT y con API key (las tools del MCP mandan una clave nueva en 
 
 > Los `POST` de esta sección que crean recursos o mueven dinero (todos salvo `/auth/*` y `/ai/*`) exigen el header `Idempotency-Key`; ver [Idempotencia](#-idempotencia-idempotency-key).
 
+> **Montos.** Los montos llegan como string decimal con sus decimales (`"250.50"`,
+> `"10.00000000"`), para no perder precisión; algunos ejemplos de abajo los muestran como
+> número por brevedad. La excepción es el dashboard (`/dashboard/` y `/dashboard/mobile/`),
+> que manda números (`200.0`). Al enviar se aceptan string o número. Cada monto está en la
+> moneda de su cuenta: las respuestas de movimientos, transferencias, suscripciones, compras a
+> meses, apartados y presupuestos traen `currency` (`MXN`, `USD` o `EUR`).
+
 ### 🔐 Autenticación - `/api/v2/auth/`
 
 > **Nota**: la API gestiona el registro y el login por sí misma. Ver [Autenticación JWT](#-autenticación-jwt) para el detalle del flujo y de los tokens.
@@ -918,7 +925,7 @@ GET /api/v2/transaction/
     "transfer_uuid": null,
     "category": "Alimentación",
     "transaction_type": "EXPENSE",
-    "amount": 250.50,
+    "amount": "250.50",
     "currency": "MXN",
     "transaction_date": "2024-12-14",
     "description": "Compra en supermercado",
@@ -1104,7 +1111,8 @@ GET /api/v2/subscription/
     "account_uuid": "660e8400-e29b-41d4-a716-446655440001",
     "category_name": "Entretenimiento",
     "frequency": "MONTHLY",
-    "amount": 299.00,
+    "amount": "299.00",
+    "currency": "MXN",
     "billing_day": 15,
     "description": "Plan Premium 4K",
     "service_url": "https://netflix.com",
@@ -2275,7 +2283,7 @@ Dos consecuencias que conviene tener claras:
 GET /api/v2/installments/
 ```
 
-**Response:** lista de compras con `uuid`, `account_uuid`, `category_id`, `description`, `total_amount`, `num_installments`, `installment_type` (`NO_INTEREST` o `WITH_INTEREST`), `annual_interest_rate`, `monthly_payment`, `purchase_date`, `notes`, `is_active`, `creation_date` y `charges` (cada cargo con `uuid`, `installment_number`, `amount`, `due_date`, `paid` y `paid_at`).
+**Response:** lista de compras con `uuid`, `account_uuid`, `category_id`, `description`, `total_amount`, `currency`, `num_installments`, `installment_type` (`NO_INTEREST` o `WITH_INTEREST`), `annual_interest_rate`, `monthly_payment`, `purchase_date`, `notes`, `is_active`, `creation_date` y `charges` (cada cargo con `uuid`, `installment_number`, `amount`, `due_date`, `paid` y `paid_at`).
 
 #### Crear Compra a Plazos
 ```bash
