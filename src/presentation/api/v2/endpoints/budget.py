@@ -138,6 +138,7 @@ async def create_budget(
         category_id=budget_request.category_id,
         end_date=budget_request.end_date,
         alert_percentage=budget_request.alert_percentage,
+        currency=budget_request.currency.value,
     )
     command = CreateBudgetCommand(dto=dto)
 
@@ -171,6 +172,7 @@ async def update_budget(
         end_date=budget_request.end_date,
         alert_percentage=budget_request.alert_percentage,
         category_id=budget_request.category_id,
+        currency=budget_request.currency.value if budget_request.currency else None,
     )
     command = UpdateBudgetCommand(
         budget_uuid=budget_uuid,

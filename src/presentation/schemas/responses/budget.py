@@ -12,6 +12,7 @@ class BudgetResponse(BaseModel):
     category_id: int | None
     category_name: str | None
     limit_amount: Decimal
+    currency: str = Field("MXN", description="Moneda del límite: MXN, USD o EUR")
     period: BudgetPeriod
     start_date: date | None
     end_date: date | None
@@ -26,6 +27,7 @@ class BudgetProgressResponse(BaseModel):
     category_id: int | None = Field(None, description="ID de categoría (null = todas)")
     category_name: str | None = Field(None, description="Nombre de la categoría")
     limit_amount: Decimal = Field(..., description="Monto límite configurado")
+    currency: str = Field("MXN", description="Moneda del límite y de lo gastado")
     spent_amount: Decimal = Field(..., description="Total gastado en el periodo actual")
     remaining_amount: Decimal = Field(
         ..., description="Monto restante (puede ser negativo)"

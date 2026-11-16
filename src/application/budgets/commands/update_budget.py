@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from application.dto.budget_dto import BudgetResponseDTO, UpdateBudgetDTO
+from domain.objects.money import ensure_supported_currency
 from domain.repositories.budgets.budget_repository import BudgetRepository
 from domain.repositories.categories.category_repository import CategoryRepository
 from domain.repositories.unit_of_work import AbstractUnitOfWork
@@ -58,6 +59,9 @@ class UpdateBudgetHandler:
             budget.end_date = dto.end_date
         if dto.alert_percentage is not None:
             budget.alert_percentage = dto.alert_percentage
+        if dto.currency is not None:
+            ensure_supported_currency(dto.currency)
+            budget.currency = dto.currency
 
         async with self.uow:
             updated_budget = await self.budget_repository.update(budget)

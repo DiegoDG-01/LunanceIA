@@ -50,6 +50,7 @@ class CreateBudgetHandler:
             start_date=dto.start_date,
             end_date=dto.end_date,
             alert_percentage=dto.alert_percentage,
+            currency=dto.currency,
         )
 
         async with self.uow:

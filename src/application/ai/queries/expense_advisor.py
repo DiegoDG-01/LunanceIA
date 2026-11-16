@@ -39,17 +39,24 @@ class GetExpenseAdvisorHandler:
         if not transactions:
             raise TransactionNotActivityError()
 
-        expense_summary = [
-            {
-                "category": category_name,
-                "amount": float(t.amount.amount),
-                "type": t.transaction_type.value,
-                "description": t.description,
-            }
-            for t, _, _, _, category_name in transactions
-        ]
+        # Agrupados por moneda: el modelo no debe sumar montos de monedas distintas.
+        expense_summary: dict[str, list[dict]] = {}
+        for t, _, _, _, category_name in transactions:
+            expense_summary.setdefault(t.amount.currency, []).append(
+                {
+                    "category": category_name,
+                    "amount": float(t.amount.amount),
+                    "type": t.transaction_type.value,
+                    "description": t.description,
+                }
+            )
 
-        prompt = f"Analiza estos gastos del mes (Recuerda que son pesos - MXN):\n<user_data>\n{expense_summary}\n</user_data>"
+        prompt = (
+            "Analiza estos movimientos del mes. Vienen agrupados por moneda (MXN, USD o "
+            "EUR): no sumes ni compares montos de monedas distintas como si fueran la "
+            "misma.\n<user_data>\n"
+            f"{expense_summary}\n</user_data>"
+        )
         try:
             result = await self.agent.run(
                 prompt,
