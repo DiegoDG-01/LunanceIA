@@ -1401,6 +1401,57 @@
                   "mode": "inherit"
                 }
               }
+            },
+            {
+              "type": "http",
+              "name": "Dollar_Account",
+              "filename": "Simple_Account.bru",
+              "seq": 4,
+              "settings": {},
+              "tags": [],
+              "examples": [],
+              "request": {
+                "url": "http://{{URL_HOST}}/api/v2/account",
+                "method": "POST",
+                "headers": [
+                  {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Authorization",
+                    "value": "{{AUTH_TYPE}} {{AUTH_TOKEN}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Accept-Language",
+                    "value": "{{LANG}}",
+                    "enabled": true
+                  },
+                  {
+                    "name": "Idempotency-Key",
+                    "value": "{{$randomUUID}}",
+                    "enabled": true
+                  }
+                ],
+                "params": [],
+                "body": {
+                  "mode": "json",
+                  "json": "{\n  \"name\": \"Cuenta en dólares\",\n  \"account_type\": \"SAVINGS\",\n  \"bank_id\": 1,\n  \"initial_balance\": \"1000.00\",\n  \"currency\": \"USD\"\n}",
+                  "formUrlEncoded": [],
+                  "multipartForm": [],
+                  "file": []
+                },
+                "script": {},
+                "vars": {},
+                "assertions": [],
+                "tests": "",
+                "docs": "Cuenta en USD (también vale EUR). Sus movimientos, transferencias y apartados quedan en esa moneda; transferir a una cuenta de otra moneda da 409 TRANSFER_CURRENCY_MISMATCH.",
+                "auth": {
+                  "mode": "inherit"
+                }
+              }
             }
           ]
         }
