@@ -14,6 +14,7 @@ from datetime import UTC, date, datetime
 from typing import cast
 
 from application.interfaces.market_data import MarketDataGateway, NoProviderAvailable
+from application.securities.currency_demand import CurrencyDemandRepository
 from application.securities.services.business_days import subtract_business_days
 from application.securities.services.price_sync import InstrumentPriceSync
 from domain.entities.securities.exchange_rate import ExchangeRate
@@ -30,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 # Días hábiles antes de `tracked_since` que se piden la primera vez.
 LEAD_BUSINESS_DAYS = 5
-FX_PAIRS = (("USD", "MXN"),)
+FX_PAIRS = (("USD", "MXN"), ("EUR", "MXN"))
 
 
 @dataclass
@@ -82,9 +83,12 @@ class SyncMarketDataHandler:
         gateway: MarketDataGateway,
         uow: AbstractUnitOfWork,
         holding_repository: SecurityHoldingRepository | None = None,
+        currency_demand: CurrencyDemandRepository | None = None,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self._instruments = instrument_repository
+        # Cuentas y apartados en otra moneda también necesitan su tipo de cambio.
+        self._demand = currency_demand
         self._holdings = holding_repository
         self._prices = price_repository
         self._fx = fx_repository
@@ -148,10 +152,13 @@ class SyncMarketDataHandler:
         command: SyncMarketDataCommand,
         stats: SyncMarketDataStats,
     ) -> None:
+        demand = await self._demand.since() if self._demand is not None else {}
         for base, quote in FX_PAIRS:
             needed = [
                 cast(date, i.tracked_since) for i in tracked if i.currency == base
             ]
+            if base in demand:
+                needed.append(demand[base] or command.as_of)
             if not needed:
                 continue
             earliest = first_fetch_date(min(needed))

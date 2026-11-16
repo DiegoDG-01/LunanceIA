@@ -81,7 +81,7 @@ class Settings(BaseSettings):
     APPLE_TOKEN_ENCRYPTION_KEY: SecretStr = SecretStr("")
 
     # Precios de mercado (acciones, ETFs, FIBRAs) y tipo de cambio. Todas opcionales: sin
-    # llave, el proveedor queda fuera de las rutas. Banxico da el FIX de USD/MXN.
+    # llave, el proveedor queda fuera de las rutas. Banxico da USD/MXN (FIX) y EUR/MXN.
     DATABURSATIL_TOKEN: SecretStr = SecretStr("")
     EODHD_API_KEY: SecretStr = SecretStr("")
     TWELVEDATA_API_KEY: SecretStr = SecretStr("")
