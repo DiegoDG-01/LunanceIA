@@ -65,6 +65,7 @@ class TestDashboardAPI:
             "top_account",
             "today_transactions",
             "category_distribution",
+            "by_currency",
             "net_worth",
         }
 
@@ -131,6 +132,7 @@ class TestDashboardAPI:
             "top_category",
             "category_distribution",
             "monthly_budget",
+            "by_currency",
             "net_worth",
         }
         assert float(data["total_spent"]) == 400.00
