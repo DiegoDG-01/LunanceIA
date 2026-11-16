@@ -160,9 +160,11 @@ async def create_budget(
     category_id: int | None = None,
     end_date: str | None = None,  # ISO: YYYY-MM-DD
     alert_percentage: int = 80,
+    currency: str = "MXN",  # MXN / USD / EUR
 ) -> str:
     """Crea un nuevo presupuesto. 'period' debe ser uno de: semanal, quincenal,
-    mensual, trimestral, anual. 'limit_amount' es el monto límite (positivo).
+    mensual, trimestral, anual. 'limit_amount' es el monto límite (positivo), en
+    'currency' (MXN, USD o EUR): solo cuenta gastos de cuentas en esa moneda.
     'category_id' es opcional; si se omite el presupuesto aplica a todas las
     categorías. Confirma el resumen con el usuario antes de crear."""
     body = {
@@ -175,6 +177,7 @@ async def create_budget(
             "category_id": category_id,
             "end_date": end_date,
             "alert_percentage": alert_percentage,
+            "currency": currency,
         }.items()
         if v is not None
     }
@@ -716,6 +719,7 @@ async def update_budget(
     end_date: str | None = None,
     alert_percentage: int | None = None,
     category_id: int | None = None,
+    currency: str | None = None,  # MXN / USD / EUR
 ) -> str:
     """Actualiza un presupuesto. Solo envía los campos a cambiar. period
     acepta: semanal, quincenal, mensual, trimestral, anual."""
@@ -731,6 +735,7 @@ async def update_budget(
             "end_date": end_date,
             "alert_percentage": alert_percentage,
             "category_id": category_id,
+            "currency": currency,
         }.items()
         if v is not None
     }

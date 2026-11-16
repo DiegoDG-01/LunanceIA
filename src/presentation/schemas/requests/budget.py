@@ -3,7 +3,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
-from domain.objects.enums import BudgetPeriod
+from domain.objects.enums import BudgetPeriod, Currency
+from presentation.schemas.requests.currency import CurrencyCode
 
 
 class CreateBudgetRequest(BaseModel):
@@ -12,6 +13,10 @@ class CreateBudgetRequest(BaseModel):
     )
     limit_amount: Decimal = Field(
         ..., gt=Decimal(0), description="Monto límite del presupuesto"
+    )
+    currency: CurrencyCode = Field(
+        Currency.MXN,
+        description="Moneda del límite (MXN, USD o EUR): solo cuenta gastos de cuentas en ella",
     )
     period: BudgetPeriod = Field(..., description="Periodicidad del presupuesto")
     start_date: date | None = Field(
@@ -62,6 +67,7 @@ class UpdateBudgetRequest(BaseModel):
         None, ge=1, le=100, description="Porcentaje para activar alerta (1-100)"
     )
     category_id: int | None = Field(None, gt=0, description="ID de categoría")
+    currency: CurrencyCode | None = Field(None, description="MXN, USD o EUR")
 
     model_config = {
         "json_schema_extra": {

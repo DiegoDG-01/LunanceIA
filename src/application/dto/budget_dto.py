@@ -15,6 +15,7 @@ class CreateBudgetDTO:
     category_id: int | None = None
     end_date: date | None = None
     alert_percentage: int = 80
+    currency: str = "MXN"
 
 
 @dataclass
@@ -26,6 +27,7 @@ class UpdateBudgetDTO:
     end_date: date | None = None
     alert_percentage: int | None = None
     category_id: int | None = None
+    currency: str | None = None
 
 
 @dataclass
@@ -35,6 +37,7 @@ class BudgetResponseDTO:
     category_id: int | None
     category_name: str | None
     limit_amount: Decimal
+    currency: str
     period: BudgetPeriod
     start_date: date | None
     end_date: date | None
@@ -52,6 +55,7 @@ class BudgetResponseDTO:
             category_id=budget.category_id,
             category_name=category_name,
             limit_amount=budget.limit_amount,
+            currency=budget.currency,
             period=budget.period,
             start_date=budget.start_date,
             end_date=budget.end_date,
@@ -68,6 +72,7 @@ class BudgetProgressDTO:
     category_id: int | None
     category_name: str | None
     limit_amount: Decimal
+    currency: str
     spent_amount: Decimal
     remaining_amount: Decimal
     percentage_used: float

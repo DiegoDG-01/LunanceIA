@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from domain.entities.budgets.budget import Budget
 from domain.objects.enums import BudgetPeriod, TransactionType
 from domain.repositories.budgets.budget_repository import BudgetRepository
+from infrastructure.database.models.account import AccountModel
 from infrastructure.database.models.budget import BudgetModel
 from infrastructure.database.models.transaction import TransactionModel
 from shared.exceptions.domain import BudgetNotFoundError
@@ -31,6 +32,7 @@ class SQLAlchemyBudgetRepository(BudgetRepository):
             is_active=model.is_active,
             alert_percentage=model.alert_percentage,
             creation_date=model.creation_date,
+            currency=model.currency,
         )
 
     @staticmethod
@@ -46,6 +48,7 @@ class SQLAlchemyBudgetRepository(BudgetRepository):
             is_active=entity.is_active,
             alert_percentage=entity.alert_percentage,
             creation_date=entity.creation_date,
+            currency=entity.currency,
         )
 
     async def create(self, budget: Budget) -> Budget:
@@ -71,6 +74,7 @@ class SQLAlchemyBudgetRepository(BudgetRepository):
         model.end_date = budget.end_date
         model.is_active = budget.is_active
         model.alert_percentage = budget.alert_percentage
+        model.currency = budget.currency
 
         await self.db.flush()
         await self.db.refresh(model)
@@ -133,10 +137,11 @@ class SQLAlchemyBudgetRepository(BudgetRepository):
         period_start: date,
         period_end: date,
         category_id: int | None = None,
+        currency: str | None = None,
     ) -> Decimal:
         """
         Suma el total de transacciones de tipo EXPENSE del usuario en el rango de fechas,
-        opcionalmente filtrado por categoría.
+        opcionalmente filtrado por categoría y por la moneda de la cuenta.
         """
         stmt = select(func.coalesce(func.sum(TransactionModel.amount), 0)).where(
             and_(
@@ -149,6 +154,10 @@ class SQLAlchemyBudgetRepository(BudgetRepository):
 
         if category_id is not None:
             stmt = stmt.where(TransactionModel.category_id == category_id)
+        if currency is not None:
+            stmt = stmt.join(
+                AccountModel, AccountModel.id == TransactionModel.account_id
+            ).where(AccountModel.currency == currency)
 
         result = await self.db.execute(stmt)
         total = result.scalar_one()

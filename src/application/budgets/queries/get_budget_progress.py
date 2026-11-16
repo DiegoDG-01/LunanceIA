@@ -40,6 +40,7 @@ class GetBudgetProgressHandler:
             period_start=period_start,
             period_end=period_end,
             category_id=budget.category_id,
+            currency=budget.currency,
         )
 
         remaining = budget.limit_amount - spent_amount
@@ -53,6 +54,7 @@ class GetBudgetProgressHandler:
             category_id=budget.category_id,
             category_name=category_name,
             limit_amount=budget.limit_amount,
+            currency=budget.currency,
             spent_amount=spent_amount,
             remaining_amount=remaining,
             percentage_used=round(percentage_used, 2),

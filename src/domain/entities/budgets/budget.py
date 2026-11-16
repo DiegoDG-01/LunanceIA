@@ -2,7 +2,8 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
-from domain.objects.enums import BudgetPeriod
+from domain.objects.enums import BudgetPeriod, Currency
+from domain.objects.money import ensure_supported_currency
 
 
 @dataclass
@@ -21,6 +22,8 @@ class Budget:
     is_active: bool
     alert_percentage: int
     creation_date: datetime | None = None
+    # El límite está en esta moneda y solo cuenta gastos de cuentas en ella.
+    currency: str = Currency.MXN.value
 
     @classmethod
     def create_new(
@@ -33,7 +36,9 @@ class Budget:
         start_date: date | None = None,
         end_date: date | None = None,
         alert_percentage: int = 80,
+        currency: str = Currency.MXN.value,
     ) -> "Budget":
+        ensure_supported_currency(currency)
         return cls(
             id=None,
             uuid=None,
@@ -47,6 +52,7 @@ class Budget:
             is_active=True,
             alert_percentage=alert_percentage,
             creation_date=datetime.now(UTC),
+            currency=currency,
         )
 
     def get_current_period_dates(

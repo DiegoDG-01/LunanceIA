@@ -1051,6 +1051,33 @@ Retorna un resumen del estado financiero del usuario.
 Incluye `net_worth`, el patrimonio en pesos con la misma forma que
 [`GET /securities/portfolio/`](#patrimonio). También lo trae `GET /api/v2/dashboard/mobile/`.
 
+**Por moneda.** Los montos de monedas distintas nunca se suman:
+
+- Los campos de siempre (`total_spent`, `total_income`, `total_purchases`, `top_category`,
+  `top_account`, `today_transactions`, `category_distribution`) son **solo de MXN**.
+- `by_currency` trae los mismos campos para cada moneda con movimientos en el mes (en orden
+  MXN, USD, EUR). Una moneda sin movimientos no aparece.
+- Cada elemento de `today_transactions` trae `currency`.
+
+```json
+{
+  "total_spent": 200.0,
+  "total_income": 0.0,
+  "…": "…",
+  "by_currency": [
+    { "currency": "MXN", "total_spent": 200.0, "total_income": 0.0, "total_purchases": 1, "…": "…" },
+    { "currency": "USD", "total_spent": 80.0, "total_income": 100.0, "total_purchases": 2,
+      "top_category": "Alimentos", "top_account": "GBM USD",
+      "today_transactions": [{ "date": "2026-11-15", "amount": 50.0, "currency": "USD", "…": "…" }],
+      "category_distribution": [{ "category": "Alimentos", "count": 2, "percent_by_count": 100.0 }] }
+  ]
+}
+```
+
+`GET /api/v2/dashboard/mobile/` sigue la misma regla: `total_spent`, `top_category`,
+`category_distribution` y `monthly_budget` son de MXN, y `by_currency` trae cada moneda con su
+propio `monthly_budget`, que solo suma los presupuestos de esa moneda.
+
 ### 🔄 Suscripciones - `/api/v2/subscription/`
 
 #### Listar Suscripciones
@@ -2091,7 +2118,7 @@ GET /api/v2/budgets/
 | `active_only` | bool | Solo presupuestos activos (default: false) |
 | `category_id` | int | Filtrar por categoría |
 
-**Response:** lista con `uuid`, `name`, `category_id`, `category_name`, `limit_amount`, `period`, `start_date`, `end_date`, `is_active`, `alert_percentage` y `creation_date`.
+**Response:** lista con `uuid`, `name`, `category_id`, `category_name`, `limit_amount`, `currency`, `period`, `start_date`, `end_date`, `is_active`, `alert_percentage` y `creation_date`.
 
 #### Obtener Presupuesto por UUID
 ```bash
@@ -2105,7 +2132,7 @@ GET /api/v2/budgets/{budget_uuid}/progress/
 
 Progreso del presupuesto en el periodo actual.
 
-**Response:** `uuid`, `name`, `category_id`, `category_name`, `limit_amount`, `spent_amount`, `remaining_amount`, `percentage_used`, `alert_percentage`, `is_alert_triggered`, `is_limit_exceeded`, `period`, `period_start`, `period_end` e `is_active`.
+**Response:** `uuid`, `name`, `category_id`, `category_name`, `limit_amount`, `currency`, `spent_amount`, `remaining_amount`, `percentage_used`, `alert_percentage`, `is_alert_triggered`, `is_limit_exceeded`, `period`, `period_start`, `period_end` e `is_active`.
 
 #### Crear Presupuesto
 ```bash
@@ -2117,6 +2144,7 @@ POST /api/v2/budgets/
 {
   "name": "Comida mensual",
   "limit_amount": 5000.00,
+  "currency": "MXN",
   "period": "mensual",
   "category_id": 1,
   "end_date": null,
@@ -2126,6 +2154,9 @@ POST /api/v2/budgets/
 
 `category_id` es opcional (si se omite, aplica a todas las categorías), igual que `start_date`, `end_date` y `alert_percentage` (default 80, rango 1-100). Las fechas de vigencia se reservan para presupuestos temporales y aún no afectan el cálculo de progreso. Periodos disponibles: `semanal`, `quincenal`, `mensual`, `trimestral`, `anual`.
 
+`currency` (`MXN`, `USD` o `EUR`, default `MXN`) es la moneda del límite: el presupuesto solo
+cuenta los gastos de cuentas en esa moneda. Otra moneda → `422 VALIDATION_ERROR`.
+
 **Response:** `201 Created`
 
 #### Actualizar Presupuesto
@@ -2133,7 +2164,7 @@ POST /api/v2/budgets/
 PATCH /api/v2/budgets/{budget_uuid}/
 ```
 
-**Request:** todos los campos son opcionales (`name`, `limit_amount`, `period`, `start_date`, `end_date`, `alert_percentage`, `category_id`).
+**Request:** todos los campos son opcionales (`name`, `limit_amount`, `currency`, `period`, `start_date`, `end_date`, `alert_percentage`, `category_id`).
 
 #### Activar/Desactivar Presupuesto
 ```bash

@@ -49,6 +49,7 @@ class BudgetRepository(ABC):
         period_start: date,
         period_end: date,
         category_id: int | None = None,
+        currency: str | None = None,
     ) -> Decimal:
         """
         Returns the total EXPENSE amount for the user in the given date range,
