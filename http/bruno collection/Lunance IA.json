@@ -1387,7 +1387,7 @@
                 "params": [],
                 "body": {
                   "mode": "json",
-                  "json": "{\n  \"name\": \"Fondo de Inversión Crecimiento\",\n  \"account_type\": \"INVESTMENT\",\n  \"bank_id\": 6,\n  \"initial_balance\": \"125000.00\",\n  \"currency\": \"MXN\",\n  \"is_active\": true,\n  \"investment_settings\": {\n    \"investment_type\": \"fixed_term\",\n    \"interest_rate\": 7.5,\n    \"lock_period_end_date\": \"2027-01-01\",\n    \"maturity_date\": \"2027-01-01\",\n    \"early_withdrawal_penalty\": 2.0\n  }\n}",
+                  "json": "{\n  \"name\": \"Fondo de Inversión Crecimiento\",\n  \"account_type\": \"INVESTMENT\",\n  \"bank_id\": 6,\n  \"initial_balance\": \"125000.00\",\n  \"currency\": \"MXN\",\n  \"is_active\": true\n}",
                   "formUrlEncoded": [],
                   "multipartForm": [],
                   "file": []
