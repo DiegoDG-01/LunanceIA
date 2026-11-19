@@ -241,6 +241,32 @@ class TestAPIKeyLifecycle:
         )
         assert response.status_code == 200
 
+    async def test_dashboard_read_scope_allows_reading_mobile_dashboard(
+        self, http_client, auth_tokens
+    ):
+        # El MCP la usa (get_monthly_summary): antes solo aceptaba el token de la app.
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["dashboard:read"]
+        )
+
+        response = await http_client.get(
+            "/dashboard/mobile/", headers={"X-API-Key": created["raw_key"]}
+        )
+        assert response.status_code == 200, response.text
+        assert "by_currency" in response.json()
+
+    async def test_mobile_dashboard_requires_dashboard_scope(
+        self, http_client, auth_tokens
+    ):
+        created = await self._create_key(
+            http_client, auth_tokens, scopes=["transactions:read"]
+        )
+
+        response = await http_client.get(
+            "/dashboard/mobile/", headers={"X-API-Key": created["raw_key"]}
+        )
+        assert response.status_code == 403
+
     async def test_budgets_read_scope_allows_listing_budgets(
         self, http_client, auth_tokens
     ):

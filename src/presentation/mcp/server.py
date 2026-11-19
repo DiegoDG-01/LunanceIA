@@ -28,7 +28,12 @@ async def list_transactions(
 ) -> str:
     """Lista las transacciones (gastos e ingresos) del usuario, con filtros
     opcionales por fecha, tipo, categoría o cuenta. Úsala para responder
-    cuánto se ha gastado, movimientos recientes, etc."""
+    cuánto se ha gastado, movimientos recientes, etc.
+
+    Cada movimiento trae 'currency' (la de su cuenta): no sumes montos de monedas
+    distintas. Si viene de una operación de acciones (compra, venta, dividendo),
+    trae 'security_trade_uuid' y 'security_holding_uuid'; edítala o bórrala con
+    las tools de acciones, no como movimiento."""
     params = {
         k: v
         for k, v in {
@@ -70,7 +75,9 @@ async def create_transaction(
 ) -> str:
     """Registra una nueva transacción (gasto o ingreso) en una cuenta del usuario.
     'transaction_type' debe ser 'INCOME' o 'EXPENSE' y 'amount' debe ser positivo.
-    'account_uuid' identifica la cuenta; usa list_accounts si no lo conoces."""
+    'account_uuid' identifica la cuenta; usa list_accounts si no lo conoces.
+    'amount' va en la moneda de la cuenta (un gasto de 50 en una cuenta USD son
+    50 dólares)."""
     body = {
         k: v
         for k, v in {
@@ -89,9 +96,25 @@ async def create_transaction(
 
 @mcp.tool()
 async def get_dashboard(ctx: Context) -> str:
-    """Obtiene el resumen financiero del usuario (dashboard): balances,
-    ingresos/gastos del periodo y métricas generales."""
+    """Resumen del mes: gastos, ingresos, compras, categoría y cuenta principales,
+    gastos de los últimos 7 días y el patrimonio ('net_worth', en pesos).
+
+    Los campos de arriba son SOLO de cuentas en MXN. Cada moneda (MXN, USD, EUR)
+    viene aparte en 'by_currency'. Nunca sumes montos de monedas distintas;
+    preséntalos por separado."""
     return await request_api("GET", "/dashboard", get_api_key(ctx))
+
+
+@mcp.tool()
+async def get_monthly_summary(ctx: Context) -> str:
+    """Resumen del mes por fecha del movimiento, con el presupuesto mensual:
+    gastado, categorías y 'monthly_budget' (límite, gastado y restante, sumando
+    los presupuestos activos llevados a un mes). Úsala para responder cómo va el
+    usuario contra su presupuesto este mes.
+
+    Igual que get_dashboard: los campos de arriba son solo MXN y cada moneda
+    viene en 'by_currency' con su propio presupuesto. No sumes monedas."""
+    return await request_api("GET", "/dashboard/mobile", get_api_key(ctx))
 
 
 @mcp.tool()
@@ -103,10 +126,17 @@ async def list_categories(ctx: Context, only_active: bool = True) -> str:
 
 
 @mcp.tool()
-async def list_accounts(ctx: Context, limit: int = 50, offset: int = 0) -> str:
-    """Lista las cuentas del usuario (bancos, efectivo, etc.) con sus saldos."""
+async def list_accounts(
+    ctx: Context, only_active: bool = False, limit: int = 50, offset: int = 0
+) -> str:
+    """Lista las cuentas del usuario (bancos, efectivo, etc.) con su saldo y su
+    moneda ('currency': MXN, USD o EUR). 'only_active' deja fuera las cuentas
+    desactivadas."""
     return await request_api(
-        "GET", "/account", get_api_key(ctx), params={"limit": limit, "offset": offset}
+        "GET",
+        "/account",
+        get_api_key(ctx),
+        params={"only_active": only_active, "limit": limit, "offset": offset},
     )
 
 
@@ -409,6 +439,17 @@ async def get_subscription(ctx: Context, subscription_uuid: str) -> str:
 
 
 @mcp.tool()
+async def get_subscription_last_charge(ctx: Context, subscription_uuid: str) -> str:
+    """El último cargo de una suscripción: cuándo y cuánto se cobró, en qué
+    cuenta. Para el historial de todas, usa list_subscription_charges."""
+    if error := _validate_uuid(subscription_uuid, "subscription_uuid"):
+        return error
+    return await request_api(
+        "GET", f"/subscription/{subscription_uuid}/transactions/", get_api_key(ctx)
+    )
+
+
+@mcp.tool()
 async def create_subscription(
     ctx: Context,
     account_uuid: str,
@@ -498,8 +539,11 @@ async def create_transfer(
     transfer_date: str | None = None,  # ISO: YYYY-MM-DD
 ) -> str:
     """Registra una transferencia de dinero entre dos cuentas del usuario. 'amount'
-    es positivo. IMPORTANTE: mueve dinero real entre cuentas — muestra siempre un
-    resumen (origen, destino, monto) y pide confirmación explícita antes de enviar."""
+    es positivo. Las dos cuentas deben tener la misma moneda; entre monedas
+    distintas la API responde 409 TRANSFER_CURRENCY_MISMATCH (todavía no hay
+    transferencias con tipo de cambio). IMPORTANTE: mueve dinero real entre
+    cuentas — muestra siempre un resumen (origen, destino, monto) y pide
+    confirmación explícita antes de enviar."""
     body = {
         k: v
         for k, v in {
@@ -539,6 +583,15 @@ async def list_incomes(
         if v is not None
     }
     return await request_api("GET", "/incomes", get_api_key(ctx), params=params)
+
+
+@mcp.tool()
+async def get_income(ctx: Context, income_uuid: str) -> str:
+    """Obtiene el detalle de un ingreso recurrente por su UUID: monto, moneda,
+    frecuencia y próxima fecha de pago."""
+    if error := _validate_uuid(income_uuid, "income_uuid"):
+        return error
+    return await request_api("GET", f"/incomes/{income_uuid}/", get_api_key(ctx))
 
 
 @mcp.tool()
@@ -662,12 +715,21 @@ async def update_account(
     name: str | None = None,
     bank_id: int | None = None,
     current_balance: float | None = None,
+    # Ajustes de tarjeta de crédito: se mandan los cuatro juntos.
+    billing_cycle_day: int | None = None,  # día de facturación 1-31
+    payment_due_day: int | None = None,  # día de pago 1-31
+    credit_limit: float | None = None,
+    minimum_payment_percentage: float | None = None,  # porcentaje 0-100
 ) -> str:
-    """Actualiza una cuenta (nombre, banco o balance). Solo envía los campos
-    a cambiar."""
+    """Actualiza una cuenta (nombre, banco, balance o ajustes de tarjeta de
+    crédito). Solo envía los campos a cambiar. La moneda no se puede cambiar.
+
+    Para cambiar los ajustes de una tarjeta de crédito manda los cuatro juntos:
+    'billing_cycle_day', 'payment_due_day', 'credit_limit' y
+    'minimum_payment_percentage'."""
     if error := _validate_uuid(account_uuid, "account_uuid"):
         return error
-    body = {
+    body: dict = {
         k: v
         for k, v in {
             "name": name,
@@ -676,6 +738,18 @@ async def update_account(
         }.items()
         if v is not None
     }
+    card = {
+        "billing_cycle_day": billing_cycle_day,
+        "payment_due_day": payment_due_day,
+        "credit_limit": credit_limit,
+        "minimum_payment_percentage": minimum_payment_percentage,
+    }
+    given = {k: v for k, v in card.items() if v is not None}
+    if given and len(given) < len(card):
+        missing = ", ".join(k for k in card if k not in given)
+        return f"Para cambiar los ajustes de la tarjeta faltan: {missing}."
+    if given:
+        body["credit_card_settings"] = given
     return await request_api(
         "PATCH", f"/account/{account_uuid}/", get_api_key(ctx), json=body
     )
