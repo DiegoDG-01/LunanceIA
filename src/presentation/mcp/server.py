@@ -440,8 +440,9 @@ async def get_subscription(ctx: Context, subscription_uuid: str) -> str:
 
 @mcp.tool()
 async def get_subscription_last_charge(ctx: Context, subscription_uuid: str) -> str:
-    """El último cargo de una suscripción: cuándo y cuánto se cobró, en qué
-    cuenta. Para el historial de todas, usa list_subscription_charges."""
+    """Los últimos 5 cargos de una suscripción, del más reciente al más viejo:
+    cuándo y cuánto se cobró y en qué cuenta. Para los cargos de todas las
+    suscripciones, usa list_subscription_charges."""
     if error := _validate_uuid(subscription_uuid, "subscription_uuid"):
         return error
     return await request_api(
