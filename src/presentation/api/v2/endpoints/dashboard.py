@@ -17,7 +17,6 @@ from infrastructure.rate_limiting.limiters import (
     limiter_10_per_minute,
 )
 from presentation.dependencies import (
-    get_current_active_user,
     get_dashboard_summary_handler,
     get_mobile_dashboard_summary_handler,
 )
@@ -46,7 +45,8 @@ async def get_general_data(
 @router.get("/mobile/", response_model=MobileDashboardSummaryResponse)
 async def get_genera_data_mobile(
     request: Request,
-    current_user: User = Depends(get_current_active_user),
+    # Con scope, como el web: también la usa el MCP con una API key.
+    current_user: User = Depends(require_scope(APIKeyScope.DASHBOARD_READ.value)),
     handler: GetMobileDashboardSummaryHandler = Depends(
         get_mobile_dashboard_summary_handler
     ),

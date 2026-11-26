@@ -395,7 +395,7 @@ Además del JWT (usuarios humanos), la API soporta **API keys** para acceso prog
 | Alcance | Acceso completo | Limitado por **scopes** |
 | Puede editar / eliminar | Sí | **Sí**, si la key tiene el scope `<recurso>:write` |
 
-Los endpoints de recursos (cuentas, transacciones, categorías, dashboard, suscripciones, inversiones, bancos, ingresos, presupuestos, metas, plazos y transferencias) aceptan **ambos** métodos (autenticación dual): si llega `X-API-Key` se usa esa vía; si no, se valida el JWT. Un usuario por JWT siempre tiene acceso completo; una API key solo puede hacer lo que sus scopes permitan. En cambio, `/ai/*`, `/notifications`, `/auth/*` y `/api-keys/*` son **solo JWT**.
+Los endpoints de recursos (cuentas, transacciones, categorías, dashboard web y mobile, suscripciones, inversiones, apartados, acciones y patrimonio, bancos, ingresos, presupuestos, metas, plazos y transferencias) aceptan **ambos** métodos (autenticación dual): si llega `X-API-Key` se usa esa vía; si no, se valida el JWT. Un usuario por JWT siempre tiene acceso completo; una API key solo puede hacer lo que sus scopes permitan. En cambio, `/ai/*`, `/notifications`, `/auth/*` y `/api-keys/*` son **solo JWT**.
 
 ### Scopes disponibles
 
@@ -406,13 +406,13 @@ Los endpoints de recursos (cuentas, transacciones, categorías, dashboard, suscr
 | `accounts:read` | Listar / ver cuentas y su actividad |
 | `accounts:write` | Crear, editar, activar/desactivar y eliminar cuentas |
 | `categories:read` | Listar categorías |
-| `dashboard:read` | Ver el dashboard financiero |
+| `dashboard:read` | Ver el dashboard web y el mobile: resumen del mes, presupuesto mensual y totales por moneda |
 | `budgets:read` | Listar / ver presupuestos y su progreso |
 | `budgets:write` | Crear, editar, activar/desactivar y eliminar presupuestos |
 | `goals:read` | Listar / ver metas de ahorro |
 | `goals:write` | Crear, editar, activar/desactivar y eliminar metas de ahorro |
-| `investments:read` | Ver apartados de inversión, rendimientos y proyecciones |
-| `investments:write` | Crear apartados, depositar, retirar y liquidar |
+| `investments:read` | Ver apartados de inversión, rendimientos y proyecciones; buscar valores y ver sus precios, tenencias y operaciones de acciones; ver el patrimonio y su historia |
+| `investments:write` | Crear, editar, depositar, retirar y liquidar apartados; registrar, editar y eliminar operaciones de acciones (compras, ventas, dividendos y splits). Mueve el saldo de las cuentas |
 | `subscriptions:read` | Listar / ver suscripciones y sus cargos |
 | `subscriptions:write` | Crear, editar, activar/desactivar y eliminar suscripciones |
 | `installments:read` | Listar compras a plazos (MSI) |
@@ -426,6 +426,10 @@ Los endpoints de recursos (cuentas, transacciones, categorías, dashboard, suscr
 > recurso (el chequeo solo verifica la presencia del scope); una key que solo tenga
 > `:read` no puede modificar nada. `transfers` solo tiene `:write` (crear y eliminar);
 > las transferencias se consultan dentro de las transacciones.
+
+> Los scopes de una key **no se pueden editar** después de crearla. Si a una key le falta
+> uno (por ejemplo, una creada antes de los apartados o de las acciones no trae
+> `investments:write`), hay que crear otra.
 
 > 🤖 **Uso vía MCP:** estos scopes son la base del servidor MCP que expone la API a
 > agentes/LLM. Para ejecutarlo, sus herramientas y cómo probarlo, consulta
@@ -1085,6 +1089,8 @@ Incluye `net_worth`, el patrimonio en pesos con la misma forma que
 `category_distribution` y `monthly_budget` son de MXN, y `by_currency` trae cada moneda con su
 propio `monthly_budget`, que solo suma los presupuestos de esa moneda.
 
+Los dos dashboards aceptan JWT o una API key con scope `dashboard:read`.
+
 ### 🔄 Suscripciones - `/api/v2/subscription/`
 
 #### Listar Suscripciones
@@ -1213,7 +1219,7 @@ Retorna el historial de cargos generados automáticamente para las suscripciones
 GET /api/v2/subscription/{subscription_uuid}/transactions/
 ```
 
-Retorna los últimos cargos generados por una suscripción. Requiere scope `subscriptions:read`.
+Retorna los últimos 5 cargos generados por una suscripción, del más reciente al más viejo. Requiere scope `subscriptions:read`.
 
 **Response:** lista con `name` (nombre de la suscripción), `account_name`, `amount` y `charge_date` de cada cargo.
 

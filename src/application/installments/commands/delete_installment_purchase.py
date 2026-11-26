@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from decimal import Decimal
 from typing import cast
 
 from domain.objects.enums import TransactionType
@@ -56,14 +55,14 @@ class DeleteInstallmentPurchaseHandler:
                 purchase_id=cast(int, purchase.id), for_update=True
             )
 
-            if purchase.initial_transaction_id is not None:
-                await self._delete_purchase_with_linked_transactions(
-                    command=command, purchase=purchase, charges=charges
-                )
-            else:
-                await self._delete_legacy_purchase(
-                    command=command, purchase=purchase, charges=charges
-                )
+            # Toda compra se registra con su gasto inicial; sin él no hay forma
+            # confiable de saber qué se movió, así que no se borra a ciegas.
+            if purchase.initial_transaction_id is None:
+                raise BulkDeleteFailedError(entity="initial installment transaction")
+
+            await self._delete_purchase_with_linked_transactions(
+                command=command, purchase=purchase, charges=charges
+            )
 
             await self.installment_charge_repository.delete_by_purchase_id(
                 purchase_id=cast(int, purchase.id)
@@ -72,34 +71,6 @@ class DeleteInstallmentPurchaseHandler:
                 purchase_uuid=cast(str, purchase.uuid)
             )
             await self.uow.commit()
-
-    async def _delete_legacy_purchase(self, command, purchase, charges) -> None:
-        """Mantiene la reversión para compras creadas antes del nuevo modelo."""
-        account = await self.account_repository.get_by_id(
-            purchase.account_id, for_update=True
-        )
-        if not account:
-            raise AccountNotFoundError(account_uuid=str(purchase.account_id))
-
-        paid_total = Decimal(0)
-        transactions_ids_to_delete = []
-        for charge in charges:
-            if charge.paid and charge.transaction_id is not None:
-                paid_total += charge.amount
-                transactions_ids_to_delete.append(charge.transaction_id)
-
-        net_restore = purchase.total_amount.amount - paid_total
-        new_balance = account.current_balance.add(account.money(net_restore))
-        account.update_balance(new_balance)
-
-        if transactions_ids_to_delete:
-            deleted = await self.transaction_repository.delete_bulk_by_ids(
-                transaction_ids=transactions_ids_to_delete, user_id=command.user_id
-            )
-            if not deleted:
-                raise BulkDeleteFailedError(entity="transactions")
-
-        await self.account_repository.update(account)
 
     async def _delete_purchase_with_linked_transactions(
         self, command, purchase, charges

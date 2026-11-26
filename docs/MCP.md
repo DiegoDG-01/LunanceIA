@@ -58,7 +58,7 @@ disponible: las operaciones de **lectura** requieren el scope `:read` del recurs
 | **Cuentas** | `list_accounts`, `get_account`, `get_account_activity` | `accounts:read` |
 | | `create_account`, `update_account`, `set_account_status`, `delete_account` | `accounts:write` |
 | **Categorías** | `list_categories` | `categories:read` |
-| **Dashboard** | `get_dashboard` | `dashboard:read` |
+| **Dashboard** | `get_dashboard`, `get_monthly_summary` | `dashboard:read` |
 | **Presupuestos** | `list_budgets`, `get_budget`, `get_budget_progress` | `budgets:read` |
 | | `create_budget`, `update_budget`, `toggle_budget`, `delete_budget` | `budgets:write` |
 | **Metas de ahorro** | `list_goals`, `get_goal` | `goals:read` |
@@ -69,17 +69,25 @@ disponible: las operaciones de **lectura** requieren el scope `:read` del recurs
 | **Acciones, ETFs y FIBRAs** | `search_securities`, `get_security_prices`, `list_security_holdings`, `get_security_holding`, `get_security_holding_history`, `list_security_trades` | `investments:read` |
 | | `record_security_trade`, `update_security_trade`, `delete_security_trade` | `investments:write` |
 | **Patrimonio** | `get_portfolio`, `get_portfolio_history` | `investments:read` |
-| **Suscripciones** | `list_subscriptions`, `list_subscription_charges`, `get_subscription` | `subscriptions:read` |
+| **Suscripciones** | `list_subscriptions`, `list_subscription_charges`, `get_subscription`, `get_subscription_last_charge` | `subscriptions:read` |
 | | `create_subscription`, `update_subscription`, `toggle_subscription`, `delete_subscription` | `subscriptions:write` |
-| **Ingresos recurrentes** | `list_incomes`, `get_income_deposits` | `incomes:read` |
+| **Ingresos recurrentes** | `list_incomes`, `get_income`, `get_income_deposits` | `incomes:read` |
 | | `create_income`, `update_income`, `toggle_income`, `delete_income` | `incomes:write` |
 | **Compras a plazos (MSI)** | `list_installments` | `installments:read` |
 | | `create_installment`, `update_installment`, `pay_installment_charge`, `delete_installment` | `installments:write` |
 | **Transferencias** | `create_transfer`, `delete_transfer` | `transfers:write` |
 | **Bancos** | `list_banks` | `banks:read` |
 
-> Total: **70 herramientas**. Excluidos a propósito del MCP: `auth` y `api-keys` (por
-> seguridad) y `ai` (el MCP ya es la capa de IA).
+> Total: **73 herramientas**. Excluidos a propósito del MCP: `auth` y `api-keys` (por
+> seguridad), `ai` (el MCP ya es la capa de IA) y `notifications` (leerlas las borra, y
+> el agente se las quitaría a la app).
+>
+> **Monedas.** Cada cuenta tiene moneda (MXN, USD o EUR) y sus movimientos, apartados,
+> suscripciones e ingresos usan esa misma. `get_dashboard` y `get_monthly_summary` traen
+> arriba solo lo de MXN y cada moneda aparte en `by_currency`: las tools le piden al
+> modelo no sumar monedas distintas. Las transferencias solo van entre cuentas de la misma
+> moneda (`409 TRANSFER_CURRENCY_MISMATCH`). `get_portfolio` es lo único que junta todo,
+> convertido a pesos.
 >
 > Un **apartado de inversión** vive dentro de una cuenta y genera rendimientos (a la
 > vista o a plazo fijo). El dinero apartado no cuenta en el saldo disponible: para
