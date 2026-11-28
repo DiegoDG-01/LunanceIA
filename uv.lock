@@ -1267,6 +1267,7 @@ dev = [
 mcp = [
     { name = "httpx" },
     { name = "mcp", extra = ["cli"] },
+    { name = "pydantic-settings" },
 ]
 test = [
     { name = "aiosqlite" },
@@ -1326,6 +1327,7 @@ dev = [
 mcp = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "mcp", extras = ["cli"], specifier = "==2.3.0" },
+    { name = "pydantic-settings", specifier = "==2.16.3" },
 ]
 test = [
     { name = "aiosqlite", specifier = "==0.22.1" },

@@ -70,6 +70,7 @@ dev = [
 mcp = [
     "mcp[cli]==2.3.0",
     "httpx>=0.28.1",
+    "pydantic-settings==2.16.3",
 ]
 
 typecheck = [
